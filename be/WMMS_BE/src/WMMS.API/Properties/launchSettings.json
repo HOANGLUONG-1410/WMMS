@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "WMMS.API": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:54761;http://localhost:54762"
+    }
+  }
+}
