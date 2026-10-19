@@ -84,6 +84,12 @@ pnpm-debug.log*
 .env*.local
 
 # ==========================================
+# Serena
+# ==========================================
+.serena/*.local.yml
+.serena/cache/
+
+# ==========================================
 # Operating System files
 # ==========================================
 Thumbs.db
@@ -93,3 +99,4 @@ $RECYCLE.BIN/
 .DS_Store
 .AppleDouble
 .LSOverride
+
