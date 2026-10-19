@@ -20,6 +20,7 @@ Replace this placeholder with a concise description of what this project does, w
 - New feature: feat: initialize fe workspace with Report 4 ReactJS package skeleton [fe/README.md]
 - Database successfully updated and verified on local SQL Server WMMS_DB with InitialCreate migration and automatic seed execution on startup.
 - Serena installed at D:\Tools\serena with Python 3.12, registered in Antigravity mcp_config.json for WMMS, and pjm doctor verified healthy.
+- Spec Kit initialized for WMMS with Gemini integration, PowerShell scripts, and 10 speckit slash commands.
 
 ## Key files
 - `WMMS_BE.sln`
