@@ -19,6 +19,7 @@ Replace this placeholder with a concise description of what this project does, w
 - Merge: chore: merge remote initial commit and keep monorepo .gitignore
 - New feature: feat: initialize fe workspace with Report 4 ReactJS package skeleton [fe/README.md]
 - Database successfully updated and verified on local SQL Server WMMS_DB with InitialCreate migration and automatic seed execution on startup.
+- Serena installed at D:\Tools\serena with Python 3.12, registered in Antigravity mcp_config.json for WMMS, and pjm doctor verified healthy.
 
 ## Key files
 - `WMMS_BE.sln`
@@ -36,6 +37,8 @@ Replace this placeholder with a concise description of what this project does, w
 - `fe/src/routes/.gitkeep`
 - `fe/src/services/.gitkeep`
 - `fe/src/utils/.gitkeep`
+- `3.12`
+- `mcp_config.json`
 
 ## Open questions
 - None logged yet.
