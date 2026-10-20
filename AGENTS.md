@@ -44,3 +44,49 @@ via the MCP tools and the summary will follow.
 Do not re-scan source files when MCP tools can give you the same
 answer in a few hundred tokens instead of thousands. This is not optional.
 <!-- <<< projectmem bridge <<< -->
+
+<!-- >>> ai usage logging bridge >>> -->
+## AI Usage Logging Protocol (MANDATORY)
+
+Mỗi khi thực hiện coding hoặc thay đổi quan trọng trong dự án WMMS:
+1. **Ghi log vào file Excel**:
+   - Đường dẫn: `D:\Các kỳ học\FALL2026\Final_Project\Tài liệu\Tài Liệu\WMMS_docs\WMMS_AI_Usage_Report.xlsx`
+   - Cột `Evidence / Link`: Ghi rõ tham chiếu đến file Word `AI_Usage_Evidence.docx` kèm mục tương ứng (ví dụ: `AI_Usage_Evidence.docx - Entry #...`).
+2. **Ghi nội dung chi tiết Evidence vào file Word**:
+   - Đường dẫn: `D:\Các kỳ học\FALL2026\Final_Project\Tài liệu\Tài Liệu\WMMS_docs\AI_Usage_Evidence.docx`
+   - Cấu trúc mỗi mục:
+     + Entry / Session ID
+     + Thời gian (Timestamp: YYYY-MM-DD HH:mm:ss)
+     + Câu lệnh Prompt của User
+     + Kết quả trả về (Tóm tắt nhưng đầy đủ các thay đổi, file tạo/sửa, migration, kết quả kiểm thử/build).
+3. **Thực hiện xuyên suốt**: Luôn cập nhật cả hai file trên mỗi khi hoàn thành một tác vụ coding.
+<!-- <<< ai usage logging bridge <<< -->
+
+<!-- >>> git workflow bridge >>> -->
+## Git & Branching Workflow Protocol (MANDATORY)
+
+1. **Quy tắc phân nhánh (Branching Rule)**:
+   - Mỗi thành viên làm việc trên một nhánh riêng (`luong`, `duy`, `duong`,...).
+   - **Nhánh làm việc của User là `luong`**. Mọi thao tác lập trình, kiểm thử, commit và push code PHẢI thực hiện trên nhánh `luong`.
+   - **Tuyệt đối KHÔNG làm việc trực tiếp hoặc push lên nhánh `main`**. Chỉ push/merge lên `main` khi có chỉ đạo rõ ràng từ User ("khi đó sẽ có lệnh up lên main").
+2. **Quy trình trước khi code & commit/push**:
+   - Trước mỗi lần code mới hoặc commit/push:
+     + Kiểm tra trạng thái toàn bộ nhánh: `git fetch origin`, `git branch -a`.
+     + Pull cập nhật mới nhất về nhánh làm việc: `git pull origin luong` (hoặc đồng bộ rebase/merge từ `main` nếu `main` có cập nhật từ team).
+   - Kiểm tra `git status` và `git diff` trước khi commit, đảm bảo không commit file thừa, bí mật bảo mật (.env), hoặc file build/cache.
+3. **Chuẩn hóa Commit & Code Quality**:
+   - Tuân thủ quy chuẩn Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`.
+   - Đảm bảo dự án build thành công (`dotnet build` 0 errors) trước khi tạo commit và push.
+<!-- <<< git workflow bridge <<< -->
+
+<!-- >>> docs synchronization bridge >>> -->
+## Documentation & Specification Protocol (MANDATORY)
+
+1. **Thư mục tài liệu gốc**:
+   - Đường dẫn: `D:\Các kỳ học\FALL2026\Final_Project\Tài liệu\Tài Liệu\WMMS_docs`
+   - Chứa: `WMMS_Specification.docx`, `Report4.docx`, `Bảng chi tiết các quy trình nghiệp vụ.xlsx`, `sampleOrder.xlsx`, `sampleBOM.xls`.
+2. **Kiểm tra trước khi code**:
+   - Mỗi lần thực hiện tính năng hoặc nghiệp vụ, bắt buộc đọc và rà soát lại tài liệu trong thư mục trên để cập nhật các yêu cầu/luồng mới nhất mà User đã chỉnh sửa.
+3. **Đồng bộ hóa Code & Docs**:
+   - Nếu trong quá trình phát triển có chức năng phát sinh hoặc logic thực tế chưa có trong docs, cần chủ động cập nhật/sửa đổi tài liệu trong `WMMS_docs` để đặc tả và mã nguồn luôn thống nhất 100%.
+<!-- <<< docs synchronization bridge <<< -->
