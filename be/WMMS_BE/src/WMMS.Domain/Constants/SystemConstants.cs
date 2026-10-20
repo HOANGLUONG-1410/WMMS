@@ -32,3 +32,11 @@ public static class SystemConfigKeys
     public const string DefaultScrapMax = "DEFAULT_SCRAP_MAX";
     public const string EtdWarningDays = "ETD_WARNING_DAYS";
 }
+
+public static class BusinessRuleConstants
+{
+    public const string Br001ActiveBomUniqueness = "BR-001";
+    public const string Br002NaturalScrapRateRange = "BR-002";
+    public const string Br011BomStagingImport = "BR-011";
+}
+

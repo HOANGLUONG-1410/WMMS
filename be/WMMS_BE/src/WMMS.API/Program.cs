@@ -1,10 +1,20 @@
 using System.Text;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using WMMS.API.Middlewares;
+using WMMS.Application.Interfaces.External;
+using WMMS.Application.Interfaces.Repositories;
+using WMMS.Application.Interfaces.Services;
+using WMMS.Application.Mappers;
+using WMMS.Application.Services.BomRouting;
+using WMMS.Application.Validators.BomRouting;
+using WMMS.Infrastructure.Excel;
 using WMMS.Infrastructure.Persistence;
 using WMMS.Infrastructure.Persistence.Seed;
+using WMMS.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,14 +69,29 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 4. API Controllers & JSON Formatting
+// 4. Application & Infrastructure Services (DI)
+builder.Services.AddAutoMapper(typeof(BomMappingProfile).Assembly);
+builder.Services.AddValidatorsFromAssemblyContaining<CreateBomRequestValidator>();
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IBomRepository, BomRepository>();
+builder.Services.AddScoped<IRoutingRepository, RoutingRepository>();
+builder.Services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IMaterialRepository, MaterialRepository>();
+builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+
+builder.Services.AddScoped<IExcelBomParser, ExcelBomParser>();
+builder.Services.AddScoped<IBomRoutingService, BomRoutingService>();
+
+// 5. API Controllers & JSON Formatting
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-// 5. Swagger with JWT Support
+// 6. Swagger with JWT Support
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -115,6 +140,8 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
 app.UseHttpsRedirection();
 
 app.UseCors("WmmsCorsPolicy");
@@ -129,6 +156,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<WmmsDbContext>();
+        await context.Database.MigrateAsync();
         await DbInitializer.SeedAsync(context);
     }
     catch (Exception ex)
