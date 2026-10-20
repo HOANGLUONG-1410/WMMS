@@ -84,9 +84,23 @@ Mỗi khi thực hiện coding hoặc thay đổi quan trọng trong dự án WM
 
 1. **Thư mục tài liệu gốc**:
    - Đường dẫn: `D:\Các kỳ học\FALL2026\Final_Project\Tài liệu\Tài Liệu\WMMS_docs`
-   - Chứa: `WMMS_Specification.docx`, `Report4.docx`, `Bảng chi tiết các quy trình nghiệp vụ.xlsx`, `sampleOrder.xlsx`, `sampleBOM.xls`.
+   - Chứa: `WMMS_Specification.docx`, `Report-3.docx`, `Report4.docx`, `Bảng chi tiết các quy trình nghiệp vụ.xlsx`, `sampleOrder.xlsx`, `sampleBOM.xls`.
 2. **Kiểm tra trước khi code**:
    - Mỗi lần thực hiện tính năng hoặc nghiệp vụ, bắt buộc đọc và rà soát lại tài liệu trong thư mục trên để cập nhật các yêu cầu/luồng mới nhất mà User đã chỉnh sửa.
 3. **Đồng bộ hóa Code & Docs**:
    - Nếu trong quá trình phát triển có chức năng phát sinh hoặc logic thực tế chưa có trong docs, cần chủ động cập nhật/sửa đổi tài liệu trong `WMMS_docs` để đặc tả và mã nguồn luôn thống nhất 100%.
 <!-- <<< docs synchronization bridge <<< -->
+
+<!-- >>> code documentation and migration bridge >>> -->
+## Code Documentation & EF Core Code-First Migration Protocol (MANDATORY)
+
+1. **Ghi chú & Đặc tả trong Code (Code Comments & XML Documentation)**:
+   - Mỗi khi viết hoặc sửa code (Entities, DTOs, Interfaces, Services, Controllers, Validators, Middlewares), **bắt buộc** phải bổ sung ghi chú XML (`/// <summary>`) và comment giải thích rõ nghiệp vụ, mã Use Case (`UC-01`, `UC-02`,...), và mã Business Rule (`GBR-04`, `BR-SEC-01`, `BR-ADM-01`,...) để các thành viên khác trong nhóm đọc vào hiểu ngay luồng xử lý.
+   - Bật `GenerateDocumentationFile` trên project API để hiển thị đầy đủ mô tả đặc tả trên giao diện Swagger UI cho team FE dễ tích hợp.
+2. **Quy trình Chỉnh sửa DB theo chuẩn Code-First (EF Core Migrations)**:
+   - Tuyệt đối không sửa trực tiếp bảng trong SQL Server bằng tay.
+   - Mỗi khi thêm/sửa Entity hoặc Fluent API Configuration trong `WMMS.Domain` và `WMMS.Infrastructure`:
+     + Bước 1: Kiểm tra và đồng bộ nhánh Git để tránh xung đột snapshot (`ModelSnapshot`) với thành viên khác.
+     + Bước 2: Tạo migration mới với tên mô tả rõ ràng: `dotnet ef migrations add <TenMigration> --project src/WMMS.Infrastructure --startup-project src/WMMS.API --output-dir Persistence/Migrations`.
+     + Bước 3: Cập nhật vào database: `dotnet ef database update --project src/WMMS.Infrastructure --startup-project src/WMMS.API`.
+<!-- <<< code documentation and migration bridge <<< -->

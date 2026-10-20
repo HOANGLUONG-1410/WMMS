@@ -16,18 +16,42 @@ public static class DbInitializer
         {
             var roles = new List<Role>
             {
-                new() { RoleCode = RoleConstants.Admin, RoleName = "System Administrator", PermissionsJson = "{\"all\": true}" },
-                new() { RoleCode = RoleConstants.Owner, RoleName = "Factory Owner / Executive", PermissionsJson = "{\"view_all\": true, \"approve_orders\": true}" },
-                new() { RoleCode = RoleConstants.Sales, RoleName = "Sales Staff", PermissionsJson = "{\"manage_orders\": true, \"view_customers\": true}" },
-                new() { RoleCode = RoleConstants.Planner, RoleName = "Production Planner", PermissionsJson = "{\"manage_boms\": true, \"manage_batches\": true, \"manage_prs\": true}" },
-                new() { RoleCode = RoleConstants.Purchasing, RoleName = "Purchasing Officer", PermissionsJson = "{\"manage_pos\": true, \"manage_suppliers\": true}" },
-                new() { RoleCode = RoleConstants.Warehouse, RoleName = "Warehouse Keeper", PermissionsJson = "{\"manage_inventory\": true, \"manage_grns\": true}" },
-                new() { RoleCode = RoleConstants.Leader, RoleName = "Production Team Leader", PermissionsJson = "{\"manage_routing\": true, \"view_kanban\": true}" },
-                new() { RoleCode = RoleConstants.Qc, RoleName = "Quality Control Inspector", PermissionsJson = "{\"manage_qc\": true, \"log_defects\": true}" }
+                new() { RoleCode = RoleConstants.Admin, RoleName = "System Administrator", Description = "Full system control, user & multi-role RBAC management, and system audit log inspection.", PermissionsJson = "{\"all\": true, \"users.manage\": true, \"roles.manage\": true, \"audit.view\": true}" },
+                new() { RoleCode = RoleConstants.Owner, RoleName = "Factory Owner / Executive", Description = "Executive KPI dashboard, ETD risk monitoring, and high-level order/PR approvals.", PermissionsJson = "{\"view_all\": true, \"approve_orders\": true, \"approve_prs\": true, \"dashboard.view\": true}" },
+                new() { RoleCode = RoleConstants.Sales, RoleName = "Sales Staff", Description = "Customer order registration, space & item management, and order progress tracking.", PermissionsJson = "{\"manage_orders\": true, \"view_customers\": true}" },
+                new() { RoleCode = RoleConstants.Planner, RoleName = "Production Planner", Description = "BOM definition, routing configuration, inventory reconciliation, PR consolidation, and batch creation.", PermissionsJson = "{\"manage_boms\": true, \"manage_batches\": true, \"manage_prs\": true}" },
+                new() { RoleCode = RoleConstants.Purchasing, RoleName = "Purchasing Officer", Description = "Supplier management, PO issuance from approved PRs, and procurement tracking.", PermissionsJson = "{\"manage_pos\": true, \"manage_suppliers\": true}" },
+                new() { RoleCode = RoleConstants.Warehouse, RoleName = "Warehouse Keeper", Description = "Goods receipt (GRN), material stock management, and shop-floor material issuance.", PermissionsJson = "{\"manage_inventory\": true, \"manage_grns\": true}" },
+                new() { RoleCode = RoleConstants.Leader, RoleName = "Production Team Leader", Description = "Kanban board execution, workstation step progression, and rework sub-card handling.", PermissionsJson = "{\"manage_routing\": true, \"view_kanban\": true, \"execute_steps\": true}" },
+                new() { RoleCode = RoleConstants.Qc, RoleName = "Quality Control Inspector", Description = "100% QC gate inspection, 97%-3% defect branching, and Hold-Point verification.", PermissionsJson = "{\"manage_qc\": true, \"log_defects\": true}" }
             };
 
             await context.Roles.AddRangeAsync(roles);
             await context.SaveChangesAsync();
+        }
+        else
+        {
+            // Cập nhật Description cho các Role đã seed trước đó nếu đang null
+            var existingRoles = await context.Roles.Where(r => r.Description == null).ToListAsync();
+            if (existingRoles.Count > 0)
+            {
+                foreach (var role in existingRoles)
+                {
+                    role.Description = role.RoleCode switch
+                    {
+                        RoleConstants.Admin => "Full system control, user & multi-role RBAC management, and system audit log inspection.",
+                        RoleConstants.Owner => "Executive KPI dashboard, ETD risk monitoring, and high-level order/PR approvals.",
+                        RoleConstants.Sales => "Customer order registration, space & item management, and order progress tracking.",
+                        RoleConstants.Planner => "BOM definition, routing configuration, inventory reconciliation, PR consolidation, and batch creation.",
+                        RoleConstants.Purchasing => "Purchasing Officer responsible for suppliers and PO issuance.",
+                        RoleConstants.Warehouse => "Warehouse Keeper responsible for inventory stock and GRN receipts.",
+                        RoleConstants.Leader => "Production Team Leader responsible for shop-floor Kanban execution.",
+                        RoleConstants.Qc => "Quality Control Inspector responsible for stage gate inspections and defect logs.",
+                        _ => role.RoleName
+                    };
+                }
+                await context.SaveChangesAsync();
+            }
         }
 
         // 2. Seed Default Admin User

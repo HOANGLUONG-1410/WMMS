@@ -13,6 +13,7 @@ Replace this placeholder with a concise description of what this project does, w
 - Keep C# entity class names aligned with Report 4 Class Diagrams (CustomerOrder, BomHeader, MaterialStock, PurchaseRequest) and map them via EF Core Fluent API ToTable() to Report 4 Physical ERD snake_case tables (sales_orders, boms, inventory_stocks, consolidated_prs). [be/WMMS_BE/src/WMMS.Infrastructure/Persistence/Configurations/]
 - Implement complete Code-First DB layer with EF Core 8 and SQL Server, 31 domain entities, snake_case table mappings, optimistic concurrency rowversion, InitialCreate migration, and DbInitializer seed data.
 - Enforce dedicated branch workflow on branch luong (no direct push to main), documentation sync with WMMS_docs, and mandatory dual AI usage logging in WMMS_AI_Usage_Report.xlsx and AI_Usage_Evidence.docx.
+- Implement full Authentication, Authorization & User Management (AUT & ADM) module (UC-01 to UC-14, JOB-01) with JWT + SHA-256 Refresh Token rotation, 5-attempt 30-min lockout, 6-digit OTP + token password reset (15-min TTL, 3/10min rate limit), Multi-Role RBAC user CRUD, role permission matrix config, and immutable system audit log query APIs.
 
 ## Notes
 - gotcha: Never reconcile BOM demand against raw PhysicalQty; always enforce AvailableQty = max(0, PhysicalQty - AllocatedQty) with SQL Server rowversion optimistic concurrency on inventory_stocks, and enforce 100% QC Pass before advancing Kanban cards (or 97%-3% branching / Overdrive HoldPointStageSeq lock). [be/WMMS_BE/src/WMMS.Application/Services/]
@@ -22,6 +23,7 @@ Replace this placeholder with a concise description of what this project does, w
 - Database successfully updated and verified on local SQL Server WMMS_DB with InitialCreate migration and automatic seed execution on startup.
 - Serena installed at D:\Tools\serena with Python 3.12, registered in Antigravity mcp_config.json for WMMS, and pjm doctor verified healthy.
 - Spec Kit initialized for WMMS with Gemini integration, PowerShell scripts, and 10 speckit slash commands.
+- Added Code Documentation (mandatory XML summary comments with UC/BR references + Swagger XML docs) and EF Core Code-First Migration protocol to AGENTS.md and CLAUDE.md; applied migration 20261020160920_AddAuthAndPasswordResetEnhancements to WMMS_DB.
 
 ## Key files
 - `WMMS_BE.sln`
@@ -43,6 +45,7 @@ Replace this placeholder with a concise description of what this project does, w
 - `mcp_config.json`
 - `WMMS_AI_Usage_Report.xlsx`
 - `AI_Usage_Evidence.docx`
+- `AGENTS.md`
 
 ## Open questions
 - None logged yet.
