@@ -7,11 +7,18 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using WMMS.API.Middlewares;
 using WMMS.API.Schedulers;
+using WMMS.Application.Interfaces.External;
+using WMMS.Application.Interfaces.Repositories;
 using WMMS.Application.Interfaces.Services;
+using WMMS.Application.Mappers;
+using WMMS.Application.Services.BomRouting;
 using WMMS.Application.Validators.Auth;
+using WMMS.Application.Validators.BomRouting;
+using WMMS.Infrastructure.Excel;
 using WMMS.Infrastructure.Mail;
 using WMMS.Infrastructure.Persistence;
 using WMMS.Infrastructure.Persistence.Seed;
+using WMMS.Infrastructure.Repositories;
 using WMMS.Infrastructure.Security;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,15 +33,36 @@ builder.Services.AddDbContext<WmmsDbContext>(options =>
     });
 });
 
-// 2. Application & Infrastructure Services (AUT & ADM Modules)
+// 2. Application & Infrastructure Services (DI)
+builder.Services.AddAutoMapper(typeof(BomMappingProfile).Assembly);
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateBomRequestValidator>();
+
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+
+// Phân hệ 1: Authentication & Session Security (AUT - UC-01..UC-05)
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Phân hệ 3: System Administration & Multi-Role RBAC (ADM - UC-06..UC-15)
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+// Phân hệ 4: Order Intake & Order Space Initialization (ORD - UC-30..UC-35)
+builder.Services.AddScoped<IOrderIntakeService, OrderIntakeService>();
+
+// Phân hệ 5: Material Breakdown & BOM Preparation (BOM - UC-38..UC-41)
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IBomRepository, BomRepository>();
+builder.Services.AddScoped<IRoutingRepository, RoutingRepository>();
+builder.Services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IMaterialRepository, MaterialRepository>();
+builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+builder.Services.AddScoped<IExcelBomParser, ExcelBomParser>();
+builder.Services.AddScoped<IBomRoutingService, BomRoutingService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();

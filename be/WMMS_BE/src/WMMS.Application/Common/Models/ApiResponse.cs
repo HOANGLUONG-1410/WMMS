@@ -15,35 +15,61 @@ public class ApiResponse<T>
     public object? Errors { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-    public static ApiResponse<T> Ok(T data, string message = "Operation completed successfully.", string messageCode = MessageCodes.Msg07Success)
-        => new()
+    public static ApiResponse<T> Ok(T data, string message = "Success", string messageCode = MessageCodes.Msg07Success)
+    {
+        return new ApiResponse<T>
         {
             Success = true,
             MessageCode = messageCode,
             Message = message,
             Data = data
         };
+    }
 
-    public static ApiResponse<T> Fail(string message, string messageCode = MessageCodes.Msg13ValidationError, object? errors = null)
-        => new()
+    public static ApiResponse<T> Fail(string message, List<string>? errors = null, string messageCode = MessageCodes.Msg13ValidationError)
+    {
+        return new ApiResponse<T>
+        {
+            Success = false,
+            MessageCode = messageCode,
+            Message = message,
+            Errors = errors ?? new List<string>()
+        };
+    }
+
+    public static ApiResponse<T> Fail(string message, string messageCode, object? errors = null)
+    {
+        return new ApiResponse<T>
         {
             Success = false,
             MessageCode = messageCode,
             Message = message,
             Errors = errors
         };
+    }
 }
 
-/// <summary>
-/// Cấu trúc dữ liệu phân trang chuẩn (Paginated Result) dùng cho danh sách tài khoản (UC-06) và nhật ký kiểm toán (UC-13).
-/// </summary>
-public class PagedResult<T>
+public class ApiResponse : ApiResponse<object>
 {
-    public IReadOnlyList<T> Items { get; set; } = Array.Empty<T>();
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
-    public int TotalCount { get; set; }
-    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 0;
-    public bool HasPreviousPage => PageNumber > 1;
-    public bool HasNextPage => PageNumber < TotalPages;
+    public static ApiResponse Ok(string message = "Success", string messageCode = MessageCodes.Msg07Success)
+    {
+        return new ApiResponse
+        {
+            Success = true,
+            MessageCode = messageCode,
+            Message = message,
+            Data = null
+        };
+    }
+
+    public static new ApiResponse Fail(string message, List<string>? errors = null, string messageCode = MessageCodes.Msg13ValidationError)
+    {
+        return new ApiResponse
+        {
+            Success = false,
+            MessageCode = messageCode,
+            Message = message,
+            Errors = errors ?? new List<string>()
+        };
+    }
 }
