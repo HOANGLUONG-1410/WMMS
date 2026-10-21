@@ -93,6 +93,11 @@ public static class AuditActionConstants
     public const string OrderStagingConfirmed = "CONFIRM_PO_STAGING";
     public const string OrderSpaceInitialized = "CREATE_ORDER_SPACE";
     public const string OrderSpaceDrawingUpdated = "UPDATE_ORDER_SPACE_DRAWING";
+
+    // Phân hệ 5: Material Breakdown & BOM Preparation (BOM - QT-02, SC-10, SC-11, UC-38..UC-41)
+    public const string BomCreated = "BOM_CREATED";
+    public const string BomUpdated = "BOM_UPDATED";
+    public const string BomApproved = "BOM_APPROVED";
 }
 
 public static class DefectCodeConstants
@@ -117,4 +122,3 @@ public static class BusinessRuleConstants
     public const string Br002NaturalScrapRateRange = "BR-002";
     public const string Br011BomStagingImport = "BR-011";
 }
-

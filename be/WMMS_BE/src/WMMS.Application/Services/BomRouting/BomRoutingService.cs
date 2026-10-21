@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AutoMapper;
 using WMMS.Application.DTOs.BomRouting;
 using WMMS.Application.Interfaces.External;
@@ -5,11 +6,20 @@ using WMMS.Application.Interfaces.Repositories;
 using WMMS.Application.Interfaces.Services;
 using WMMS.Domain.Constants;
 using WMMS.Domain.Entities.CatalogBom;
+using WMMS.Domain.Entities.Identity;
 using WMMS.Domain.Enums;
 using WMMS.Domain.Exceptions;
 
 namespace WMMS.Application.Services.BomRouting;
 
+/// <summary>
+/// Triển khai Dịch vụ Bóc tách Định mức Nguyên vật liệu (BOM) &amp; Quy trình Sản xuất Động (Phân hệ 5 - QT-02, SC-10, SC-11, UC-38..UC-41).
+/// Tuân thủ đầy đủ quy tắc nghiệp vụ:
+/// - BR-001: Mỗi dòng đơn hàng (<c>OrderItem</c>) chỉ có duy nhất một bản BOM Active/Draft.
+/// - BR-002: Tỷ lệ hao hụt gỗ tự nhiên đối chiếu động theo tham số cấu hình hệ thống (<c>DEFAULT_SCRAP_MIN</c> .. <c>DEFAULT_SCRAP_MAX</c>).
+/// - BR-011: Kiểm tra và xác nhận import BOM từ vùng đệm Staging Grid.
+/// - GBR-05: Ghi vết kiểm toán bất biến (<c>audit_logs</c>) khi khởi tạo, cập nhật và phê duyệt/chốt BOM.
+/// </summary>
 public class BomRoutingService : IBomRoutingService
 {
     private readonly IBomRepository _bomRepository;
@@ -177,7 +187,7 @@ public class BomRoutingService : IBomRoutingService
                 $"BOM for OrderItemId {request.OrderItemId} already exists. Enforcing BR-001: Only one Active BOM is allowed per order item.");
         }
 
-        // 2. Validate BR-002 (Tỷ lệ hao hụt tự nhiên 3% - 5%)
+        // 2. Validate BR-002 (Tỷ lệ hao hụt tự nhiên theo SystemConfig DEFAULT_SCRAP_MIN .. DEFAULT_SCRAP_MAX)
         await ValidateScrapRateAsync(request.ScrapRatePercent);
 
         // 3. Verify OrderItem & Product
@@ -196,6 +206,7 @@ public class BomRoutingService : IBomRoutingService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var now = DateTime.UtcNow;
             var bomHeader = new BomHeader
             {
                 OrderItemId = request.OrderItemId,
@@ -203,7 +214,7 @@ public class BomRoutingService : IBomRoutingService
                 CreatedBy = currentUserId,
                 ScrapRatePercent = request.ScrapRatePercent,
                 BomStatus = BomStatusEnum.DRAFT,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = now
             };
 
             await _bomRepository.AddAsync(bomHeader);
@@ -242,6 +253,29 @@ public class BomRoutingService : IBomRoutingService
             orderItem.Status = OrderItemStatusEnum.BOM_DRAFT;
             await _orderItemRepository.UpdateAsync(orderItem);
 
+            // Ghi vết kiểm toán bất biến GBR-05 vào bảng audit_logs
+            var afterStateJson = JsonSerializer.Serialize(new
+            {
+                bomHeader.BomId,
+                bomHeader.OrderItemId,
+                bomHeader.ProductId,
+                bomHeader.ScrapRatePercent,
+                BomStatus = bomHeader.BomStatus.ToString(),
+                MaterialLinesCount = details.Count
+            });
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.BomCreated,
+                EntityName = "BomHeader",
+                EntityId = bomHeader.BomId.ToString(),
+                BeforeState = null,
+                AfterState = afterStateJson,
+                Reason = $"Created BOM in DRAFT state for OrderItem #{request.OrderItemId} with {request.ScrapRatePercent:0.##}% scrap rate (SC-10, BR-001, BR-002).",
+                CreatedAt = now
+            });
+
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
 
@@ -271,8 +305,17 @@ public class BomRoutingService : IBomRoutingService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var now = DateTime.UtcNow;
+            var beforeStateJson = JsonSerializer.Serialize(new
+            {
+                bomHeader.BomId,
+                bomHeader.ScrapRatePercent,
+                BomStatus = bomHeader.BomStatus.ToString(),
+                MaterialLinesCount = bomHeader.BomDetails.Count
+            });
+
             bomHeader.ScrapRatePercent = request.ScrapRatePercent;
-            bomHeader.UpdatedAt = DateTime.UtcNow;
+            bomHeader.UpdatedAt = now;
 
             await _bomRepository.UpdateAsync(bomHeader);
 
@@ -309,6 +352,88 @@ public class BomRoutingService : IBomRoutingService
                 });
                 await _routingRepository.SaveCustomRoutingAsync(bomHeader.ProductId, stages);
             }
+
+            var afterStateJson = JsonSerializer.Serialize(new
+            {
+                bomHeader.BomId,
+                bomHeader.ScrapRatePercent,
+                BomStatus = bomHeader.BomStatus.ToString(),
+                MaterialLinesCount = newDetails.Count
+            });
+
+            // Ghi vết kiểm toán bất biến GBR-05 vào bảng audit_logs
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.BomUpdated,
+                EntityName = "BomHeader",
+                EntityId = bomHeader.BomId.ToString(),
+                BeforeState = beforeStateJson,
+                AfterState = afterStateJson,
+                Reason = $"Updated BOM #{bomId} material breakdown and recalculated gross demand with {request.ScrapRatePercent:0.##}% scrap rate (SC-10, BR-002).",
+                CreatedAt = now
+            });
+
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+
+            return (await GetBomByIdAsync(bomHeader.BomId))!;
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    public async Task<BomDto> ApproveBomAsync(long bomId, long currentUserId)
+    {
+        var bomHeader = await _bomRepository.GetByIdAsync(bomId);
+        if (bomHeader == null)
+        {
+            throw new NotFoundException($"Bom with ID {bomId} was not found.");
+        }
+
+        if (!bomHeader.BomDetails.Any())
+        {
+            throw new DomainException("Cannot approve an empty BOM without material lines.", "BOM_EMPTY");
+        }
+
+        await ValidateScrapRateAsync(bomHeader.ScrapRatePercent);
+
+        var orderItem = await _orderItemRepository.GetByIdAsync(bomHeader.OrderItemId);
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var now = DateTime.UtcNow;
+            var previousStatus = bomHeader.BomStatus.ToString();
+
+            bomHeader.BomStatus = BomStatusEnum.READY_FOR_PRODUCTION;
+            bomHeader.UpdatedAt = now;
+            await _bomRepository.UpdateAsync(bomHeader);
+
+            if (orderItem != null)
+            {
+                orderItem.Status = OrderItemStatusEnum.READY_PROD;
+                await _orderItemRepository.UpdateAsync(orderItem);
+            }
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.BomApproved,
+                EntityName = "BomHeader",
+                EntityId = bomHeader.BomId.ToString(),
+                BeforeState = JsonSerializer.Serialize(new { BomStatus = previousStatus }),
+                AfterState = JsonSerializer.Serialize(new
+                {
+                    BomStatus = bomHeader.BomStatus.ToString(),
+                    OrderItemStatus = orderItem?.Status.ToString()
+                }),
+                Reason = $"Locked and approved BOM #{bomId} to READY_FOR_PRODUCTION (QT-02, SC-10).",
+                CreatedAt = now
+            });
 
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
@@ -422,11 +547,11 @@ public class BomRoutingService : IBomRoutingService
         var minScrap = await _systemConfigRepository.GetDecimalConfigAsync(SystemConfigKeys.DefaultScrapMin, 3.00m);
         var maxScrap = await _systemConfigRepository.GetDecimalConfigAsync(SystemConfigKeys.DefaultScrapMax, 5.00m);
 
-        // Allow reasonable operational upper bound up to 15%
-        if (scrapRate < minScrap || scrapRate > 15.00m)
+        // Đối chiếu chính xác với ngưỡng [DEFAULT_SCRAP_MIN .. DEFAULT_SCRAP_MAX] cấu hình trong system_configs (BR-002, UC-15)
+        if (scrapRate < minScrap || scrapRate > maxScrap)
         {
             throw new InvalidScrapRateException(
-                $"Scrap rate {scrapRate:F2}% violates BR-002: Natural wood scrap rate must be between {minScrap:F2}% and 15.00% (default standard is {minScrap:F2}% - {maxScrap:F2}%).");
+                $"Scrap rate {scrapRate:F2}% violates BR-002: Natural wood scrap rate must be between {minScrap:F2}% and {maxScrap:F2}%.");
         }
     }
 

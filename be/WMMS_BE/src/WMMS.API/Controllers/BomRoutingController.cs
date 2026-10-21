@@ -7,6 +7,9 @@ using WMMS.Application.Interfaces.Services;
 
 namespace WMMS.API.Controllers;
 
+/// <summary>
+/// API Controller quản lý Bóc tách Định mức Nguyên vật liệu (BOM) &amp; Quy trình Sản xuất Động (Phân hệ 5 - QT-02, SC-10, SC-11, UC-38..UC-41).
+/// </summary>
 [ApiController]
 [Route("api/v1/bom")]
 public class BomRoutingController : ControllerBase
@@ -60,7 +63,7 @@ public class BomRoutingController : ControllerBase
     }
 
     /// <summary>
-    /// QT-02: Kiểm tra sản phẩm đã có BOM sẵn trong hệ thống chưa để kế thừa (Inherited BOM & Dynamic Routing).
+    /// QT-02: Kiểm tra sản phẩm đã có BOM sẵn trong hệ thống chưa để kế thừa (Inherited BOM &amp; Dynamic Routing).
     /// </summary>
     [HttpGet("check-product/{productId:long}")]
     public async Task<ActionResult<ApiResponse<InheritedBomDto>>> CheckProductBom(long productId)
@@ -90,7 +93,7 @@ public class BomRoutingController : ControllerBase
     }
 
     /// <summary>
-    /// QT-02 & BR-002: Xem trước tính toán tổng nhu cầu nguyên vật liệu có hao hụt:
+    /// QT-02 &amp; BR-002: Xem trước tính toán tổng nhu cầu nguyên vật liệu có hao hụt:
     /// GrossTotalDemand = (NetQtyPerUnit * OrderedQty) * (1 + ScrapRatePercent / 100)
     /// </summary>
     [HttpPost("calculate-demand")]
@@ -107,7 +110,7 @@ public class BomRoutingController : ControllerBase
     }
 
     /// <summary>
-    /// SC-10, QT-02, BR-001 & BR-002: Bóc tách & Khởi tạo BOM mới ở trạng thái Draft kèm quy trình tùy biến.
+    /// SC-10, QT-02, BR-001 &amp; BR-002: Bóc tách &amp; Khởi tạo BOM mới ở trạng thái Draft kèm quy trình tùy biến.
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<ApiResponse<BomDto>>> CreateBom([FromBody] CreateBomRequestDto request)
@@ -141,7 +144,18 @@ public class BomRoutingController : ControllerBase
     }
 
     /// <summary>
-    /// SC-11 & BR-011: Tải file Excel BOM lên vùng đệm Staging Grid UI, tự động kiểm tra định dạng và báo lỗi các ô/dòng không hợp lệ.
+    /// QT-02 &amp; SC-10: Phê duyệt / Chốt khóa BOM từ trạng thái DRAFT sang READY_FOR_PRODUCTION và ghi Audit Log (GBR-05).
+    /// </summary>
+    [HttpPatch("{bomId:long}/approve")]
+    public async Task<ActionResult<ApiResponse<BomDto>>> ApproveBom(long bomId)
+    {
+        long currentUserId = GetCurrentUserId();
+        var result = await _bomRoutingService.ApproveBomAsync(bomId, currentUserId);
+        return Ok(ApiResponse<BomDto>.Ok(result, "Đã chốt và phê duyệt BOM sang trạng thái READY_FOR_PRODUCTION."));
+    }
+
+    /// <summary>
+    /// SC-11 &amp; BR-011: Tải file Excel BOM lên vùng đệm Staging Grid UI, tự động kiểm tra định dạng và báo lỗi các ô/dòng không hợp lệ.
     /// </summary>
     [HttpPost("staging-preview")]
     [Consumes("multipart/form-data")]
@@ -167,7 +181,7 @@ public class BomRoutingController : ControllerBase
     }
 
     /// <summary>
-    /// SC-11 & BR-011: Xác nhận Confirm dữ liệu từ Staging Grid sau khi KHVT kiểm tra/sửa lỗi để lưu vào CSDL chính.
+    /// SC-11 &amp; BR-011: Xác nhận Confirm dữ liệu từ Staging Grid sau khi KHVT kiểm tra/sửa lỗi để lưu vào CSDL chính.
     /// </summary>
     [HttpPost("staging-confirm")]
     public async Task<ActionResult<ApiResponse<BomDto>>> ConfirmStaging([FromBody] ConfirmBomStagingRequestDto request)

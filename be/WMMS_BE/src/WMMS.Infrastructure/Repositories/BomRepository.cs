@@ -1,11 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using WMMS.Application.Interfaces.Repositories;
 using WMMS.Domain.Entities.CatalogBom;
+using WMMS.Domain.Entities.Identity;
 using WMMS.Domain.Enums;
 using WMMS.Infrastructure.Persistence;
 
 namespace WMMS.Infrastructure.Repositories;
 
+/// <summary>
+/// Triển khai kho lưu trữ BOM (<c>bom_headers</c>, <c>bom_details</c>) và lưu vết kiểm toán bất biến (<c>audit_logs</c>) (GBR-05, QT-02).
+/// </summary>
 public class BomRepository : IBomRepository
 {
     private readonly WmmsDbContext _context;
@@ -80,5 +84,10 @@ public class BomRepository : IBomRepository
     {
         _context.BomDetails.RemoveRange(details);
         return Task.CompletedTask;
+    }
+
+    public async Task AddAuditLogAsync(AuditLog auditLog)
+    {
+        await _context.AuditLogs.AddAsync(auditLog);
     }
 }
