@@ -22,7 +22,7 @@ public static class RoleConstants
 }
 
 /// <summary>
-/// Chuẩn hóa mã thông báo hệ thống (System Message Codes MSG01 - MSG13) theo đặc tả Report 3 (Mục 3.1.4).
+/// Chuẩn hóa mã thông báo hệ thống (System Message Codes MSG01 - MSG13) theo đặc tả Report 3 (Mục 3.1.4 &amp; Phần V.2).
 /// </summary>
 public static class MessageCodes
 {
@@ -47,7 +47,7 @@ public static class MessageCodes
     /// <summary>MSG07: Thay đổi thông tin / tạo mới thành công.</summary>
     public const string Msg07Success = "MSG07";
 
-    /// <summary>MSG08: Xung đột dữ liệu trùng lặp (Username / Email đã tồn tại - HTTP 409 Conflict, UC-08).</summary>
+    /// <summary>MSG08: Xung đột dữ liệu trùng lặp (Username / Email / PO Number đã tồn tại - HTTP 409 Conflict, UC-08, UC-33).</summary>
     public const string Msg08DuplicateConflict = "MSG08";
 
     /// <summary>MSG09: Vượt giới hạn tần suất yêu cầu đặt lại mật khẩu (tối đa 3 lần / 10 phút, UC-04).</summary>
@@ -56,18 +56,18 @@ public static class MessageCodes
     /// <summary>MSG10: Không tìm thấy bản ghi yêu cầu (HTTP 404 Not Found).</summary>
     public const string Msg10NotFound = "MSG10";
 
-    /// <summary>MSG11: Vi phạm quy tắc quản trị hoặc không đủ quyền hạn (BR-ADM-01, BR-ADM-02, BR-ADM-03).</summary>
+    /// <summary>MSG11: Vi phạm quy tắc quản trị hoặc không đủ quyền hạn (BR-ADM-01, BR-ADM-02, BR-ADM-03, BR-ORD-04).</summary>
     public const string Msg11ForbiddenRule = "MSG11";
 
     /// <summary>MSG12: Phiên đăng nhập hoặc Refresh Token không hợp lệ / đã bị thu hồi (BR-SEC-01).</summary>
     public const string Msg12InvalidToken = "MSG12";
 
-    /// <summary>MSG13: Lỗi đầu vào hoặc vi phạm độ phức tạp mật khẩu (UC-03, UC-05).</summary>
+    /// <summary>MSG13: Lỗi đầu vào hoặc vi phạm độ phức tạp mật khẩu / lỗi dữ liệu Staging Grid (UC-03, UC-05, UC-30..UC-33).</summary>
     public const string Msg13ValidationError = "MSG13";
 }
 
 /// <summary>
-/// Hằng số các loại hành động ghi nhận vào bảng nhật ký kiểm toán <c>audit_logs</c> (GBR-05, UC-13, UC-14).
+/// Hằng số các loại hành động ghi nhận vào bảng nhật ký kiểm toán <c>audit_logs</c> (GBR-05, UC-13, UC-14, UC-33).
 /// </summary>
 public static class AuditActionConstants
 {
@@ -86,6 +86,13 @@ public static class AuditActionConstants
     public const string UserRolesUpdated = "USER_ROLES_UPDATED";
     public const string UserStatusChanged = "USER_STATUS_CHANGED";
     public const string RolePermissionsUpdated = "ROLE_PERMISSIONS_UPDATED";
+    public const string SystemConfigUpdated = "SYSTEM_CONFIG_UPDATED";
+
+    // Phân hệ 4: Order Intake & Order Space Initialization (ORD - BF-01, UC-30..UC-35)
+    public const string OrderStagingUploaded = "UPLOAD_PO_STAGING";
+    public const string OrderStagingConfirmed = "CONFIRM_PO_STAGING";
+    public const string OrderSpaceInitialized = "CREATE_ORDER_SPACE";
+    public const string OrderSpaceDrawingUpdated = "UPDATE_ORDER_SPACE_DRAWING";
 }
 
 public static class DefectCodeConstants

@@ -73,7 +73,7 @@ public interface IRoleService
 }
 
 /// <summary>
-/// Giao diện Dịch vụ Nhật ký Kiểm toán Hệ thống bất biến (UC-13 &amp; UC-14, GBR-05).
+/// Giao diện Dịch vụ Nhật ký Kiểm toán Hệ thống bất biến &amp; Cấu hình Tham số Toàn cục (UC-13, UC-14, UC-15, GBR-05, SCR-ADM-02).
 /// </summary>
 public interface IAuditLogService
 {
@@ -82,4 +82,13 @@ public interface IAuditLogService
 
     /// <summary>UC-14: Xem chi tiết một bản ghi nhật ký kiểm toán (bao gồm JSON BeforeState và AfterState).</summary>
     Task<AuditLogDto> GetAuditLogByIdAsync(long logId, CancellationToken cancellationToken = default);
+
+    /// <summary>UC-13 / SCR-ADM-02: Xuất dữ liệu nhật ký kiểm toán bất biến ra định dạng CSV theo bộ lọc hiện tại.</summary>
+    Task<byte[]> ExportAuditLogsCsvAsync(AuditLogFilterDto filter, CancellationToken cancellationToken = default);
+
+    /// <summary>UC-15: Lấy danh sách toàn bộ tham số cấu hình hệ thống (DEFAULT_SCRAP_MIN, DEFAULT_SCRAP_MAX, ETD_WARNING_DAYS).</summary>
+    Task<IReadOnlyList<SystemConfigDto>> GetSystemConfigsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>UC-15: Cập nhật giá trị tham số cấu hình hệ thống và ghi nhận vào Audit Log.</summary>
+    Task<SystemConfigDto> UpdateSystemConfigAsync(string configKey, UpdateSystemConfigDto dto, long actorUserId, string? ipAddress, CancellationToken cancellationToken = default);
 }

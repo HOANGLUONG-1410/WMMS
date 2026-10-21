@@ -1,7 +1,7 @@
 namespace WMMS.Application.DTOs.AuditLogs;
 
 /// <summary>
-/// DTO Bộ lọc truy vấn nhật ký kiểm toán hệ thống (UC-13: Query Audit Logs).
+/// DTO Bộ lọc truy vấn nhật ký kiểm toán hệ thống (UC-13: Query Audit Logs, SCR-ADM-02).
 /// </summary>
 public class AuditLogFilterDto
 {
@@ -16,7 +16,7 @@ public class AuditLogFilterDto
 }
 
 /// <summary>
-/// DTO Chi tiết bản ghi nhật ký kiểm toán hệ thống (UC-13: Query Audit Logs, UC-14: View Audit Log Details).
+/// DTO Chi tiết bản ghi nhật ký kiểm toán hệ thống (UC-13: Query Audit Logs, UC-14: View Audit Log Details, SCR-ADM-02).
 /// </summary>
 public class AuditLogDto
 {
@@ -24,6 +24,7 @@ public class AuditLogDto
     public long? UserId { get; set; }
     public string? Username { get; set; }
     public string? UserFullName { get; set; }
+    public string? PrimaryRole { get; set; }
     public string ActionType { get; set; } = string.Empty;
     public string EntityName { get; set; } = string.Empty;
     public string EntityId { get; set; } = string.Empty;
@@ -32,4 +33,26 @@ public class AuditLogDto
     public string? Reason { get; set; }
     public string? IpAddress { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// DTO Tham số cấu hình hệ thống toàn cục (UC-15: Configure System Parameters).
+/// </summary>
+public class SystemConfigDto
+{
+    public string ConfigKey { get; set; } = string.Empty;
+    public string ConfigValue { get; set; } = string.Empty;
+    public string DataType { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// DTO Yêu cầu cập nhật tham số cấu hình hệ thống (UC-15, BR-SYS-01, BR-002).
+/// </summary>
+public class UpdateSystemConfigDto
+{
+    public string ConfigValue { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Reason { get; set; }
 }

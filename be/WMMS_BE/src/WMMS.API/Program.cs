@@ -9,6 +9,7 @@ using WMMS.API.Middlewares;
 using WMMS.API.Schedulers;
 using WMMS.Application.Interfaces.Services;
 using WMMS.Application.Validators.Auth;
+using WMMS.Infrastructure.Excel;
 using WMMS.Infrastructure.Mail;
 using WMMS.Infrastructure.Persistence;
 using WMMS.Infrastructure.Persistence.Seed;
@@ -26,7 +27,7 @@ builder.Services.AddDbContext<WmmsDbContext>(options =>
     });
 });
 
-// 2. Application & Infrastructure Services (AUT & ADM Modules)
+// 2. Application & Infrastructure Services (AUT, ADM & ORD Modules)
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
@@ -35,6 +36,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<IOrderIntakeService, OrderIntakeService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();
