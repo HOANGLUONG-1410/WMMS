@@ -2,15 +2,10 @@ using System.Net;
 using System.Text.Json;
 using FluentValidation;
 using WMMS.Application.Common.Models;
-using WMMS.Domain.Constants;
 using WMMS.Domain.Exceptions;
 
 namespace WMMS.API.Middlewares;
 
-/// <summary>
-/// Middleware bắt và chuẩn hóa toàn bộ ngoại lệ phát sinh trong hệ thống WMMS.
-/// Đảm bảo mọi phản hồi lỗi đều tuân theo phong bì JSON <see cref="ApiResponse{T}"/> kèm HTTP Status Code và MessageCode (MSG01..MSG13).
-/// </summary>
 public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
@@ -30,55 +25,63 @@ public class GlobalExceptionMiddleware
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex);
         }
     }
 
-    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var statusCode = (int)HttpStatusCode.InternalServerError;
-        var messageCode = MessageCodes.Msg13ValidationError;
-        var message = "An unexpected server error occurred.";
-        object? errors = null;
+        context.Response.ContentType = "application/json";
+
+        var response = new ApiResponse<object>();
+        var statusCode = HttpStatusCode.InternalServerError;
 
         switch (exception)
         {
-            case AppException appEx:
-                statusCode = appEx.StatusCode;
-                messageCode = appEx.MessageCode;
-                message = appEx.Message;
-                errors = appEx.Errors;
+            case NotFoundException notFoundEx:
+                statusCode = HttpStatusCode.NotFound;
+                response = ApiResponse<object>.Fail(notFoundEx.Message);
+                break;
+
+            case ActiveBomConflictException conflictEx:
+                statusCode = HttpStatusCode.Conflict;
+                response = ApiResponse<object>.Fail(conflictEx.Message, new List<string> { conflictEx.ErrorCode });
+                break;
+
+            case InvalidScrapRateException scrapEx:
+                statusCode = HttpStatusCode.BadRequest;
+                response = ApiResponse<object>.Fail(scrapEx.Message, new List<string> { scrapEx.ErrorCode });
+                break;
+
+            case StagingValidationException stagingEx:
+                statusCode = HttpStatusCode.BadRequest;
+                response = ApiResponse<object>.Fail(stagingEx.Message, new List<string> { stagingEx.ErrorCode });
                 break;
 
             case ValidationException valEx:
-                statusCode = (int)HttpStatusCode.BadRequest;
-                messageCode = MessageCodes.Msg13ValidationError;
-                message = "One or more validation errors occurred.";
-                errors = valEx.Errors
-                    .GroupBy(e => e.PropertyName)
-                    .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+                statusCode = HttpStatusCode.BadRequest;
+                var errors = valEx.Errors.Select(e => e.ErrorMessage).ToList();
+                response = ApiResponse<object>.Fail("Validation failed.", errors);
                 break;
 
-            case UnauthorizedAccessException unauthEx:
-                statusCode = (int)HttpStatusCode.Unauthorized;
-                messageCode = MessageCodes.Msg02InvalidCredentials;
-                message = unauthEx.Message;
+            case DomainException domainEx:
+                statusCode = HttpStatusCode.BadRequest;
+                response = ApiResponse<object>.Fail(domainEx.Message, new List<string> { domainEx.ErrorCode });
                 break;
 
             default:
-                _logger.LogError(exception, "Unhandled exception on {Method} {Path}", context.Request.Method, context.Request.Path);
+                statusCode = HttpStatusCode.InternalServerError;
+                response = ApiResponse<object>.Fail("An unexpected internal server error occurred.");
                 break;
         }
 
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = statusCode;
-
-        var responsePayload = ApiResponse<object>.Fail(message, messageCode, errors);
+        context.Response.StatusCode = (int)statusCode;
         var jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(responsePayload, jsonOptions));
+        return context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
     }
 }
