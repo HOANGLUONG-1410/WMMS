@@ -104,3 +104,4 @@ $RECYCLE.BIN/
 .specify/integrations/gemini.manifest.json
 .specify/integrations/speckit.manifest.json
 .specify/workflows/workflow-registry.json
+.specify/integrations/gemini.manifest.json
