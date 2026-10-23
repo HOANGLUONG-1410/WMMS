@@ -104,3 +104,15 @@ Mỗi khi thực hiện coding hoặc thay đổi quan trọng trong dự án WM
      + Bước 2: Tạo migration mới với tên mô tả rõ ràng: `dotnet ef migrations add <TenMigration> --project src/WMMS.Infrastructure --startup-project src/WMMS.API --output-dir Persistence/Migrations`.
      + Bước 3: Cập nhật vào database: `dotnet ef database update --project src/WMMS.Infrastructure --startup-project src/WMMS.API`.
 <!-- <<< code documentation and migration bridge <<< -->
+
+<!-- >>> testing and backend-only scope bridge >>> -->
+## Testing & Backend Scope Protocol (MANDATORY)
+
+1. **Thư mục Unit Test Biệt Lập**:
+   - Khi viết hoặc chạy test (`test run`), TOÀN BỘ file test, project test và kịch bản kiểm thử PHẢI đặt tại thư mục: `D:\dotnet\unitestWMMS`.
+   - **Tuyệt đối KHÔNG tạo file test rác** bên trong thư mục code chính của dự án WMMS (`c:\Users\ADMIN\Documents\github\WMMS`). Không thêm test project, test class hay mock data tạm bợ vào solution chính nhằm giữ source code sạch sẽ 100%.
+
+2. **Phạm vi Phát triển (Backend Only)**:
+   - **Chỉ code ở `be` (`be/WMMS_BE`)**: Mọi chức năng, API, xử lý nghiệp vụ, database chỉ được thực hiện trong thư mục Backend `be/`.
+   - **Không thao tác với `fe`**: Tuyệt đối không chỉnh sửa, không tạo file và không can thiệp vào thư mục `fe/` (Frontend).
+<!-- <<< testing and backend-only scope bridge <<< -->
