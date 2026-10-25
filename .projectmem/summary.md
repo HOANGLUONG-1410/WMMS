@@ -1,45 +1,29 @@
 # projectmem - WMMS
 
-_Last updated: 2026-10-19_
+_Last updated: 2026-10-21_
 
 ## Project purpose
 Replace this placeholder with a concise description of what this project does, who it serves, and the main technologies or runtime assumptions.
 
 ## Recent issues
-- No issues logged yet.
+- [DONE] #0002 Missing seed data causes auth, admin, order tests to fail in virtual test harness. [c:\Users\cuong\OneDrive\Tài liệu\New folder\app test AI\app test AI\Program.cs] -> All 22 tests in app test AI pass with 0 failures. (fixed)
+- [DONE] #0001 Authentication fails: no owner user seeded; system admin expects >=8 users; audit logs missing; order spaces missing. [DbInitializer.cs] -> Resolved missing seed data in virtual test harness app test AI without modifying main WMMS DbInitializer.cs; all 22 API tests across Auth, Admin, Order Intake, and Material Breakdown & BOM pass. (fixed)
 
 ## Decisions
-- Adopt 4-project Clean Layered Architecture in WMMS_BE.sln (WMMS.Domain, WMMS.Application, WMMS.Infrastructure, WMMS.API) mapped 1-to-1 with the 12 packages and 6 core business modules (AUT, ORD, BOM, INV, WHS, KBN) of Report 4 SDS. [be/WMMS_BE/ARCHITECTURE.md]
-- Keep C# entity class names aligned with Report 4 Class Diagrams (CustomerOrder, BomHeader, MaterialStock, PurchaseRequest) and map them via EF Core Fluent API ToTable() to Report 4 Physical ERD snake_case tables (sales_orders, boms, inventory_stocks, consolidated_prs). [be/WMMS_BE/src/WMMS.Infrastructure/Persistence/Configurations/]
-- Implement complete Code-First DB layer with EF Core 8 and SQL Server, 31 domain entities, snake_case table mappings, optimistic concurrency rowversion, InitialCreate migration, and DbInitializer seed data.
+- Implement Order Intake & Order Space Initialization module (ORD - BF-01, UC-30..UC-35) via OrdersController and OrderIntakeService, and extend AuditLogsController with CSV export (SCR-ADM-02) and SystemConfig management (UC-15), alongside ReactJS SPA frontend screens for Section III.1, III.2, III.3, and III.4.
 
 ## Notes
-- gotcha: Never reconcile BOM demand against raw PhysicalQty; always enforce AvailableQty = max(0, PhysicalQty - AllocatedQty) with SQL Server rowversion optimistic concurrency on inventory_stocks, and enforce 100% QC Pass before advancing Kanban cards (or 97%-3% branching / Overdrive HoldPointStageSeq lock). [be/WMMS_BE/src/WMMS.Application/Services/]
-- Updated root .gitignore to ignore Visual Studio .vs, bin/obj, node_modules, and OS caches while preserving projectmem memory rules. [.gitignore]
-- Merge: chore: merge remote initial commit and keep monorepo .gitignore
-- New feature: feat: initialize fe workspace with Report 4 ReactJS package skeleton [fe/README.md]
-- Database successfully updated and verified on local SQL Server WMMS_DB with InitialCreate migration and automatic seed execution on startup.
-- Serena installed at D:\Tools\serena with Python 3.12, registered in Antigravity mcp_config.json for WMMS, and pjm doctor verified healthy.
-- Spec Kit initialized for WMMS with Gemini integration, PowerShell scripts, and 10 speckit slash commands.
+- Order Intake staging validation (BR-ORD-01, BR-ORD-02, BR-ORD-03) strips Container No, Shipping Port, PI, and Unit Prices (CBD), highlights invalid dimensions/ETD/quantities as red cells, and blocks ConfirmSalesOrder until ErrorCellCount == 0.
+- Updated app test AI (Program.cs) with SeedTestDataAsync (8 users, 5 audit logs, 4 B2B customer orders & order spaces) and added full test suite for Module 5 Material Breakdown & BOM (BomRoutingController). All 22/22 API tests pass on SQLite In-Memory with zero files modified in WMMS_BE.
 
 ## Key files
-- `WMMS_BE.sln`
-- `WMMS.Domain`
-- `WMMS.Application`
-- `WMMS.Infrastructure`
-- `WMMS.API`
-- `fe/README.md`
-- `fe/src/assets/.gitkeep`
-- `fe/src/common/.gitkeep`
-- `fe/src/components/.gitkeep`
-- `fe/src/constant/.gitkeep`
-- `fe/src/context/.gitkeep`
-- `fe/src/pages/.gitkeep`
-- `fe/src/routes/.gitkeep`
-- `fe/src/services/.gitkeep`
-- `fe/src/utils/.gitkeep`
-- `3.12`
-- `mcp_config.json`
+- `UC-30..UC`
+- `III.1`
+- `III.2`
+- `III.3`
+- `III.4`
+- `Program.cs`
+- `DbInitializer.cs`
 
 ## Open questions
 - None logged yet.

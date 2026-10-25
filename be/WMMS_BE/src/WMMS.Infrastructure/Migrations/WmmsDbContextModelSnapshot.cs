@@ -390,6 +390,11 @@ namespace WMMS.Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("entity_name");
 
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("ip_address");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
@@ -401,9 +406,70 @@ namespace WMMS.Infrastructure.Migrations
 
                     b.HasKey("LogId");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("UserId");
 
+                    b.HasIndex("EntityName", "ActionType");
+
                     b.ToTable("audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("WMMS.Domain.Entities.Identity.PasswordResetToken", b =>
+                {
+                    b.Property<long>("ResetTokenId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("reset_token_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ResetTokenId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_used");
+
+                    b.Property<string>("OtpHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("otp_hash");
+
+                    b.Property<string>("RequestedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("requested_by_ip");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("used_at");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("ResetTokenId");
+
+                    b.HasIndex("TokenHash");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("password_reset_tokens", (string)null);
                 });
 
             modelBuilder.Entity("WMMS.Domain.Entities.Identity.RefreshToken", b =>
@@ -419,6 +485,11 @@ namespace WMMS.Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("created_by_ip");
+
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("expires_at");
@@ -428,6 +499,15 @@ namespace WMMS.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false)
                         .HasColumnName("is_revoked");
+
+                    b.Property<string>("ReplacedByTokenHash")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("replaced_by_token_hash");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("revoked_at");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
@@ -440,6 +520,8 @@ namespace WMMS.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("TokenId");
+
+                    b.HasIndex("TokenHash");
 
                     b.HasIndex("UserId");
 
@@ -454,6 +536,11 @@ namespace WMMS.Infrastructure.Migrations
                         .HasColumnName("role_id");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("description");
 
                     b.Property<string>("PermissionsJson")
                         .IsRequired()
@@ -510,6 +597,10 @@ namespace WMMS.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)")
                         .HasColumnName("full_name");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("last_login_at");
 
                     b.Property<DateTime?>("LockedUntil")
                         .HasColumnType("datetime2")
@@ -1733,6 +1824,17 @@ namespace WMMS.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("WMMS.Domain.Entities.Identity.PasswordResetToken", b =>
+                {
+                    b.HasOne("WMMS.Domain.Entities.Identity.User", "User")
+                        .WithMany("PasswordResetTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("WMMS.Domain.Entities.Identity.RefreshToken", b =>
                 {
                     b.HasOne("WMMS.Domain.Entities.Identity.User", "User")
@@ -2096,6 +2198,8 @@ namespace WMMS.Infrastructure.Migrations
             modelBuilder.Entity("WMMS.Domain.Entities.Identity.User", b =>
                 {
                     b.Navigation("AuditLogs");
+
+                    b.Navigation("PasswordResetTokens");
 
                     b.Navigation("RefreshTokens");
 

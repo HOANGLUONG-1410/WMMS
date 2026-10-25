@@ -1,5 +1,9 @@
 namespace WMMS.Domain.Constants;
 
+/// <summary>
+/// Các mã vai trò hệ thống (System Roles) hỗ trợ cơ chế Multi-Role RBAC (GBR-04).
+/// Một tài khoản có thể sở hữu 1..* vai trò thông qua bảng liên kết <c>user_roles</c>.
+/// </summary>
 public static class RoleConstants
 {
     public const string Admin = "ADMIN";
@@ -17,6 +21,85 @@ public static class RoleConstants
     };
 }
 
+/// <summary>
+/// Chuẩn hóa mã thông báo hệ thống (System Message Codes MSG01 - MSG13) theo đặc tả Report 3 (Mục 3.1.4 &amp; Phần V.2).
+/// </summary>
+public static class MessageCodes
+{
+    /// <summary>MSG01: Trường bắt buộc bị bỏ trống.</summary>
+    public const string Msg01RequiredField = "MSG01";
+
+    /// <summary>MSG02: Sai tên đăng nhập/email hoặc mật khẩu (UC-01).</summary>
+    public const string Msg02InvalidCredentials = "MSG02";
+
+    /// <summary>MSG03: Tài khoản tạm thời bị khóa 30 phút sau 5 lần đăng nhập sai liên tiếp (UC-01, BR-SEC-02).</summary>
+    public const string Msg03AccountLocked = "MSG03";
+
+    /// <summary>MSG04: Tài khoản đã bị vô hiệu hóa hoặc bị cấm bởi Quản trị viên (UC-01, UC-10).</summary>
+    public const string Msg04AccountBannedOrInactive = "MSG04";
+
+    /// <summary>MSG05: Thông báo chung khi yêu cầu đặt lại mật khẩu để chống dò quét email (UC-04).</summary>
+    public const string Msg05PasswordResetDispatched = "MSG05";
+
+    /// <summary>MSG06: Liên kết hoặc mã OTP đặt lại mật khẩu không hợp lệ hoặc đã hết hạn 15 phút (UC-05).</summary>
+    public const string Msg06ResetTokenInvalidOrExpired = "MSG06";
+
+    /// <summary>MSG07: Thay đổi thông tin / tạo mới thành công.</summary>
+    public const string Msg07Success = "MSG07";
+
+    /// <summary>MSG08: Xung đột dữ liệu trùng lặp (Username / Email / PO Number đã tồn tại - HTTP 409 Conflict, UC-08, UC-33).</summary>
+    public const string Msg08DuplicateConflict = "MSG08";
+
+    /// <summary>MSG09: Vượt giới hạn tần suất yêu cầu đặt lại mật khẩu (tối đa 3 lần / 10 phút, UC-04).</summary>
+    public const string Msg09RateLimitExceeded = "MSG09";
+
+    /// <summary>MSG10: Không tìm thấy bản ghi yêu cầu (HTTP 404 Not Found).</summary>
+    public const string Msg10NotFound = "MSG10";
+
+    /// <summary>MSG11: Vi phạm quy tắc quản trị hoặc không đủ quyền hạn (BR-ADM-01, BR-ADM-02, BR-ADM-03, BR-ORD-04).</summary>
+    public const string Msg11ForbiddenRule = "MSG11";
+
+    /// <summary>MSG12: Phiên đăng nhập hoặc Refresh Token không hợp lệ / đã bị thu hồi (BR-SEC-01).</summary>
+    public const string Msg12InvalidToken = "MSG12";
+
+    /// <summary>MSG13: Lỗi đầu vào hoặc vi phạm độ phức tạp mật khẩu / lỗi dữ liệu Staging Grid (UC-03, UC-05, UC-30..UC-33).</summary>
+    public const string Msg13ValidationError = "MSG13";
+}
+
+/// <summary>
+/// Hằng số các loại hành động ghi nhận vào bảng nhật ký kiểm toán <c>audit_logs</c> (GBR-05, UC-13, UC-14, UC-33).
+/// </summary>
+public static class AuditActionConstants
+{
+    public const string LoginSuccess = "AUTH_LOGIN_SUCCESS";
+    public const string LoginFailed = "AUTH_LOGIN_FAILED";
+    public const string AccountLocked = "AUTH_ACCOUNT_LOCKED";
+    public const string AccountAutoUnlocked = "AUTH_ACCOUNT_AUTO_UNLOCKED";
+    public const string Logout = "AUTH_LOGOUT";
+    public const string TokenRefreshed = "AUTH_TOKEN_REFRESHED";
+    public const string PasswordChanged = "AUTH_PASSWORD_CHANGED";
+    public const string PasswordResetRequested = "AUTH_PASSWORD_RESET_REQUESTED";
+    public const string PasswordResetConfirmed = "AUTH_PASSWORD_RESET_CONFIRMED";
+
+    public const string UserCreated = "USER_CREATED";
+    public const string UserUpdated = "USER_UPDATED";
+    public const string UserRolesUpdated = "USER_ROLES_UPDATED";
+    public const string UserStatusChanged = "USER_STATUS_CHANGED";
+    public const string RolePermissionsUpdated = "ROLE_PERMISSIONS_UPDATED";
+    public const string SystemConfigUpdated = "SYSTEM_CONFIG_UPDATED";
+
+    // Phân hệ 4: Order Intake & Order Space Initialization (ORD - BF-01, UC-30..UC-35)
+    public const string OrderStagingUploaded = "UPLOAD_PO_STAGING";
+    public const string OrderStagingConfirmed = "CONFIRM_PO_STAGING";
+    public const string OrderSpaceInitialized = "CREATE_ORDER_SPACE";
+    public const string OrderSpaceDrawingUpdated = "UPDATE_ORDER_SPACE_DRAWING";
+
+    // Phân hệ 5: Material Breakdown & BOM Preparation (BOM - QT-02, SC-10, SC-11, UC-38..UC-41)
+    public const string BomCreated = "BOM_CREATED";
+    public const string BomUpdated = "BOM_UPDATED";
+    public const string BomApproved = "BOM_APPROVED";
+}
+
 public static class DefectCodeConstants
 {
     public const string CutErr01 = "ERR_CUT_01";
@@ -31,4 +114,11 @@ public static class SystemConfigKeys
     public const string DefaultScrapMin = "DEFAULT_SCRAP_MIN";
     public const string DefaultScrapMax = "DEFAULT_SCRAP_MAX";
     public const string EtdWarningDays = "ETD_WARNING_DAYS";
+}
+
+public static class BusinessRuleConstants
+{
+    public const string Br001ActiveBomUniqueness = "BR-001";
+    public const string Br002NaturalScrapRateRange = "BR-002";
+    public const string Br011BomStagingImport = "BR-011";
 }

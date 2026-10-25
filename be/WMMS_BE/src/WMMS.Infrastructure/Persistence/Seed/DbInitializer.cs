@@ -146,5 +146,194 @@ public static class DbInitializer
             await context.SystemConfigs.AddRangeAsync(configs);
             await context.SaveChangesAsync();
         }
+
+        // 5. Seed Default Materials
+        if (!await context.Materials.AnyAsync())
+        {
+            var now = DateTime.UtcNow;
+            var materials = new List<WMMS.Domain.Entities.CatalogBom.Material>
+            {
+                new()
+                {
+                    MaterialCode = "WOOD_OAK_01",
+                    MaterialName = "Gỗ sồi Bắc Mỹ xẻ sấy FAS (Oak)",
+                    MaterialGroup = MaterialGroupEnum.LUMBER,
+                    UnitOfMeasure = "M3",
+                    DimensionSpec = "26mm x 150mm x 2400mm",
+                    FscCertified = true,
+                    SafetyStockQty = 10.0m,
+                    Status = "ACTIVE",
+                    CreatedAt = now
+                },
+                new()
+                {
+                    MaterialCode = "WOOD_RUBBER_02",
+                    MaterialName = "Gỗ cao su ghép thanh tiêu chuẩn AB",
+                    MaterialGroup = MaterialGroupEnum.LUMBER,
+                    UnitOfMeasure = "M3",
+                    DimensionSpec = "20mm x 1200mm x 2400mm",
+                    FscCertified = true,
+                    SafetyStockQty = 15.0m,
+                    Status = "ACTIVE",
+                    CreatedAt = now
+                },
+                new()
+                {
+                    MaterialCode = "HW_SCREW_M4",
+                    MaterialName = "Vít bắt gỗ tự khoan mạ kẽm M4x30",
+                    MaterialGroup = MaterialGroupEnum.HARDWARE,
+                    UnitOfMeasure = "PCS",
+                    DimensionSpec = "M4 x 30mm",
+                    FscCertified = false,
+                    SafetyStockQty = 2000.0m,
+                    Status = "ACTIVE",
+                    CreatedAt = now
+                },
+                new()
+                {
+                    MaterialCode = "HW_HINGE_01",
+                    MaterialName = "Bản lề giảm chấn Hafele SUS304",
+                    MaterialGroup = MaterialGroupEnum.HARDWARE,
+                    UnitOfMeasure = "PCS",
+                    DimensionSpec = "Góc mở 110 độ",
+                    FscCertified = false,
+                    SafetyStockQty = 500.0m,
+                    Status = "ACTIVE",
+                    CreatedAt = now
+                },
+                new()
+                {
+                    MaterialCode = "HW_HANDLE_01",
+                    MaterialName = "Tay nắm hợp kim nhôm xước mờ",
+                    MaterialGroup = MaterialGroupEnum.HARDWARE,
+                    UnitOfMeasure = "PCS",
+                    DimensionSpec = "Tâm lỗ 96mm",
+                    FscCertified = false,
+                    SafetyStockQty = 300.0m,
+                    Status = "ACTIVE",
+                    CreatedAt = now
+                },
+                new()
+                {
+                    MaterialCode = "PAINT_SEALER_01",
+                    MaterialName = "Sơn lót PU 2K kháng ẩm gốc nước",
+                    MaterialGroup = MaterialGroupEnum.FINISH_PAINT,
+                    UnitOfMeasure = "LITER",
+                    DimensionSpec = "Thùng 20L",
+                    FscCertified = false,
+                    SafetyStockQty = 100.0m,
+                    Status = "ACTIVE",
+                    CreatedAt = now
+                },
+                new()
+                {
+                    MaterialCode = "PAINT_TOP_MATT",
+                    MaterialName = "Sơn phủ bóng mờ PU 50%",
+                    MaterialGroup = MaterialGroupEnum.FINISH_PAINT,
+                    UnitOfMeasure = "LITER",
+                    DimensionSpec = "Thùng 20L",
+                    FscCertified = false,
+                    SafetyStockQty = 80.0m,
+                    Status = "ACTIVE",
+                    CreatedAt = now
+                },
+                new()
+                {
+                    MaterialCode = "BOX_CARTON_01",
+                    MaterialName = "Thùng carton 5 lớp xuất khẩu Master",
+                    MaterialGroup = MaterialGroupEnum.PACKAGING,
+                    UnitOfMeasure = "PCS",
+                    DimensionSpec = "600mm x 550mm x 950mm",
+                    FscCertified = true,
+                    SafetyStockQty = 400.0m,
+                    Status = "ACTIVE",
+                    CreatedAt = now
+                }
+            };
+
+            await context.Materials.AddRangeAsync(materials);
+            await context.SaveChangesAsync();
+        }
+
+        // 6. Seed Visual Catalog Products & Default Routing
+        if (!await context.Products.AnyAsync())
+        {
+            var now = DateTime.UtcNow;
+            var chair = new WMMS.Domain.Entities.CatalogBom.Product
+            {
+                ProductSku = "CHAIR-DINING-OAK-01",
+                ProductName = "Ghế ăn tựa nan gỗ sồi Bắc Mỹ",
+                CategoryName = "CHAIR",
+                DimensionsCm = "45 x 52 x 88 cm",
+                WoodSpecies = "White Oak",
+                FinishColor = "Natural Walnut",
+                PackingSpec = "2 pcs / Master Carton",
+                CbmPerUnit = 0.12m,
+                Status = "ACTIVE",
+                CreatedAt = now
+            };
+
+            var table = new WMMS.Domain.Entities.CatalogBom.Product
+            {
+                ProductSku = "TABLE-DINING-EXT-02",
+                ProductName = "Bàn ăn thông minh kéo dài gỗ sồi",
+                CategoryName = "TABLE",
+                DimensionsCm = "160/210 x 90 x 75 cm",
+                WoodSpecies = "White Oak",
+                FinishColor = "Smoked Oak",
+                PackingSpec = "1 pc / 2 Cartons",
+                CbmPerUnit = 0.35m,
+                Status = "ACTIVE",
+                CreatedAt = now
+            };
+
+            var cabinet = new WMMS.Domain.Entities.CatalogBom.Product
+            {
+                ProductSku = "CABINET-SIDEBOARD-03",
+                ProductName = "Tủ sideboard 3 cánh 2 hộc kéo",
+                CategoryName = "CABINET",
+                DimensionsCm = "150 x 42 x 82 cm",
+                WoodSpecies = "Rubber Wood + Oak Veneer",
+                FinishColor = "Warm Chestnut",
+                PackingSpec = "1 pc / Carton kèm xốp định hình",
+                CbmPerUnit = 0.58m,
+                Status = "ACTIVE",
+                CreatedAt = now
+            };
+
+            await context.Products.AddRangeAsync(chair, table, cabinet);
+            await context.SaveChangesAsync();
+
+            // Default Routings for Products
+            var products = new[] { chair, table, cabinet };
+            foreach (var p in products)
+            {
+                var routing = new WMMS.Domain.Entities.CatalogBom.RoutingTemplate
+                {
+                    ProductId = p.ProductId,
+                    VersionCode = "v1.0",
+                    IsActive = true,
+                    CreatedAt = now
+                };
+
+                await context.RoutingTemplates.AddAsync(routing);
+                await context.SaveChangesAsync();
+
+                var stages = new List<WMMS.Domain.Entities.CatalogBom.RoutingStage>
+                {
+                    new() { RoutingId = routing.RoutingId, StageSequence = 1, StageName = "1. Pha phôi gỗ thô", IsHoldPoint = false },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 2, StageName = "2. Cắt/Xẻ định hình chi tiết", IsHoldPoint = false },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 3, StageName = "3. Bào 4 mặt & Chà nhám phẳng", IsHoldPoint = false },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 4, StageName = "4. Khoan lỗ & Phay mộng mộng âm/dương", IsHoldPoint = false },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 5, StageName = "5. Lắp ráp kết cấu & Bắt phụ kiện bản lề/ray trượt", IsHoldPoint = true },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 6, StageName = "6. Sơn lót & Sơn phủ hoàn thiện PU", IsHoldPoint = false },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 7, StageName = "7. Kiểm tra xuất xưởng & Đóng gói carton", IsHoldPoint = false }
+                };
+
+                await context.RoutingStages.AddRangeAsync(stages);
+                await context.SaveChangesAsync();
+            }
+        }
     }
 }
+
