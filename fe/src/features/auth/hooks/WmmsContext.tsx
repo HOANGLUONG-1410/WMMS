@@ -2,14 +2,12 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   DEFAULT_ORDER_SPACES,
   INITIAL_AUDIT_LOGS,
-  INITIAL_USERS_DIRECTORY,
   ROLE_CONFIG,
 } from "../../../constants/wmmsConstants";
 
 /**
- * Context Quản lý Dữ liệu Mẫu (Mock Store) cho các màn hình nghiệp vụ:
+ * Context Quản lý Dữ liệu Mẫu (Mock Store) cho các màn hình nghiệp vụ chưa nối API:
  * - Order Spaces (Section III.4): Danh sách không gian đơn hàng
- * - Users Directory (SCR-ADM-01): Danh mục nhân sự
  * - System Audit Logs (SCR-ADM-02): Nhật ký hệ thống
  */
 
@@ -24,10 +22,6 @@ interface WmmsContextType {
   >;
   currentSpaceKey: string;
   setCurrentSpaceKey: React.Dispatch<React.SetStateAction<string>>;
-  usersDirectory: typeof INITIAL_USERS_DIRECTORY;
-  setUsersDirectory: React.Dispatch<
-    React.SetStateAction<typeof INITIAL_USERS_DIRECTORY>
-  >;
   auditLogs: AuditLogEntry[];
   setAuditLogs: React.Dispatch<React.SetStateAction<AuditLogEntry[]>>;
   appendAuditLog: (
@@ -88,8 +82,7 @@ export function WmmsProvider({ children }: { children: ReactNode }) {
   const [orderSpaces, setOrderSpaces] = useState(DEFAULT_ORDER_SPACES);
   const [currentSpaceKey, setCurrentSpaceKey] = useState("SPACE-PO-880504");
 
-  // State chia sẻ cho Employee User Directory (SCR-ADM-01) và Audit Logs (SCR-ADM-02)
-  const [usersDirectory, setUsersDirectory] = useState(INITIAL_USERS_DIRECTORY);
+  // State chia sẻ cho Audit Logs (SCR-ADM-02)
   const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
 
   /**
@@ -145,8 +138,6 @@ export function WmmsProvider({ children }: { children: ReactNode }) {
         setOrderSpaces,
         currentSpaceKey,
         setCurrentSpaceKey,
-        usersDirectory,
-        setUsersDirectory,
         auditLogs,
         setAuditLogs,
         appendAuditLog,

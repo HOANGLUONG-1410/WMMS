@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useWmms } from '../../features/auth/hooks/WmmsContext';
 import { useSession } from '../../features/auth/store/SessionContext';
@@ -14,6 +15,10 @@ export default function WmmsAppShell({
   children,
   mode = 'admin', // 'admin' | 'sales' | 'staging' | 'owner' | 'purchasing'
   customTopLeft = null
+}: {
+  children: ReactNode;
+  mode?: string;
+  customTopLeft?: ReactNode;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,9 +59,9 @@ export default function WmmsAppShell({
         {
           heading: 'PURCHASING OPERATIONS',
           items: [
-            { icon: '🛒', label: 'Purchase Orders (PO)', path: '/orders', active: true },
+            { icon: '🛒', label: 'Purchase Orders (PO)', path: '/purchasing/orders', active: location.pathname.startsWith('/purchasing') },
             { icon: '📝', label: 'Daily Requisitions (PR)', path: '/orders' },
-            { icon: '🪵', label: 'Vendor & Material Catalog', path: '/orders' }
+            { icon: '🪵', label: 'Vendor & Material Catalog', path: '/catalog', active: location.pathname === '/catalog' }
           ]
         },
         {
@@ -125,7 +130,7 @@ export default function WmmsAppShell({
               path: `/orders/spaces/${currentSpaceKey}`,
               active: location.pathname.startsWith('/orders/spaces')
             },
-            { icon: '📐', label: 'Breakdown BOM & Routing', path: '/orders/staging' },
+            { icon: '📐', label: 'Breakdown BOM & Routing', path: '/bom', active: location.pathname.startsWith('/bom') },
             { icon: '⚖️', label: 'Inventory Reconciliation', path: '/orders' },
             { icon: '📋', label: 'Production Kanban', path: '/orders' }
           ]
@@ -134,6 +139,7 @@ export default function WmmsAppShell({
           heading: 'EXECUTIVE & FLOOR',
           items: [
             { icon: '📊', label: 'Executive Dashboard', path: '/orders' },
+            { icon: '🪵', label: 'Product & Material Catalog', path: '/catalog', active: location.pathname === '/catalog' },
             { icon: '📝', label: 'Daily Consolidated PR', path: '/orders' },
             { icon: '🏬', label: '3-Tier Stock', path: '/orders' }
           ]
@@ -168,10 +174,10 @@ export default function WmmsAppShell({
       {
         heading: 'TECHNICAL & STOCK',
         items: [
-          { icon: '📐', label: 'BOM & Routing Builder', path: '/orders/staging' },
-          { icon: '🪵', label: 'Master Materials & SKUs', path: '/orders' },
+          { icon: '📐', label: 'BOM & Routing Builder', path: '/bom', active: location.pathname.startsWith('/bom') },
+          { icon: '🪵', label: 'Master Materials & SKUs', path: '/catalog', active: location.pathname === '/catalog' },
           { icon: '🏬', label: '3-Tier Inventory', path: '/orders' },
-          { icon: '🛒', label: 'Purchasing (PO)', path: '/orders' }
+          { icon: '🛒', label: 'Purchasing (PO)', path: '/purchasing/orders', active: location.pathname.startsWith('/purchasing') }
         ]
       },
       {
@@ -288,7 +294,11 @@ export default function WmmsAppShell({
             ) : (
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-xs">
                 <span className="text-slate-500 font-medium">
-                  {mode === 'owner' ? 'Active Order Space:' : 'Current Space:'}
+                  {location.pathname.startsWith('/bom')
+                    ? 'Target Order Space:'
+                    : mode === 'owner'
+                    ? 'Active Order Space:'
+                    : 'Current Space:'}
                 </span>
                 <select
                   value={currentSpaceKey}

@@ -18,6 +18,9 @@ import SystemAuditLogPage from "../features/audit-logs/pages/SystemAuditLogPage"
 import SalesOrderListPage from "../features/orders/pages/SalesOrderListPage";
 import StagingGridPage from "../features/staging/pages/StagingGridPage";
 import OrderSpaceDetailPage from "../features/orders/pages/OrderSpaceDetailPage";
+import CatalogPage from "../features/catalog/pages/CatalogPage";
+import BomBuilderPage from "../features/bom/pages/BomBuilderPage";
+import PurchaseOrderManagementPage from "../features/purchasing/pages/PurchaseOrderManagementPage";
 
 function RootLayout() {
   const navigate = useNavigate();
@@ -83,6 +86,52 @@ export const router = createBrowserRouter([
         ],
       },
 
+      // Protected: Phân hệ Bóc tách BOM & Quy trình Sản xuất Động (OWNER, PLANNER, ADMIN)
+      {
+        element: (
+          <ProtectedRoute
+            allowedRoles={[ROLES.OWNER, ROLES.PLANNER, ROLES.ADMIN]}
+          />
+        ),
+        children: [{ path: "/bom", element: <BomBuilderPage /> }],
+      },
+
+      // Protected: Phân hệ Quản lý Đơn mua hàng Nhà cung cấp (PURCHASING, OWNER, WAREHOUSE, ADMIN)
+      {
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              ROLES.PURCHASING,
+              ROLES.OWNER,
+              ROLES.WAREHOUSE,
+              ROLES.ADMIN,
+            ]}
+          />
+        ),
+        children: [
+          {
+            path: "/purchasing/orders",
+            element: <PurchaseOrderManagementPage />,
+          },
+        ],
+      },
+
+      // Protected: Danh mục Sản phẩm & Nguyên vật liệu xưởng (OWNER, PURCHASING, WAREHOUSE, ADMIN, PLANNER)
+      {
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              ROLES.ADMIN,
+              ROLES.OWNER,
+              ROLES.PURCHASING,
+              ROLES.WAREHOUSE,
+              ROLES.PLANNER,
+            ]}
+          />
+        ),
+        children: [{ path: "/catalog", element: <CatalogPage /> }],
+      },
+
       // Protected: Mọi tài khoản đã đăng nhập
       {
         element: <ProtectedRoute />,
@@ -100,4 +149,3 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
-

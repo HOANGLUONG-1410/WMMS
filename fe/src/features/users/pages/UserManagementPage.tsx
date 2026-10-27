@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import WmmsAppShell from "../../../components/layout/WmmsAppShell";
-import { useWmms } from "../../auth/hooks/WmmsContext";
 import { adminApi } from "../api/userApi";
-import ProvisionUserModal, {
-  type ProvisionedUserItem,
-} from "../components/ProvisionUserModal";
+import { useUsers } from "../hooks/useUsers";
+import type { UserDto } from "../types";
+import ProvisionUserModal from "../components/ProvisionUserModal";
 import RolePermissionMatrixModal from "../components/RolePermissionMatrixModal";
 import EditUserModal from "../components/EditUserModal";
 
@@ -13,15 +13,68 @@ interface ToastBanner {
   text: string;
 }
 
+/** Ánh xạ mã role kỹ thuật từ backend sang nhãn hiển thị và phạm vi nghiệp vụ */
+function formatRoleInfo(roles: string[] = []) {
+  const primary = roles[0]?.toUpperCase() || "STAFF";
+
+  switch (primary) {
+    case "ADMIN":
+      return {
+        label: "SYSTEM ADMIN",
+        scope: "Global System Configuration, RBAC & Audit Trail",
+      };
+    case "OWNER":
+      return {
+        label: "WORKSHOP OWNER",
+        scope: "BOM Breakdown, Purchasing Approval, Dispatch Release",
+      };
+    case "SALES":
+      return {
+        label: "SALES STAFF",
+        scope: "Excel PO Staging, CRUD Sanitization, Space Init",
+      };
+    case "PLANNER":
+      return {
+        label: "PRODUCTION PLANNER",
+        scope: "Material Routing, Cutting List Optimization, Work Orders",
+      };
+    case "PURCHASING":
+      return {
+        label: "PURCHASING STAFF",
+        scope: "Vendor Sourcing, PO Creation & ETA Management",
+      };
+    case "WAREHOUSE":
+      return {
+        label: "WAREHOUSE KEEPER",
+        scope: "Goods Receipt Commit, Goods Issue Floor Handover",
+      };
+    case "LEADER":
+      return {
+        label: "PRODUCTION LEADER",
+        scope: "Kanban Floor Dispatch, Overdriver Requests",
+      };
+    case "QC":
+      return {
+        label: "QC STAFF",
+        scope: "Workstation Quality Gate, Defect Logging",
+      };
+    default:
+      return {
+        label: primary,
+        scope: "Standard Operational Privileges",
+      };
+  }
+}
+
 /**
  * Màn hình III.3: System Administration
  * Bao gồm 3 giao diện chuẩn theo đúng thiết kế trong Report 3:
- * - 3.1: User Accounts & Multi-Role RBAC (SCR-ADM-01)
- * - 3.2: Provision New User Account Modal (MOD-ADM-01) -> Tách ra ProvisionUserModal.tsx
- * - 3.3: Role Permission Configuration Matrix Modal (MOD-ADM-02) -> Tách ra RolePermissionMatrixModal.tsx
+ * - 3.1: User Accounts & Multi-Role RBAC (SCR-ADM-01) - Fetch thực từ GET /users
+ * - 3.2: Provision New User Account Modal (MOD-ADM-01) -> ProvisionUserModal.tsx
+ * - 3.3: Role Permission Configuration Matrix Modal (MOD-ADM-02) -> RolePermissionMatrixModal.tsx
  */
 export default function UserManagementPage() {
-  const { usersDirectory, setUsersDirectory, appendAuditLog } = useWmms();
+  const queryClient = useQueryClient();
 
   // Từ khóa tìm kiếm trên bảng Employee User Directory (Field #5)
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -31,32 +84,41 @@ export default function UserManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // State cho Modal chỉnh sửa tài khoản nhân sự (UC-09)
-  const [editingUser, setEditingUser] = useState<ProvisionedUserItem | null>(
-    null,
-  );
+  const [editingUser, setEditingUser] = useState<UserDto | null>(null);
 
   // State cho Modal 3.3: Role Permission Configuration Matrix (MOD-ADM-02)
   const [showPermissionMatrixModal, setShowPermissionMatrixModal] =
     useState(false);
 
-  // Lọc danh sách nhân sự theo tên, email, hoặc vai trò (UC-06)
-  const filteredUsers = useMemo(() => {
-    const kw = searchKeyword.trim().toLowerCase();
-    if (!kw) return usersDirectory;
-    return usersDirectory.filter(
-      (u) =>
-        u.fullName.toLowerCase().includes(kw) ||
-        u.email.toLowerCase().includes(kw) ||
-        u.primaryRoleLabel.toLowerCase().includes(kw) ||
-        u.operationalScope.toLowerCase().includes(kw),
-    );
-  }, [usersDirectory, searchKeyword]);
+  // Fetch danh sách tài khoản nhân sự từ backend API /api/v1/users
+  const {
+    data: usersPaged,
+    isLoading,
+    isError,
+    error,
+  } = useUsers({
+    searchTerm: searchKeyword.trim() || undefined,
+  });
+
+  const usersList: UserDto[] = usersPaged?.items ?? [];
+
+  // Thống kê nhanh từ dữ liệu thật
+  const totalUsersCount = usersPaged?.totalCount ?? usersList.length;
+  const suspendedCount = useMemo(
+    () =>
+      usersList.filter(
+        (u) => u.status === "BANNED" || u.status === "SUSPENDED",
+      ).length,
+    [usersList],
+  );
 
   // Ánh xạ màu sắc huy hiệu Primary Assigned Role giống hệt ảnh SCR-ADM-01
   const getRoleBadgeStyle = (roleLabel: string) => {
     const upper = String(roleLabel || "").toUpperCase();
     if (upper.includes("OWNER"))
       return "bg-yellow-100 text-amber-800 border-yellow-200";
+    if (upper.includes("ADMIN"))
+      return "bg-slate-700 text-white border-slate-800";
     if (upper.includes("SALES"))
       return "bg-blue-100 text-blue-700 border-blue-200";
     if (upper.includes("LEADER"))
@@ -70,84 +132,30 @@ export default function UserManagementPage() {
     return "bg-slate-100 text-slate-600 border-slate-200";
   };
 
-  /**
-   * UC-08: Xử lý khi tạo mới tài khoản thành công từ ProvisionUserModal
-   */
-  const handleUserCreated = (newUser: ProvisionedUserItem, message: string) => {
-    setUsersDirectory((prev) => [newUser, ...prev]);
-    appendAuditLog(
-      "USER_CREATED",
-      `User ${newUser.email}`,
-      "NONE → ACTIVE",
-      `Provisioned new staff account (${newUser.primaryRoleLabel}) via MOD-ADM-01.`,
-    );
-    setToastBanner({
-      type: "success",
-      text: message,
-    });
-  };
-
-  /**
-   * UC-10: Khóa / Mở khóa (Unban) tài khoản bị đình chỉ trên bảng
-   */
-  const handleToggleBanStatus = async (user: ProvisionedUserItem) => {
-    const nextStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-    const apiStatus = nextStatus === "ACTIVE" ? "ACTIVE" : "BANNED";
-
-    try {
-      await adminApi.updateUserStatus(
-        user.userId,
-        apiStatus,
-        `Admin toggled account status to ${nextStatus} via SCR-ADM-01.`,
-      );
-    } catch {
-      // Fallback local state
-    }
-
-    setUsersDirectory((prev) =>
-      prev.map((u) =>
-        u.userId === user.userId ? { ...u, status: nextStatus } : u,
-      ),
-    );
-
-    appendAuditLog(
-      "USER_STATUS_CHANGED",
-      `User ${user.email}`,
-      `${user.status} → ${nextStatus}`,
-      `Admin updated account status for ${user.fullName} (UC-10).`,
-    );
-
-    setToastBanner({
-      type: "success",
-      text: `Account ${user.email} status updated to ${nextStatus} (UC-10).`,
-    });
-  };
-
-  /**
-   * UC-09: Lưu cập nhật thông tin nhân sự khi bấm nút Save trong EditUserModal
-   */
-  const handleSaveEditUser = (updatedUser: ProvisionedUserItem) => {
-    setUsersDirectory((prev) =>
-      prev.map((u) => (u.userId === updatedUser.userId ? updatedUser : u)),
-    );
-
-    appendAuditLog(
-      "USER_UPDATED",
-      `User ${updatedUser.email}`,
-      "PROFILE_EDIT",
-      `Updated profile and multi-role assignment for ${updatedUser.fullName} (UC-09).`,
-    );
-
-    setEditingUser(null);
-    setToastBanner({
-      type: "success",
-      text: "User profile and multi-role assignments updated successfully! (MSG-ADM-03)",
-    });
-  };
-
-  const suspendedCount = usersDirectory.filter(
-    (u) => u.status !== "ACTIVE",
-  ).length;
+  // Mutation Khóa / Mở khóa tài khoản trực tiếp từ bảng (UC-10)
+  const toggleBanMutation = useMutation({
+    mutationFn: async (user: UserDto) => {
+      const isCurrentlyActive = user.status === "ACTIVE";
+      const apiStatus = isCurrentlyActive ? "BANNED" : "ACTIVE";
+      const reason = `Admin toggled status via SCR-ADM-01`;
+      return await adminApi.updateUserStatus(user.userId, apiStatus, reason);
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setToastBanner({
+        type: "success",
+        text: res?.message || "Account status updated successfully (UC-10).",
+      });
+    },
+    onError: (err: unknown) => {
+      setToastBanner({
+        type: "error",
+        text:
+          (err as { message?: string })?.message ||
+          "Failed to update user status.",
+      });
+    },
+  });
 
   return (
     <WmmsAppShell mode="admin">
@@ -205,17 +213,17 @@ export default function UserManagementPage() {
           </div>
         )}
 
-        {/* 3 Thẻ KPI Thống kê (ACTIVE USERS: 24, ROLES CONFIGURED: 7, SUSPENDED ACCOUNTS: 1) */}
+        {/* 3 Thẻ KPI Thống kê (ACTIVE USERS, ROLES CONFIGURED, SUSPENDED ACCOUNTS) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               ACTIVE USERS
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-1">
-              24
+              {isLoading ? "..." : totalUsersCount}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Across 7 factory departments
+              Across factory departments
             </div>
           </div>
 
@@ -234,7 +242,7 @@ export default function UserManagementPage() {
               SUSPENDED ACCOUNTS
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-1">
-              {suspendedCount}
+              {isLoading ? "..." : suspendedCount}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
               Action logged in Audit Trail
@@ -272,59 +280,106 @@ export default function UserManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-xs">
-                {filteredUsers.map((user) => (
-                  <tr
-                    key={user.userId}
-                    className="hover:bg-slate-50/80 transition-colors"
-                  >
-                    <td className="py-3.5 px-5 font-bold text-slate-900">
-                      {user.fullName}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600">{user.email}</td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${getRoleBadgeStyle(
-                          user.primaryRoleLabel,
-                        )}`}
-                      >
-                        {user.primaryRoleLabel}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600">
-                      {user.operationalScope}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {user.status === "ACTIVE" ? (
-                        <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700">
-                          ACTIVE
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-rose-100 text-rose-700">
-                          SUSPENDED
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-5 text-right">
-                      {user.status === "ACTIVE" ? (
-                        <button
-                          type="button"
-                          onClick={() => setEditingUser({ ...user })}
-                          className="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50"
-                        >
-                          Edit
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleBanStatus(user)}
-                          className="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50"
-                        >
-                          Unban
-                        </button>
-                      )}
+                {isLoading && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-10 text-center text-slate-400"
+                    >
+                      <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
+                      <p className="text-xs">
+                        Fetching users from WMMS backend...
+                      </p>
                     </td>
                   </tr>
-                ))}
+                )}
+
+                {isError && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-8 text-center text-rose-600 font-medium"
+                    >
+                      {(error as { message?: string })?.message ||
+                        "Unable to load employee directory. Please check network or session."}
+                    </td>
+                  </tr>
+                )}
+
+                {!isLoading && !isError && usersList.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-8 text-center text-slate-400 italic"
+                    >
+                      No user accounts found matching your search.
+                    </td>
+                  </tr>
+                )}
+
+                {!isLoading &&
+                  !isError &&
+                  usersList.map((user) => {
+                    const roleInfo = formatRoleInfo(user.roles);
+                    const isActive = user.status === "ACTIVE";
+
+                    return (
+                      <tr
+                        key={user.userId}
+                        className="hover:bg-slate-50/80 transition-colors"
+                      >
+                        <td className="py-3.5 px-5 font-bold text-slate-900">
+                          {user.fullName || user.username}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {user.email}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${getRoleBadgeStyle(
+                              roleInfo.label,
+                            )}`}
+                          >
+                            {roleInfo.label}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {roleInfo.scope}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {isActive ? (
+                            <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700">
+                              ACTIVE
+                            </span>
+                          ) : (
+                            <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-rose-100 text-rose-700">
+                              {user.status || "SUSPENDED"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-5 text-right">
+                          {isActive ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditingUser(user)}
+                              className="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
+                            >
+                              Edit
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={toggleBanMutation.isPending}
+                              onClick={() => toggleBanMutation.mutate(user)}
+                              className="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
+                            >
+                              Unban
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
@@ -335,12 +390,16 @@ export default function UserManagementPage() {
       <ProvisionUserModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        existingEmails={usersDirectory.map((u) => u.email)}
-        onSuccess={handleUserCreated}
-        onError={(message) =>
+        onSuccess={(msg) =>
+          setToastBanner({
+            type: "success",
+            text: msg,
+          })
+        }
+        onError={(msg) =>
           setToastBanner({
             type: "error",
-            text: message,
+            text: msg,
           })
         }
       />
@@ -355,8 +414,18 @@ export default function UserManagementPage() {
       <EditUserModal
         user={editingUser}
         onClose={() => setEditingUser(null)}
-        onSave={handleSaveEditUser}
-        onSuspendOrBan={handleToggleBanStatus}
+        onSuccess={(msg) =>
+          setToastBanner({
+            type: "success",
+            text: msg,
+          })
+        }
+        onError={(msg) =>
+          setToastBanner({
+            type: "error",
+            text: msg,
+          })
+        }
       />
     </WmmsAppShell>
   );

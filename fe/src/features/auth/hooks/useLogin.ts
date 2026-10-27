@@ -16,9 +16,7 @@ export function useLogin() {
     }) => login(usernameOrEmail, password),
     onSuccess: (user) => {
       // Điều hướng tới workspace tương ứng với vai trò (POST-2 trong UC-01)
-      if (user.activeRole === "SALES") {
-        navigate("/orders");
-      } else {
+      if (user.activeRole === "ADMIN") {
         navigate("/admin/users");
       }
     },
