@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using WMMS.Application.DTOs.Orders;
+using WMMS.Application.Interfaces.External;
 using WMMS.Application.Interfaces.Services;
 using WMMS.Domain.Constants;
 using WMMS.Domain.Entities.CatalogBom;
@@ -30,10 +31,12 @@ public class OrderIntakeService : IOrderIntakeService
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private readonly WmmsDbContext _context;
+    private readonly IExcelOrderParser _excelOrderParser;
 
-    public OrderIntakeService(WmmsDbContext context)
+    public OrderIntakeService(WmmsDbContext context, IExcelOrderParser? excelOrderParser = null)
     {
         _context = context;
+        _excelOrderParser = excelOrderParser ?? new ExcelOrderParser();
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     }
 
@@ -49,6 +52,7 @@ public class OrderIntakeService : IOrderIntakeService
         var detectedPoNumber = !string.IsNullOrWhiteSpace(poNumberOverride) ? poNumberOverride.Trim() : ExtractPoNumberFromFileName(fileName);
         var detectedCustomerName = "Target Home US / Ashley Furniture";
         var sheetName = "OrderDetails";
+        ExcelOrderParseResultDto? parsedExcel = null;
 
         if (excelStream is not null && excelStream.Length > 0)
         {
@@ -63,18 +67,19 @@ public class OrderIntakeService : IOrderIntakeService
 
             try
             {
-                using var package = new ExcelPackage(excelStream);
-                var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-                if (worksheet is null || worksheet.Dimension is null)
+                parsedExcel = await _excelOrderParser.ParseOrderExcelAsync(excelStream, fileName, cancellationToken);
+                sheetName = parsedExcel.SheetName;
+                extractedRows = parsedExcel.Rows;
+
+                if (string.IsNullOrWhiteSpace(poNumberOverride) && !string.IsNullOrWhiteSpace(parsedExcel.DetectedPoNumber))
                 {
-                    throw new AppException(
-                        "Invalid Excel template. Worksheet is empty (UC030.E1).",
-                        400,
-                        MessageCodes.Msg13ValidationError);
+                    detectedPoNumber = parsedExcel.DetectedPoNumber;
                 }
 
-                sheetName = worksheet.Name;
-                extractedRows = ParseWorksheetRows(worksheet, ref detectedPoNumber, ref detectedCustomerName);
+                if (!string.IsNullOrWhiteSpace(parsedExcel.DetectedCustomerName))
+                {
+                    detectedCustomerName = parsedExcel.DetectedCustomerName;
+                }
             }
             catch (AppException)
             {
@@ -114,6 +119,15 @@ public class OrderIntakeService : IOrderIntakeService
 
         var result = await ValidateStagingGridAsync(validateRequest, cancellationToken);
         result.SheetName = sheetName;
+        result.DetectedTargetEtd = parsedExcel?.DetectedTargetEtd ?? result.Rows.FirstOrDefault()?.TargetEtd;
+        result.TotalOrderQty = parsedExcel?.TotalOrderQty ?? result.Rows.Sum(r => r.OrderQty);
+        result.TotalCartons = parsedExcel?.TotalCartons;
+        result.TotalCbm = parsedExcel?.TotalCbm;
+        result.ContainerSpec = parsedExcel?.ContainerSpec;
+        if (parsedExcel?.StrippedCommercialFields is { Count: > 0 })
+        {
+            result.StrippedCommercialFields = parsedExcel.StrippedCommercialFields;
+        }
         return result;
     }
 
@@ -182,7 +196,8 @@ public class OrderIntakeService : IOrderIntakeService
             }
             else
             {
-                var match = DimensionRegex.Match(row.DimensionsMm);
+                var normalizedDim = ExcelOrderParser.NormalizeRawDimensionString(row.DimensionsMm);
+                var match = DimensionRegex.Match(normalizedDim);
                 if (!match.Success)
                 {
                     row.CellErrors.Add(new StagingCellErrorDto
@@ -931,137 +946,6 @@ public class OrderIntakeService : IOrderIntakeService
         };
     }
 
-    private static List<StagingOrderRowDto> ParseWorksheetRows(
-        ExcelWorksheet worksheet,
-        ref string detectedPoNumber,
-        ref string detectedCustomerName)
-    {
-        var rows = new List<StagingOrderRowDto>();
-        var maxRow = worksheet.Dimension.End.Row;
-        var maxCol = worksheet.Dimension.End.Column;
-
-        var headerRow = 1;
-        var colMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        // Quét 10 dòng đầu tiên để tìm dòng tiêu đề bảng và thông tin PO / Khách hàng
-        for (var r = 1; r <= Math.Min(10, maxRow); r++)
-        {
-            for (var c = 1; c <= maxCol; c++)
-            {
-                var cellText = worksheet.Cells[r, c].Text?.Trim() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(cellText))
-                {
-                    continue;
-                }
-
-                if (cellText.StartsWith("PO#", StringComparison.OrdinalIgnoreCase) ||
-                    cellText.StartsWith("PO Number", StringComparison.OrdinalIgnoreCase))
-                {
-                    var parts = cellText.Split(':', '#');
-                    if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[^1]))
-                    {
-                        detectedPoNumber = parts[^1].Trim();
-                    }
-                }
-
-                var lower = cellText.ToLowerInvariant();
-                if (lower.Contains("sku") || lower.Contains("item no") || lower.Contains("product code") || lower == "code")
-                {
-                    headerRow = r;
-                    colMap["sku"] = c;
-                }
-                else if (lower.Contains("description") || lower.Contains("product name") || lower.Contains("item name"))
-                {
-                    colMap["desc"] = c;
-                }
-                else if (lower.Contains("dimension") || lower.Contains("size"))
-                {
-                    colMap["dim"] = c;
-                }
-                else if (lower.Contains("finish") || lower.Contains("color"))
-                {
-                    colMap["finish"] = c;
-                }
-                else if (lower.Contains("qty") || lower.Contains("quantity"))
-                {
-                    colMap["qty"] = c;
-                }
-                else if (lower.Contains("etd") || lower.Contains("delivery"))
-                {
-                    colMap["etd"] = c;
-                }
-                else if (lower.Contains("fsc"))
-                {
-                    colMap["fsc"] = c;
-                }
-                else if (lower.Contains("drawing") || lower.Contains("cad"))
-                {
-                    colMap["cad"] = c;
-                }
-            }
-        }
-
-        if (!colMap.ContainsKey("sku"))
-        {
-            colMap["sku"] = 1;
-            colMap["desc"] = 2;
-            colMap["dim"] = 3;
-            colMap["finish"] = 4;
-            colMap["qty"] = 5;
-            colMap["etd"] = 6;
-        }
-
-        for (var r = headerRow + 1; r <= maxRow; r++)
-        {
-            var sku = GetCellString(worksheet, r, colMap.GetValueOrDefault("sku", 1));
-            var desc = GetCellString(worksheet, r, colMap.GetValueOrDefault("desc", 2));
-            var dim = GetCellString(worksheet, r, colMap.GetValueOrDefault("dim", 3));
-            var finish = GetCellString(worksheet, r, colMap.GetValueOrDefault("finish", 4));
-            var qtyStr = GetCellString(worksheet, r, colMap.GetValueOrDefault("qty", 5));
-            var etdStr = GetCellString(worksheet, r, colMap.GetValueOrDefault("etd", 6));
-            var fscStr = colMap.TryGetValue("fsc", out var fscCol) ? GetCellString(worksheet, r, fscCol) : "FSC 100%";
-            var cadStr = colMap.TryGetValue("cad", out var cadCol) ? GetCellString(worksheet, r, cadCol) : string.Empty;
-
-            if (string.IsNullOrWhiteSpace(sku) && string.IsNullOrWhiteSpace(desc) && string.IsNullOrWhiteSpace(qtyStr))
-            {
-                continue;
-            }
-
-            _ = int.TryParse(qtyStr.Replace(",", "").Trim(), out var parsedQty);
-
-            rows.Add(new StagingOrderRowDto
-            {
-                RowNumber = rows.Count + 1,
-                ProductSku = sku,
-                ProductDescription = desc,
-                DimensionsMm = dim,
-                FinishColor = finish,
-                OrderQty = parsedQty,
-                TargetEtd = etdStr,
-                FscRequired = string.IsNullOrWhiteSpace(fscStr) || fscStr.Contains("FSC", StringComparison.OrdinalIgnoreCase) || fscStr.Contains("100", StringComparison.OrdinalIgnoreCase),
-                TechnicalDrawingName = cadStr
-            });
-        }
-
-        return rows;
-    }
-
-    private static string GetCellString(ExcelWorksheet sheet, int row, int col)
-    {
-        if (col <= 0 || col > sheet.Dimension.End.Column)
-        {
-            return string.Empty;
-        }
-
-        var val = sheet.Cells[row, col].Value;
-        if (val is DateTime dt)
-        {
-            return dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        }
-
-        return sheet.Cells[row, col].Text?.Trim() ?? string.Empty;
-    }
-
     private static List<StagingOrderRowDto> BuildDefaultSampleStagingRows()
     {
         return new List<StagingOrderRowDto>
@@ -1119,14 +1003,15 @@ public class OrderIntakeService : IOrderIntakeService
 
     private static bool TryParseFlexibleDate(string input, out DateTime parsedDate)
     {
+        var normalized = ExcelOrderParser.NormalizeDateString(input);
         var formats = new[] { "yyyy-MM-dd", "dd/MM/yyyy", "MM/dd/yyyy", "yyyy/MM/dd", "d/M/yyyy" };
         return DateTime.TryParseExact(
-                   input.Trim(),
+                   normalized,
                    formats,
                    CultureInfo.InvariantCulture,
                    DateTimeStyles.None,
                    out parsedDate)
-               || DateTime.TryParse(input.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate);
+               || DateTime.TryParse(normalized, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate);
     }
 
     private static string ExtractPoNumberFromFileName(string fileName)
