@@ -25,7 +25,15 @@ public class GlobalExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
+            if (ex is AppException or DomainException or ValidationException)
+            {
+                _logger.LogWarning("Handled business/validation exception ({ExceptionType}): {Message}", ex.GetType().Name, ex.Message);
+            }
+            else
+            {
+                _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
+            }
+
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -39,6 +47,16 @@ public class GlobalExceptionMiddleware
 
         switch (exception)
         {
+            case AppException appEx:
+                statusCode = (HttpStatusCode)appEx.StatusCode;
+                response = appEx.Errors is not null
+                    ? ApiResponse<object>.Fail(appEx.Message, appEx.MessageCode, appEx.Errors)
+                    : ApiResponse<object>.Fail(
+                        appEx.Message,
+                        !string.IsNullOrWhiteSpace(appEx.MessageCode) ? new List<string> { appEx.MessageCode } : new List<string>(),
+                        appEx.MessageCode);
+                break;
+
             case NotFoundException notFoundEx:
                 statusCode = HttpStatusCode.NotFound;
                 response = ApiResponse<object>.Fail(notFoundEx.Message);

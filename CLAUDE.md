@@ -45,6 +45,7 @@ Do not re-scan source files when MCP tools can give you the same
 answer in a few hundred tokens instead of thousands. This is not optional.
 <!-- <<< projectmem bridge <<< -->
 
+
 <!-- >>> ai usage logging bridge >>> -->
 ## AI Usage Logging Protocol (MANDATORY)
 
@@ -116,3 +117,5 @@ Mỗi khi thực hiện coding hoặc thay đổi quan trọng trong dự án WM
    - **Chỉ code ở `be` (`be/WMMS_BE`)**: Mọi chức năng, API, xử lý nghiệp vụ, database chỉ được thực hiện trong thư mục Backend `be/`.
    - **Không thao tác với `fe`**: Tuyệt đối không chỉnh sửa, không tạo file và không can thiệp vào thư mục `fe/` (Frontend).
 <!-- <<< testing and backend-only scope bridge <<< -->
+
+
