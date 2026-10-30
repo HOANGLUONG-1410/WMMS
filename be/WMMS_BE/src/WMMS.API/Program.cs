@@ -37,6 +37,7 @@ builder.Services.AddDbContext<WmmsDbContext>(options =>
 builder.Services.AddAutoMapper(typeof(BomMappingProfile).Assembly);
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateBomRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<WMMS.Application.Validators.MasterData.CreateMaterialValidator>();
 
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
@@ -51,6 +52,7 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 // Phân hệ 4: Order Intake & Order Space Initialization (ORD - UC-30..UC-35)
+builder.Services.AddScoped<IExcelOrderParser, ExcelOrderParser>();
 builder.Services.AddScoped<IOrderIntakeService, OrderIntakeService>();
 
 // Phân hệ 5: Material Breakdown & BOM Preparation (BOM - UC-38..UC-41)
@@ -63,6 +65,10 @@ builder.Services.AddScoped<IMaterialRepository, MaterialRepository>();
 builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
 builder.Services.AddScoped<IExcelBomParser, ExcelBomParser>();
 builder.Services.AddScoped<IBomRoutingService, BomRoutingService>();
+// Master Data (SC-04, SC-05, SC-06 / UC-17..UC-29)
+builder.Services.AddScoped<IMaterialService, WMMS.Infrastructure.Services.MasterData.MaterialService>();
+builder.Services.AddScoped<IProductService, WMMS.Infrastructure.Services.MasterData.ProductService>();
+builder.Services.AddScoped<ISupplierService, WMMS.Infrastructure.Services.MasterData.SupplierService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();

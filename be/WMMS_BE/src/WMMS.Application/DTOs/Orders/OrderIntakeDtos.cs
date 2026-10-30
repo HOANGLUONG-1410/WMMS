@@ -57,6 +57,30 @@ public class StagingOrderRowDto
 }
 
 /// <summary>
+/// DTO Kết quả bóc tách thô từ file Excel PO Khách hàng (tách riêng 4 khối: Header PO, Bảng sản phẩm, Trường thương mại đã lọc theo BR-ORD-01, và Footer Summary/ETD).
+/// </summary>
+public class ExcelOrderParseResultDto
+{
+    public string FileName { get; set; } = string.Empty;
+    public string SheetName { get; set; } = "OrderDetails";
+    public string? DetectedPoNumber { get; set; }
+    public string? DetectedCustomerName { get; set; }
+    public string? DetectedTargetEtd { get; set; }
+    public int? TotalOrderQty { get; set; }
+    public int? TotalCartons { get; set; }
+    public decimal? TotalCbm { get; set; }
+    public string? ContainerSpec { get; set; }
+    public List<string> StrippedCommercialFields { get; set; } = new()
+    {
+        "Container No",
+        "Shipping Port",
+        "Proforma Invoice (PI)",
+        "Unit Prices (CBD)"
+    };
+    public List<StagingOrderRowDto> Rows { get; set; } = new();
+}
+
+/// <summary>
 /// DTO Kết quả phân tích &amp; kiểm tra bảng Safe Excel PO Staging Grid (UC-30, UC-31, UC-32, SCR-ORD-02).
 /// </summary>
 public class StagingOrderGridResponseDto
@@ -66,6 +90,11 @@ public class StagingOrderGridResponseDto
     public string PoNumber { get; set; } = string.Empty;
     public long? CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
+    public string? DetectedTargetEtd { get; set; }
+    public int TotalOrderQty { get; set; }
+    public int? TotalCartons { get; set; }
+    public decimal? TotalCbm { get; set; }
+    public string? ContainerSpec { get; set; }
     public List<string> StrippedCommercialFields { get; set; } = new()
     {
         "Container No",
