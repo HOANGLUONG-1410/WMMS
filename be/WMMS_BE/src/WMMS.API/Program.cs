@@ -52,6 +52,7 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 // Phân hệ 4: Order Intake & Order Space Initialization (ORD - UC-30..UC-35)
+builder.Services.AddScoped<IExcelOrderParser, ExcelOrderParser>();
 builder.Services.AddScoped<IOrderIntakeService, OrderIntakeService>();
 
 // Phân hệ 5: Material Breakdown & BOM Preparation (BOM - UC-38..UC-41)
