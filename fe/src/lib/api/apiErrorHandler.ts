@@ -17,12 +17,8 @@ const handlers: Partial<Record<number, ErrorAction>> = {
     }),
 
   [HttpStatus.UNAUTHORIZED]: (e) => {
-    // Distinguish wrong login credentials (MSG02) from an expired JWT session (MSG12)
-    if (e.messageCode === "MSG02" || e.url?.includes("/auth/login")) {
-      toast.error("Authentication failed", {
-        description: e.message,
-        id: "401-login",
-      });
+    // Không bắn toast pop-up cho API đăng nhập (lỗi được hiển thị trực tiếp trên form)
+    if (e.url?.includes("/auth/login")) {
       return;
     }
 
@@ -37,10 +33,7 @@ const handlers: Partial<Record<number, ErrorAction>> = {
   },
 
   [HttpStatus.FORBIDDEN]: (e) =>
-    toast.error(
-      e.messageCode === "MSG04" ? "Account restricted" : "Access denied",
-      { description: e.message, id: "403" },
-    ),
+    toast.error("Access denied", { description: e.message, id: "403" }),
 
   [HttpStatus.NOT_FOUND]: (e) =>
     toast.error("Not found", { description: e.message, id: "404" }),

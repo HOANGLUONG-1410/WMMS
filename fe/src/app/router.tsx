@@ -82,7 +82,7 @@ export const router = createBrowserRouter([
         ),
         children: [
           { path: "/orders", element: <SalesOrderListPage /> },
-          { path: "/orders/staging", element: <StagingGridPage /> },
+          { path: "/", element: <StagingGridPage /> },
         ],
       },
 

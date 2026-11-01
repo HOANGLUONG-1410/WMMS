@@ -8,36 +8,20 @@ interface FeedbackMessage {
   text: string;
 }
 
-/**
- * Màn hình III.1: Authorization (1.1 Login & 1.2 Forgot Password Modal)
- * Tuân thủ 100% thiết kế giao diện và bảng Field Description trong Report 3 (Section III.1):
- * - Nền tối `#0d1528`, thẻ trắng chính giữa bo góc.
- * - Tiêu đề: `WMMS PRODUCTION SUITE` | Phụ đề: `Nguyen Khoa Ha Nam Wood Factory`.
- * - Trường #1: `Work Email / Username` (mặc định `owner@nguyenkhoa.vn`).
- * - Trường #2: `Password` + Link #3 `Forgot password?` nằm cùng hàng bên phải nhãn Password (text-blue-600).
- * - Nút #4: `Sign In to Workspace` (bg-[#2563eb] text-white).
- * - Modal 1.2 (`Reset Personal Password`) được tách ra `ResetPasswordModal.tsx`.
- */
 export default function LoginPage() {
-  // State cho biểu mẫu Đăng nhập (Section III.1.1 - UC-01)
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [authMessage, setAuthMessage] = useState<FeedbackMessage | null>(null);
-
-  // State cho Modal Quên mật khẩu (Section III.1.2 - UC-04)
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   const loginMutation = useLogin();
 
-  /**
-   * UC-01: Xử lý sự kiện bấm nút "Sign In to Workspace"
-   */
   const handleSignIn = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!identifier.trim() || !password.trim()) {
       setAuthMessage({
         type: "error",
-        text: "Please enter both Work Email / Username and Password (MSG01).",
+        text: "Please enter both Work Email / Username and Password.",
       });
       return;
     }
@@ -61,9 +45,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#0d1528] flex items-center justify-center p-4 relative select-none">
-      {/* Thẻ Login chính giữa (Section III.1.1) */}
       <div className="w-full max-w-[380px] bg-white rounded-xl shadow-2xl px-7 py-8 border border-slate-100">
-        {/* Tiêu đề hệ thống */}
         <div className="text-center mb-6">
           <h1 className="text-[17px] font-extrabold tracking-tight text-slate-900 uppercase">
             WMMS PRODUCTION SUITE
@@ -73,7 +55,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Thông báo phản hồi nếu có */}
+        {/* Thông báo lỗi hiển thị inline ngay trên 2 ô input khi đăng nhập thất bại */}
         {authMessage && (
           <div
             className={`mb-4 px-3 py-2 rounded text-xs font-medium ${
@@ -86,9 +68,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Biểu mẫu đăng nhập */}
         <form onSubmit={handleSignIn} className="space-y-4">
-          {/* Field #1: Work Email / Username */}
           <div>
             <label
               htmlFor="identifier-input"
@@ -106,7 +86,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Field #2: Password & Field #3: Forgot password? Link */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label
@@ -133,7 +112,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Field #4: Sign In to Workspace Button */}
           <div className="pt-1">
             <button
               type="submit"
@@ -149,7 +127,6 @@ export default function LoginPage() {
         </form>
       </div>
 
-      {/* Modal 1.2: Reset Personal Password (UC-04 - Section III.1.2) */}
       <ResetPasswordModal
         isOpen={showForgotModal}
         onClose={() => setShowForgotModal(false)}

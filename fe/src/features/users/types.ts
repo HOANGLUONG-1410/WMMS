@@ -1,5 +1,5 @@
 /**
- * Cấu trúc User trả về từ API /users (UC-06)
+ * Cấu trúc User trả về từ API /users
  */
 export interface UserDto {
   userId: number;
@@ -34,10 +34,11 @@ export interface PagedResult<T> {
  * Tham số truy vấn khi lọc / tìm kiếm danh sách nhân sự
  */
 export interface UserQueryParams {
+  searchKeyword?: string;
   searchTerm?: string;
   roleCode?: string;
   status?: string;
+  pageNumber?: number;
   pageIndex?: number;
   pageSize?: number;
 }
-

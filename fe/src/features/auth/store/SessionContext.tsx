@@ -18,10 +18,15 @@ export type SessionUser = AuthUser & {
   activeRole: RoleCode;
 };
 
+export interface LoginResult {
+  user: SessionUser;
+  message: string;
+}
+
 interface SessionValue {
   currentUser: SessionUser | null;
   isInitializing: boolean;
-  login: (identifier: string, password: string) => Promise<SessionUser>;
+  login: (identifier: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   switchActiveRole: (role: RoleCode) => void;
 }
@@ -35,24 +40,34 @@ export function getInitials(fullName = ""): string {
   return fullName.slice(0, 2).toUpperCase() || "WM";
 }
 
-/** Rút thông báo lỗi hiển thị cho người dùng từ lỗi trả về của API đăng nhập. */
+/**
+ * Rút thông báo lỗi hiển thị cho người dùng từ lỗi trả về của API:
+ * 1. Ưu tiên cao nhất: message do Backend trả về.
+ * 2. Ưu tiên nhì: mảng errors do Backend trả về (bỏ qua các mã code nội bộ như MSG01, MSG02).
+ * 3. Fallback cuối cùng: thông báo mặc định của Frontend khi mất kết nối mạng.
+ */
 export function getErrorMessage(error: unknown): string {
   if (error && typeof error === "object") {
-    if (
-      "errors" in error &&
-      Array.isArray((error as { errors?: unknown }).errors)
-    ) {
-      const errs = (error as { errors: string[] }).errors;
-      if (errs.length > 0 && errs[0]) return errs[0];
+    const err = error as { message?: string; errors?: string[] };
+
+    // 1. Ưu tiên cao nhất: Lấy chuỗi message do Backend trả về
+    if (typeof err.message === "string" && err.message.trim().length > 0) {
+      return err.message.trim();
     }
-    if (
-      "message" in error &&
-      typeof (error as { message?: unknown }).message === "string"
-    ) {
-      return (error as { message: string }).message;
+
+    // 2. Ưu tiên nhì: Lấy lỗi chi tiết từ backend (bỏ qua mã code nội bộ như MSG01, MSG02...)
+    if (Array.isArray(err.errors) && err.errors.length > 0) {
+      const fieldError = err.errors.find(
+        (e) => typeof e === "string" && !/^MSG\d+$/i.test(e),
+      );
+      if (fieldError && fieldError.trim().length > 0) {
+        return fieldError.trim();
+      }
     }
   }
-  return "Invalid username/email or password (MSG02).";
+
+  // 3. Fallback cuối cùng nếu không nhận được bất kỳ phản hồi nào từ server
+  return "Unable to connect to server. Please try again.";
 }
 
 function buildSessionUser(user: AuthUser): SessionUser {
@@ -74,10 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isInitializing, setIsInitializing] = useState(true);
   const queryClient = useQueryClient();
 
-  // Khôi phục session khi tải lại trang (F5):
-  // 1. Gọi POST /auth/refresh (trình duyệt tự kẹp HttpOnly cookie wmms_refresh_token)
-  // 2. Nhận accessToken mới -> lưu vào RAM (tokenStore)
-  // 3. Gọi GET /auth/me để lấy profile user hiện tại
+  // Khôi phục session khi tải lại trang (F5)
   useEffect(() => {
     let isMounted = true;
 
@@ -119,7 +131,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (identifier: string, password: string) => {
     const res = await authApi.login(identifier, password, true);
-    const { accessToken, user } = res.data; // authApi đã return res.data (envelope)
+    const { accessToken, user } = res.data;
 
     const roles: string[] = user?.roles ?? [];
     if (roles.length === 0) {
@@ -128,11 +140,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    setAccessToken(accessToken); // Lưu accessToken vào tokenStore (RAM)
+    setAccessToken(accessToken);
 
     const nextUser = buildSessionUser(user);
     setCurrentUser(nextUser);
-    return nextUser;
+    return {
+      user: nextUser,
+      message: res.message || "Signed in successfully!",
+    };
   }, []);
 
   const logout = useCallback(async () => {
@@ -141,7 +156,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setAccessToken(null);
       setCurrentUser(null);
-      queryClient.clear(); // Xóa sạch TanStack Query cache để tránh rò rỉ dữ liệu phiên trước
+      queryClient.clear();
     }
   }, [queryClient]);
 
