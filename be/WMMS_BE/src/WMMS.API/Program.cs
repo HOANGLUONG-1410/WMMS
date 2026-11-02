@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using WMMS.API.Hubs;
 using WMMS.API.Middlewares;
 using WMMS.API.Schedulers;
 using WMMS.Application.Interfaces.External;
@@ -52,6 +53,8 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 // Phân hệ 4: Order Intake & Order Space Initialization (ORD - UC-30..UC-35)
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationHubService, SignalRNotificationHubService>();
 builder.Services.AddScoped<IExcelOrderParser, ExcelOrderParser>();
 builder.Services.AddScoped<IOrderIntakeService, OrderIntakeService>();
 
@@ -205,5 +208,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
+app.MapHub<WmmsNotificationHub>("/hubs/notifications");
 
 app.Run();

@@ -32,11 +32,16 @@ public class OrderIntakeService : IOrderIntakeService
 
     private readonly WmmsDbContext _context;
     private readonly IExcelOrderParser _excelOrderParser;
+    private readonly INotificationHubService? _notificationHubService;
 
-    public OrderIntakeService(WmmsDbContext context, IExcelOrderParser? excelOrderParser = null)
+    public OrderIntakeService(
+        WmmsDbContext context,
+        IExcelOrderParser? excelOrderParser = null,
+        INotificationHubService? notificationHubService = null)
     {
         _context = context;
         _excelOrderParser = excelOrderParser ?? new ExcelOrderParser();
+        _notificationHubService = notificationHubService;
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     }
 
@@ -537,6 +542,17 @@ public class OrderIntakeService : IOrderIntakeService
 
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+
+            if (_notificationHubService != null)
+            {
+                await _notificationHubService.NotifyOrderSpaceCreatedAsync(
+                    orderSpace.SpaceKey,
+                    salesOrder.PoNumber,
+                    customer.CompanyName,
+                    totalUnits,
+                    validationResult.Rows.Count,
+                    cancellationToken);
+            }
 
             return await GetOrderSpaceDetailAsync(orderSpace.SpaceKey, false, cancellationToken);
         }
