@@ -334,11 +334,11 @@ public static class DbInitializer
                 {
                     new() { RoutingId = routing.RoutingId, StageSequence = 1, StageName = "1. Pha phôi gỗ thô", IsHoldPoint = false },
                     new() { RoutingId = routing.RoutingId, StageSequence = 2, StageName = "2. Cắt/Xẻ định hình chi tiết", IsHoldPoint = false },
-                    new() { RoutingId = routing.RoutingId, StageSequence = 3, StageName = "3. Bào 4 mặt & Chà nhám phẳng", IsHoldPoint = false },
-                    new() { RoutingId = routing.RoutingId, StageSequence = 4, StageName = "4. Khoan lỗ & Phay mộng âm/dương", IsHoldPoint = false },
-                    new() { RoutingId = routing.RoutingId, StageSequence = 5, StageName = "5. Lắp ráp kết cấu & Bắt phụ kiện bản lề/ray trượt", IsHoldPoint = true },
-                    new() { RoutingId = routing.RoutingId, StageSequence = 6, StageName = "6. Sơn lót & Sơn phủ hoàn thiện PU", IsHoldPoint = false },
-                    new() { RoutingId = routing.RoutingId, StageSequence = 7, StageName = "7. Kiểm tra xuất xưởng & Đóng gói carton", IsHoldPoint = false }
+                    new() { RoutingId = routing.RoutingId, StageSequence = 3, StageName = "3. Bào 4 mặt & Chà nhám phẳng mịn", IsHoldPoint = false },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 4, StageName = "4. Khoan lỗ chốt & Phay mộng âm dương", IsHoldPoint = false },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 5, StageName = "5. Lắp ráp kết cấu & Vào mộng dán keo ép vam", IsHoldPoint = true },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 6, StageName = "6. Phun sơn lót PU & Sơn phủ hoàn thiện", IsHoldPoint = false },
+                    new() { RoutingId = routing.RoutingId, StageSequence = 7, StageName = "7. Kiểm tra xuất xưởng KCS & Đóng thùng carton", IsHoldPoint = false }
                 };
 
                 await context.RoutingStages.AddRangeAsync(stages);
