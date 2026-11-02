@@ -168,9 +168,9 @@ public class BomRoutingService : IBomRoutingService
             var grossDemand = CalculateGrossDemand(item.NetQtyPerUnit, request.OrderedQty, request.ScrapRatePercent);
 
             // QT-03: Loại trừ phần tồn kho đã giữ chỗ của đơn khác ngay từ đầu, chỉ lấy AvailableStock để đối chiếu
-            var physicalStock = mat?.MaterialStock?.PhysicalStock ?? 0m;
-            var allocatedStock = mat?.MaterialStock?.AllocatedStock ?? 0m;
-            var availableStock = mat?.MaterialStock?.AvailableStock ?? Math.Max(0m, physicalStock - allocatedStock);
+            var physicalStock = mat?.MaterialStock?.PhysicalQty ?? 0m;
+            var allocatedStock = mat?.MaterialStock?.AllocatedQty ?? 0m;
+            var availableStock = mat?.MaterialStock?.AvailableQty ?? Math.Max(0m, physicalStock - allocatedStock);
             var netDemand = Math.Max(0m, Math.Round(grossDemand - availableStock, 4));
 
             results.Add(new CalculateDemandItemResultDto
@@ -427,7 +427,7 @@ public class BomRoutingService : IBomRoutingService
         // QT-03: Kiểm tra xem tồn kho khả dụng (AvailableStock) có đáp ứng đủ toàn bộ dòng BOM không
         var hasShortage = bomHeader.BomDetails.Any(d =>
         {
-            var avail = d.Material?.MaterialStock?.AvailableStock ?? 0m;
+            var avail = d.Material?.MaterialStock?.AvailableQty ?? 0m;
             return d.GrossTotalDemand > avail;
         });
 
@@ -531,7 +531,7 @@ public class BomRoutingService : IBomRoutingService
                     row.UnitOfMeasure = resolvedMaterial.UnitOfMeasure;
                 }
                 row.MaterialGroup = resolvedMaterial.MaterialGroup.ToString();
-                row.AvailableStock = resolvedMaterial.MaterialStock?.AvailableStock ?? 0m;
+                row.AvailableStock = resolvedMaterial.MaterialStock?.AvailableQty ?? 0m;
             }
 
             if (row.NetQtyPerUnit <= 0)
