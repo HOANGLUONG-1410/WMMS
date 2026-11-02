@@ -3,3 +3,34 @@
 body {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
+
+/* Tùy chỉnh nút đóng (X) của Toaster luôn hiển thị rõ ràng ở góc trên bên phải */
+[data-sonner-toast] [data-close-button] {
+  opacity: 1 !important;
+  left: unset !important;
+  right: 8px !important;
+  top: 8px !important;
+  transform: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 9999px !important;
+  background: rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: inherit !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  background: rgba(0, 0, 0, 0.2) !important;
+  transform: scale(1.1) !important;
+}
+
+[data-sonner-toast] [data-close-button] svg {
+  width: 10px !important;
+  height: 10px !important;
+  stroke-width: 2.5 !important;
+}
