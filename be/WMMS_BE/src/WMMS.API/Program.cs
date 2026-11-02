@@ -186,6 +186,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads", "products"));
+app.UseStaticFiles();
+
 app.UseCors("WmmsCorsPolicy");
 
 app.UseAuthentication();
