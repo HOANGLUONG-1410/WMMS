@@ -686,13 +686,13 @@ public class BomRoutingService : IBomRoutingService
     {
         return new List<RoutingStageDto>
         {
-            new() { StageSequence = 1, StageName = "1. Pha phôi gỗ", IsHoldPoint = false, WorkstationCode = "WC-01-SAW", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 2, StageName = "2. Cắt/Xẻ chi tiết", IsHoldPoint = false, WorkstationCode = "WC-01-SAW", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 3, StageName = "3. Bào & Chà nhám", IsHoldPoint = false, WorkstationCode = "WC-02-SAND", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 4, StageName = "4. Khoan & Tạo mộng", IsHoldPoint = false, WorkstationCode = "WC-03-CNC", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 5, StageName = "5. Lắp ráp & Gắn phụ kiện", IsHoldPoint = true, WorkstationCode = "WC-04-ASSY", QualityGateName = "QC Hold Point Gate (100% Inspection)" },
-            new() { StageSequence = 6, StageName = "6. Sơn lót & Sơn PU hoàn thiện", IsHoldPoint = false, WorkstationCode = "WC-05-PAINT", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 7, StageName = "7. Đóng gói & Dán tem nhãn", IsHoldPoint = false, WorkstationCode = "WC-06-PACK", QualityGateName = "Final Packing QC Gate" }
+            new() { StageSequence = 1, StageName = "1. Pha phôi gỗ thô", IsHoldPoint = false, WorkstationCode = "WC-01-SAW", QualityGateName = "In-Process Self-Check" },
+            new() { StageSequence = 2, StageName = "2. Cắt/Xẻ định hình chi tiết", IsHoldPoint = false, WorkstationCode = "WC-01-SAW", QualityGateName = "In-Process Self-Check" },
+            new() { StageSequence = 3, StageName = "3. Bào 4 mặt & Chà nhám phẳng mịn", IsHoldPoint = false, WorkstationCode = "WC-02-SAND", QualityGateName = "In-Process Self-Check" },
+            new() { StageSequence = 4, StageName = "4. Khoan lỗ chốt & Phay mộng âm dương", IsHoldPoint = false, WorkstationCode = "WC-03-CNC", QualityGateName = "In-Process Self-Check" },
+            new() { StageSequence = 5, StageName = "5. Lắp ráp kết cấu & Vào mộng dán keo ép vam", IsHoldPoint = true, WorkstationCode = "WC-04-ASSY", QualityGateName = "QC Hold Point Gate (100% Inspection)" },
+            new() { StageSequence = 6, StageName = "6. Phun sơn lót PU & Sơn phủ hoàn thiện", IsHoldPoint = false, WorkstationCode = "WC-05-PAINT", QualityGateName = "In-Process Self-Check" },
+            new() { StageSequence = 7, StageName = "7. Kiểm tra xuất xưởng KCS & Đóng thùng carton", IsHoldPoint = false, WorkstationCode = "WC-06-PACK", QualityGateName = "Final Packing QC Gate" }
         };
     }
 }

@@ -605,30 +605,38 @@ GO
 SET IDENTITY_INSERT [routing_stages] ON;
 INSERT INTO [routing_stages] ([stage_id], [routing_id], [stage_sequence], [stage_name], [is_hold_point])
 VALUES
--- Routing cho Ghế (routing_id = 1)
-(1, 1, 1, N'1. Pha phôi gỗ sồi thô theo chiều dài nan ghế', 0),
-(2, 1, 2, N'2. Cắt/Xẻ định hình chân ghế và nan cong', 0),
-(3, 1, 3, N'3. Bào 4 mặt & Chà nhám phẳng mịn chi tiết', 0),
-(4, 1, 4, N'4. Khoan lỗ chốt & Phay mộng âm dương chân/mặt ghế', 0),
-(5, 1, 5, N'5. Lắp ráp khung giàn ghế & Vào mộng keo dán ép vam', 1), -- Hold Point 1: Kiểm tra liên kết mộng
-(6, 1, 6, N'6. Phun sơn lót PU và Phủ mờ 50% hoàn thiện', 0),
-(7, 1, 7, N'7. Kiểm tra xuất xưởng KCS & Đóng thùng carton (2 cái/thùng)', 0),
--- Routing cho Bàn (routing_id = 2)
-(8, 2, 1, N'1. Pha phôi gỗ tấm mặt bàn & giàn chân trụ', 0),
-(9, 2, 2, N'2. Ghép mộng mang cá mặt bàn mở rộng', 0),
-(10, 2, 3, N'3. Chà nhám thùng bề mặt đạt độ phẳng tiêu chuẩn', 0),
-(11, 2, 4, N'4. Gia công rãnh lắp cơ cấu ray trượt ray thông minh', 0),
-(12, 2, 5, N'5. Lắp ráp cơ cấu mở rộng & Thử tải trượt êm', 1), -- Hold Point 2: Kiểm tra ray trượt mở rộng
-(13, 2, 6, N'6. Sơn phủ chống ẩm 3 lớp tiêu chuẩn xuất khẩu', 0),
-(14, 2, 7, N'7. Bọc xốp PE Foam góc & Đóng gói 2 kiện/bộ bàn', 0),
--- Routing cho Tủ (routing_id = 3)
-(15, 3, 1, N'1. Cắt ván Plywood & Gỗ xẻ theo kích thước hộp tủ', 0),
-(16, 3, 2, N'2. Dán nẹp chỉ cạnh Veneer và phay soi hèm', 0),
-(17, 3, 3, N'3. Khoan giàn lỗ bản lề bật và ray trượt hộc kéo', 0),
-(18, 3, 4, N'4. Lắp ráp thùng tủ và cân chỉnh cánh tủ', 1), -- Hold Point 3: Kiểm tra khe hở cánh & ray
-(19, 3, 5, N'5. Hoàn thiện bề mặt sơn bóng mờ màu hạt dẻ', 0),
-(20, 3, 6, N'6. Gắn tay nắm nhôm và bọc phụ kiện dự phòng', 0),
-(21, 3, 7, N'7. Kiểm định xuất khẩu & Đóng thùng carton xuất khẩu', 0);
+-- Routing chuẩn công đoạn sản xuất (routing_id = 1)
+(1, 1, 1, N'1. Pha phôi gỗ thô', 0),
+(2, 1, 2, N'2. Cắt/Xẻ định hình chi tiết', 0),
+(3, 1, 3, N'3. Bào 4 mặt & Chà nhám phẳng mịn', 0),
+(4, 1, 4, N'4. Khoan lỗ chốt & Phay mộng âm dương', 0),
+(5, 1, 5, N'5. Lắp ráp kết cấu & Vào mộng dán keo ép vam', 1), -- Hold Point: Kiểm tra liên kết mộng & phụ kiện
+(6, 1, 6, N'6. Phun sơn lót PU & Sơn phủ hoàn thiện', 0),
+(7, 1, 7, N'7. Kiểm tra xuất xưởng KCS & Đóng thùng carton', 0),
+-- Routing chuẩn công đoạn sản xuất (routing_id = 2)
+(8, 2, 1, N'1. Pha phôi gỗ thô', 0),
+(9, 2, 2, N'2. Cắt/Xẻ định hình chi tiết', 0),
+(10, 2, 3, N'3. Bào 4 mặt & Chà nhám phẳng mịn', 0),
+(11, 2, 4, N'4. Khoan lỗ chốt & Phay mộng âm dương', 0),
+(12, 2, 5, N'5. Lắp ráp kết cấu & Vào mộng dán keo ép vam', 1), -- Hold Point
+(13, 2, 6, N'6. Phun sơn lót PU & Sơn phủ hoàn thiện', 0),
+(14, 2, 7, N'7. Kiểm tra xuất xưởng KCS & Đóng thùng carton', 0),
+-- Routing chuẩn công đoạn sản xuất (routing_id = 3)
+(15, 3, 1, N'1. Pha phôi gỗ thô', 0),
+(16, 3, 2, N'2. Cắt/Xẻ định hình chi tiết', 0),
+(17, 3, 3, N'3. Bào 4 mặt & Chà nhám phẳng mịn', 0),
+(18, 3, 4, N'4. Khoan lỗ chốt & Phay mộng âm dương', 0),
+(19, 3, 5, N'5. Lắp ráp kết cấu & Vào mộng dán keo ép vam', 1), -- Hold Point
+(20, 3, 6, N'6. Phun sơn lót PU & Sơn phủ hoàn thiện', 0),
+(21, 3, 7, N'7. Kiểm tra xuất xưởng KCS & Đóng thùng carton', 0),
+-- Routing chuẩn công đoạn sản xuất (routing_id = 4)
+(22, 4, 1, N'1. Pha phôi gỗ thô', 0),
+(23, 4, 2, N'2. Cắt/Xẻ định hình chi tiết', 0),
+(24, 4, 3, N'3. Bào 4 mặt & Chà nhám phẳng mịn', 0),
+(25, 4, 4, N'4. Khoan lỗ chốt & Phay mộng âm dương', 0),
+(26, 4, 5, N'5. Lắp ráp kết cấu & Vào mộng dán keo ép vam', 1), -- Hold Point
+(27, 4, 6, N'6. Phun sơn lót PU & Sơn phủ hoàn thiện', 0),
+(28, 4, 7, N'7. Kiểm tra xuất xưởng KCS & Đóng thùng carton', 0);
 SET IDENTITY_INSERT [routing_stages] OFF;
 GO
 
