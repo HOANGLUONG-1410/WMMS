@@ -1,60 +1,10 @@
-import axios from 'axios';
+import { apiClient } from '../lib/axios';
 import { API_BASE_URL } from '../constants/wmmsConstants';
-import { ApiError, type ApiResponseEnvelope } from '../lib/api/apiError';
-import { HttpStatus } from '../lib/api/httpStatus';
 
 /**
  * Dịch vụ kết nối REST API tới WMMS Backend (.NET 8 Web API)
- * Bao gồm các nhóm API:
- * 1. Authorization (UC-01..UC-05): /api/v1/auth/*
- * 2. System Administration & RBAC (UC-06..UC-15): /api/v1/users/*, /api/v1/roles/*, /api/v1/audit-logs/*
- * 3. Order Intake & Order Space (UC-30..UC-35): /api/v1/orders/*
- * 4. BOM & Dynamic Routing (UC-38..UC-41): /api/v1/bom/*
+ * Sử dụng apiClient chuẩn hóa từ ../lib/axios (tự động đính kèm Bearer token từ in-memory tokenStore)
  */
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  withCredentials: true
-});
-
-// Tự động đính kèm JWT Access Token vào header Authorization (BR-AUT-04)
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('wmms_access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Chuẩn hóa mọi lỗi phản hồi từ Backend về ApiError để TanStack Query (QueryCache / MutationCache) xử lý nhất quán
-apiClient.interceptors.response.use(
-  (response) => {
-    const body = response.data as ApiResponseEnvelope | undefined;
-    if (body && typeof body === 'object' && body.success === false) {
-      const normalizedErrors = Array.isArray(body.errors)
-        ? body.errors.map(String)
-        : body.errors && typeof body.errors === 'object'
-        ? Object.values(body.errors).flat().map(String)
-        : [];
-
-      return Promise.reject(
-        new ApiError(
-          body.message || normalizedErrors[0] || 'Request failed.',
-          response.status || HttpStatus.BAD_REQUEST,
-          body.messageCode,
-          normalizedErrors,
-          response.config?.url
-        )
-      );
-    }
-    return response;
-  },
-  (error: unknown) => {
-    return Promise.reject(ApiError.fromAxiosError(error));
-  }
-);
 
 /**
  * 3. API Phân hệ Quản trị Hệ thống & Đa vai trò (Section III.3: System Administration - UC-06..UC-15)

@@ -3,6 +3,8 @@ export interface RoutingStageDto {
   stageSequence: number;
   stageName: string;
   isHoldPoint: boolean;
+  workstationCode?: string;
+  qualityGateName?: string;
 }
 
 export interface BomDetailDto {
@@ -17,6 +19,13 @@ export interface BomDetailDto {
   fscCertified?: boolean;
   netQtyPerUnit: number;
   grossTotalDemand: number;
+  physicalStock?: number;
+  allocatedStock?: number;
+  availableStock?: number;
+  netDemand?: number;
+  isShortage?: boolean;
+  subAssemblyName?: string | null;
+  componentDimensionSpec?: string | null;
   notes?: string | null;
 }
 
@@ -36,6 +45,8 @@ export interface BomDto {
   creatorName?: string | null;
   createdAt?: string;
   updatedAt?: string | null;
+  hasMaterialShortage?: boolean;
+  shortageMaterialsCount?: number;
   bomDetails: BomDetailDto[];
   routingStages: RoutingStageDto[];
 }
@@ -77,20 +88,32 @@ export interface CalculateDemandItemResultDto {
   materialId: number;
   materialCode: string;
   materialName: string;
+  materialGroup?: string;
   unitOfMeasure: string;
   netQtyPerUnit: number;
   grossTotalDemand: number;
+  physicalStock?: number;
+  allocatedStock?: number;
+  availableStock?: number;
+  netDemand?: number;
+  isShortage?: boolean;
+  stockCoverageStatus?: string;
 }
 
 export interface CalculateDemandResponseDto {
   orderedQty: number;
   scrapRatePercent: number;
+  hasAnyShortage?: boolean;
+  shortageItemsCount?: number;
+  recommendedBomState?: string;
   calculatedItems: CalculateDemandItemResultDto[];
 }
 
 export interface BomDetailItemInputDto {
   materialId: number;
   netQtyPerUnit: number;
+  subAssemblyName?: string | null;
+  componentDimensionSpec?: string | null;
   notes?: string | null;
 }
 
@@ -108,3 +131,57 @@ export interface UpdateBomRequestDto {
   customRoutingStages?: RoutingStageDto[];
 }
 
+export interface BomStagingRowDto {
+  rowIndex: number;
+  rowNumber?: number;
+  materialCode: string;
+  materialName: string;
+  materialGroup: string;
+  unitOfMeasure: string;
+  netQtyPerUnit: number;
+  subAssemblyName?: string | null;
+  componentPartName?: string | null;
+  componentDimensionSpec?: string | null;
+  rawPiecesPerUnit?: number | null;
+  availableStock?: number;
+  notes?: string | null;
+  resolvedMaterialId?: number | null;
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface BomStagingPreviewDto {
+  fileName: string;
+  sheetName: string;
+  detectedProductSku?: string | null;
+  detectedProductDimensions?: string | null;
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  hasErrors: boolean;
+  rows: BomStagingRowDto[];
+}
+
+export interface ConfirmBomStagingRequestDto {
+  orderItemId: number;
+  productId: number;
+  scrapRatePercent: number;
+  rows: BomStagingRowDto[];
+}
+
+export interface OrderSpaceLineItemForBom {
+  orderItemId: number;
+  productId: number;
+  productSku: string;
+  productName: string;
+  dimensionsSpec?: string | null;
+  woodSpecies?: string | null;
+  finishSpec?: string | null;
+  orderedQty: number;
+  fscCertifiedReq: boolean;
+  attachedCadFileName?: string | null;
+  bomId?: number | null;
+  scrapRatePct?: number | null;
+  itemStatus: string;
+  bomLifecycleBadge: string;
+}

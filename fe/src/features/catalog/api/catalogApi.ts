@@ -28,22 +28,27 @@ export const catalogApi = {
   },
 
   /**
-   * Lấy danh mục nguyên vật liệu chuẩn xưởng (Master Raw Materials)
+   * Lấy danh mục nguyên vật liệu chuẩn xưởng (Master Raw Materials) từ GET /api/v1/materials
    * Phân loại theo 4 nhóm: LUMBER, HARDWARE, FINISH_PAINT, PACKAGING
    */
   getMaterials: async (group?: string): Promise<MaterialCatalogDto[]> => {
-    // Giữ sẵn cấu trúc để tự động kết nối khi backend mở endpoint /materials
     try {
-      const params = group && group !== "ALL" ? { group } : {};
-      const res = await apiClient.get<{ success: boolean; data: MaterialCatalogDto[] }>(
-        "/materials",
-        { params },
-      );
-      if (res.data?.data && res.data.data.length > 0) {
-        return res.data.data;
+      const params: Record<string, string | number> = { page: 1, pageSize: 100, status: "ACTIVE" };
+      if (group && group !== "ALL") {
+        params.category = group;
+      }
+      const res = await apiClient.get<{
+        success: boolean;
+        data: MaterialCatalogDto[] | { items?: MaterialCatalogDto[] };
+      }>("/materials", { params });
+
+      const rawData = res.data?.data;
+      const list = Array.isArray(rawData) ? rawData : rawData?.items ?? [];
+      if (list.length > 0) {
+        return list;
       }
     } catch {
-      // Backend chưa mở endpoint /materials -> Dùng master directory chuẩn
+      // Fallback sang danh mục vật tư chuẩn đồng bộ DB nếu mất kết nối
     }
 
     if (!group || group === "ALL") {
@@ -52,4 +57,3 @@ export const catalogApi = {
     return DEFAULT_MASTER_MATERIALS.filter((m) => m.materialGroup === group);
   },
 };
-

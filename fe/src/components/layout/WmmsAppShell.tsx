@@ -4,17 +4,53 @@ import { useWmms } from '../../features/auth/hooks/WmmsContext';
 import { useSession } from '../../features/auth/store/SessionContext';
 import { useLogout } from '../../features/auth/hooks/useLogout';
 import { ROLE_CONFIG } from '../../constants/wmmsConstants';
+import { ROLES, type RoleCode } from '../../constants/roles';
+
+interface SidebarItem {
+  icon: string;
+  label: string;
+  path: string;
+  badge?: string;
+}
+
+interface SidebarSection {
+  heading: string;
+  items: SidebarItem[];
+}
+
+export const getDefaultRouteForRole = (role: RoleCode): string => {
+  switch (role) {
+    case ROLES.ADMIN:
+      return '/admin/users';
+    case ROLES.OWNER:
+      return '/orders';
+    case ROLES.SALES:
+      return '/orders';
+    case ROLES.PLANNER:
+      return '/bom';
+    case ROLES.PURCHASING:
+      return '/purchasing/orders';
+    case ROLES.WAREHOUSE:
+      return '/inventory/stock';
+    case ROLES.LEADER:
+      return '/production/kanban';
+    case ROLES.QC:
+      return '/qc/inspection';
+    default:
+      return '/orders';
+  }
+};
 
 /**
- * Component Bố cục Điều hướng Toàn cục (Section III.2: Navigation - Global selector & Top Bar)
- * Hiển thị đúng theo thiết kế nguyên bản trong Report 3:
- * - Cột bên trái (Dark Navy Sidebar `#0b132b`): Logo WMMS / WMMSWOOD + Role Badge, các nhóm điều hướng theo vai trò, và chân trang `WMMS System v2.6.4`.
- * - Thanh đỉnh (Top Bar): Dropdown chuyển đổi `Current Space` (hoặc nhãn ngữ cảnh), Role Switcher nhanh, Avatar viết tắt + Họ tên + Vai trò, và nút `Logout`.
+ * Component Bố cục Điều hướng Toàn cục (Section III.2: Navigation - Global Selector & Top Bar)
+ * Chuẩn hóa 100% theo sơ đồ Accessibility trong Report 3 (SRS Screen Inventory):
+ * - Cột bên trái (Dark Navy Sidebar `#0d1528`): Logo WMMSWOOD + Active Role Badge, danh mục menu theo thẩm quyền của Role hiện tại.
+ * - Thanh đỉnh (Top Bar): Active Space Selector, Multi-Role Switcher (khi user có nhiều vai trò), Avatar Profile, và Logout.
  */
 export default function WmmsAppShell({
   children,
-  mode = 'admin', // 'admin' | 'sales' | 'staging' | 'owner' | 'purchasing'
-  customTopLeft = null
+  mode,
+  customTopLeft = null,
 }: {
   children: ReactNode;
   mode?: string;
@@ -26,193 +62,209 @@ export default function WmmsAppShell({
   const { currentUser, switchActiveRole } = useSession();
   const logoutMutation = useLogout();
 
-  // Xác định cấu hình hiển thị thương hiệu và hồ sơ theo màn hình hiện tại
-  const activeRoleKey =
-    mode === 'admin'
-      ? 'ADMIN'
-      : mode === 'sales' || mode === 'staging'
-      ? 'SALES'
+  // Xác định Role đang kích hoạt (ưu tiên currentUser.activeRole, fallback mode / ADMIN)
+  const activeRole: RoleCode =
+    currentUser?.activeRole ||
+    (mode === 'sales' || mode === 'staging'
+      ? ROLES.SALES
       : mode === 'purchasing'
-      ? 'PURCHASING'
-      : 'OWNER';
+      ? ROLES.PURCHASING
+      : mode === 'owner'
+      ? ROLES.OWNER
+      : ROLES.ADMIN);
 
-  const roleMeta =
-    ROLE_CONFIG[activeRoleKey] ||
-    (currentUser?.activeRole && ROLE_CONFIG[currentUser.activeRole]) ||
-    ROLE_CONFIG.ADMIN;
+  const roleMeta = ROLE_CONFIG[activeRole] || ROLE_CONFIG.ADMIN;
 
   const displayUser = {
     fullName: currentUser?.fullName || roleMeta.defaultUser.fullName,
     initials: currentUser?.initials || roleMeta.defaultUser.initials,
-    roleTitle: roleMeta.roleTitle
+    roleTitle: roleMeta.roleTitle,
   };
 
-  // Cấu hình menu bên trái theo đúng ảnh chụp màn hình trong Section III.2, III.3, III.4
-  const getSidebarSections = () => {
-    if (mode === 'purchasing') {
-      // Section III.2.1: Global selector (WMMS PURCHASING)
-      return [
-        {
-          heading: 'NAVIGATION PORTAL',
-          items: [{ icon: '🏠', label: 'All Prototypes Portal', path: '/admin/users' }]
-        },
-        {
-          heading: 'PURCHASING OPERATIONS',
-          items: [
-            { icon: '🛒', label: 'Purchase Orders (PO)', path: '/purchasing/orders', active: location.pathname.startsWith('/purchasing') },
-            { icon: '📝', label: 'Daily Requisitions (PR)', path: '/orders' },
-            { icon: '🪵', label: 'Vendor & Material Catalog', path: '/catalog', active: location.pathname === '/catalog' }
-          ]
-        },
-        {
-          heading: 'WAREHOUSE & STOCK',
-          items: [
-            { icon: '🏬', label: '3-Tier Inventory', path: '/orders' },
-            { icon: '📥', label: 'Goods Inbound Schedule', path: '/orders' }
-          ]
-        }
-      ];
-    }
-
-    if (mode === 'sales' || mode === 'staging') {
-      // Section III.4.1 & III.4.2: Sales Orders Directory & Safe Excel PO Staging Grid
-      return [
-        {
-          heading: 'NAVIGATION PORTAL',
-          items: [{ icon: '🏠', label: 'All Prototypes Portal', path: '/admin/users' }]
-        },
-        {
-          heading: 'ORDER MANAGEMENT',
-          items: [
-            {
-              icon: '📦',
-              label: 'Sales Orders List',
-              path: '/orders',
-              active: location.pathname === '/orders'
-            },
-            {
-              icon: '📄',
-              label: 'PO Excel Staging',
-              path: '/orders/staging',
-              active: location.pathname === '/orders/staging'
-            },
-            {
-              icon: '🗂️',
-              label: 'Active Order Space',
-              path: `/orders/spaces/${currentSpaceKey}`,
-              active: location.pathname.startsWith('/orders/spaces')
-            }
-          ]
-        },
-        {
-          heading: 'PRODUCTION & FLOOR',
-          items: [
-            { icon: '📊', label: 'Executive Dashboard', path: `/orders/spaces/${currentSpaceKey}` },
-            { icon: '📋', label: 'Production Kanban', path: `/orders/spaces/${currentSpaceKey}` }
-          ]
-        }
-      ];
-    }
-
-    if (mode === 'owner') {
-      // Section III.4.3: Order Space Detail Dashboard (WMMSWOOD OWNER)
-      return [
-        {
-          heading: 'NAVIGATION PORTAL',
-          items: [{ icon: '🏠', label: 'All Prototypes Portal', path: '/admin/users' }]
-        },
-        {
-          heading: 'ACTIVE SPACE DETAILS',
-          items: [
-            {
-              icon: '🗂️',
-              label: 'Space Overview',
-              path: `/orders/spaces/${currentSpaceKey}`,
-              active: location.pathname.startsWith('/orders/spaces')
-            },
-            { icon: '📐', label: 'Breakdown BOM & Routing', path: '/bom', active: location.pathname.startsWith('/bom') },
-            { icon: '⚖️', label: 'Inventory Reconciliation', path: '/orders' },
-            { icon: '📋', label: 'Production Kanban', path: '/orders' }
-          ]
-        },
-        {
-          heading: 'EXECUTIVE & FLOOR',
-          items: [
-            { icon: '📊', label: 'Executive Dashboard', path: '/orders' },
-            { icon: '🪵', label: 'Product & Material Catalog', path: '/catalog', active: location.pathname === '/catalog' },
-            { icon: '📝', label: 'Daily Consolidated PR', path: '/orders' },
-            { icon: '🏬', label: '3-Tier Stock', path: '/orders' }
-          ]
-        }
-      ];
-    }
-
-    // Mặc định Section III.3: System Administration (SCR-ADM-01 & SCR-ADM-02)
-    return [
-      {
-        heading: 'NAVIGATION PORTAL',
-        items: [{ icon: '🏠', label: 'All Prototypes Portal', path: '/admin/users' }]
-      },
-      {
-        heading: 'EXECUTIVE & ORDERS',
-        items: [
-          { icon: '📊', label: 'Executive Dashboard', path: `/orders/spaces/${currentSpaceKey}` },
+  // Cấu hình các mục điều hướng Sidebar theo thẩm quyền 8 vai trò chuẩn hóa từ Report 3
+  const getSidebarSections = (): SidebarSection[] => {
+    switch (activeRole) {
+      case ROLES.ADMIN:
+        return [
           {
-            icon: '📦',
-            label: 'Sales Orders List',
-            path: '/orders',
-            active: location.pathname === '/orders'
+            heading: 'SYSTEM ADMINISTRATION',
+            items: [
+              { icon: '👥', label: 'User & Multi-Role RBAC', path: '/admin/users' },
+              { icon: '🛡️', label: 'System Audit Logs', path: '/admin/audit-logs' },
+            ],
           },
           {
-            icon: '🗂️',
-            label: 'Active Order Space',
-            path: `/orders/spaces/${currentSpaceKey}`,
-            active: location.pathname.startsWith('/orders/spaces')
-          }
-        ]
-      },
-      {
-        heading: 'TECHNICAL & STOCK',
-        items: [
-          { icon: '📐', label: 'BOM & Routing Builder', path: '/bom', active: location.pathname.startsWith('/bom') },
-          { icon: '🪵', label: 'Master Materials & SKUs', path: '/catalog', active: location.pathname === '/catalog' },
-          { icon: '🏬', label: '3-Tier Inventory', path: '/orders' },
-          { icon: '🛒', label: 'Purchasing (PO)', path: '/purchasing/orders', active: location.pathname.startsWith('/purchasing') }
-        ]
-      },
-      {
-        heading: 'SHOP FLOOR & QUALITY',
-        items: [
-          { icon: '📋', label: 'Production Kanban', path: '/orders' },
-          { icon: '🔍', label: 'QC Inspection Queue', path: '/orders' },
-          { icon: '📈', label: 'Analytics & Excel', path: '/admin/audit-logs' }
-        ]
-      },
-      {
-        heading: 'SYSTEM ADMINISTRATION',
-        items: [
+            heading: 'ANALYTICS & STOCK',
+            items: [
+              { icon: '📈', label: 'Production & Quality Reports', path: '/analytics/reports' },
+              { icon: '🏬', label: '3-Tier Inventory Stock', path: '/inventory/stock' },
+            ],
+          },
+        ];
+
+      case ROLES.OWNER:
+        return [
           {
-            icon: '👥',
-            label: 'Users & Permissions',
-            path: '/admin/users',
-            active: location.pathname === '/admin/users'
+            heading: 'EXECUTIVE & ORDERS',
+            items: [
+              { icon: '📊', label: 'Executive Dashboard & ETD', path: '/dashboard' },
+              { icon: '📦', label: 'Sales Orders List', path: '/orders' },
+              { icon: '🗂️', label: 'Active Order Space', path: `/orders/spaces/${currentSpaceKey}` },
+            ],
           },
           {
-            icon: '🛡️',
-            label: 'System Audit Logs',
-            path: '/admin/audit-logs',
-            active: location.pathname === '/admin/audit-logs'
-          }
-        ]
-      }
-    ];
+            heading: 'TECHNICAL & ROUTING',
+            items: [
+              { icon: '📐', label: 'BOM & Routing Builder', path: '/bom' },
+              { icon: '⚙️', label: 'Dynamic Routing Config', path: '/production/routing-config' },
+              { icon: '🪵', label: 'Master Material Catalog', path: '/catalog' },
+              { icon: '🖼️', label: 'Visual Product Catalog', path: '/catalog/visual' },
+            ],
+          },
+          {
+            heading: 'INVENTORY & PURCHASING',
+            items: [
+              { icon: '⚖️', label: 'Inventory Reconciliation', path: '/inventory/reconciliation' },
+              { icon: '🏬', label: '3-Tier Stock Grid', path: '/inventory/stock' },
+              { icon: '🛒', label: 'Purchase Orders (PO)', path: '/purchasing/orders' },
+              { icon: '📝', label: 'Daily Consolidated PR', path: '/purchasing/requisitions' },
+            ],
+          },
+          {
+            heading: 'SHOP FLOOR & AUDIT',
+            items: [
+              { icon: '📋', label: 'Production Kanban', path: '/production/kanban' },
+              { icon: '⚡', label: 'Overdriver Approvals', path: '/production/overdriver' },
+              { icon: '🔄', label: 'Replacement Approvals', path: '/production/replacement-approvals' },
+              { icon: '📈', label: 'Quality & Analytics Reports', path: '/analytics/reports' },
+              { icon: '🛡️', label: 'System Audit Logs', path: '/admin/audit-logs' },
+            ],
+          },
+        ];
+
+      case ROLES.SALES:
+        return [
+          {
+            heading: 'ORDER INTAKE & MANAGEMENT',
+            items: [
+              { icon: '📦', label: 'Sales Orders List', path: '/orders' },
+              { icon: '📄', label: 'PO Excel Staging Grid', path: '/orders/staging' },
+              { icon: '🗂️', label: 'Active Order Space', path: `/orders/spaces/${currentSpaceKey}` },
+            ],
+          },
+          {
+            heading: 'TECHNICAL & INVENTORY',
+            items: [
+              { icon: '📐', label: 'BOM & Routing Breakdown', path: '/bom' },
+              { icon: '⚖️', label: 'Inventory Reconciliation', path: '/inventory/reconciliation' },
+            ],
+          },
+        ];
+
+      case ROLES.PLANNER:
+        return [
+          {
+            heading: 'MATERIAL PLANNING & BOM',
+            items: [
+              { icon: '📐', label: 'BOM & Routing Builder', path: '/bom' },
+              { icon: '⚖️', label: 'Inventory Reconciliation', path: '/inventory/reconciliation' },
+              { icon: '🪵', label: 'Master Materials & SKUs', path: '/catalog' },
+              { icon: '🛒', label: 'Purchase Orders (PO)', path: '/purchasing/orders' },
+            ],
+          },
+        ];
+
+      case ROLES.PURCHASING:
+        return [
+          {
+            heading: 'PURCHASING OPERATIONS',
+            items: [
+              { icon: '🛒', label: 'Purchase Orders (PO)', path: '/purchasing/orders' },
+              { icon: '📝', label: 'Daily Consolidated PR', path: '/purchasing/requisitions' },
+              { icon: '🪵', label: 'Vendor & Material Catalog', path: '/catalog' },
+            ],
+          },
+          {
+            heading: 'WAREHOUSE & STOCK',
+            items: [
+              { icon: '🏬', label: '3-Tier Inventory Stock', path: '/inventory/stock' },
+            ],
+          },
+        ];
+
+      case ROLES.WAREHOUSE:
+        return [
+          {
+            heading: 'WAREHOUSE OPERATIONS',
+            items: [
+              { icon: '🏬', label: '3-Tier Stock Grid', path: '/inventory/stock' },
+              { icon: '📥', label: 'Goods Receipt & Commit', path: '/warehouse/receipts' },
+              { icon: '📤', label: 'Goods Issue & Handover', path: '/warehouse/issues' },
+              { icon: '📦', label: 'Finished Goods Receipt', path: '/warehouse/finished-goods' },
+            ],
+          },
+          {
+            heading: 'CATALOG & FLOOR',
+            items: [
+              { icon: '🪵', label: 'Master Material Catalog', path: '/catalog' },
+              { icon: '📋', label: 'Production Kanban', path: '/production/kanban' },
+            ],
+          },
+        ];
+
+      case ROLES.LEADER:
+        return [
+          {
+            heading: 'PRODUCTION FLOOR',
+            items: [
+              { icon: '📊', label: 'Executive Dashboard & ETD', path: '/dashboard' },
+              { icon: '📋', label: 'Production Kanban Board', path: '/production/kanban' },
+              { icon: '⏱️', label: 'Workstation Stage Progress', path: '/production/progress' },
+              { icon: '🗂️', label: 'Active Order Space', path: `/orders/spaces/${currentSpaceKey}` },
+            ],
+          },
+          {
+            heading: 'APPROVALS & ANALYTICS',
+            items: [
+              { icon: '⚡', label: 'Overdriver Requests', path: '/production/overdriver' },
+              { icon: '📈', label: 'Production & Quality Reports', path: '/analytics/reports' },
+            ],
+          },
+        ];
+
+      case ROLES.QC:
+        return [
+          {
+            heading: 'QUALITY CONTROL',
+            items: [
+              { icon: '🔍', label: 'QC Inspection & Defect Log', path: '/qc/inspection' },
+              { icon: '📋', label: 'Production Kanban Board', path: '/production/kanban' },
+            ],
+          },
+        ];
+
+      default:
+        return [
+          {
+            heading: 'OPERATIONAL SCREENS',
+            items: [{ icon: '📦', label: 'Sales Orders', path: '/orders' }],
+          },
+        ];
+    }
+  };
+
+  const isItemActive = (path: string): boolean => {
+    if (path.includes('/orders/spaces/')) {
+      return location.pathname.startsWith('/orders/spaces');
+    }
+    return location.pathname === path || (path !== '/' && location.pathname.startsWith(path + '/'));
   };
 
   const handleLogout = () => {
     logoutMutation.mutate();
   };
 
-  const handleSpaceChange = (e) => {
+  const handleSpaceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newKey = e.target.value;
     setCurrentSpaceKey(newKey);
     if (location.pathname.startsWith('/orders/spaces')) {
@@ -220,33 +272,49 @@ export default function WmmsAppShell({
     }
   };
 
+  const handleRoleSwitch = (targetRole: RoleCode) => {
+    if (targetRole === activeRole) return;
+    switchActiveRole(targetRole);
+    navigate(getDefaultRouteForRole(targetRole));
+  };
+
   const avatarBgClass =
-    activeRoleKey === 'ADMIN'
-      ? 'bg-slate-700'
-      : activeRoleKey === 'SALES'
+    activeRole === ROLES.ADMIN
+      ? 'bg-purple-700'
+      : activeRole === ROLES.SALES
       ? 'bg-blue-600'
-      : activeRoleKey === 'OWNER'
+      : activeRole === ROLES.OWNER
       ? 'bg-amber-600'
-      : 'bg-emerald-600';
+      : activeRole === ROLES.PURCHASING
+      ? 'bg-emerald-600'
+      : activeRole === ROLES.WAREHOUSE
+      ? 'bg-amber-700'
+      : activeRole === ROLES.LEADER
+      ? 'bg-orange-700'
+      : activeRole === ROLES.QC
+      ? 'bg-rose-600'
+      : 'bg-indigo-600';
 
   return (
     <div className="min-h-screen flex bg-[#f4f6f9] text-slate-800">
-      {/* Cột điều hướng bên trái (Global Selector Sidebar - Section III.2.1) */}
+      {/* Cột điều hướng bên trái (Global Selector Sidebar) */}
       <aside className="w-60 bg-[#0d1528] text-slate-300 flex flex-col justify-between shrink-0 select-none border-r border-slate-800">
         <div>
           {/* Logo Header + Role Badge */}
-          <div className="h-14 px-4 flex items-center gap-2 border-b border-slate-800/80">
-            <span className="text-white font-extrabold tracking-tight text-base">
-              {mode === 'purchasing' ? 'WMMS' : 'WMMSWOOD'}
-            </span>
-            <span
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${roleMeta.badgeClass}`}
-            >
-              {roleMeta.badgeLabel}
-            </span>
+          <div className="h-14 px-4 flex items-center justify-between border-b border-slate-800/80">
+            <div className="flex items-center gap-2">
+              <span className="text-white font-extrabold tracking-tight text-base">
+                WMMSWOOD
+              </span>
+              <span
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${roleMeta.badgeClass}`}
+              >
+                {roleMeta.badgeLabel}
+              </span>
+            </div>
           </div>
 
-          {/* Danh sách các nhóm menu điều hướng */}
+          {/* Danh sách các nhóm menu điều hướng theo vai trò */}
           <nav className="py-3 px-2 space-y-4 overflow-y-auto max-h-[calc(100vh-7.5rem)]">
             {getSidebarSections().map((section, idx) => (
               <div key={idx}>
@@ -254,40 +322,45 @@ export default function WmmsAppShell({
                   {section.heading}
                 </div>
                 <ul className="space-y-0.5">
-                  {section.items.map((item, i) => (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(item.path)}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-colors ${
-                          item.active
-                            ? 'bg-[#172544] text-blue-400 font-semibold border-l-2 border-blue-500'
-                            : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
-                        }`}
-                      >
-                        <span className="text-sm leading-none">{item.icon}</span>
-                        <span className="truncate">{item.label}</span>
-                      </button>
-                    </li>
-                  ))}
+                  {section.items.map((item, i) => {
+                    const active = isItemActive(item.path);
+                    return (
+                      <li key={i}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(item.path)}
+                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-colors ${
+                            active
+                              ? 'bg-[#172544] text-blue-400 font-semibold border-l-2 border-blue-500'
+                              : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                          }`}
+                        >
+                          <span className="text-sm leading-none">{item.icon}</span>
+                          <span className="truncate">{item.label}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
           </nav>
         </div>
 
-        {/* Chân trang Sidebar (Footer: WMMS System v2.6.4 + Role) */}
+        {/* Chân trang Sidebar */}
         <div className="px-4 py-3 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-0.5">
           <div className="font-medium text-slate-400">WMMS System v2.6.4</div>
-          <div className="text-slate-500">Role: {displayUser.roleTitle}</div>
+          <div className="text-slate-500 truncate" title={displayUser.roleTitle}>
+            Role: {displayUser.roleTitle}
+          </div>
         </div>
       </aside>
 
       {/* Khu vực nội dung chính bên phải */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Thanh Header trên cùng (Current Space Switcher + User Profile + Logout) */}
+        {/* Thanh Header trên cùng */}
         <header className="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
-          {/* Góc trái: Dropdown Current Space / Active Order Space hoặc Nhãn Sandbox */}
+          {/* Góc trái: Dropdown Current Space / Active Order Space */}
           <div className="flex items-center gap-3">
             {customTopLeft ? (
               customTopLeft
@@ -296,7 +369,7 @@ export default function WmmsAppShell({
                 <span className="text-slate-500 font-medium">
                   {location.pathname.startsWith('/bom')
                     ? 'Target Order Space:'
-                    : mode === 'owner'
+                    : activeRole === ROLES.OWNER
                     ? 'Active Order Space:'
                     : 'Current Space:'}
                 </span>
@@ -315,58 +388,40 @@ export default function WmmsAppShell({
             )}
           </div>
 
-          {/* Góc phải: Bộ chuyển nhanh màn hình theo Role + Hồ sơ nhân sự + Nút Logout */}
-          <div className="flex items-center gap-4">
-            {/* Thanh chuyển đổi nhanh giữa các màn hình đặc tả trong Report 3 */}
-            <div className="hidden xl:flex items-center gap-1 bg-slate-100 p-1 rounded-md text-[11px]">
-              <button
-                type="button"
-                onClick={() => {
-                  switchActiveRole('ADMIN');
-                  navigate('/admin/users');
-                }}
-                className={`px-2 py-1 rounded font-medium transition ${
-                  location.pathname.startsWith('/admin')
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                III.3 Admin & RBAC
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  switchActiveRole('SALES');
-                  navigate('/orders');
-                }}
-                className={`px-2 py-1 rounded font-medium transition ${
-                  location.pathname === '/orders' || location.pathname === '/orders/staging'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                III.4 Order Intake (Sales)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  switchActiveRole('OWNER');
-                  navigate(`/orders/spaces/${currentSpaceKey}`);
-                }}
-                className={`px-2 py-1 rounded font-medium transition ${
-                  location.pathname.startsWith('/orders/spaces')
-                    ? 'bg-white text-amber-700 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                III.4.3 Space Dashboard
-              </button>
-            </div>
+          {/* Góc phải: Multi-Role Switcher + Thông tin nhân sự + Logout */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Multi-Role Switcher (Chỉ hiển thị khi tài khoản có >= 2 vai trò) */}
+            {currentUser?.roles && currentUser.roles.length > 1 && (
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+                <span className="text-[11px] font-semibold text-slate-500 px-1 hidden md:inline">
+                  Vai trò:
+                </span>
+                {currentUser.roles.map((r) => {
+                  const isCurrent = r === activeRole;
+                  const cfg = ROLE_CONFIG[r];
+                  return (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => handleRoleSwitch(r)}
+                      title={`Chuyển sang vai trò ${cfg?.displayName || r}`}
+                      className={`px-2 py-1 rounded text-xs font-semibold transition ${
+                        isCurrent
+                          ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      }`}
+                    >
+                      {cfg?.badgeLabel || r}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Thông tin nhân sự đang đăng nhập */}
             <div className="flex items-center gap-2.5">
               <div
-                className={`w-8 h-8 rounded-full ${avatarBgClass} text-white text-xs font-bold flex items-center justify-center`}
+                className={`w-8 h-8 rounded-full ${avatarBgClass} text-white text-xs font-bold flex items-center justify-center shadow-sm`}
               >
                 {displayUser.initials}
               </div>
@@ -378,11 +433,11 @@ export default function WmmsAppShell({
               </div>
             </div>
 
-            {/* Nút Logout (UC-02) */}
+            {/* Nút Logout */}
             <button
               type="button"
               onClick={handleLogout}
-              className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
+              className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition shadow-sm"
             >
               Logout
             </button>
