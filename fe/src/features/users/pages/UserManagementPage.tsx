@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { adminApi } from "../api/userApi";
@@ -66,27 +66,20 @@ function formatRoleInfo(roles: string[] = []) {
   }
 }
 
-/**
- * Màn hình III.3: System Administration
- * Bao gồm 3 giao diện chuẩn theo đúng thiết kế trong Report 3:
- * - 3.1: User Accounts & Multi-Role RBAC (SCR-ADM-01) - Fetch thực từ GET /users
- * - 3.2: Provision New User Account Modal (MOD-ADM-01) -> ProvisionUserModal.tsx
- * - 3.3: Role Permission Configuration Matrix Modal (MOD-ADM-02) -> RolePermissionMatrixModal.tsx
- */
 export default function UserManagementPage() {
   const queryClient = useQueryClient();
 
-  // Từ khóa tìm kiếm trên bảng Employee User Directory (Field #5)
-  const [searchKeyword, setSearchKeyword] = useState("");
+  // State tìm kiếm: searchInput (khi người dùng gõ) vs appliedKeyword (khi bấm Search/Enter)
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedKeyword, setAppliedKeyword] = useState("");
+
+  // State phân trang
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const [toastBanner, setToastBanner] = useState<ToastBanner | null>(null);
-
-  // State cho Modal 3.2: Provision New User Account (MOD-ADM-01)
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  // State cho Modal chỉnh sửa tài khoản nhân sự (UC-09)
   const [editingUser, setEditingUser] = useState<UserDto | null>(null);
-
-  // State cho Modal 3.3: Role Permission Configuration Matrix (MOD-ADM-02)
   const [showPermissionMatrixModal, setShowPermissionMatrixModal] =
     useState(false);
 
@@ -94,16 +87,25 @@ export default function UserManagementPage() {
   const {
     data: usersPaged,
     isLoading,
+    isFetching,
     isError,
     error,
   } = useUsers({
-    searchTerm: searchKeyword.trim() || undefined,
+    searchKeyword: appliedKeyword.trim() || undefined,
+    pageNumber,
+    pageSize,
   });
 
   const usersList: UserDto[] = usersPaged?.items ?? [];
+  const totalCount = usersPaged?.totalCount ?? 0;
+  const totalPages = Math.max(
+    1,
+    usersPaged?.totalPages || Math.ceil(totalCount / pageSize),
+  );
+  const startItem = totalCount === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
+  const endItem = Math.min(pageNumber * pageSize, totalCount);
 
   // Thống kê nhanh từ dữ liệu thật
-  const totalUsersCount = usersPaged?.totalCount ?? usersList.length;
   const suspendedCount = useMemo(
     () =>
       usersList.filter(
@@ -112,7 +114,7 @@ export default function UserManagementPage() {
     [usersList],
   );
 
-  // Ánh xạ màu sắc huy hiệu Primary Assigned Role giống hệt ảnh SCR-ADM-01
+  // Ánh xạ màu sắc huy hiệu Primary Assigned Role
   const getRoleBadgeStyle = (roleLabel: string) => {
     const upper = String(roleLabel || "").toUpperCase();
     if (upper.includes("OWNER"))
@@ -132,19 +134,19 @@ export default function UserManagementPage() {
     return "bg-slate-100 text-slate-600 border-slate-200";
   };
 
-  // Mutation Khóa / Mở khóa tài khoản trực tiếp từ bảng (UC-10)
+  // Mutation Khóa / Mở khóa tài khoản trực tiếp từ bảng
   const toggleBanMutation = useMutation({
     mutationFn: async (user: UserDto) => {
       const isCurrentlyActive = user.status === "ACTIVE";
       const apiStatus = isCurrentlyActive ? "BANNED" : "ACTIVE";
-      const reason = `Admin toggled status via SCR-ADM-01`;
+      const reason = `Admin updated user status`;
       return await adminApi.updateUserStatus(user.userId, apiStatus, reason);
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setToastBanner({
         type: "success",
-        text: res?.message || "Account status updated successfully (UC-10).",
+        text: res?.message || "Account status updated successfully.",
       });
     },
     onError: (err: unknown) => {
@@ -157,14 +159,28 @@ export default function UserManagementPage() {
     },
   });
 
+  // Xử lý xác nhận tìm kiếm khi bấm nút hoặc gõ phím Enter
+  const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setAppliedKeyword(searchInput.trim());
+    setPageNumber(1);
+  };
+
+  // Xử lý xóa từ khóa tìm kiếm và trở về toàn bộ danh sách
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setAppliedKeyword("");
+    setPageNumber(1);
+  };
+
   return (
     <WmmsAppShell mode="admin">
       <div className="max-w-[1400px] mx-auto space-y-5">
-        {/* Hàng tiêu đề màn hình + 2 nút hành động góc phải (Field #3 & Field #4) */}
+        {/* Hàng tiêu đề màn hình + 2 nút hành động góc phải */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              User Accounts &amp; Multi-Role RBAC (SCR-ADM-01)
+              User Accounts &amp; Multi-Role RBAC
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
               Configure employee system accounts, role assignments, and
@@ -173,7 +189,6 @@ export default function UserManagementPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Field #3: + Create New Account */}
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
@@ -182,7 +197,6 @@ export default function UserManagementPage() {
               + Create New Account
             </button>
 
-            {/* Field #4: Role Permission Matrix */}
             <button
               type="button"
               onClick={() => setShowPermissionMatrixModal(true)}
@@ -217,10 +231,10 @@ export default function UserManagementPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              ACTIVE USERS
+              TOTAL USERS
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-1">
-              {isLoading ? "..." : totalUsersCount}
+              {isLoading ? "..." : totalCount}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
               Across factory departments
@@ -231,40 +245,73 @@ export default function UserManagementPage() {
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               ROLES CONFIGURED
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1">7</div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-1">8</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Jira-style functional RBAC
+              Functional role-based security
             </div>
           </div>
 
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              SUSPENDED ACCOUNTS
+              SUSPENDED IN CURRENT VIEW
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-1">
               {isLoading ? "..." : suspendedCount}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Action logged in Audit Trail
+              Accounts suspended / banned
             </div>
           </div>
         </div>
 
-        {/* Bảng Employee User Directory (Field #5, #6, #7) */}
+        {/* Bảng Employee User Directory */}
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h2 className="text-xs font-bold text-slate-800">
-              Employee User Directory
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs font-bold text-slate-800">
+                Employee User Directory
+              </h2>
+              {isFetching && !isLoading && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-200">
+                  <span className="w-2 h-2 rounded-full border border-blue-600 border-t-transparent animate-spin" />
+                  Requesting BE...
+                </span>
+              )}
+            </div>
 
-            {/* Field #5: Search by name, email, or role... */}
-            <input
-              type="text"
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              placeholder="Search by name, email, or role..."
-              className="w-full sm:w-64 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            {/* Form Tìm kiếm có nút bấm xác nhận, không gọi API onChange */}
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex items-center gap-2 w-full sm:w-auto"
+            >
+              <div className="relative w-full sm:w-64">
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search name, email, username, phone..."
+                  className="w-full pl-3 pr-7 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
+                    title="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isFetching}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 disabled:opacity-60 rounded-md shadow-sm transition whitespace-nowrap"
+              >
+                Search
+              </button>
+            </form>
           </div>
 
           <div className="overflow-x-auto">
@@ -280,21 +327,22 @@ export default function UserManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-xs">
-                {isLoading && (
+                {/* Spinner Indicator hiển thị rõ ràng khi đang request Backend */}
+                {isFetching && (
                   <tr>
                     <td
                       colSpan={6}
-                      className="py-10 text-center text-slate-400"
+                      className="py-12 text-center text-slate-400"
                     >
                       <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
-                      <p className="text-xs">
+                      <p className="text-xs font-medium text-slate-500">
                         Fetching users from WMMS backend...
                       </p>
                     </td>
                   </tr>
                 )}
 
-                {isError && (
+                {!isFetching && isError && (
                   <tr>
                     <td
                       colSpan={6}
@@ -306,18 +354,18 @@ export default function UserManagementPage() {
                   </tr>
                 )}
 
-                {!isLoading && !isError && usersList.length === 0 && (
+                {!isFetching && !isError && usersList.length === 0 && (
                   <tr>
                     <td
                       colSpan={6}
                       className="py-8 text-center text-slate-400 italic"
                     >
-                      No user accounts found matching your search.
+                      No user accounts found matching your query.
                     </td>
                   </tr>
                 )}
 
-                {!isLoading &&
+                {!isFetching &&
                   !isError &&
                   usersList.map((user) => {
                     const roleInfo = formatRoleInfo(user.roles);
@@ -383,10 +431,89 @@ export default function UserManagementPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Thanh Phân trang (Pagination Footer) */}
+          <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600">
+            {/* Thống kê dòng hiển thị & chọn PageSize */}
+            <div className="flex items-center gap-3">
+              <span>
+                Showing <strong className="text-slate-800">{startItem}</strong>{" "}
+                to <strong className="text-slate-800">{endItem}</strong> of{" "}
+                <strong className="text-slate-800">{totalCount}</strong> users
+              </span>
+
+              <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
+                <span className="text-slate-500 text-[11px]">Rows/page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPageNumber(1);
+                  }}
+                  className="px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Các nút bấm chuyển trang */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={pageNumber <= 1 || isFetching}
+                onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+                className="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                Previous
+              </button>
+
+              <div className="flex items-center gap-1 px-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(
+                    (p) =>
+                      p === 1 ||
+                      p === totalPages ||
+                      Math.abs(p - pageNumber) <= 1,
+                  )
+                  .map((p, idx, arr) => (
+                    <Fragment key={p}>
+                      {idx > 0 && arr[idx - 1] !== p - 1 && (
+                        <span className="px-1 text-slate-400 text-xs">...</span>
+                      )}
+                      <button
+                        type="button"
+                        disabled={isFetching}
+                        onClick={() => setPageNumber(p)}
+                        className={`w-7 h-7 text-xs font-semibold rounded transition ${
+                          p === pageNumber
+                            ? "bg-[#2563eb] text-white shadow-sm"
+                            : "text-slate-700 bg-white border border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    </Fragment>
+                  ))}
+              </div>
+
+              <button
+                type="button"
+                disabled={pageNumber >= totalPages || isFetching}
+                onClick={() =>
+                  setPageNumber((p) => Math.min(totalPages, p + 1))
+                }
+                className="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Modal 3.2: Provision New User Account (MOD-ADM-01 - Section III.3.2) */}
       <ProvisionUserModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -404,13 +531,11 @@ export default function UserManagementPage() {
         }
       />
 
-      {/* Modal 3.3: Role Permission Configuration Matrix (MOD-ADM-02 - Section III.3.3) */}
       <RolePermissionMatrixModal
         isOpen={showPermissionMatrixModal}
         onClose={() => setShowPermissionMatrixModal(false)}
       />
 
-      {/* Modal Edit User (UC-09 & UC-10) */}
       <EditUserModal
         user={editingUser}
         onClose={() => setEditingUser(null)}

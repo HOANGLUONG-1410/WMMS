@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '../api/authApi';
+import { getErrorMessage } from '../store/SessionContext';
 import type { ResetPasswordRequest } from '../types';
 
 interface FeedbackMessage {
@@ -9,41 +10,6 @@ interface FeedbackMessage {
   text: string;
 }
 
-function getErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object') {
-    // 1. Direct errors array (e.g. from ApiError)
-    if ('errors' in error && Array.isArray((error as { errors?: unknown }).errors)) {
-      const errs = (error as { errors: unknown[] }).errors.map(String).filter(Boolean);
-      if (errs.length > 0) return errs.join('\n');
-    }
-
-    // 2. Axios response payload (e.g. error.response.data.errors)
-    if ('response' in error && typeof (error as { response?: unknown }).response === 'object') {
-      const resData = (error as { response?: { data?: unknown } }).response?.data;
-      if (resData && typeof resData === 'object') {
-        if ('errors' in resData && Array.isArray((resData as { errors?: unknown }).errors)) {
-          const errs = (resData as { errors: unknown[] }).errors.map(String).filter(Boolean);
-          if (errs.length > 0) return errs.join('\n');
-        }
-        if ('message' in resData && typeof (resData as { message?: unknown }).message === 'string') {
-          return (resData as { message: string }).message;
-        }
-      }
-    }
-
-    // 3. Fallback to top-level message
-    if ('message' in error && typeof (error as { message?: unknown }).message === 'string') {
-      return (error as { message: string }).message;
-    }
-  }
-  return 'Invalid or expired password reset token. Please request a new recovery link (MSG06).';
-}
-
-/**
- * Màn hình UC-05: Confirm Password Reset
- * Hỗ trợ đường dẫn khôi phục từ email:
- * Ví dụ: http://localhost:5173/reset-password?email=tranhunganhc%40gmail.com&token=mpuiJ_fn97y...
- */
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -66,7 +32,7 @@ export default function ResetPasswordPage() {
         type: 'success',
         text:
           res?.message ||
-          'Này là fail rồi'
+          'Password has been reset successfully. You can now sign in with your new password.'
       });
     },
     onError: (err: unknown) => {
@@ -83,7 +49,7 @@ export default function ResetPasswordPage() {
     if (!email.trim() || !tokenOrOtp.trim()) {
       setFeedback({
         type: 'error',
-        text: 'Missing recovery email or reset token. Please use the link from your email inbox (MSG06).'
+        text: 'Missing recovery email or reset token. Please use the link from your email inbox.'
       });
       return;
     }
@@ -91,7 +57,7 @@ export default function ResetPasswordPage() {
     if (!newPassword.trim() || !confirmNewPassword.trim()) {
       setFeedback({
         type: 'error',
-        text: 'Please enter both New Password and Confirm Password (MSG01).'
+        text: 'Please enter both New Password and Confirm Password.'
       });
       return;
     }
@@ -99,7 +65,7 @@ export default function ResetPasswordPage() {
     if (newPassword !== confirmNewPassword) {
       setFeedback({
         type: 'error',
-        text: 'New password and confirmation password do not match (MSG13).'
+        text: 'New password and confirmation password do not match.'
       });
       return;
     }
@@ -115,9 +81,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#0d1528] flex items-center justify-center p-4 relative select-none">
-      {/* Thẻ Reset Password chính giữa đồng bộ thiết kế với LoginPage */}
       <div className="w-full max-w-[380px] bg-white rounded-xl shadow-2xl px-7 py-8 border border-slate-100">
-        {/* Tiêu đề hệ thống */}
         <div className="text-center mb-6">
           <h1 className="text-[17px] font-extrabold tracking-tight text-slate-900 uppercase">
             WMMS PRODUCTION SUITE
@@ -126,7 +90,6 @@ export default function ResetPasswordPage() {
           <p className="text-xs font-semibold text-blue-600 mt-2">Set New Account Password</p>
         </div>
 
-        {/* Thông báo phản hồi nếu có */}
         {feedback && (
           <div
             className={`mb-4 px-3 py-2 rounded text-xs font-medium whitespace-pre-line ${
@@ -151,7 +114,6 @@ export default function ResetPasswordPage() {
           </div>
         ) : (
           <form onSubmit={handleResetSubmit} className="space-y-4">
-            {/* Hiển thị Email nhận từ URL hoặc cho nhập nếu mở trực tiếp */}
             <div>
               <label
                 htmlFor="reset-email-input"
@@ -172,7 +134,6 @@ export default function ResetPasswordPage() {
               />
             </div>
 
-            {/* Chỉ hiển thị ô nhập OTP/Token nếu đường dẫn không có sẵn query ?token=... */}
             {!tokenFromUrl && (
               <div>
                 <label
@@ -192,7 +153,6 @@ export default function ResetPasswordPage() {
               </div>
             )}
 
-            {/* Field #1: New Password */}
             <div>
               <label
                 htmlFor="new-password-input"
@@ -210,7 +170,6 @@ export default function ResetPasswordPage() {
               />
             </div>
 
-            {/* Field #2: Confirm Password */}
             <div>
               <label
                 htmlFor="confirm-password-input"
@@ -228,7 +187,6 @@ export default function ResetPasswordPage() {
               />
             </div>
 
-            {/* Submit Button */}
             <div className="pt-1">
               <button
                 type="submit"
@@ -262,7 +220,6 @@ export default function ResetPasswordPage() {
               </button>
             </div>
 
-            {/* Back to Login link */}
             <div className="text-center pt-1">
               <button
                 type="button"
@@ -278,4 +235,3 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-

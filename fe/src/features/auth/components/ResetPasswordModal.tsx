@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { authApi } from "../api/authApi";
+import { getErrorMessage } from "../store/SessionContext";
 
 interface FeedbackMessage {
   type: "error" | "success";
@@ -12,31 +13,6 @@ export interface ResetPasswordModalProps {
   onClose: () => void;
 }
 
-function getErrorMessage(error: unknown): string {
-  if (error && typeof error === "object") {
-    if (
-      "errors" in error &&
-      Array.isArray((error as { errors?: unknown }).errors)
-    ) {
-      const errs = (error as { errors: string[] }).errors;
-      if (errs.length > 0 && errs[0]) return errs[0];
-    }
-    if (
-      "message" in error &&
-      typeof (error as { message?: unknown }).message === "string"
-    ) {
-      return (error as { message: string }).message;
-    }
-  }
-  return "Unable to process password reset request. Please try again.";
-}
-
-/**
- * Modal 1.2: Reset Personal Password (UC-04 - Section III.1.2)
- * - Mô tả: "Enter your registered employee email. System will generate a single-use authentication token sent to your company inbox."
- * - Trường #1: Employee Email Address (employee@nguyenkhoa.vn).
- * - Nút #2: Cancel | Nút #3: Send Recovery Token.
- */
 export default function ResetPasswordModal({
   isOpen,
   onClose,
@@ -50,7 +26,10 @@ export default function ResetPasswordModal({
     onSuccess: (apiRes) => {
       setRecoveryFeedback({
         type: "success",
-        text: apiRes?.message || apiRes?.data?.message || "Fail lòi lolololol",
+        text:
+          apiRes?.message ||
+          apiRes?.data?.message ||
+          "Password reset instructions have been sent to your email.",
       });
     },
     onError: (err: unknown) => {
@@ -80,7 +59,6 @@ export default function ResetPasswordModal({
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-[1px] flex items-center justify-center p-4">
       <div className="w-full max-w-[490px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        {/* Header Modal */}
         <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-slate-100">
           <h2 className="text-sm font-bold text-slate-900">
             Reset Personal Password
@@ -95,7 +73,6 @@ export default function ResetPasswordModal({
           </button>
         </div>
 
-        {/* Nội dung Modal */}
         <form
           onSubmit={handleSendRecoveryToken}
           className="px-6 py-4 space-y-4"
@@ -105,7 +82,6 @@ export default function ResetPasswordModal({
             single-use authentication token sent to your company inbox.
           </p>
 
-          {/* Field #1: Employee Email Address */}
           <div>
             <label
               htmlFor="recovery-email-input"
@@ -135,7 +111,6 @@ export default function ResetPasswordModal({
             </div>
           )}
 
-          {/* Footer Buttons: Field #2 Cancel & Field #3 Send Recovery Token */}
           <div className="pt-2 flex items-center justify-end gap-2">
             <button
               type="button"
