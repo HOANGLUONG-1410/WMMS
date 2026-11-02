@@ -44,6 +44,15 @@ export default function DynamicRoutingModal({
     setLocalStages(copy.map((s, idx) => ({ ...s, stageSequence: idx + 1 })));
   };
 
+  const handleDeleteStep = (index: number) => {
+    if (localStages.length <= 1) return;
+    setLocalStages((prev) =>
+      prev
+        .filter((_, idx) => idx !== index)
+        .map((s, idx) => ({ ...s, stageSequence: idx + 1 })),
+    );
+  };
+
   const handleAddStep = () => {
     const trimmed = newStepName.trim();
     if (!trimmed) return;
@@ -87,8 +96,8 @@ export default function DynamicRoutingModal({
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs text-slate-500">
-              Re-order workstation sequence, inject specialized steps (e.g., Cushion Upholstery), or
-              mark critical Hold Points.
+              Re-order workstation sequence, inject specialized steps (e.g., Cushion Upholstery),
+              remove unnecessary steps, or mark critical Hold Points.
             </p>
             <button
               type="button"
@@ -124,7 +133,7 @@ export default function DynamicRoutingModal({
               const isHold = stg.isHoldPoint;
               return (
                 <div
-                  key={stg.stageId}
+                  key={`${stg.stageId}-${idx}`}
                   className={`px-4 py-3 rounded-lg border flex items-center justify-between gap-3 transition ${
                     isHold
                       ? "border-rose-400 bg-rose-50/20 shadow-2xs"
@@ -160,18 +169,34 @@ export default function DynamicRoutingModal({
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleToggleHoldPoint(idx)}
-                    title="Click to toggle Standard vs Critical Hold Point"
-                    className={`shrink-0 px-2.5 py-0.5 text-[10px] font-bold rounded transition cursor-pointer ${
-                      isHold
-                        ? "bg-yellow-100 text-amber-800 border border-yellow-300"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {isHold ? "Critical Hold Point (Hardware Lock)" : "STANDARD"}
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleHoldPoint(idx)}
+                      title="Click to toggle Standard vs Critical Hold Point"
+                      className={`px-2.5 py-0.5 text-[10px] font-bold rounded transition cursor-pointer ${
+                        isHold
+                          ? "bg-yellow-100 text-amber-800 border border-yellow-300"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {isHold ? "Critical Hold Point (Hardware Lock)" : "STANDARD"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStep(idx)}
+                      disabled={localStages.length <= 1}
+                      title={
+                        localStages.length <= 1
+                          ? "At least 1 routing step is required"
+                          : "Delete this step"
+                      }
+                      className="px-2 py-0.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-slate-200 rounded transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -199,4 +224,3 @@ export default function DynamicRoutingModal({
     </div>
   );
 }
-

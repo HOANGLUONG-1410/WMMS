@@ -2,15 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "../store/SessionContext";
-
-const ROLE_DEFAULT_ROUTES: Partial<Record<string, string>> = {
-  ADMIN: "/admin/users",
-  PURCHASING: "/purchasing/orders",
-  PLANNER: "/bom",
-  SALES: "/orders",
-  OWNER: "/orders",
-  WAREHOUSE: "/purchasing/orders",
-};
+import { getDefaultRouteForRole } from "../../../components/layout/WmmsAppShell";
 
 export function useLogin() {
   const { login } = useSession();
@@ -35,8 +27,7 @@ export function useLogin() {
       });
 
       // Điều hướng tới workspace tương ứng với vai trò của người dùng
-      const targetRoute =
-        (user.activeRole && ROLE_DEFAULT_ROUTES[user.activeRole]) || "/orders";
+      const targetRoute = getDefaultRouteForRole(user.activeRole);
       navigate(targetRoute, { replace: true });
     },
   });

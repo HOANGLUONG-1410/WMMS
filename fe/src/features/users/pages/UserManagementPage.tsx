@@ -13,58 +13,6 @@ interface ToastBanner {
   text: string;
 }
 
-/** Ánh xạ mã role kỹ thuật từ backend sang nhãn hiển thị và phạm vi nghiệp vụ */
-function formatRoleInfo(roles: string[] = []) {
-  const primary = roles[0]?.toUpperCase() || "STAFF";
-
-  switch (primary) {
-    case "ADMIN":
-      return {
-        label: "SYSTEM ADMIN",
-        scope: "Global System Configuration, RBAC & Audit Trail",
-      };
-    case "OWNER":
-      return {
-        label: "WORKSHOP OWNER",
-        scope: "BOM Breakdown, Purchasing Approval, Dispatch Release",
-      };
-    case "SALES":
-      return {
-        label: "SALES STAFF",
-        scope: "Excel PO Staging, CRUD Sanitization, Space Init",
-      };
-    case "PLANNER":
-      return {
-        label: "PRODUCTION PLANNER",
-        scope: "Material Routing, Cutting List Optimization, Work Orders",
-      };
-    case "PURCHASING":
-      return {
-        label: "PURCHASING STAFF",
-        scope: "Vendor Sourcing, PO Creation & ETA Management",
-      };
-    case "WAREHOUSE":
-      return {
-        label: "WAREHOUSE KEEPER",
-        scope: "Goods Receipt Commit, Goods Issue Floor Handover",
-      };
-    case "LEADER":
-      return {
-        label: "PRODUCTION LEADER",
-        scope: "Kanban Floor Dispatch, Overdriver Requests",
-      };
-    case "QC":
-      return {
-        label: "QC STAFF",
-        scope: "Workstation Quality Gate, Defect Logging",
-      };
-    default:
-      return {
-        label: primary,
-        scope: "Standard Operational Privileges",
-      };
-  }
-}
 
 export default function UserManagementPage() {
   const queryClient = useQueryClient();
@@ -123,6 +71,8 @@ export default function UserManagementPage() {
       return "bg-slate-700 text-white border-slate-800";
     if (upper.includes("SALES"))
       return "bg-blue-100 text-blue-700 border-blue-200";
+    if (upper.includes("PLANNER"))
+      return "bg-indigo-100 text-indigo-700 border-indigo-200";
     if (upper.includes("LEADER"))
       return "bg-amber-100 text-amber-900 border-amber-200";
     if (upper.includes("QC"))
@@ -319,9 +269,10 @@ export default function UserManagementPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
                   <th className="py-3 px-5">Employee Name</th>
+                  <th className="py-3 px-4">Username</th>
                   <th className="py-3 px-4">Email Address</th>
-                  <th className="py-3 px-4">Primary Assigned Role</th>
-                  <th className="py-3 px-4">Operational Scope</th>
+                  <th className="py-3 px-4">Phone</th>
+                  <th className="py-3 px-4">Roles</th>
                   <th className="py-3 px-4">Account Status</th>
                   <th className="py-3 px-5 text-right">Actions</th>
                 </tr>
@@ -331,7 +282,7 @@ export default function UserManagementPage() {
                 {isFetching && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="py-12 text-center text-slate-400"
                     >
                       <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
@@ -345,7 +296,7 @@ export default function UserManagementPage() {
                 {!isFetching && isError && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="py-8 text-center text-rose-600 font-medium"
                     >
                       {(error as { message?: string })?.message ||
@@ -357,7 +308,7 @@ export default function UserManagementPage() {
                 {!isFetching && !isError && usersList.length === 0 && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="py-8 text-center text-slate-400 italic"
                     >
                       No user accounts found matching your query.
@@ -368,7 +319,6 @@ export default function UserManagementPage() {
                 {!isFetching &&
                   !isError &&
                   usersList.map((user) => {
-                    const roleInfo = formatRoleInfo(user.roles);
                     const isActive = user.status === "ACTIVE";
 
                     return (
@@ -376,25 +326,37 @@ export default function UserManagementPage() {
                         key={user.userId}
                         className="hover:bg-slate-50/80 transition-colors"
                       >
-                        <td className="py-3.5 px-5 font-bold text-slate-900">
-                          {user.fullName || user.username}
+                        <td className="py-3.5 px-5 font-bold text-slate-900 align-top">
+                          {user.fullName || "—"}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-600">
+                        <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 align-top">
+                          {user.username}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600 align-top">
                           {user.email}
                         </td>
-                        <td className="py-3.5 px-4">
-                          <span
-                            className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${getRoleBadgeStyle(
-                              roleInfo.label,
-                            )}`}
-                          >
-                            {roleInfo.label}
-                          </span>
+                        <td className="py-3.5 px-4 text-slate-600 font-mono text-xs align-top">
+                          {user.phone || "—"}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-600">
-                          {roleInfo.scope}
+                        <td className="py-3.5 px-4 align-top">
+                          <div className="flex flex-col items-start gap-1">
+                            {user.roles && user.roles.length > 0 ? (
+                              user.roles.map((r) => (
+                                <span
+                                  key={r}
+                                  className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded border whitespace-nowrap ${getRoleBadgeStyle(
+                                    r,
+                                  )}`}
+                                >
+                                  {r}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-slate-400 italic text-xs">No roles</span>
+                            )}
+                          </div>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 align-top">
                           {isActive ? (
                             <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700">
                               ACTIVE
@@ -405,7 +367,7 @@ export default function UserManagementPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-5 text-right">
+                        <td className="py-3.5 px-5 text-right align-top">
                           {isActive ? (
                             <button
                               type="button"

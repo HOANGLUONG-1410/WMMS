@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { catalogApi } from "../../catalog/api/catalogApi";
+import { DEFAULT_MASTER_MATERIALS } from "../../catalog/data/defaultMaterials";
+import type { MaterialCatalogDto } from "../../catalog/types";
 import type { BomDetailDto } from "../types";
 
 interface MaterialItemModalProps {
@@ -8,13 +11,7 @@ interface MaterialItemModalProps {
   onSave: (item: BomDetailDto) => void;
 }
 
-const CATEGORIES = [
-  "SOLID LUMBER",
-  "SHEET WOOD",
-  "HARDWARE",
-  "FINISHING",
-  "PACKAGING",
-];
+const CATEGORIES = ["LUMBER", "HARDWARE", "FINISH_PAINT", "PACKAGING"];
 
 export default function MaterialItemModal({
   isOpen,
@@ -22,66 +19,153 @@ export default function MaterialItemModal({
   onClose,
   onSave,
 }: MaterialItemModalProps) {
+  const [masterMaterials, setMasterMaterials] = useState<MaterialCatalogDto[]>(
+    DEFAULT_MASTER_MATERIALS,
+  );
+  const [selectedMaterialId, setSelectedMaterialId] = useState<number>(
+    DEFAULT_MASTER_MATERIALS[0]?.materialId || 1,
+  );
   const [materialCode, setMaterialCode] = useState("");
-  const [materialGroup, setMaterialGroup] = useState("SOLID LUMBER");
+  const [materialGroup, setMaterialGroup] = useState("LUMBER");
   const [materialName, setMaterialName] = useState("");
-  const [unitOfMeasure, setUnitOfMeasure] = useState("m³");
-  const [netQtyPerUnit, setNetQtyPerUnit] = useState("0.015");
+  const [dimensionSpec, setDimensionSpec] = useState("");
+  const [unitOfMeasure, setUnitOfMeasure] = useState("M3");
+  const [fscCertified, setFscCertified] = useState(true);
+  const [netQtyPerUnit, setNetQtyPerUnit] = useState("0.018");
+  const [notes, setNotes] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    if (isOpen) {
-      if (editingItem) {
-        setMaterialCode(editingItem.materialCode);
-        setMaterialGroup(editingItem.materialGroup || "SOLID LUMBER");
-        setMaterialName(editingItem.materialName);
-        setUnitOfMeasure(editingItem.unitOfMeasure);
-        setNetQtyPerUnit(String(editingItem.netQtyPerUnit));
-      } else {
-        setMaterialCode("LUMB-ASH-02");
-        setMaterialGroup("SOLID LUMBER");
-        setMaterialName("European White Ash Rough Board (30 x 150 x 1200 mm)");
-        setUnitOfMeasure("m³");
-        setNetQtyPerUnit("0.025");
+    if (!isOpen) return;
+    catalogApi
+      .getMaterials()
+      .then((list) => {
+        if (list && list.length > 0) {
+          setMasterMaterials(list);
+        }
+      })
+      .catch(() => {
+        setMasterMaterials(DEFAULT_MASTER_MATERIALS);
+      });
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (editingItem) {
+      const matched =
+        masterMaterials.find(
+          (m) =>
+            m.materialId === editingItem.materialId ||
+            m.materialCode.toUpperCase() === editingItem.materialCode.toUpperCase(),
+        ) || masterMaterials[0];
+      setSelectedMaterialId(editingItem.materialId || matched?.materialId || 1);
+      setMaterialCode(editingItem.materialCode);
+      setMaterialGroup(editingItem.materialGroup || matched?.materialGroup || "LUMBER");
+      setMaterialName(editingItem.materialName);
+      setDimensionSpec(editingItem.dimensionSpec || matched?.dimensionSpec || "");
+      setUnitOfMeasure(editingItem.unitOfMeasure || matched?.unitOfMeasure || "M3");
+      setFscCertified(editingItem.fscCertified ?? matched?.fscCertified ?? false);
+      setNetQtyPerUnit(String(editingItem.netQtyPerUnit));
+      setNotes(editingItem.notes || "");
+    } else {
+      const first = masterMaterials[0] || DEFAULT_MASTER_MATERIALS[0];
+      if (first) {
+        setSelectedMaterialId(first.materialId);
+        setMaterialCode(first.materialCode);
+        setMaterialGroup(first.materialGroup);
+        setMaterialName(first.materialName);
+        setDimensionSpec(first.dimensionSpec);
+        setUnitOfMeasure(first.unitOfMeasure);
+        setFscCertified(first.fscCertified);
       }
-      setErrorMsg("");
+      setNetQtyPerUnit("0.025");
+      setNotes("");
     }
-  }, [isOpen, editingItem]);
+    setErrorMsg("");
+  }, [isOpen, editingItem, masterMaterials]);
 
   if (!isOpen) return null;
+
+  const handleSelectMasterMaterial = (matIdStr: string) => {
+    const id = Number(matIdStr);
+    setSelectedMaterialId(id);
+    const mat = masterMaterials.find((m) => m.materialId === id);
+    if (mat) {
+      setMaterialCode(mat.materialCode);
+      setMaterialGroup(mat.materialGroup);
+      setMaterialName(mat.materialName);
+      setDimensionSpec(mat.dimensionSpec);
+      setUnitOfMeasure(mat.unitOfMeasure);
+      setFscCertified(mat.fscCertified);
+      setErrorMsg("");
+    }
+  };
+
+  const handleCodeChange = (val: string) => {
+    setMaterialCode(val);
+    const matched = masterMaterials.find(
+      (m) => m.materialCode.toUpperCase() === val.trim().toUpperCase(),
+    );
+    if (matched) {
+      setSelectedMaterialId(matched.materialId);
+      setMaterialGroup(matched.materialGroup);
+      setMaterialName(matched.materialName);
+      setDimensionSpec(matched.dimensionSpec);
+      setUnitOfMeasure(matched.unitOfMeasure);
+      setFscCertified(matched.fscCertified);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const parsedQty = Number(netQtyPerUnit);
     if (!materialCode.trim() || !materialName.trim()) {
-      setErrorMsg("Material code and name are required.");
+      setErrorMsg("Material code and material name are required.");
       return;
     }
     if (Number.isNaN(parsedQty) || parsedQty <= 0) {
-      setErrorMsg("Net quantity per unit must be greater than 0.");
+      setErrorMsg("Net quantity per unit must be greater than 0 (BR-005).");
       return;
     }
 
+    const matchedByCode = masterMaterials.find(
+      (m) => m.materialCode.toUpperCase() === materialCode.trim().toUpperCase(),
+    );
+    const resolvedMatId =
+      matchedByCode?.materialId ||
+      selectedMaterialId ||
+      editingItem?.materialId ||
+      masterMaterials[0]?.materialId ||
+      1;
+
     onSave({
       bomDetailId: editingItem?.bomDetailId || Date.now(),
-      materialId: editingItem?.materialId || Date.now(),
+      materialId: resolvedMatId,
       materialCode: materialCode.trim().toUpperCase(),
       materialGroup,
       materialName: materialName.trim(),
-      unitOfMeasure: unitOfMeasure.trim() || "Pcs",
+      dimensionSpec: dimensionSpec.trim() || null,
+      fscCertified,
+      unitOfMeasure: unitOfMeasure.trim() || "PCS",
       netQtyPerUnit: parsedQty,
       grossTotalDemand: editingItem?.grossTotalDemand || 0,
+      notes: notes.trim() || null,
     });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[1px]">
-      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-sm font-extrabold text-slate-900">
-            {editingItem ? "Edit BOM Material Item" : "Add Raw Material Line Item"}
-          </h2>
+          <div>
+            <h2 className="text-sm font-extrabold text-slate-900">
+              {editingItem ? "Edit BOM Material Line Item" : "Add Raw Material Line Item"}
+            </h2>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Select from factory Master Material Catalog or enter a registered Material Code.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -100,21 +184,38 @@ export default function MaterialItemModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Material Code
+              Master Material Directory Lookup (Database Synced)
             </label>
-            <input
-              type="text"
-              value={materialCode}
-              onChange={(e) => setMaterialCode(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-              placeholder="e.g. LUMB-OAK-01"
-            />
+            <select
+              value={selectedMaterialId}
+              onChange={(e) => handleSelectMasterMaterial(e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-amber-50/40 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800"
+            >
+              {masterMaterials.map((mat) => (
+                <option key={mat.materialId} value={mat.materialId}>
+                  [{mat.materialCode}] {mat.materialName} ({mat.unitOfMeasure} - {mat.materialGroup})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Category
+                Material Code
+              </label>
+              <input
+                type="text"
+                value={materialCode}
+                onChange={(e) => handleCodeChange(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                placeholder="e.g. WOOD_OAK_01"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Category Group
               </label>
               <select
                 value={materialGroup}
@@ -128,6 +229,34 @@ export default function MaterialItemModal({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Material Name
+            </label>
+            <input
+              type="text"
+              value={materialName}
+              onChange={(e) => setMaterialName(e.target.value)}
+              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g. Gỗ sồi Bắc Mỹ xẻ sấy FAS (Oak)"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Dimension Specification
+              </label>
+              <input
+                type="text"
+                value={dimensionSpec}
+                onChange={(e) => setDimensionSpec(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 26mm x 150mm x 2400mm"
+              />
+            </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -138,35 +267,38 @@ export default function MaterialItemModal({
                 value={unitOfMeasure}
                 onChange={(e) => setUnitOfMeasure(e.target.value)}
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="m³, Sheet, Pcs, Kg, Box"
+                placeholder="M3, PCS, LITER"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Material Name &amp; Dimensions (mm)
-            </label>
-            <input
-              type="text"
-              value={materialName}
-              onChange={(e) => setMaterialName(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. American White Oak Rough Board (25 x 120 x 1000 mm)"
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Net Quantity per Product Unit
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0.0001"
+                value={netQtyPerUnit}
+                onChange={(e) => setNetQtyPerUnit(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Net Quantity per Product Unit
-            </label>
-            <input
-              type="number"
-              step="any"
-              value={netQtyPerUnit}
-              onChange={(e) => setNetQtyPerUnit(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Technical Notes (Optional)
+              </label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. Main frame / Top coat"
+              />
+            </div>
           </div>
 
           <div className="pt-2 flex items-center justify-end gap-2.5">
@@ -189,4 +321,3 @@ export default function MaterialItemModal({
     </div>
   );
 }
-
