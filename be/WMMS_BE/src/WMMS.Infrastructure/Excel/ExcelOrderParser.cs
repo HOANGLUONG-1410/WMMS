@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using OfficeOpenXml;
+using OfficeOpenXml.Drawing;
 using WMMS.Application.DTOs.Orders;
 using WMMS.Application.Interfaces.External;
 using WMMS.Domain.Constants;
@@ -163,7 +164,7 @@ public class ExcelOrderParser : IExcelOrderParser
                 {
                     colMap["fsc"] = c;
                 }
-                else if (lower.Contains("drawing") || lower.Contains("cad"))
+                else if (lower.Contains("drawing") || lower.Contains("cad") || lower.Contains("picture") || lower.Contains("photo") || lower.Contains("image"))
                 {
                     colMap["cad"] = c;
                 }
@@ -324,6 +325,8 @@ public class ExcelOrderParser : IExcelOrderParser
         // --------------------------------------------------------------------
         // KHỐI 2: Trích xuất danh sách dòng sản phẩm sản xuất (Production Line Items)
         // --------------------------------------------------------------------
+        var embeddedImagesByRow = ExtractEmbeddedPicturesByRow(worksheet);
+
         for (var r = dataStartRow; r < footerStartRow; r++)
         {
             var sku = colMap.TryGetValue("sku", out var skuCol) ? GetCellString(worksheet, r, skuCol) : string.Empty;
@@ -373,7 +376,9 @@ public class ExcelOrderParser : IExcelOrderParser
                 FscRequired = string.IsNullOrWhiteSpace(fscStr) ||
                               fscStr.Contains("FSC", StringComparison.OrdinalIgnoreCase) ||
                               fscStr.Contains("100", StringComparison.OrdinalIgnoreCase),
-                TechnicalDrawingName = cadStr
+                TechnicalDrawingName = ResolveDrawingName(cadStr, sku, r, embeddedImagesByRow),
+                TechnicalDrawingUrl = embeddedImagesByRow.TryGetValue(r, out var picInfo) ? picInfo.DataUri : null,
+                ProductImageUrl = embeddedImagesByRow.TryGetValue(r, out var prodPic) ? prodPic.DataUri : null
             });
         }
 
@@ -482,5 +487,73 @@ public class ExcelOrderParser : IExcelOrderParser
         }
 
         return sheet.Cells[row, col].Text?.Trim() ?? string.Empty;
+    }
+
+    private sealed record EmbeddedPictureInfo(string DataUri, string Extension, string PictureName);
+
+    /// <summary>
+    /// Trích xuất toàn bộ hình ảnh nhúng (OpenXML Drawings / ExcelPicture) trên sheet Excel theo tọa độ dòng (1-based row).
+    /// Phục vụ Giai đoạn 1 của kiến trúc Hybrid: trả về chuỗi Base64 Data URI ngay cho màn hình Staging Grid (SCR-ORD-02).
+    /// </summary>
+    private static Dictionary<int, EmbeddedPictureInfo> ExtractEmbeddedPicturesByRow(ExcelWorksheet worksheet)
+    {
+        var map = new Dictionary<int, EmbeddedPictureInfo>();
+        if (worksheet.Drawings == null || worksheet.Drawings.Count == 0)
+        {
+            return map;
+        }
+
+        foreach (var drawing in worksheet.Drawings)
+        {
+            if (drawing is not ExcelPicture pic || pic.Image?.ImageBytes == null || pic.Image.ImageBytes.Length == 0)
+            {
+                continue;
+            }
+
+            // EPPlus lưu From.Row theo chỉ số 0-based -> cộng 1 để khớp với dòng 1-based của ExcelWorksheet
+            var excelRow = pic.From.Row + 1;
+            if (excelRow <= 0 || map.ContainsKey(excelRow))
+            {
+                continue;
+            }
+
+            var typeStr = pic.Image.Type?.ToString()?.ToLowerInvariant() ?? "png";
+            var (mimeType, ext) = typeStr switch
+            {
+                "jpg" or "jpeg" => ("image/jpeg", ".jpg"),
+                "gif" => ("image/gif", ".gif"),
+                "webp" => ("image/webp", ".webp"),
+                _ => ("image/png", ".png")
+            };
+
+            var base64 = Convert.ToBase64String(pic.Image.ImageBytes);
+            var dataUri = $"data:{mimeType};base64,{base64}";
+            var safeName = string.IsNullOrWhiteSpace(pic.Name) ? $"Row_{excelRow}_Image" : pic.Name.Trim().Replace(' ', '_');
+
+            map[excelRow] = new EmbeddedPictureInfo(dataUri, ext, safeName);
+        }
+
+        return map;
+    }
+
+    private static string ResolveDrawingName(
+        string? cadCellText,
+        string? sku,
+        int excelRow,
+        Dictionary<int, EmbeddedPictureInfo> embeddedImagesByRow)
+    {
+        if (!string.IsNullOrWhiteSpace(cadCellText))
+        {
+            return cadCellText.Trim();
+        }
+
+        if (embeddedImagesByRow.TryGetValue(excelRow, out var picInfo))
+        {
+            return !string.IsNullOrWhiteSpace(sku)
+                ? $"IMG_{sku.Trim()}{picInfo.Extension}"
+                : $"{picInfo.PictureName}{picInfo.Extension}";
+        }
+
+        return string.Empty;
     }
 }
