@@ -42,6 +42,7 @@ public class StagingOrderRowDto
     public bool FscRequired { get; set; } = true;
     public string? TechnicalDrawingName { get; set; }
     public string? TechnicalDrawingUrl { get; set; }
+    public string? ProductImageUrl { get; set; }
 
     /// <summary>ID sản phẩm khớp trong Visual Catalog (nếu có).</summary>
     public long? MatchedProductId { get; set; }
@@ -210,6 +211,7 @@ public class OrderSpaceLineItemDto
     public string FinishSpec { get; set; } = string.Empty;
     public int OrderedQty { get; set; }
     public bool FscCertifiedReq { get; set; }
+    public string? ProductImageUrl { get; set; }
     public string? AttachedCadFileName { get; set; }
     public string? AttachedCadUrl { get; set; }
     public long? BomId { get; set; }
