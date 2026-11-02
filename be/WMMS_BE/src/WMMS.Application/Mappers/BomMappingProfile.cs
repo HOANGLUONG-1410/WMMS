@@ -23,7 +23,10 @@ public class BomMappingProfile : Profile
             .ForMember(dest => dest.MaterialGroup, opt => opt.MapFrom(src => src.Material != null ? src.Material.MaterialGroup.ToString() : string.Empty))
             .ForMember(dest => dest.UnitOfMeasure, opt => opt.MapFrom(src => src.Material != null ? src.Material.UnitOfMeasure : string.Empty))
             .ForMember(dest => dest.DimensionSpec, opt => opt.MapFrom(src => src.Material != null ? src.Material.DimensionSpec : null))
-            .ForMember(dest => dest.FscCertified, opt => opt.MapFrom(src => src.Material != null && src.Material.FscCertified));
+            .ForMember(dest => dest.FscCertified, opt => opt.MapFrom(src => src.Material != null && src.Material.FscCertified))
+            .ForMember(dest => dest.PhysicalStock, opt => opt.MapFrom(src => src.Material != null && src.Material.MaterialStock != null ? src.Material.MaterialStock.PhysicalStock : 0m))
+            .ForMember(dest => dest.AllocatedStock, opt => opt.MapFrom(src => src.Material != null && src.Material.MaterialStock != null ? src.Material.MaterialStock.AllocatedStock : 0m))
+            .ForMember(dest => dest.AvailableStock, opt => opt.MapFrom(src => src.Material != null && src.Material.MaterialStock != null ? src.Material.MaterialStock.AvailableStock : 0m));
 
         CreateMap<RoutingStage, RoutingStageDto>();
 
