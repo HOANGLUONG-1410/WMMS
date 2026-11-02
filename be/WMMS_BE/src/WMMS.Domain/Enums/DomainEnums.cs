@@ -14,7 +14,8 @@ public enum OrderStatusEnum
     IN_PLANNING = 2,
     IN_PRODUCTION = 3,
     COMPLETED = 4,
-    CANCELLED = 5
+    CANCELLED = 5,
+    DRAFT = 6
 }
 
 public enum SpaceStatusEnum
@@ -30,14 +31,17 @@ public enum OrderItemStatusEnum
     WAITING_MAT = 3,
     READY_PROD = 4,
     IN_PROD = 5,
-    DONE = 6
+    DONE = 6,
+    BOM_APPROVED = 7
 }
 
 public enum BomStatusEnum
 {
     DRAFT = 1,
     WAITING_FOR_MATERIALS = 2,
-    READY_FOR_PRODUCTION = 3
+    READY_FOR_PRODUCTION = 3,
+    PENDING_APPROVAL = 4,
+    APPROVED = 5
 }
 
 public enum MaterialGroupEnum
@@ -79,6 +83,7 @@ public enum GrnStatusEnum
 
 public enum InventoryTransactionTypeEnum
 {
+    INITIAL_IMPORT = 0,
     IN_RECEIPT = 1,
     OUT_ISSUE = 2,
     ADJUST = 3

@@ -72,6 +72,7 @@ builder.Services.AddScoped<IBomRoutingService, BomRoutingService>();
 builder.Services.AddScoped<IMaterialService, WMMS.Infrastructure.Services.MasterData.MaterialService>();
 builder.Services.AddScoped<IProductService, WMMS.Infrastructure.Services.MasterData.ProductService>();
 builder.Services.AddScoped<ISupplierService, WMMS.Infrastructure.Services.MasterData.SupplierService>();
+builder.Services.AddScoped<IInventoryService, WMMS.Infrastructure.Services.Inventory.InventoryService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();
