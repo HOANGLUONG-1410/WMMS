@@ -278,6 +278,14 @@ public class OrderIntakeService : IOrderIntakeService
                 row.MatchedProductId = matchedProduct.ProductId;
                 row.IsNewProduct = false;
                 matchedCatalogCount++;
+                if (string.IsNullOrWhiteSpace(row.ProductImageUrl))
+                {
+                    row.ProductImageUrl = matchedProduct.ImageUrl ?? matchedProduct.CadDrawingUrl;
+                }
+                if (string.IsNullOrWhiteSpace(row.TechnicalDrawingUrl))
+                {
+                    row.TechnicalDrawingUrl = row.ProductImageUrl ?? matchedProduct.CadDrawingUrl;
+                }
                 if (string.IsNullOrWhiteSpace(row.TechnicalDrawingName))
                 {
                     row.TechnicalDrawingName = !string.IsNullOrWhiteSpace(matchedProduct.CadDrawingUrl)
@@ -434,17 +442,20 @@ public class OrderIntakeService : IOrderIntakeService
             foreach (var row in validationResult.Rows)
             {
                 Product? product = null;
+                var persistedImageUrl = await PersistProductImageFromDataUriAsync(row.ProductSku, row.ProductImageUrl ?? row.TechnicalDrawingUrl, cancellationToken);
                 if (row.MatchedProductId.HasValue)
                 {
                     product = await _context.Products
                         .FirstOrDefaultAsync(p => p.ProductId == row.MatchedProductId.Value, cancellationToken);
                 }
 
+
                 if (product is null)
                 {
                     product = await _context.Products
                         .FirstOrDefaultAsync(p => p.ProductSku.ToUpper() == row.ProductSku, cancellationToken);
                 }
+
 
                 if (product is null)
                 {
@@ -456,12 +467,28 @@ public class OrderIntakeService : IOrderIntakeService
                         DimensionsCm = row.DimensionsMm,
                         WoodSpecies = "American White Oak",
                         FinishColor = row.FinishColor,
-                        CadDrawingUrl = row.TechnicalDrawingUrl ?? $"/drawings/{row.TechnicalDrawingName ?? $"CAD_{row.ProductSku}.pdf"}",
+
+
+                        ImageUrl = persistedImageUrl,
+                        CadDrawingUrl = persistedImageUrl ?? $"/drawings/{row.TechnicalDrawingName ?? $"CAD_{row.ProductSku}.pdf"}",
                         Status = "ACTIVE",
                         CreatedAt = now,
                         UpdatedAt = now
                     };
                     await _context.Products.AddAsync(product, cancellationToken);
+                }
+                else if (!string.IsNullOrWhiteSpace(persistedImageUrl))
+                {
+                    product.ImageUrl = persistedImageUrl;
+                    if (string.IsNullOrWhiteSpace(product.CadDrawingUrl))
+                    {
+                        product.CadDrawingUrl = persistedImageUrl;
+                    }
+                    product.UpdatedAt = now;
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                if (product.ProductId == 0)
+                {
                     await _context.SaveChangesAsync(cancellationToken);
                 }
 
@@ -726,7 +753,8 @@ public class OrderIntakeService : IOrderIntakeService
                 OrderedQty = oi.OrderedQty,
                 FscCertifiedReq = oi.FscCertifiedReq,
                 AttachedCadFileName = cadFile,
-                AttachedCadUrl = oi.Product.CadDrawingUrl ?? $"/drawings/{cadFile}",
+                ProductImageUrl = oi.Product.ImageUrl ?? oi.Product.CadDrawingUrl,
+                AttachedCadUrl = oi.Product.CadDrawingUrl ?? oi.Product.ImageUrl ?? $"/drawings/{cadFile}",
                 BomId = oi.BomHeader?.BomId,
                 ScrapRatePct = oi.BomHeader?.ScrapRatePercent,
                 ItemStatus = oi.Status.ToString(),
@@ -1074,5 +1102,64 @@ public class OrderIntakeService : IOrderIntakeService
             return "BEDROOM & CABINETS";
         }
         return "SOLID WOOD FURNITURE";
+    }
+
+    /// <summary>
+    /// Giai đoạn 2 của kiến trúc Hybrid: Giải mã chuỗi Base64 Data URI (nếu có) khi Owner bấm Confirm
+    /// và lưu thành file ảnh vật lý tại <c>wwwroot/uploads/products/{sku}.{ext}</c>, trả về URL tĩnh lưu vào CSDL.
+    /// </summary>
+    private static async Task<string?> PersistProductImageFromDataUriAsync(
+        string? sku,
+        string? imageUrlOrDataUri,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrlOrDataUri))
+        {
+            return null;
+        }
+
+        var trimmed = imageUrlOrDataUri.Trim();
+        if (!trimmed.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        var commaIndex = trimmed.IndexOf(',');
+        if (commaIndex <= 0 || commaIndex >= trimmed.Length - 1)
+        {
+            return null;
+        }
+
+        var header = trimmed[..commaIndex].ToLowerInvariant();
+        var base64Payload = trimmed[(commaIndex + 1)..];
+
+        var ext = header.Contains("jpeg") || header.Contains("jpg")
+            ? ".jpg"
+            : header.Contains("gif")
+                ? ".gif"
+                : header.Contains("webp")
+                    ? ".webp"
+                    : ".png";
+
+        byte[] imageBytes;
+        try
+        {
+            imageBytes = Convert.FromBase64String(base64Payload);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var safeSku = Regex.Replace(string.IsNullOrWhiteSpace(sku) ? "ITEM" : sku.Trim(), @"[^a-zA-Z0-9_\-]", "_");
+        var fileName = $"{safeSku}{ext}";
+
+        var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products");
+        Directory.CreateDirectory(uploadDir);
+
+        var fullPath = Path.Combine(uploadDir, fileName);
+        await File.WriteAllBytesAsync(fullPath, imageBytes, cancellationToken);
+
+        return $"/uploads/products/{fileName}";
     }
 }
