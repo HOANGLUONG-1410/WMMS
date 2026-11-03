@@ -30,6 +30,11 @@ public class BomMappingProfile : Profile
 
         CreateMap<RoutingStage, RoutingStageDto>();
 
+        CreateMap<RoutingTemplate, RoutingDto>()
+            .ForMember(dest => dest.ProductSku, opt => opt.MapFrom(src => src.Product != null ? src.Product.ProductSku : string.Empty))
+            .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.ProductName : string.Empty))
+            .ForMember(dest => dest.Stages, opt => opt.MapFrom(src => src.RoutingStages));
+
         CreateMap<Product, VisualCatalogProductDto>()
             .ForMember(dest => dest.HasActiveBom, opt => opt.MapFrom(src => src.BomHeaders.Any(b => b.BomStatus == Domain.Enums.BomStatusEnum.READY_FOR_PRODUCTION || b.BomStatus == Domain.Enums.BomStatusEnum.DRAFT)))
             .ForMember(dest => dest.DefaultRoutingStages, opt => opt.MapFrom(src => src.RoutingTemplates.FirstOrDefault(r => r.IsActive) != null ? src.RoutingTemplates.FirstOrDefault(r => r.IsActive)!.RoutingStages : new List<RoutingStage>()));

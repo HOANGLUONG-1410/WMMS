@@ -149,6 +149,127 @@ public class BomRoutingService : IBomRoutingService
         return GetStandardWoodworkingStages();
     }
 
+    public async Task<RoutingDto?> GetProductRoutingAsync(long productId)
+    {
+        var product = await _productRepository.GetByIdAsync(productId);
+        if (product == null)
+        {
+            return null;
+        }
+
+        var routing = await _routingRepository.GetActiveRoutingByProductIdAsync(productId);
+        if (routing != null)
+        {
+            var dto = _mapper.Map<RoutingDto>(routing);
+            dto.ProductSku = product.ProductSku;
+            dto.ProductName = product.ProductName;
+            dto.Stages = EnrichWorkstationAndQualityGate(
+                _mapper.Map<List<RoutingStageDto>>(routing.RoutingStages.OrderBy(s => s.StageSequence)));
+            return dto;
+        }
+
+        return new RoutingDto
+        {
+            RoutingId = 0,
+            ProductId = product.ProductId,
+            ProductSku = product.ProductSku,
+            ProductName = product.ProductName,
+            VersionCode = "v1.0-default",
+            IsActive = true,
+            Stages = GetStandardWoodworkingStages()
+        };
+    }
+
+    public async Task<RoutingDto> SaveDynamicRoutingAsync(long productId, RoutingConfigDto request, long currentUserId)
+    {
+        var product = await _productRepository.GetByIdAsync(productId);
+        if (product == null)
+        {
+            throw new NotFoundException($"Product with ID {productId} was not found.");
+        }
+
+        if (request.Stages == null || !request.Stages.Any())
+        {
+            throw new DomainException("Workstation routing stages cannot be empty.", "INVALID_ROUTING_SEQUENCE");
+        }
+
+        // Kiểm tra thứ tự các công đoạn phải liên tục từ 1..N không ngắt quãng (BR-007, UC-37)
+        var orderedStages = request.Stages.OrderBy(s => s.StageSequence).ToList();
+        for (int i = 0; i < orderedStages.Count; i++)
+        {
+            if (orderedStages[i].StageSequence != i + 1)
+            {
+                throw new DomainException(
+                    $"Workstation stages must form a continuous sequence starting from 1 (expected {i + 1}, but found {orderedStages[i].StageSequence}).",
+                    "INVALID_ROUTING_SEQUENCE");
+            }
+
+            if (string.IsNullOrWhiteSpace(orderedStages[i].StageName))
+            {
+                throw new DomainException($"Stage name at sequence {orderedStages[i].StageSequence} cannot be empty.", "INVALID_STAGE_NAME");
+            }
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var domainStages = orderedStages.Select(s => new RoutingStage
+            {
+                StageSequence = s.StageSequence,
+                StageName = s.StageName.Trim(),
+                IsHoldPoint = s.IsHoldPoint
+            }).ToList();
+
+            var template = await _routingRepository.SaveCustomRoutingAsync(productId, domainStages);
+            await _unitOfWork.SaveChangesAsync();
+
+            var now = DateTime.UtcNow;
+            var afterStateJson = JsonSerializer.Serialize(new
+            {
+                template.RoutingId,
+                ProductId = productId,
+                StagesCount = domainStages.Count,
+                HoldPointStages = domainStages.Where(s => s.IsHoldPoint).Select(s => new { s.StageSequence, s.StageName })
+            });
+
+            // Ghi nhận kiểm toán bất biến GBR-05 vào bảng audit_logs
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.RoutingConfigured,
+                EntityName = "RoutingTemplate",
+                EntityId = template.RoutingId.ToString(),
+                BeforeState = null,
+                AfterState = afterStateJson,
+                Reason = $"Configured dynamic product routing with {domainStages.Count} stages (HoldPoints: {domainStages.Count(s => s.IsHoldPoint)}) for Product #{product.ProductSku} (UC-37, BR-007).",
+                CreatedAt = now
+            });
+
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+
+            var updatedRouting = await _routingRepository.GetActiveRoutingByProductIdAsync(productId);
+            var resultDto = new RoutingDto
+            {
+                RoutingId = updatedRouting?.RoutingId ?? template.RoutingId,
+                ProductId = productId,
+                ProductSku = product.ProductSku,
+                ProductName = product.ProductName,
+                VersionCode = updatedRouting?.VersionCode ?? template.VersionCode,
+                IsActive = updatedRouting?.IsActive ?? template.IsActive,
+                Stages = EnrichWorkstationAndQualityGate(
+                    _mapper.Map<List<RoutingStageDto>>(updatedRouting?.RoutingStages != null ? updatedRouting.RoutingStages.OrderBy(s => s.StageSequence) : Enumerable.Empty<RoutingStage>()))
+            };
+
+            return resultDto;
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
     public async Task<CalculateDemandResponseDto> CalculateGrossDemandAsync(CalculateDemandRequestDto request)
     {
         await ValidateScrapRateAsync(request.ScrapRatePercent);
