@@ -24,8 +24,6 @@ Replace this placeholder with a concise description of what this project does, w
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- Synchronized branch luong into dev and pushed origin/dev. Included Master Data APIs, separated Excel Order Parser, and updated WMMS_DB_Test_Iteration1.sql with auto-migration patch for missing columns.
-- Merged origin/dev and origin/hunganh into branch luong. Integrated Swagger schema ID fix and Frontend Auth/User Management improvements. Verified dotnet build 0 errors, all 44/44 unit tests pass 100%, and pushed to origin/luong.
 - Implemented Duong and Luong BE deliverables on branch luong (8 modular commits): UomConversionHelper (cm/mm to m3/m2/Sheet), multi-level & 3-tier stock BomDtos/BomStagingDtos, ExcelBomParser supporting both .xlsx and legacy .xls BIFF8 workshop component sheets (sampleBOM.xls), stock-aware CalculateGrossDemandAsync & ApproveBomAsync with Workstation/QualityGate enrichment, and SignalR WmmsNotificationHub (/hubs/notifications) integrated with OrderIntakeService. Verified 46/46 unit tests pass and pushed to origin/luong. [be/WMMS_BE/src/WMMS.Infrastructure/Excel/ExcelBomParser.cs]
 - New feature: feat(auth): support industrial MES Session vs Persistent Cookie (RememberMe) and cookie cleanup on logout [be/WMMS_BE/src/WMMS.API/Controllers/AuthController.cs]
 - Merge: docs(projectmem): update summary
@@ -34,6 +32,8 @@ Replace this placeholder with a concise description of what this project does, w
 - Merged origin/hunganh commit 545dab6 (feat(fe/inventory): add 3-tier stock grid and electronic stock ledger) into branch luong (commit 6b511d3) with 0 conflicts. Verified dotnet build 0 errors, and synced to origin/luong and origin/dev.
 - Merge: docs(projectmem): sync merge note for hunganh inventory
 - Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.1: synchronized 100% of demo accounts with Database seed data (operational factory staff accounts: admin, owner, sales01, sales02, planner01, purchasing01, warehouse01, leader01, qc01 and 5 SEP490_G122 team multi-role accounts: luonghd, duynd, duongnt, cuonghd, anhth, all with password Admin@123).
+- Merge: docs(projectmem): sync update for demo script db accounts
+- Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.2: added explicit 'Mật khẩu' (Password) column with value Admin@123 for all rows in both Seed Data tables (Operational Staff and Team Member Multi-Roles).
 
 ## Key files
 - `WMMS_BE.sln`
