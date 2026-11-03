@@ -24,8 +24,6 @@ Replace this placeholder with a concise description of what this project does, w
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- Updated Report-5.1_Unit Test.xlsx to follow the concise module-sheet demo format (Report-5.1_Unit Test_Demo.xlsx). Replaced 21 scattered sheets with 5 clean sheets: Cover, Test Cases, Test Statistics, AUTH (44 TCs), and BOM (30 TCs). Formulas and Pie charts dynamically calculate 74 total TCs with 100% pass rate.
-- Merged origin/hunganh into branch luong for testing; integrated 4 Frontend modules (Admin, Catalog, BOM Builder, Purchasing); verified backend build 0 errors, all 44 unit tests pass 100%; restored Server=. in appsettings.json.
 - Updated Report-2_Project Tracking.xlsx sheet 28-411 with weekly plan (28/10 - 04/11): Iteration 1 Demo prep & rehearsal for weekend, and Iteration 2 coding launch for next week across all 5 team members.
 - Merged origin/cuong into luong bringing Master Data APIs (Materials, Products, Suppliers); verified backend build 0 errors, 44/44 unit tests pass; generated and verified WMMS_DB_Test_Iteration1.sql with full Master Case seed data.
 - Synchronized branch luong into dev and pushed origin/dev. Included Master Data APIs, separated Excel Order Parser, and updated WMMS_DB_Test_Iteration1.sql with auto-migration patch for missing columns.
@@ -34,6 +32,8 @@ Replace this placeholder with a concise description of what this project does, w
 - New feature: feat(auth): support industrial MES Session vs Persistent Cookie (RememberMe) and cookie cleanup on logout [be/WMMS_BE/src/WMMS.API/Controllers/AuthController.cs]
 - Merge: docs(projectmem): update summary
 - Generated comprehensive Dual Demo Scripts document (WMMS_Iteration1_Demo_Scripts.docx) covering both Mentor/Instructor business flow perspective and MES Technical Expert deep-dive architecture (OpenXML Excel parsing, Base64 drawing extraction, UoM volumetric conversion, 3-tier BOM, dynamic routing with Critical Hold Point, and Session vs Persistent Cookie authentication).
+- Merge: Merge remote-tracking branch 'origin/hunganh' into luong
+- Merged origin/hunganh commit 545dab6 (feat(fe/inventory): add 3-tier stock grid and electronic stock ledger) into branch luong (commit 6b511d3) with 0 conflicts. Verified dotnet build 0 errors, and synced to origin/luong and origin/dev.
 
 ## Key files
 - `WMMS_BE.sln`
