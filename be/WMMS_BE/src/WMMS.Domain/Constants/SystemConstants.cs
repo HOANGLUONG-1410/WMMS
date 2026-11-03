@@ -98,6 +98,7 @@ public static class AuditActionConstants
     public const string BomCreated = "BOM_CREATED";
     public const string BomUpdated = "BOM_UPDATED";
     public const string BomApproved = "BOM_APPROVED";
+    public const string RoutingConfigured = "ROUTING_CONFIGURED";
 }
 
 public static class DefectCodeConstants
@@ -120,5 +121,6 @@ public static class BusinessRuleConstants
 {
     public const string Br001ActiveBomUniqueness = "BR-001";
     public const string Br002NaturalScrapRateRange = "BR-002";
+    public const string Br007DynamicRoutingConfig = "BR-007";
     public const string Br011BomStagingImport = "BR-011";
 }

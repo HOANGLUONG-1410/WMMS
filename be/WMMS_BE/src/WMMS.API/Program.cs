@@ -175,6 +175,9 @@ var app = builder.Build();
 // Global Exception Handling Middleware (standardized JSON ApiResponse with MSG01..MSG13)
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
+// CORS MUST be placed before UseStaticFiles and UseHttpsRedirection to handle cross-origin browser requests properly
+app.UseCors("WmmsCorsPolicy");
+
 // Auto-seed database during development if needed
 if (app.Environment.IsDevelopment())
 {
@@ -184,13 +187,13 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "WMMS API v1");
     });
 }
-
-app.UseHttpsRedirection();
+else
+{
+    app.UseHttpsRedirection();
+}
 
 Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads", "products"));
 app.UseStaticFiles();
-
-app.UseCors("WmmsCorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();

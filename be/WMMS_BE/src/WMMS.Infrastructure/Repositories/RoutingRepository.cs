@@ -17,6 +17,7 @@ public class RoutingRepository : IRoutingRepository
     public async Task<RoutingTemplate?> GetActiveRoutingByProductIdAsync(long productId)
     {
         return await _context.RoutingTemplates
+            .Include(r => r.Product)
             .Include(r => r.RoutingStages)
             .FirstOrDefaultAsync(r => r.ProductId == productId && r.IsActive);
     }
@@ -33,6 +34,7 @@ public class RoutingRepository : IRoutingRepository
     public async Task<RoutingTemplate> SaveCustomRoutingAsync(long productId, IEnumerable<RoutingStage> stages)
     {
         var existing = await _context.RoutingTemplates
+            .Include(r => r.Product)
             .Include(r => r.RoutingStages)
             .FirstOrDefaultAsync(r => r.ProductId == productId && r.IsActive);
 
