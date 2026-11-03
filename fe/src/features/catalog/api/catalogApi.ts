@@ -29,9 +29,63 @@ export const catalogApi = {
 
   /**
    * Lấy danh mục nguyên vật liệu chuẩn xưởng (Master Raw Materials) từ GET /api/v1/materials
+   * kết hợp tồn kho thực tế từ GET /api/v1/inventory/stocks (hoặc fallback mặc định).
    * Phân loại theo 4 nhóm: LUMBER, HARDWARE, FINISH_PAINT, PACKAGING
    */
   getMaterials: async (group?: string): Promise<MaterialCatalogDto[]> => {
+    type RawMaterialItem = Partial<MaterialCatalogDto> & {
+      physicalQty?: number;
+      availableQty?: number;
+    };
+
+    const normalizeMaterialItem = (item: RawMaterialItem): MaterialCatalogDto => {
+      const matchedFallback = DEFAULT_MASTER_MATERIALS.find(
+        (d) =>
+          d.materialCode.toUpperCase() === (item.materialCode || "").toUpperCase() ||
+          d.materialId === item.materialId,
+      );
+
+      return {
+        materialId: item.materialId ?? matchedFallback?.materialId ?? 0,
+        materialCode: item.materialCode ?? matchedFallback?.materialCode ?? "",
+        materialName: item.materialName ?? matchedFallback?.materialName ?? "",
+        materialGroup: item.materialGroup ?? matchedFallback?.materialGroup ?? "LUMBER",
+        unitOfMeasure: item.unitOfMeasure ?? matchedFallback?.unitOfMeasure ?? "PCS",
+        dimensionSpec: item.dimensionSpec ?? matchedFallback?.dimensionSpec ?? null,
+        fscCertified: item.fscCertified ?? matchedFallback?.fscCertified ?? false,
+        safetyStockQty: Number(item.safetyStockQty ?? matchedFallback?.safetyStockQty ?? 0),
+        currentStockQty: Number(
+          item.currentStockQty ??
+            item.physicalQty ??
+            item.availableQty ??
+            matchedFallback?.currentStockQty ??
+            0,
+        ),
+        status: item.status ?? matchedFallback?.status ?? "ACTIVE",
+      };
+    };
+
+    // 1. Ưu tiên lấy từ /inventory/stocks vì có sẵn cả dimensionSpec + physicalQty thực tế trong DB
+    try {
+      const stockParams: Record<string, string | number> = { page: 1, pageSize: 100 };
+      if (group && group !== "ALL") {
+        stockParams.category = group;
+      }
+      const stockRes = await apiClient.get<{
+        success: boolean;
+        data: RawMaterialItem[] | { items?: RawMaterialItem[] };
+      }>("/inventory/stocks", { params: stockParams });
+
+      const rawStockData = stockRes.data?.data;
+      const stockList = Array.isArray(rawStockData) ? rawStockData : rawStockData?.items ?? [];
+      if (stockList.length > 0) {
+        return stockList.map(normalizeMaterialItem);
+      }
+    } catch {
+      // Nếu role không thuộc quyền /inventory/stocks thì tiếp tục gọi /materials
+    }
+
+    // 2. Gọi /materials (Master Data SC-04) và ánh xạ đầy đủ currentStockQty & dimensionSpec
     try {
       const params: Record<string, string | number> = { page: 1, pageSize: 100, status: "ACTIVE" };
       if (group && group !== "ALL") {
@@ -39,13 +93,13 @@ export const catalogApi = {
       }
       const res = await apiClient.get<{
         success: boolean;
-        data: MaterialCatalogDto[] | { items?: MaterialCatalogDto[] };
+        data: RawMaterialItem[] | { items?: RawMaterialItem[] };
       }>("/materials", { params });
 
       const rawData = res.data?.data;
       const list = Array.isArray(rawData) ? rawData : rawData?.items ?? [];
       if (list.length > 0) {
-        return list;
+        return list.map(normalizeMaterialItem);
       }
     } catch {
       // Fallback sang danh mục vật tư chuẩn đồng bộ DB nếu mất kết nối
