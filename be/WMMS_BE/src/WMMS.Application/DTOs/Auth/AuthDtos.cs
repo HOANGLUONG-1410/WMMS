@@ -34,6 +34,17 @@ public class AuthResponseDto
     /// <summary>Thời điểm hết hạn của Refresh Token (UTC).</summary>
     public DateTime RefreshTokenExpiresAt { get; set; }
 
+    /// <summary>
+    /// Cờ xác định phiên đăng nhập có kích hoạt chế độ ghi nhớ dài hạn (Persistent Cookie 30 ngày) hay không.
+    /// Nếu <c>false</c> (mặc định chuẩn trạm MES/Kiosk), trình duyệt chỉ lưu Session Cookie và tự hủy khi đóng trình duyệt.
+    /// </summary>
+    public bool RememberMe { get; set; } = false;
+
+    /// <summary>
+    /// Thời gian cho phép bất hoạt tối đa (phút) trước khi tự động khóa phiên trên giao diện trạm MES (Mặc định: 30 phút).
+    /// </summary>
+    public int IdleTimeoutMinutes { get; set; } = 30;
+
     /// <summary>Thông tin tóm tắt tài khoản và danh sách vai trò hỗ trợ Global Role Selector trên giao diện.</summary>
     public CurrentUserProfileDto User { get; set; } = null!;
 }

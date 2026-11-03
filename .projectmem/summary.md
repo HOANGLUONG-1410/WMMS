@@ -1,6 +1,6 @@
 # projectmem - WMMS
 
-_Last updated: 2026-11-02_
+_Last updated: 2026-11-03_
 
 ## Project purpose
 Replace this placeholder with a concise description of what this project does, who it serves, and the main technologies or runtime assumptions.
@@ -21,18 +21,19 @@ Replace this placeholder with a concise description of what this project does, w
 - Merged origin/dev into local branch luong (commit 626bd8b) bringing Order Intake, BOM Routing, Repository Pattern, and React Frontend into luong. Retained AGENTS.md for projectmem compatibility. Successfully verified dotnet build with 0 errors, and pushed to origin/luong.
 - Enforce Frontend Error Handling Protocol: Khi kiem tra ma nguon neu phat hien loi Frontend (FE) thi tuyet doi KHONG duoc tu y sua code; chi ghi nhan, phan tich nguyen nhan va bao cao chi tiet danh sach loi cho nguoi dung.
 - Adopt Hybrid 2-Stage Product Image Architecture for Excel PO Intake: Stage 1 (Staging Preview) extracts embedded OpenXML ExcelPicture drawings by row into Base64 Data URIs (ProductImageUrl / TechnicalDrawingUrl) for immediate UI rendering without disk garbage; Stage 2 (Order Confirm) decodes and persists confirmed images to wwwroot/uploads/products/{sku}.{ext}, stores static URLs in Product.ImageUrl, and serves them via UseStaticFiles(). [be/WMMS_BE/src/WMMS.Infrastructure/Excel/ExcelOrderParser.cs]
+- Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- New feature: feat(auth): implement AUT & ADM modules (UC-01..UC-14, JOB-01), password reset OTP/token, multi-role RBAC, and Code-Firs [be/WMMS_BE/src/WMMS.API/Controllers/AuthController.cs]
-- Implemented and executed all 36 Unit Test cases (UT-AUTH-01 to UT-AUTH-36) for the Authentication & Security module inside D:\WMMS_TEST\WMMS.UnitTests (isolated outside the main repository). All 36/36 tests passed and automatically generated a formatted evidence table at D:\WMMS_TEST\TestEvidence_AuthModule.md.
-- Merged branch luong (with GlobalExceptionMiddleware AppException fix) into dev and pushed origin/dev successfully.
-- Updated Report-5.1_Unit Test.xlsx to follow the concise module-sheet demo format (Report-5.1_Unit Test_Demo.xlsx). Replaced 21 scattered sheets with 5 clean sheets: Cover, Test Cases, Test Statistics, AUTH (44 TCs), and BOM (30 TCs). Formulas and Pie charts dynamically calculate 74 total TCs with 100% pass rate.
-- Merged origin/hunganh into branch luong for testing; integrated 4 Frontend modules (Admin, Catalog, BOM Builder, Purchasing); verified backend build 0 errors, all 44 unit tests pass 100%; restored Server=. in appsettings.json.
-- Updated Report-2_Project Tracking.xlsx sheet 28-411 with weekly plan (28/10 - 04/11): Iteration 1 Demo prep & rehearsal for weekend, and Iteration 2 coding launch for next week across all 5 team members.
-- Merged origin/cuong into luong bringing Master Data APIs (Materials, Products, Suppliers); verified backend build 0 errors, 44/44 unit tests pass; generated and verified WMMS_DB_Test_Iteration1.sql with full Master Case seed data.
 - Synchronized branch luong into dev and pushed origin/dev. Included Master Data APIs, separated Excel Order Parser, and updated WMMS_DB_Test_Iteration1.sql with auto-migration patch for missing columns.
 - Merged origin/dev and origin/hunganh into branch luong. Integrated Swagger schema ID fix and Frontend Auth/User Management improvements. Verified dotnet build 0 errors, all 44/44 unit tests pass 100%, and pushed to origin/luong.
 - Implemented Duong and Luong BE deliverables on branch luong (8 modular commits): UomConversionHelper (cm/mm to m3/m2/Sheet), multi-level & 3-tier stock BomDtos/BomStagingDtos, ExcelBomParser supporting both .xlsx and legacy .xls BIFF8 workshop component sheets (sampleBOM.xls), stock-aware CalculateGrossDemandAsync & ApproveBomAsync with Workstation/QualityGate enrichment, and SignalR WmmsNotificationHub (/hubs/notifications) integrated with OrderIntakeService. Verified 46/46 unit tests pass and pushed to origin/luong. [be/WMMS_BE/src/WMMS.Infrastructure/Excel/ExcelBomParser.cs]
+- New feature: feat(auth): support industrial MES Session vs Persistent Cookie (RememberMe) and cookie cleanup on logout [be/WMMS_BE/src/WMMS.API/Controllers/AuthController.cs]
+- Merge: docs(projectmem): update summary
+- Generated comprehensive Dual Demo Scripts document (WMMS_Iteration1_Demo_Scripts.docx) covering both Mentor/Instructor business flow perspective and MES Technical Expert deep-dive architecture (OpenXML Excel parsing, Base64 drawing extraction, UoM volumetric conversion, 3-tier BOM, dynamic routing with Critical Hold Point, and Session vs Persistent Cookie authentication).
+- Merge: Merge remote-tracking branch 'origin/hunganh' into luong
+- Merged origin/hunganh commit 545dab6 (feat(fe/inventory): add 3-tier stock grid and electronic stock ledger) into branch luong (commit 6b511d3) with 0 conflicts. Verified dotnet build 0 errors, and synced to origin/luong and origin/dev.
+- Merge: docs(projectmem): sync merge note for hunganh inventory
+- Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.1: synchronized 100% of demo accounts with Database seed data (operational factory staff accounts: admin, owner, sales01, sales02, planner01, purchasing01, warehouse01, leader01, qc01 and 5 SEP490_G122 team multi-role accounts: luonghd, duynd, duongnt, cuonghd, anhth, all with password Admin@123).
 
 ## Key files
 - `WMMS_BE.sln`
