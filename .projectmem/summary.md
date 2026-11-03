@@ -24,8 +24,6 @@ Replace this placeholder with a concise description of what this project does, w
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- Implemented Duong and Luong BE deliverables on branch luong (8 modular commits): UomConversionHelper (cm/mm to m3/m2/Sheet), multi-level & 3-tier stock BomDtos/BomStagingDtos, ExcelBomParser supporting both .xlsx and legacy .xls BIFF8 workshop component sheets (sampleBOM.xls), stock-aware CalculateGrossDemandAsync & ApproveBomAsync with Workstation/QualityGate enrichment, and SignalR WmmsNotificationHub (/hubs/notifications) integrated with OrderIntakeService. Verified 46/46 unit tests pass and pushed to origin/luong. [be/WMMS_BE/src/WMMS.Infrastructure/Excel/ExcelBomParser.cs]
-- New feature: feat(auth): support industrial MES Session vs Persistent Cookie (RememberMe) and cookie cleanup on logout [be/WMMS_BE/src/WMMS.API/Controllers/AuthController.cs]
 - Merge: docs(projectmem): update summary
 - Generated comprehensive Dual Demo Scripts document (WMMS_Iteration1_Demo_Scripts.docx) covering both Mentor/Instructor business flow perspective and MES Technical Expert deep-dive architecture (OpenXML Excel parsing, Base64 drawing extraction, UoM volumetric conversion, 3-tier BOM, dynamic routing with Critical Hold Point, and Session vs Persistent Cookie authentication).
 - Merge: Merge remote-tracking branch 'origin/hunganh' into luong
@@ -34,6 +32,8 @@ Replace this placeholder with a concise description of what this project does, w
 - Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.1: synchronized 100% of demo accounts with Database seed data (operational factory staff accounts: admin, owner, sales01, sales02, planner01, purchasing01, warehouse01, leader01, qc01 and 5 SEP490_G122 team multi-role accounts: luonghd, duynd, duongnt, cuonghd, anhth, all with password Admin@123).
 - Merge: docs(projectmem): sync update for demo script db accounts
 - Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.2: added explicit 'Mật khẩu' (Password) column with value Admin@123 for all rows in both Seed Data tables (Operational Staff and Team Member Multi-Roles).
+- Merge: docs(projectmem): sync password column note
+- Created comprehensive Business Requirements Document (BRD) at WMMS_BRD_Business_Requirements_Document.docx containing 8 detailed chapters: Project Vision & As-Is/To-Be, User Personas & RACI Matrix, Core Business Rules (BR-ORD-01/02, BR-BOM-01/02, BR-INV-01/02, BR-PUR-01, BR-PRD-01/02, BR-SEC-01), 6 End-to-End Business Process Flows, Non-Functional Requirements, State Machine, QC Defect Catalog, and Acceptance Criteria.
 
 ## Key files
 - `WMMS_BE.sln`
