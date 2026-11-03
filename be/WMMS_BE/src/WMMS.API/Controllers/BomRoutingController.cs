@@ -8,7 +8,7 @@ using WMMS.Application.Interfaces.Services;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// API Controller quản lý Bóc tách Định mức Nguyên vật liệu (BOM) &amp; Quy trình Sản xuất Động (Phân hệ 5 - QT-02, SC-10, SC-11, UC-38..UC-41).
+/// API Controller quản lý Bóc tách Định mức Nguyên vật liệu (BOM) &amp; Quy trình Sản xuất Động (Phân hệ 5 - QT-02, SC-10, SC-11, UC-36..UC-41).
 /// </summary>
 [ApiController]
 [Route("api/v1/bom")]
@@ -19,19 +19,22 @@ public class BomRoutingController : ControllerBase
     private readonly IValidator<UpdateBomRequestDto> _updateBomValidator;
     private readonly IValidator<CalculateDemandRequestDto> _calculateDemandValidator;
     private readonly IValidator<ConfirmBomStagingRequestDto> _confirmStagingValidator;
+    private readonly IValidator<RoutingConfigDto> _routingConfigValidator;
 
     public BomRoutingController(
         IBomRoutingService bomRoutingService,
         IValidator<CreateBomRequestDto> createBomValidator,
         IValidator<UpdateBomRequestDto> updateBomValidator,
         IValidator<CalculateDemandRequestDto> calculateDemandValidator,
-        IValidator<ConfirmBomStagingRequestDto> confirmStagingValidator)
+        IValidator<ConfirmBomStagingRequestDto> confirmStagingValidator,
+        IValidator<RoutingConfigDto> routingConfigValidator)
     {
         _bomRoutingService = bomRoutingService;
         _createBomValidator = createBomValidator;
         _updateBomValidator = updateBomValidator;
         _calculateDemandValidator = calculateDemandValidator;
         _confirmStagingValidator = confirmStagingValidator;
+        _routingConfigValidator = routingConfigValidator;
     }
 
     /// <summary>
@@ -90,6 +93,39 @@ public class BomRoutingController : ControllerBase
     {
         var routing = await _bomRoutingService.GetDefaultRoutingAsync(productId);
         return Ok(ApiResponse<List<RoutingStageDto>>.Ok(routing));
+    }
+
+    /// <summary>
+    /// UC-36 &amp; Screen 14: Lấy chi tiết quy trình công đoạn sản xuất (Dynamic Routing) của sản phẩm.
+    /// </summary>
+    [HttpGet("routing/{productId:long}")]
+    public async Task<ActionResult<ApiResponse<RoutingDto>>> GetProductRouting(long productId)
+    {
+        var routing = await _bomRoutingService.GetProductRoutingAsync(productId);
+        if (routing == null)
+        {
+            return NotFound(ApiResponse<RoutingDto>.Fail($"Sản phẩm với ID {productId} không tồn tại."));
+        }
+        return Ok(ApiResponse<RoutingDto>.Ok(routing, "Lấy thông tin quy trình sản xuất thành công (UC-36)."));
+    }
+
+    /// <summary>
+    /// UC-37 &amp; BR-007 (Report 4 BOM01, Screen 14): Cấu hình quy trình sản xuất động (Dynamic Routing) &amp; trạm dừng kỹ thuật (Hold Points) cho sản phẩm.
+    /// </summary>
+    [HttpPut("routing/{productId:long}")]
+    public async Task<ActionResult<ApiResponse<RoutingDto>>> ConfigureDynamicRouting(
+        long productId,
+        [FromBody] RoutingConfigDto request)
+    {
+        var validation = await _routingConfigValidator.ValidateAsync(request);
+        if (!validation.IsValid)
+        {
+            return BadRequest(ApiResponse<RoutingDto>.Fail("Dữ liệu cấu hình quy trình sản xuất không hợp lệ.", validation.Errors.Select(e => e.ErrorMessage).ToList()));
+        }
+
+        long currentUserId = GetCurrentUserId();
+        var result = await _bomRoutingService.SaveDynamicRoutingAsync(productId, request, currentUserId);
+        return Ok(ApiResponse<RoutingDto>.Ok(result, "Cấu hình quy trình sản xuất động thành công (UC-37, BR-007)."));
     }
 
     /// <summary>

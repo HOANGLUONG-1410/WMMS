@@ -111,3 +111,40 @@ public class ConfirmBomStagingRequestValidator : AbstractValidator<ConfirmBomSta
             .WithMessage("Staging rows cannot be empty.");
     }
 }
+
+/// <summary>
+/// Validator cấu hình Dynamic Routing cho sản phẩm (UC-37, BR-007, Report 4 BOM01).
+/// </summary>
+public class RoutingConfigValidator : AbstractValidator<RoutingConfigDto>
+{
+    public RoutingConfigValidator()
+    {
+        RuleFor(x => x.Stages)
+            .NotEmpty()
+            .WithMessage("Workstation routing stages cannot be empty.");
+
+        RuleForEach(x => x.Stages).ChildRules(stage =>
+        {
+            stage.RuleFor(s => s.StageSequence)
+                .GreaterThan(0)
+                .WithMessage("StageSequence must be greater than 0.");
+
+            stage.RuleFor(s => s.StageName)
+                .NotEmpty()
+                .WithMessage("StageName cannot be empty.");
+        });
+
+        RuleFor(x => x.Stages)
+            .Must(stages =>
+            {
+                if (stages == null || !stages.Any()) return true;
+                var ordered = stages.OrderBy(s => s.StageSequence).ToList();
+                for (int i = 0; i < ordered.Count; i++)
+                {
+                    if (ordered[i].StageSequence != i + 1) return false;
+                }
+                return true;
+            })
+            .WithMessage("Workstation stages must form a continuous sequence starting from 1 without gaps or duplicates (BR-007, UC-37).");
+    }
+}

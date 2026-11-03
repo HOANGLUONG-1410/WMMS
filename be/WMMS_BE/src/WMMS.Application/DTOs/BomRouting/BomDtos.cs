@@ -178,3 +178,30 @@ public class VisualCatalogProductDto
     public bool HasActiveBom { get; set; }
     public List<RoutingStageDto> DefaultRoutingStages { get; set; } = new();
 }
+
+/// <summary>
+/// DTO cấu hình quy trình sản xuất động và trạm dừng kỹ thuật (UC-37, BR-007, Report 4 BOM01).
+/// </summary>
+public class RoutingConfigDto
+{
+    public string? VersionCode { get; set; } = "v1.0";
+    public List<RoutingStageConfigDto> Stages { get; set; } = new();
+}
+
+public class RoutingStageConfigDto
+{
+    public int StageSequence { get; set; }
+    public string StageName { get; set; } = string.Empty;
+    public bool IsHoldPoint { get; set; }
+}
+
+public class RoutingDto
+{
+    public long RoutingId { get; set; }
+    public long ProductId { get; set; }
+    public string ProductSku { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public string VersionCode { get; set; } = "v1.0";
+    public bool IsActive { get; set; } = true;
+    public List<RoutingStageDto> Stages { get; set; } = new();
+}
