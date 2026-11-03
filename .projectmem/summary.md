@@ -24,7 +24,6 @@ Replace this placeholder with a concise description of what this project does, w
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- New feature: feat(auth): implement AUT & ADM modules (UC-01..UC-14, JOB-01), password reset OTP/token, multi-role RBAC, and Code-Firs [be/WMMS_BE/src/WMMS.API/Controllers/AuthController.cs]
 - Implemented and executed all 36 Unit Test cases (UT-AUTH-01 to UT-AUTH-36) for the Authentication & Security module inside D:\WMMS_TEST\WMMS.UnitTests (isolated outside the main repository). All 36/36 tests passed and automatically generated a formatted evidence table at D:\WMMS_TEST\TestEvidence_AuthModule.md.
 - Merged branch luong (with GlobalExceptionMiddleware AppException fix) into dev and pushed origin/dev successfully.
 - Updated Report-5.1_Unit Test.xlsx to follow the concise module-sheet demo format (Report-5.1_Unit Test_Demo.xlsx). Replaced 21 scattered sheets with 5 clean sheets: Cover, Test Cases, Test Statistics, AUTH (44 TCs), and BOM (30 TCs). Formulas and Pie charts dynamically calculate 74 total TCs with 100% pass rate.
@@ -34,6 +33,7 @@ Replace this placeholder with a concise description of what this project does, w
 - Synchronized branch luong into dev and pushed origin/dev. Included Master Data APIs, separated Excel Order Parser, and updated WMMS_DB_Test_Iteration1.sql with auto-migration patch for missing columns.
 - Merged origin/dev and origin/hunganh into branch luong. Integrated Swagger schema ID fix and Frontend Auth/User Management improvements. Verified dotnet build 0 errors, all 44/44 unit tests pass 100%, and pushed to origin/luong.
 - Implemented Duong and Luong BE deliverables on branch luong (8 modular commits): UomConversionHelper (cm/mm to m3/m2/Sheet), multi-level & 3-tier stock BomDtos/BomStagingDtos, ExcelBomParser supporting both .xlsx and legacy .xls BIFF8 workshop component sheets (sampleBOM.xls), stock-aware CalculateGrossDemandAsync & ApproveBomAsync with Workstation/QualityGate enrichment, and SignalR WmmsNotificationHub (/hubs/notifications) integrated with OrderIntakeService. Verified 46/46 unit tests pass and pushed to origin/luong. [be/WMMS_BE/src/WMMS.Infrastructure/Excel/ExcelBomParser.cs]
+- New feature: feat(auth): support industrial MES Session vs Persistent Cookie (RememberMe) and cookie cleanup on logout [be/WMMS_BE/src/WMMS.API/Controllers/AuthController.cs]
 
 ## Key files
 - `WMMS_BE.sln`
