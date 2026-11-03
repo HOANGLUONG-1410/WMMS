@@ -1,6 +1,6 @@
 # projectmem - WMMS
 
-_Last updated: 2026-11-02_
+_Last updated: 2026-11-03_
 
 ## Project purpose
 Replace this placeholder with a concise description of what this project does, who it serves, and the main technologies or runtime assumptions.
@@ -21,6 +21,7 @@ Replace this placeholder with a concise description of what this project does, w
 - Merged origin/dev into local branch luong (commit 626bd8b) bringing Order Intake, BOM Routing, Repository Pattern, and React Frontend into luong. Retained AGENTS.md for projectmem compatibility. Successfully verified dotnet build with 0 errors, and pushed to origin/luong.
 - Enforce Frontend Error Handling Protocol: Khi kiem tra ma nguon neu phat hien loi Frontend (FE) thi tuyet doi KHONG duoc tu y sua code; chi ghi nhan, phan tich nguyen nhan va bao cao chi tiet danh sach loi cho nguoi dung.
 - Adopt Hybrid 2-Stage Product Image Architecture for Excel PO Intake: Stage 1 (Staging Preview) extracts embedded OpenXML ExcelPicture drawings by row into Base64 Data URIs (ProductImageUrl / TechnicalDrawingUrl) for immediate UI rendering without disk garbage; Stage 2 (Order Confirm) decodes and persists confirmed images to wwwroot/uploads/products/{sku}.{ext}, stores static URLs in Product.ImageUrl, and serves them via UseStaticFiles(). [be/WMMS_BE/src/WMMS.Infrastructure/Excel/ExcelOrderParser.cs]
+- Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
 - New feature: feat(auth): implement AUT & ADM modules (UC-01..UC-14, JOB-01), password reset OTP/token, multi-role RBAC, and Code-Firs [be/WMMS_BE/src/WMMS.API/Controllers/AuthController.cs]

@@ -181,6 +181,8 @@ public class AuthService : IAuthService
             RefreshToken = rawRefreshToken,
             AccessTokenExpiresAt = accessExpiresAt,
             RefreshTokenExpiresAt = refreshExpiresAt,
+            RememberMe = request.RememberMe,
+            IdleTimeoutMinutes = 30,
             User = MapToCurrentUserProfile(user)
         };
     }
@@ -188,6 +190,7 @@ public class AuthService : IAuthService
     /// <summary>
     /// Xoay vòng Refresh Token (Token Rotation - UC-01, BR-SEC-01):
     /// Kiểm tra bản băm SHA-256 của Refresh Token, thu hồi token hiện tại và cấp cặp JWT + Refresh Token mới.
+    /// Bảo toàn chế độ RememberMe (Session Cookie hoặc Persistent Cookie 30 ngày) của phiên gốc.
     /// </summary>
     public async Task<AuthResponseDto> RefreshTokenAsync(
         string rawRefreshToken,
@@ -225,8 +228,11 @@ public class AuthService : IAuthService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        // Bảo toàn trạng thái RememberMe của phiên gốc (Persistent 30 ngày vs Session 7 ngày)
+        var isRememberMe = (existingToken.ExpiresAt - existingToken.CreatedAt).TotalDays > 7.5;
+
         var (newAccessToken, accessExpiresAt) = _jwtTokenGenerator.GenerateAccessToken(user, roleCodes);
-        var (newRawRefresh, newRefreshHash, refreshExpiresAt) = _jwtTokenGenerator.GenerateRefreshToken(false);
+        var (newRawRefresh, newRefreshHash, refreshExpiresAt) = _jwtTokenGenerator.GenerateRefreshToken(isRememberMe);
 
         // Thu hồi Refresh Token cũ và đánh dấu mã thay thế (Token Rotation)
         existingToken.Revoke(newRefreshHash);
@@ -250,6 +256,8 @@ public class AuthService : IAuthService
             RefreshToken = newRawRefresh,
             AccessTokenExpiresAt = accessExpiresAt,
             RefreshTokenExpiresAt = refreshExpiresAt,
+            RememberMe = isRememberMe,
+            IdleTimeoutMinutes = 30,
             User = MapToCurrentUserProfile(user)
         };
     }
