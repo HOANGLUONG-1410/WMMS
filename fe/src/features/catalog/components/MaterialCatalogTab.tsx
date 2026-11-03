@@ -139,8 +139,10 @@ export default function MaterialCatalogTab() {
               {!isLoading &&
                 !isError &&
                 filteredMaterials.map((mat) => {
-                  const isLowStock = mat.currentStockQty < mat.safetyStockQty;
-                  const isOutOfStock = mat.currentStockQty <= 0;
+                  const safetyStock = Number(mat.safetyStockQty ?? 0);
+                  const currentStock = Number(mat.currentStockQty ?? 0);
+                  const isLowStock = currentStock < safetyStock;
+                  const isOutOfStock = currentStock <= 0;
 
                   return (
                     <tr key={mat.materialId} className="hover:bg-slate-50/70 transition-colors">
@@ -190,12 +192,12 @@ export default function MaterialCatalogTab() {
 
                       {/* Safety Stock */}
                       <td className="py-3.5 px-4 text-right font-mono text-[11px] text-slate-500 font-semibold">
-                        {mat.safetyStockQty.toLocaleString()}
+                        {safetyStock.toLocaleString()}
                       </td>
 
                       {/* Physical Stock */}
                       <td className="py-3.5 px-4 text-right font-mono text-[11px] font-bold text-slate-800">
-                        {mat.currentStockQty.toLocaleString()}
+                        {currentStock.toLocaleString()}
                       </td>
 
                       {/* Stock Health */}

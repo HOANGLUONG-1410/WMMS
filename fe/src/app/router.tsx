@@ -23,6 +23,7 @@ import OrderSpaceDetailPage from "../features/orders/pages/OrderSpaceDetailPage"
 import CatalogPage from "../features/catalog/pages/CatalogPage";
 import BomBuilderPage from "../features/bom/pages/BomBuilderPage";
 import PurchaseOrderManagementPage from "../features/purchasing/pages/PurchaseOrderManagementPage";
+import InventoryStockPage from "../features/inventory/pages/InventoryStockPage";
 
 // Placeholder Page for Screens Under Development
 import UnderConstructionPage from "../components/common/UnderConstructionPage";
@@ -191,27 +192,16 @@ export const router = createBrowserRouter([
               ROLES.WAREHOUSE,
               ROLES.PURCHASING,
               ROLES.OWNER,
+              ROLES.PLANNER,
               ROLES.ADMIN,
             ]}
           />
         ),
         children: [
-          {
-            path: "/inventory/stock",
-            element: (
-              <UnderConstructionPage
-                title="Inventory 3-Tier Stock Grid"
-                screenCode="SCR-INV-01"
-                moduleName="Inventory & Stock"
-                allowedRoles={[
-                  ROLES.WAREHOUSE,
-                  ROLES.PURCHASING,
-                  ROLES.OWNER,
-                  ROLES.ADMIN,
-                ]}
-              />
-            ),
-          },
+          { path: "/inventory/stock", element: <InventoryStockPage /> },
+          { path: "/inventory/stocks", element: <InventoryStockPage /> },
+          { path: "/inventory", element: <InventoryStockPage /> },
+          { path: "/warehouse/stocks", element: <InventoryStockPage /> },
         ],
       },
       {
