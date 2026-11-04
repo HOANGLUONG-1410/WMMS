@@ -21,6 +21,9 @@ public class PurchaseOrder : BaseEntity
     public DateTime IssueDate { get; set; }
     public DateTime ExpectedArrivalDate { get; set; }
     public decimal? TotalAmount { get; set; }
+
+    /// <summary>Điều khoản thanh toán &amp; giao hàng thỏa thuận với Nhà cung cấp (SCR-19 Field #6, UC-52); tối đa 1000 ký tự.</summary>
+    public string? Terms { get; set; }
     public PoStatusEnum PoStatus { get; set; } = PoStatusEnum.ISSUED;
 
     public ICollection<PurchaseOrderDetail> Details { get; set; } = new List<PurchaseOrderDetail>();

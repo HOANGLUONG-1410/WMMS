@@ -99,6 +99,29 @@ public class SignalRNotificationHubService : INotificationHubService
         await _hubContext.Clients.Groups(targetRoles).SendAsync("ReceiveNotification", payload, cancellationToken);
     }
 
+    public async Task NotifyPurchaseOrderChangedAsync(
+        string poCode,
+        string supplierName,
+        DateTime expectedArrivalDate,
+        bool isNew,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new
+        {
+            EventType = isNew ? "PO_ISSUED" : "PO_ETA_UPDATED",
+            PoCode = poCode,
+            SupplierName = supplierName,
+            ExpectedArrivalDate = expectedArrivalDate.ToString("yyyy-MM-dd"),
+            Message = isNew
+                ? $"[SC-16] PO {poCode} ({supplierName}) đã phát hành, dự kiến hàng về {expectedArrivalDate:dd/MM/yyyy}. Thủ kho vui lòng chuẩn bị tiếp nhận."
+                : $"[SC-16] PO {poCode} ({supplierName}) đổi lịch giao hàng sang {expectedArrivalDate:dd/MM/yyyy}.",
+            TimestampUtc = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.Groups(new[] { "WAREHOUSE", "PLANNER", "OWNER" })
+            .SendAsync("ReceiveNotification", payload, cancellationToken);
+    }
+
     public async Task NotifyGoodsReceiptCommittedAsync(
         string grnCode,
         string poCode,

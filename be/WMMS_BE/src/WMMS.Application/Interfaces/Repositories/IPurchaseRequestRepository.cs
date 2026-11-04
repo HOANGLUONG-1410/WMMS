@@ -39,6 +39,12 @@ public interface IPurchaseRequestRepository
         string? rejectionReason,
         DateTime reviewedAt,
         CancellationToken cancellationToken = default);
+    /// <summary>
+    /// SC-16: Chuyển PR từ APPROVED sang PO_ISSUED (đã đặt đủ hàng) bằng UPDATE có điều kiện;
+    /// không đổi người duyệt/thời điểm duyệt. Trả false nếu PR không còn ở trạng thái APPROVED.
+    /// </summary>
+    Task<bool> TryMarkPoIssuedAsync(long prId, DateTime updatedAt, CancellationToken cancellationToken = default);
+
     Task AddAsync(PurchaseRequest pr, CancellationToken cancellationToken = default);
     Task UpdateAsync(PurchaseRequest pr);
     Task AddItemAsync(PurchaseRequestItem item, CancellationToken cancellationToken = default);
