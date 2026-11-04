@@ -8,7 +8,7 @@ using WMMS.Domain.Constants;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// Controller Nhập kho theo đơn PO (GRN) & Phân bổ tự động vật tư vào Staging (SC-17, UC-56, UC-57).
+/// Controller Nhập kho theo đơn PO (GRN) &amp; Phân bổ tự động vật tư vào Staging (SC-17, UC-56, UC-57).
 /// Chỉ Thủ kho (WAREHOUSE) và Admin được thao tác.
 /// </summary>
 [Route("api/v1/warehouse")]

@@ -73,4 +73,29 @@ public class SignalRNotificationHubService : INotificationHubService
 
         await _hubContext.Clients.All.SendAsync("ReceiveNotification", payload, cancellationToken);
     }
+
+    public async Task NotifyGoodsReceiptCommittedAsync(
+        string grnCode,
+        string poCode,
+        int allocatedOrderCount,
+        IReadOnlyList<string> readyOrderPoNumbers,
+        CancellationToken cancellationToken = default)
+    {
+        var readyMsg = readyOrderPoNumbers.Count > 0
+            ? $" Có {readyOrderPoNumbers.Count} đơn hàng đã đủ 100% vật tư sẵn sàng sản xuất: {string.Join(", ", readyOrderPoNumbers)}."
+            : string.Empty;
+
+        var payload = new
+        {
+            EventType = "GOODS_RECEIPT_COMMITTED",
+            GrnCode = grnCode,
+            PoCode = poCode,
+            AllocatedOrderCount = allocatedOrderCount,
+            ReadyOrderPoNumbers = readyOrderPoNumbers,
+            Message = $"[SC-17] Phiếu nhập kho {grnCode} (PO: {poCode}) đã được commit. Vật tư đã được tự động phân bổ vào {allocatedOrderCount} đơn hàng đang chờ.{readyMsg}",
+            TimestampUtc = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.All.SendAsync("ReceiveNotification", payload, cancellationToken);
+    }
 }

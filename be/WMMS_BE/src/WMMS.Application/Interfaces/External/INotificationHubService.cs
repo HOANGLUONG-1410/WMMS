@@ -1,7 +1,7 @@
 namespace WMMS.Application.Interfaces.External;
 
 /// <summary>
-/// Dịch vụ phát thông báo thời gian thực (SignalR Real-time Notification) giữa các bộ phận trong nhà máy (QT-01, QT-02, QT-03).
+/// Dịch vụ phát thông báo thời gian thực (SignalR Real-time Notification) giữa các bộ phận trong nhà máy (QT-01, QT-02, QT-03, SC-17).
 /// </summary>
 public interface INotificationHubService
 {
@@ -24,5 +24,15 @@ public interface INotificationHubService
         long bomId,
         string productSku,
         bool hasShortage,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Phát thông báo real-time khi Thủ kho bấm Commit phiếu nhập kho GRN &amp; kích hoạt Auto-Allocation (SC-17, UC-57, BR-WHS-01).
+    /// </summary>
+    Task NotifyGoodsReceiptCommittedAsync(
+        string grnCode,
+        string poCode,
+        int allocatedOrderCount,
+        IReadOnlyList<string> readyOrderPoNumbers,
         CancellationToken cancellationToken = default);
 }

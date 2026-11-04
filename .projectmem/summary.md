@@ -17,6 +17,7 @@ Replace this placeholder with a concise description of what this project does, w
 - Creating test project for InventoryController APIs (SC-12, SC-13).
 - Completed InventoryController, InventoryService, IInventoryService, and InventoryDtos (SC-12, SC-13) matching 14 initial stock & ledger records from WMMS_DB_Test_Iteration1.sql. All 81 automated tests (including 11 Inventory tests UT-INV-01..UT-INV-11) passed with 0 failures.
 - GRN has no detail table: received qty lives in purchase_order_details.received_qty + inventory_transactions(IN_RECEIPT, reference_code=GRN code). Commit is single-step (no DRAFT status in GrnStatusEnum). Waiting demand = material_allocations with shortage + BOM lines of WAITING_FOR_MATERIALS BOMs lacking an allocation row. SignalR notify (INotificationHubService) is on luong branch, not wired yet. [GoodsReceiptService.cs]
+- Merge luong branch verified: SignalR NotifyGoodsReceiptCommittedAsync wired to WmmsNotificationHub, SystemConstants.CommitGrn aligned, DI registered in Program.cs. Backend builds with 0 errors and all 89 tests in 'app test AI' pass.
 
 ## Key files
 - `WMMS_DB_Test_Iteration1.sql`
@@ -27,6 +28,8 @@ Replace this placeholder with a concise description of what this project does, w
 - `InventoryControllerTests.cs`
 - `UT-WHS-01..08`
 - `purchase_order_details.received`
+- `SystemConstants.CommitGrn`
+- `Program.cs`
 
 ## Open questions
 - None logged yet.

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WMMS.Application.DTOs.Warehouse;
+using WMMS.Application.Interfaces.External;
 using WMMS.Application.Interfaces.Services;
 using WMMS.Domain.Constants;
 using WMMS.Domain.Entities.CatalogBom;
@@ -24,10 +25,14 @@ public class GoodsReceiptService : IGoodsReceiptService
     private const int MaxConcurrencyRetries = 3;
 
     private readonly WmmsDbContext _context;
+    private readonly INotificationHubService? _notificationHubService;
 
-    public GoodsReceiptService(WmmsDbContext context)
+    public GoodsReceiptService(
+        WmmsDbContext context,
+        INotificationHubService? notificationHubService = null)
     {
         _context = context;
+        _notificationHubService = notificationHubService;
     }
 
     /// <inheritdoc />
@@ -46,6 +51,24 @@ public class GoodsReceiptService : IGoodsReceiptService
             {
                 var result = await ExecuteCommitAsync(request, warehouseKeeperId, ipAddress, cancellationToken);
                 await tx.CommitAsync(cancellationToken);
+
+                if (_notificationHubService != null)
+                {
+                    try
+                    {
+                        await _notificationHubService.NotifyGoodsReceiptCommittedAsync(
+                            result.GrnCode,
+                            result.PoCode,
+                            result.AllocatedOrderCount,
+                            result.ReadyOrderPoNumbers,
+                            cancellationToken);
+                    }
+                    catch
+                    {
+                        // SignalR notification errors should not abort a successfully committed database transaction
+                    }
+                }
+
                 return result;
             }
             catch (DbUpdateConcurrencyException) when (attempt < MaxConcurrencyRetries)
