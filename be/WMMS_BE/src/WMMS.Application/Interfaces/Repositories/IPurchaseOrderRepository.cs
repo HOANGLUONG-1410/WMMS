@@ -9,6 +9,40 @@ namespace WMMS.Application.Interfaces.Repositories;
 /// </summary>
 public interface IPurchaseOrderRepository
 {
+    /// <summary>
+    /// UC-50: Tìm PO có phân trang, lọc ở tầng CSDL. <paramref name="overdueBefore"/>: chỉ lấy PO chưa nhận đủ có ETA trước ngày này;
+    /// <paramref name="dueSoonFrom"/>/<paramref name="dueSoonTo"/>: chỉ lấy PO chưa nhận đủ có ETA trong khoảng đó.
+    /// </summary>
+    Task<(List<PurchaseOrder> Items, int TotalCount)> SearchAsync(
+        long? supplierId,
+        PoStatusEnum? status,
+        DateTime? fromEta,
+        DateTime? toEta,
+        DateTime? overdueBefore,
+        DateTime? dueSoonFrom,
+        DateTime? dueSoonTo,
+        string? keyword,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Số PO theo từng trạng thái, quá hạn (ETA &lt; today) và sắp đến hạn (today..dueSoonTo) cho thẻ KPI.</summary>
+    Task<(int Issued, int Partial, int Fulfilled, int Cancelled, int Overdue, int DueSoon)> GetStatusCountsAsync(
+        DateTime today,
+        DateTime dueSoonTo,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Tổng lượng đã đặt theo (PrId, MaterialId) trong các PO chưa hủy, dùng để tính lượng còn có thể đặt của dòng PR.</summary>
+    Task<Dictionary<(long PrId, long MaterialId), decimal>> GetOrderedQtyByPrAsync(
+        IReadOnlyCollection<long> prIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Số PO đã có mã bắt đầu bằng <paramref name="codePrefix"/> (để sinh mã PO-SUP-yyyyMMdd-NNN).</summary>
+    Task<int> CountByCodePrefixAsync(string codePrefix, CancellationToken cancellationToken = default);
+
+    /// <summary>Lấy Nhà cung cấp theo danh sách ID (SupplierId → Supplier).</summary>
+    Task<Dictionary<long, Supplier>> GetSuppliersByIdsAsync(IReadOnlyCollection<long> supplierIds, CancellationToken cancellationToken = default);
+
     Task<PurchaseOrder?> GetByIdAsync(long poId, CancellationToken cancellationToken = default);
     Task<PurchaseOrder?> GetByCodeAsync(string poCode, CancellationToken cancellationToken = default);
     Task<List<PurchaseOrder>> GetByPrIdAsync(long prId, CancellationToken cancellationToken = default);

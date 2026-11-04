@@ -39,6 +39,7 @@ public class PurchaseOrderConfiguration : IEntityTypeConfiguration<PurchaseOrder
         builder.Property(po => po.IssueDate).HasColumnName("issue_date").IsRequired();
         builder.Property(po => po.ExpectedArrivalDate).HasColumnName("expected_arrival_date").IsRequired();
         builder.Property(po => po.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
+        builder.Property(po => po.Terms).HasColumnName("terms").HasMaxLength(1000);
         builder.Property(po => po.PoStatus).HasColumnName("po_status").HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(po => po.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(po => po.UpdatedAt).HasColumnName("updated_at");

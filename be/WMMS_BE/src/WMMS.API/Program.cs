@@ -83,6 +83,11 @@ builder.Services.AddScoped<IProductService, WMMS.Infrastructure.Services.MasterD
 builder.Services.AddScoped<ISupplierService, WMMS.Infrastructure.Services.MasterData.SupplierService>();
 builder.Services.AddScoped<IInventoryService, WMMS.Infrastructure.Services.Inventory.InventoryService>();
 builder.Services.AddScoped<IMrpAllocationService, MrpAllocationService>();
+// SC-15: Quản lý PR gộp & luồng phê duyệt của Chủ xưởng (UC-45..UC-48, BR-PUR-02)
+builder.Services.AddScoped<IPurchaseRequestService, PurchaseRequestService>();
+// SC-16: PO gom theo Supplier & theo dõi ETA (UC-49..UC-53, BR-PUR-02, BR-PUR-03)
+builder.Services.AddScoped<IPurchaseOrderService, WMMS.Application.Services.Purchasing.PurchaseOrderService>();
+builder.Services.AddScoped<IGoodsReceiptService, WMMS.Infrastructure.Services.Warehouse.GoodsReceiptService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();
