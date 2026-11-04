@@ -99,6 +99,29 @@ public static class AuditActionConstants
     public const string BomUpdated = "BOM_UPDATED";
     public const string BomApproved = "BOM_APPROVED";
     public const string RoutingConfigured = "ROUTING_CONFIGURED";
+
+    // Phân hệ 6: Inventory, MRP Auto-Allocation & Consolidated PR (INV - QT-03, SC-12..SC-15)
+    public const string MrpCalculated = "MRP_CALCULATED";
+    public const string InventoryAutoAllocated = "INVENTORY_AUTO_ALLOCATED";
+    public const string InventoryReallocatedByEtd = "INVENTORY_REALLOCATED_BY_ETD";
+    public const string InventoryAllocationReleased = "INVENTORY_ALLOCATION_RELEASED";
+    public const string ConsolidatedPrGenerated = "CONSOLIDATED_PR_GENERATED";
+    public const string ConsolidatedPrApproved = "CONSOLIDATED_PR_APPROVED";
+    public const string ConsolidatedPrRejected = "CONSOLIDATED_PR_REJECTED";
+
+    // Phân hệ 7: Supplier PO & Goods Receipt Note (WHS - QT-04, SC-16, SC-17)
+    public const string PurchaseOrderIssued = "PURCHASE_ORDER_ISSUED";
+    public const string PurchaseOrderUpdated = "PURCHASE_ORDER_UPDATED";
+    public const string GoodsReceiptCommitted = "COMMIT_GRN";
+    public const string CommitGrn = "COMMIT_GRN";
+
+    // Phân hệ 8: Production Kanban, 97-3 Branching & QC Gate (KBN - QT-05, QT-06, SC-18..SC-20)
+    public const string KanbanBatchGenerated = "KANBAN_BATCH_GENERATED";
+    public const string KanbanGoodsIssuedUnlocked = "KANBAN_GOODS_ISSUED_UNLOCKED";
+    public const string KanbanStepUpdated = "KANBAN_STEP_UPDATED";
+    public const string QcInspectionRecorded = "QC_INSPECTION_RECORDED";
+    public const string KanbanSubBatchSpawned = "KANBAN_SUB_BATCH_SPAWNED";
+    public const string HoldPointOverdriveApproved = "HOLD_POINT_OVERDRIVE_APPROVED";
 }
 
 public static class DefectCodeConstants
@@ -123,4 +146,9 @@ public static class BusinessRuleConstants
     public const string Br002NaturalScrapRateRange = "BR-002";
     public const string Br007DynamicRoutingConfig = "BR-007";
     public const string Br011BomStagingImport = "BR-011";
+    public const string BrInv01ExcludeAllocatedStock = "BR-INV-01";
+    public const string BrInv02SoftAllocationLock = "BR-INV-02";
+    public const string BrPur01ConsolidatedDailyPr = "BR-PUR-01";
+    public const string BrPrd01KanbanBranching973 = "BR-PRD-01";
+    public const string BrPrd02HoldPointGateOverdrive = "BR-PRD-02";
 }

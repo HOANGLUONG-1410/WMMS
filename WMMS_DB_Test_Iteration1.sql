@@ -2,23 +2,25 @@
    HỆ THỐNG QUẢN LÝ SẢN XUẤT NỘI THẤT GỖ XUẤT KHẨU - WMMS (WOODWORKING MANUFACTURING MANAGEMENT SYSTEM)
    ĐỒ ÁN TỐT NGHIỆP SEP490 - NHÓM G122
    
-   FILE: WMMS_DB_Test_Iteration1.sql
-   MỤC ĐÍCH: Khởi tạo toàn diện CSDL và Nạp bộ dữ liệu kiểm thử (Master Case Test Data) phục vụ DEMO ITERATION 1:
-     1. Module AUT & ADM (SC-01, SC-02, SC-03): 8 Vai trò RBAC, 14 Tài khoản người dùng, Phân quyền & Audit Log.
-     2. Module Master Data (SC-04, SC-05, SC-06, SC-07): 14 Vật tư gỗ/phụ kiện/sơn, 4 SKU Thành phẩm, 6 Nhà cung cấp, 5 Khách hàng B2B, 5 Mã lỗi QC.
-     3. Module Order Intake (SC-08, SC-09): 5 Đơn hàng B2B Master Case, 5 Không gian đơn hàng (Order Space), Đơn hàng mẫu Staging Area.
-     4. Module BOM Management (SC-10, SC-11): Định mức kỹ thuật BOM đa cấp (Approved & Pending Approval), Chi tiết bóc tách vật tư.
-     5. Module Inventory (SC-12, SC-13): Quản lý tồn kho 3 cấp (Physical, Allocated, Available), Sổ kho nhập tồn đầu kỳ (Stock Ledger).
+   FILE: WMMS_DB_Test_Iteration1.sql (MASTER SCHEMA & SEED CHO TOÀN BỘ ITERATION 1, ITERATION 2 & ITERATION 3)
+   MỤC ĐÍCH: Khởi tạo toàn diện 32 bảng vật lý CSDL (Full 32-Table Schema Lock-in) và Nạp bộ dữ liệu kiểm thử:
+     1. Module AUT & ADM (SC-01..SC-03): roles, users, user_roles, refresh_tokens, password_reset_tokens, audit_logs, system_configs.
+     2. Module Master Data (SC-04..SC-07): materials (14), products (4), suppliers (6), customers (5), defect_catalogs (5), routing_templates, routing_stages.
+     3. Module Order Intake (SC-08, SC-09): sales_orders (5), order_items (5), order_spaces (5).
+     4. Module BOM Management (SC-10, SC-11): boms (3), bom_details (20).
+     5. Module Inventory & MRP Auto-Allocation (SC-12, SC-13, SC-14): inventory_stocks (14), inventory_transactions (14), material_allocations (13).
+     6. Module Consolidated PR, Supplier PO & Goods Receipt (SC-15, SC-16, SC-17 - Iteration 2): consolidated_prs, consolidated_pr_items, purchase_orders, purchase_order_details, goods_receipt_notes.
+     7. Module Kanban Production, 97-3 Branching, QC Gate & Hold Point Overdrive (SC-18, SC-19, SC-20 - Iteration 3): production_batches, batch_routing_steps, qc_inspections, defect_logs, overdrive_logs.
    
    TÀI KHOẢN ĐĂNG NHẬP MẶC ĐỊNH (Mật khẩu chung cho tất cả tài khoản: Admin@123):
      - admin / Admin@123         : System Administrator (Quản trị hệ thống, phân quyền)
      - owner / Admin@123         : Factory Owner / Executive (Ban giám đốc xưởng mộc)
      - sales01 / Admin@123       : Sales Staff (Kinh doanh, tiếp nhận đơn hàng, khách hàng)
-     - planner01 / Admin@123     : Production Planner (Lập kế hoạch, thiết kế và duyệt định mức BOM)
-     - purchasing01 / Admin@123  : Purchasing Officer (Phụ trách mua sắm, quản lý nhà cung cấp)
-     - warehouse01 / Admin@123   : Warehouse Keeper (Thủ kho, theo dõi tồn kho 3 cấp, nhập tồn đầu kỳ)
-     - leader01 / Admin@123      : Production Team Leader (Quản đốc xưởng, quy trình công nghệ Routing)
-     - qc01 / Admin@123          : QC Inspector (Kiểm toán chất lượng, danh mục lỗi khuyết tật gỗ)
+     - planner01 / Admin@123     : Production Planner (Lập kế hoạch, thiết kế BOM, chạy MRP & phân bổ kho)
+     - purchasing01 / Admin@123  : Purchasing Officer (Phụ trách mua sắm, PR tổng hợp & phát hành PO)
+     - warehouse01 / Admin@123   : Warehouse Keeper (Thủ kho, tồn kho 3 cấp, nhập kho GRN)
+     - leader01 / Admin@123      : Production Team Leader (Quản đốc xưởng, điều độ thẻ Kanban)
+     - qc01 / Admin@123          : QC Inspector (Kiểm toán chất lượng, trạm kiểm soát Hold Point)
      - Tài khoản các thành viên: luonghd, duynd, duongnt, cuonghd, anhth (Pass: Admin@123)
 ============================================================================================== */
 
@@ -37,7 +39,7 @@ SET NOCOUNT ON;
 GO
 
 PRINT N'==============================================================================================';
-PRINT N'== BẮT ĐẦU KHỞI TẠO CẤU TRÚC BẢNG (DDL) CHO HỆ THỐNG WMMS                                   ==';
+PRINT N'== BẮT ĐẦU KHỞI TẠO CẤU TRÚC 32 BẢNG VẬT LÝ (DDL) CHO HỆ THỐNG WMMS (ITERATION 1, 2 & 3)  ==';
 PRINT N'==============================================================================================';
 
 -- 2. TẠO CÁC BẢNG NỀN TẢNG (NẾU CHƯA CÓ)
@@ -96,6 +98,42 @@ BEGIN
         CONSTRAINT [PK_user_roles] PRIMARY KEY ([user_id], [role_id]),
         CONSTRAINT [FK_user_roles_users] FOREIGN KEY ([user_id]) REFERENCES [users] ([user_id]) ON DELETE CASCADE,
         CONSTRAINT [FK_user_roles_roles] FOREIGN KEY ([role_id]) REFERENCES [roles] ([role_id]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[refresh_tokens]') IS NULL
+BEGIN
+    CREATE TABLE [refresh_tokens] (
+        [token_id] bigint NOT NULL IDENTITY(1,1),
+        [user_id] bigint NOT NULL,
+        [token_hash] nvarchar(255) NOT NULL,
+        [expires_at] datetime2 NOT NULL,
+        [is_revoked] bit NOT NULL CONSTRAINT [DF_refresh_tokens_is_revoked] DEFAULT 0,
+        [revoked_at] datetime2 NULL,
+        [created_by_ip] nvarchar(64) NULL,
+        [replaced_by_token_hash] nvarchar(255) NULL,
+        [created_at] datetime2 NOT NULL,
+        CONSTRAINT [PK_refresh_tokens] PRIMARY KEY ([token_id]),
+        CONSTRAINT [FK_refresh_tokens_users] FOREIGN KEY ([user_id]) REFERENCES [users] ([user_id]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[password_reset_tokens]') IS NULL
+BEGIN
+    CREATE TABLE [password_reset_tokens] (
+        [reset_token_id] bigint NOT NULL IDENTITY(1,1),
+        [user_id] bigint NOT NULL,
+        [token_hash] nvarchar(255) NOT NULL,
+        [otp_hash] nvarchar(255) NOT NULL,
+        [expires_at] datetime2 NOT NULL,
+        [is_used] bit NOT NULL CONSTRAINT [DF_password_reset_tokens_is_used] DEFAULT 0,
+        [used_at] datetime2 NULL,
+        [requested_by_ip] nvarchar(64) NULL,
+        [created_at] datetime2 NOT NULL,
+        CONSTRAINT [PK_password_reset_tokens] PRIMARY KEY ([reset_token_id]),
+        CONSTRAINT [FK_password_reset_tokens_users] FOREIGN KEY ([user_id]) REFERENCES [users] ([user_id]) ON DELETE CASCADE
     );
 END;
 GO
@@ -348,6 +386,117 @@ BEGIN
 END;
 GO
 
+IF OBJECT_ID(N'[material_allocations]') IS NULL
+BEGIN
+    CREATE TABLE [material_allocations] (
+        [allocation_id] bigint NOT NULL IDENTITY(1,1),
+        [order_item_id] bigint NOT NULL,
+        [material_id] bigint NOT NULL,
+        [reserved_qty] decimal(18,4) NOT NULL CONSTRAINT [DF_material_allocations_reserved] DEFAULT 0,
+        [issued_qty] decimal(18,4) NOT NULL CONSTRAINT [DF_material_allocations_issued] DEFAULT 0,
+        [required_qty] decimal(18,4) NOT NULL CONSTRAINT [DF_material_allocations_required] DEFAULT 0,
+        [allocation_status] nvarchar(50) NOT NULL,
+        [allocated_at] datetime2 NOT NULL,
+        CONSTRAINT [PK_material_allocations] PRIMARY KEY ([allocation_id]),
+        CONSTRAINT [FK_material_allocations_order_items] FOREIGN KEY ([order_item_id]) REFERENCES [order_items] ([order_item_id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_material_allocations_materials] FOREIGN KEY ([material_id]) REFERENCES [materials] ([material_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[consolidated_prs]') IS NULL
+BEGIN
+    CREATE TABLE [consolidated_prs] (
+        [pr_id] bigint NOT NULL IDENTITY(1,1),
+        [pr_code] nvarchar(50) NOT NULL,
+        [aggregation_date] date NOT NULL,
+        [created_by] bigint NOT NULL,
+        [approved_by] bigint NULL,
+        [pr_status] nvarchar(50) NOT NULL,
+        [rejection_reason] nvarchar(500) NULL,
+        [created_at] datetime2 NOT NULL,
+        [reviewed_at] datetime2 NULL,
+        [updated_at] datetime2 NULL,
+        CONSTRAINT [PK_consolidated_prs] PRIMARY KEY ([pr_id]),
+        CONSTRAINT [UQ_consolidated_prs_pr_code] UNIQUE ([pr_code]),
+        CONSTRAINT [FK_consolidated_prs_creator] FOREIGN KEY ([created_by]) REFERENCES [users] ([user_id]),
+        CONSTRAINT [FK_consolidated_prs_approver] FOREIGN KEY ([approved_by]) REFERENCES [users] ([user_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[consolidated_pr_items]') IS NULL
+BEGIN
+    CREATE TABLE [consolidated_pr_items] (
+        [pr_item_id] bigint NOT NULL IDENTITY(1,1),
+        [pr_id] bigint NOT NULL,
+        [material_id] bigint NOT NULL,
+        [total_shortage_qty] decimal(18,4) NOT NULL,
+        [suggested_order_qty] decimal(18,4) NOT NULL,
+        [source_order_ids_json] nvarchar(max) NULL,
+        CONSTRAINT [PK_consolidated_pr_items] PRIMARY KEY ([pr_item_id]),
+        CONSTRAINT [FK_consolidated_pr_items_prs] FOREIGN KEY ([pr_id]) REFERENCES [consolidated_prs] ([pr_id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_consolidated_pr_items_materials] FOREIGN KEY ([material_id]) REFERENCES [materials] ([material_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[purchase_orders]') IS NULL
+BEGIN
+    CREATE TABLE [purchase_orders] (
+        [po_id] bigint NOT NULL IDENTITY(1,1),
+        [po_code] nvarchar(50) NOT NULL,
+        [pr_id] bigint NOT NULL,
+        [supplier_id] bigint NOT NULL,
+        [created_by] bigint NOT NULL,
+        [issue_date] datetime2 NOT NULL,
+        [expected_arrival_date] datetime2 NOT NULL,
+        [total_amount] decimal(18,2) NULL,
+        [po_status] nvarchar(50) NOT NULL,
+        [created_at] datetime2 NOT NULL,
+        [updated_at] datetime2 NULL,
+        CONSTRAINT [PK_purchase_orders] PRIMARY KEY ([po_id]),
+        CONSTRAINT [UQ_purchase_orders_po_code] UNIQUE ([po_code]),
+        CONSTRAINT [FK_purchase_orders_prs] FOREIGN KEY ([pr_id]) REFERENCES [consolidated_prs] ([pr_id]),
+        CONSTRAINT [FK_purchase_orders_suppliers] FOREIGN KEY ([supplier_id]) REFERENCES [suppliers] ([supplier_id]),
+        CONSTRAINT [FK_purchase_orders_users] FOREIGN KEY ([created_by]) REFERENCES [users] ([user_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[purchase_order_details]') IS NULL
+BEGIN
+    CREATE TABLE [purchase_order_details] (
+        [po_detail_id] bigint NOT NULL IDENTITY(1,1),
+        [po_id] bigint NOT NULL,
+        [material_id] bigint NOT NULL,
+        [ordered_qty] decimal(18,4) NOT NULL,
+        [received_qty] decimal(18,4) NOT NULL CONSTRAINT [DF_purchase_order_details_received] DEFAULT 0,
+        [unit_price] decimal(18,2) NULL,
+        CONSTRAINT [PK_purchase_order_details] PRIMARY KEY ([po_detail_id]),
+        CONSTRAINT [FK_purchase_order_details_pos] FOREIGN KEY ([po_id]) REFERENCES [purchase_orders] ([po_id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_purchase_order_details_materials] FOREIGN KEY ([material_id]) REFERENCES [materials] ([material_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[goods_receipt_notes]') IS NULL
+BEGIN
+    CREATE TABLE [goods_receipt_notes] (
+        [grn_id] bigint NOT NULL IDENTITY(1,1),
+        [grn_code] nvarchar(50) NOT NULL,
+        [po_id] bigint NOT NULL,
+        [warehouse_keeper_id] bigint NOT NULL,
+        [committed_at] datetime2 NOT NULL,
+        [status] nvarchar(50) NOT NULL,
+        CONSTRAINT [PK_goods_receipt_notes] PRIMARY KEY ([grn_id]),
+        CONSTRAINT [UQ_goods_receipt_notes_grn_code] UNIQUE ([grn_code]),
+        CONSTRAINT [FK_goods_receipt_notes_pos] FOREIGN KEY ([po_id]) REFERENCES [purchase_orders] ([po_id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_goods_receipt_notes_users] FOREIGN KEY ([warehouse_keeper_id]) REFERENCES [users] ([user_id])
+    );
+END;
+GO
+
 IF OBJECT_ID(N'[inventory_transactions]') IS NULL
 BEGIN
     CREATE TABLE [inventory_transactions] (
@@ -359,6 +508,103 @@ BEGIN
         [created_at] datetime2 NOT NULL,
         CONSTRAINT [PK_inventory_transactions] PRIMARY KEY ([transaction_id]),
         CONSTRAINT [FK_inventory_transactions_materials] FOREIGN KEY ([material_id]) REFERENCES [materials] ([material_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[production_batches]') IS NULL
+BEGIN
+    CREATE TABLE [production_batches] (
+        [batch_id] bigint NOT NULL IDENTITY(1,1),
+        [batch_code] nvarchar(50) NOT NULL,
+        [order_item_id] bigint NOT NULL,
+        [parent_batch_id] bigint NULL,
+        [batch_type] nvarchar(50) NOT NULL,
+        [batch_qty] int NOT NULL,
+        [current_stage_seq] int NOT NULL CONSTRAINT [DF_production_batches_stage_seq] DEFAULT 1,
+        [is_overdriver] bit NOT NULL CONSTRAINT [DF_production_batches_overdriver] DEFAULT 0,
+        [hold_point_stage_seq] int NULL,
+        [goods_issued_unlocked] bit NOT NULL CONSTRAINT [DF_production_batches_unlocked] DEFAULT 0,
+        [batch_status] nvarchar(50) NOT NULL,
+        [created_at] datetime2 NOT NULL,
+        [updated_at] datetime2 NULL,
+        CONSTRAINT [PK_production_batches] PRIMARY KEY ([batch_id]),
+        CONSTRAINT [UQ_production_batches_batch_code] UNIQUE ([batch_code]),
+        CONSTRAINT [FK_production_batches_order_items] FOREIGN KEY ([order_item_id]) REFERENCES [order_items] ([order_item_id]),
+        CONSTRAINT [FK_production_batches_parent] FOREIGN KEY ([parent_batch_id]) REFERENCES [production_batches] ([batch_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[batch_routing_steps]') IS NULL
+BEGIN
+    CREATE TABLE [batch_routing_steps] (
+        [batch_step_id] bigint NOT NULL IDENTITY(1,1),
+        [batch_id] bigint NOT NULL,
+        [stage_sequence] int NOT NULL,
+        [stage_name] nvarchar(100) NOT NULL,
+        [is_hold_point] bit NOT NULL CONSTRAINT [DF_batch_routing_steps_hold_point] DEFAULT 0,
+        [target_qty] int NOT NULL,
+        [passed_qty] int NOT NULL CONSTRAINT [DF_batch_routing_steps_passed] DEFAULT 0,
+        [defect_qty] int NOT NULL CONSTRAINT [DF_batch_routing_steps_defect] DEFAULT 0,
+        [step_status] nvarchar(50) NOT NULL,
+        [completed_at] datetime2 NULL,
+        CONSTRAINT [PK_batch_routing_steps] PRIMARY KEY ([batch_step_id]),
+        CONSTRAINT [FK_batch_routing_steps_batches] FOREIGN KEY ([batch_id]) REFERENCES [production_batches] ([batch_id]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[qc_inspections]') IS NULL
+BEGIN
+    CREATE TABLE [qc_inspections] (
+        [qc_id] bigint NOT NULL IDENTITY(1,1),
+        [batch_step_id] bigint NOT NULL,
+        [inspector_id] bigint NOT NULL,
+        [inspected_qty] int NOT NULL,
+        [pass_qty] int NOT NULL,
+        [fail_qty] int NOT NULL CONSTRAINT [DF_qc_inspections_fail_qty] DEFAULT 0,
+        [result_status] nvarchar(50) NOT NULL,
+        [inspected_at] datetime2 NOT NULL,
+        CONSTRAINT [PK_qc_inspections] PRIMARY KEY ([qc_id]),
+        CONSTRAINT [FK_qc_inspections_steps] FOREIGN KEY ([batch_step_id]) REFERENCES [batch_routing_steps] ([batch_step_id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_qc_inspections_users] FOREIGN KEY ([inspector_id]) REFERENCES [users] ([user_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[defect_logs]') IS NULL
+BEGIN
+    CREATE TABLE [defect_logs] (
+        [defect_log_id] bigint NOT NULL IDENTITY(1,1),
+        [qc_id] bigint NOT NULL,
+        [defect_code] nvarchar(50) NOT NULL,
+        [defect_name] nvarchar(255) NOT NULL,
+        [defect_qty] int NOT NULL,
+        [disposition] nvarchar(50) NOT NULL,
+        [spawned_sub_batch_id] bigint NULL,
+        CONSTRAINT [PK_defect_logs] PRIMARY KEY ([defect_log_id]),
+        CONSTRAINT [FK_defect_logs_qc_inspections] FOREIGN KEY ([qc_id]) REFERENCES [qc_inspections] ([qc_id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_defect_logs_defect_catalogs] FOREIGN KEY ([defect_code]) REFERENCES [defect_catalogs] ([defect_code]),
+        CONSTRAINT [FK_defect_logs_sub_batches] FOREIGN KEY ([spawned_sub_batch_id]) REFERENCES [production_batches] ([batch_id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[overdrive_logs]') IS NULL
+BEGIN
+    CREATE TABLE [overdrive_logs] (
+        [overdrive_id] bigint NOT NULL IDENTITY(1,1),
+        [batch_id] bigint NOT NULL,
+        [requested_by] bigint NOT NULL,
+        [approved_by] bigint NOT NULL,
+        [justification] nvarchar(500) NOT NULL,
+        [hold_point_stage_seq] int NOT NULL,
+        [approved_at] datetime2 NOT NULL,
+        CONSTRAINT [PK_overdrive_logs] PRIMARY KEY ([overdrive_id]),
+        CONSTRAINT [FK_overdrive_logs_batches] FOREIGN KEY ([batch_id]) REFERENCES [production_batches] ([batch_id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_overdrive_logs_requester] FOREIGN KEY ([requested_by]) REFERENCES [users] ([user_id]),
+        CONSTRAINT [FK_overdrive_logs_approver] FOREIGN KEY ([approved_by]) REFERENCES [users] ([user_id])
     );
 END;
 GO
@@ -420,13 +666,24 @@ IF NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'202
 GO
 
 PRINT N'==============================================================================================';
-PRINT N'== BẮT ĐẦU NẠP DỮ LIỆU KIỂM THỬ (SEED DATA) CHO ITERATION 1                                 ==';
+PRINT N'== BẮT ĐẦU NẠP DỮ LIỆU KIỂM THỬ (SEED DATA) CHO ITERATION 1, ITERATION 2 & ITERATION 3      ==';
 PRINT N'==============================================================================================';
 
 -- Xóa dữ liệu cũ theo đúng thứ tự ràng buộc khóa ngoại (Foreign Key Safe Reset)
 EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT all";
 GO
 
+DELETE FROM [overdrive_logs];
+DELETE FROM [defect_logs];
+DELETE FROM [qc_inspections];
+DELETE FROM [batch_routing_steps];
+DELETE FROM [production_batches];
+DELETE FROM [goods_receipt_notes];
+DELETE FROM [purchase_order_details];
+DELETE FROM [purchase_orders];
+DELETE FROM [consolidated_pr_items];
+DELETE FROM [consolidated_prs];
+DELETE FROM [material_allocations];
 DELETE FROM [audit_logs];
 DELETE FROM [inventory_transactions];
 DELETE FROM [inventory_stocks];
@@ -460,9 +717,9 @@ VALUES
 (1, N'ADMIN', N'System Administrator', N'{"all": true}', N'Toàn quyền quản trị hệ thống, người dùng, cấu hình và audit log'),
 (2, N'OWNER', N'Factory Owner / Executive', N'{"view_all": true, "approve_orders": true, "view_dashboard": true}', N'Ban giám đốc xưởng mộc, duyệt đơn hàng và theo dõi chỉ số tổng quan'),
 (3, N'SALES', N'Sales Staff', N'{"manage_orders": true, "view_customers": true, "import_orders": true}', N'Nhân viên kinh doanh tiếp nhận đơn hàng, import đơn staging và quản lý khách hàng'),
-(4, N'PLANNER', N'Production Planner', N'{"manage_boms": true, "approve_boms": true, "manage_routing": true}', N'Kỹ sư lập kế hoạch kỹ thuật, thiết lập định mức BOM và cấu hình routing'),
+(4, N'PLANNER', N'Production Planner', N'{"manage_boms": true, "approve_boms": true, "manage_routing": true, "manage_mrp": true}', N'Kỹ sư lập kế hoạch kỹ thuật, thiết lập định mức BOM, cấu hình routing và chạy MRP'),
 (5, N'PURCHASING', N'Purchasing Officer', N'{"manage_pos": true, "manage_suppliers": true, "manage_prs": true}', N'Cán bộ vật tư thu mua, theo dõi nhà cung cấp và tiến độ đơn mua PO'),
-(6, N'WAREHOUSE', N'Warehouse Keeper', N'{"manage_inventory": true, "stock_ledger": true, "manage_grns": true}', N'Thủ kho, kiểm soát tồn kho 3 cấp, nhập tồn đầu kỳ và cấp phát vật tư'),
+(6, N'WAREHOUSE', N'Warehouse Keeper', N'{"manage_inventory": true, "stock_ledger": true, "manage_grns": true}', N'Thủ kho, kiểm soát tồn kho 3 cấp, nhập kho GRN và cấp phát vật tư'),
 (7, N'LEADER', N'Production Team Leader', N'{"view_routing": true, "view_kanban": true, "shopfloor_exec": true}', N'Quản đốc tổ trưởng sản xuất, giám sát tiến độ công đoạn gia công mộc'),
 (8, N'QC', N'Quality Control Inspector', N'{"manage_qc": true, "log_defects": true, "inspect_gates": true}', N'Kiểm soát viên chất lượng tại các trạm kiểm tra và nghiệm thu thành phẩm');
 SET IDENTITY_INSERT [roles] OFF;
@@ -513,8 +770,8 @@ GO
 SET IDENTITY_INSERT [system_configs] ON;
 INSERT INTO [system_configs] ([config_id], [config_key], [config_value], [data_type], [description], [updated_at])
 VALUES
-(1, N'DEFAULT_SCRAP_PERCENT_MIN', N'3.00', N'DECIMAL', N'Tỷ lệ hao hụt mặc định tối thiểu cho tính toán BOM và MRP (3%)', GETUTCDATE()),
-(2, N'DEFAULT_SCRAP_PERCENT_MAX', N'5.00', N'DECIMAL', N'Tỷ lệ hao hụt mặc định tối đa cho tính toán BOM và MRP (5%)', GETUTCDATE()),
+(1, N'DEFAULT_SCRAP_MIN', N'3.00', N'DECIMAL', N'Tỷ lệ hao hụt mặc định tối thiểu cho tính toán BOM và MRP (3%)', GETUTCDATE()),
+(2, N'DEFAULT_SCRAP_MAX', N'5.00', N'DECIMAL', N'Tỷ lệ hao hụt mặc định tối đa cho tính toán BOM và MRP (5%)', GETUTCDATE()),
 (3, N'ETD_WARNING_DAYS', N'7', N'INT', N'Ngưỡng cảnh báo trước hạn giao hàng ETD tính theo số ngày (7 ngày)', GETUTCDATE()),
 (4, N'ORDER_STAGING_BATCH_SIZE', N'100', N'INT', N'Kích thước tối đa mỗi lô bóc tách đơn hàng trong vùng Staging Area', GETUTCDATE());
 SET IDENTITY_INSERT [system_configs] OFF;
@@ -523,11 +780,11 @@ GO
 -- 6. NẠP DEFECT CATALOGS (Danh mục lỗi chuẩn hóa)
 INSERT INTO [defect_catalogs] ([defect_code], [defect_name], [standard_stage], [root_cause], [recommended_action])
 VALUES
-(N'CUT_ERR_01', N'Sai lệch kích thước phôi cưa xẻ', N'Pha phôi gỗ thô', N'Lưỡi cưa mòn hoặc bàn cưa rung lắc cơ khí', N'Căn chỉnh lại dưỡng cưa và cắt xẻ lại chi tiết'),
-(N'WOOD_ERR_01', N'Khuyết tật mắt gỗ / Nứt tét phôi', N'Pha phôi gỗ thô', N'Mắt chết tự nhiên hoặc nứt đầu tấm gỗ xẻ sấy', N'Cắt bỏ đoạn nứt, dán trám keo hoặc phân loại sang thanh phụ'),
-(N'SURF_ERR_02', N'Bề mặt gỗ sần sùi / Xước vết nhám', N'Bào & Chà nhám', N'Giấy nhám mòn hạt hoặc tốc độ đưa phôi không đều', N'Chà nhám lại bằng hạt nhám P240-P320 trước khi sơn'),
-(N'ASSY_ERR_03', N'Lệch mộng kết cấu / Lắp ráp kênh', N'Lắp ráp kết cấu', N'Khoan lệch tâm lỗ mộng hoặc độ ẩm gỗ co ngót', N'Tháo dỡ, căn chỉnh chốt gỗ và ép vam keo đồng phẳng'),
-(N'PAINT_ERR_04', N'Bọt khí / Chảy màng sơn PU', N'Sơn lót & Sơn phủ', N'Áp suất súng phun quá lớn hoặc bụi sơn bám bề mặt', N'Xả nhám cục bộ và dặm lại lớp sơn phủ bóng mờ');
+(N'ERR_CUT_01', N'Sai lệch kích thước phôi cưa xẻ', N'Pha phôi gỗ thô', N'Lưỡi cưa mòn hoặc bàn cưa rung lắc cơ khí', N'Căn chỉnh lại dưỡng cưa và cắt xẻ lại chi tiết'),
+(N'ERR_WOOD_01', N'Khuyết tật mắt gỗ / Nứt tét phôi', N'Pha phôi gỗ thô', N'Mắt chết tự nhiên hoặc nứt đầu tấm gỗ xẻ sấy', N'Cắt bỏ đoạn nứt, dán trám keo hoặc phân loại sang thanh phụ'),
+(N'ERR_SURF_02', N'Bề mặt gỗ sần sùi / Xước vết nhám', N'Bào & Chà nhám', N'Giấy nhám mòn hạt hoặc tốc độ đưa phôi không đều', N'Chà nhám lại bằng hạt nhám P240-P320 trước khi sơn'),
+(N'ERR_ASSY_03', N'Lệch mộng kết cấu / Lắp ráp kênh', N'Lắp ráp kết cấu', N'Khoan lệch tâm lỗ mộng hoặc độ ẩm gỗ co ngót', N'Tháo dỡ, căn chỉnh chốt gỗ và ép vam keo đồng phẳng'),
+(N'ERR_PAINT_04', N'Bọt khí / Chảy màng sơn PU', N'Sơn lót & Sơn phủ', N'Áp suất súng phun quá lớn hoặc bụi sơn bám bề mặt', N'Xả nhám cục bộ và dặm lại lớp sơn phủ bóng mờ');
 GO
 
 -- 7. NẠP CUSTOMERS (Khách hàng xuất khẩu & nội địa)
@@ -644,8 +901,8 @@ GO
 SET IDENTITY_INSERT [sales_orders] ON;
 INSERT INTO [sales_orders] ([order_id], [po_number], [customer_id], [created_by], [order_date], [etd_date], [total_cbm], [status], [created_at], [updated_at])
 VALUES
-(1, N'ASH-2026-OCT-880504', 1, 3, DATEADD(day, -4, CAST(GETUTCDATE() AS date)), DATEADD(day, 18, CAST(GETUTCDATE() AS date)), 60.0000, N'CONFIRMED', GETUTCDATE(), GETUTCDATE()),
-(2, N'ASH-2026-OCT-880505', 1, 3, DATEADD(day, -3, CAST(GETUTCDATE() AS date)), DATEADD(day, 22, CAST(GETUTCDATE() AS date)), 122.5000, N'CONFIRMED', GETUTCDATE(), GETUTCDATE()),
+(1, N'ASH-2026-OCT-880504', 1, 3, DATEADD(day, -4, CAST(GETUTCDATE() AS date)), DATEADD(day, 18, CAST(GETUTCDATE() AS date)), 60.0000, N'IN_PLANNING', GETUTCDATE(), GETUTCDATE()),
+(2, N'ASH-2026-OCT-880505', 1, 3, DATEADD(day, -3, CAST(GETUTCDATE() AS date)), DATEADD(day, 22, CAST(GETUTCDATE() AS date)), 122.5000, N'IN_PLANNING', GETUTCDATE(), GETUTCDATE()),
 (3, N'IKE-2026-OCT-990102', 2, 4, DATEADD(day, -2, CAST(GETUTCDATE() AS date)), DATEADD(day, 25, CAST(GETUTCDATE() AS date)), 174.0000, N'CONFIRMED', GETUTCDATE(), GETUTCDATE()),
 (4, N'NIT-2026-OCT-770301', 3, 3, DATEADD(day, -1, CAST(GETUTCDATE() AS date)), DATEADD(day, 30, CAST(GETUTCDATE() AS date)), 36.0000, N'CONFIRMED', GETUTCDATE(), GETUTCDATE()),
 (5, N'HOA-2026-OCT-110205', 5, 4, CAST(GETUTCDATE() AS date), DATEADD(day, 35, CAST(GETUTCDATE() AS date)), 44.0000, N'DRAFT', GETUTCDATE(), GETUTCDATE());
@@ -655,8 +912,8 @@ GO
 SET IDENTITY_INSERT [order_items] ON;
 INSERT INTO [order_items] ([order_item_id], [order_id], [product_id], [ordered_qty], [unit_price_usd], [fsc_certified_req], [length_mm], [width_mm], [height_mm], [item_status])
 VALUES
-(1, 1, 1, 500, 48.5000, 1, 450.00, 520.00, 880.00, N'BOM_APPROVED'),
-(2, 2, 2, 350, 165.0000, 1, 1600.00, 900.00, 750.00, N'BOM_APPROVED'),
+(1, 1, 1, 500, 48.5000, 1, 450.00, 520.00, 880.00, N'READY_PROD'),
+(2, 2, 2, 350, 165.0000, 1, 1600.00, 900.00, 750.00, N'WAITING_MAT'),
 (3, 3, 3, 300, 210.0000, 1, 1500.00, 420.00, 820.00, N'PENDING_BOM'),
 (4, 4, 1, 300, 48.0000, 1, 450.00, 520.00, 880.00, N'PENDING_BOM'),
 (5, 5, 4, 200, 85.0000, 1, 1200.00, 600.00, 750.00, N'PENDING_BOM');
@@ -678,8 +935,8 @@ GO
 SET IDENTITY_INSERT [boms] ON;
 INSERT INTO [boms] ([bom_id], [order_item_id], [product_id], [created_by], [scrap_rate_percent], [bom_status], [created_at], [updated_at])
 VALUES
-(1, 1, 1, 5, 4.00, N'APPROVED', GETUTCDATE(), GETUTCDATE()),
-(2, 2, 2, 5, 3.50, N'APPROVED', GETUTCDATE(), GETUTCDATE()),
+(1, 1, 1, 5, 4.00, N'READY_FOR_PRODUCTION', GETUTCDATE(), GETUTCDATE()),
+(2, 2, 2, 5, 3.50, N'WAITING_FOR_MATERIALS', GETUTCDATE(), GETUTCDATE()),
 (3, 3, 3, 5, 5.00, N'PENDING_APPROVAL', GETUTCDATE(), GETUTCDATE());
 SET IDENTITY_INSERT [boms] OFF;
 GO
@@ -755,20 +1012,103 @@ VALUES
 SET IDENTITY_INSERT [inventory_transactions] OFF;
 GO
 
--- 15. NẠP AUDIT LOGS (Nhật ký kiểm toán mẫu phục vụ demo màn hình Audit Logs)
+-- 15. NẠP MATERIAL ALLOCATIONS (Phân bổ mềm giữ chỗ vật tư cho Đơn hàng 1 & Đơn hàng 2 - SC-14)
+SET IDENTITY_INSERT [material_allocations] ON;
+INSERT INTO [material_allocations] ([allocation_id], [order_item_id], [material_id], [reserved_qty], [issued_qty], [required_qty], [allocation_status], [allocated_at])
+VALUES
+-- Đơn hàng 1 (OrderItem 1 - 500x Ghế ăn sồi): Đã phân bổ đủ 100% cả 7 dòng BOM -> READY_PROD
+(1, 1, 1, 13.0000, 0.0000, 13.0000, N'RESERVED', DATEADD(day, -3, GETUTCDATE())),
+(2, 1, 5, 6240.0000, 0.0000, 6240.0000, N'RESERVED', DATEADD(day, -3, GETUTCDATE())),
+(3, 1, 10, 78.0000, 0.0000, 78.0000, N'RESERVED', DATEADD(day, -3, GETUTCDATE())),
+(4, 1, 11, 52.0000, 0.0000, 52.0000, N'RESERVED', DATEADD(day, -3, GETUTCDATE())),
+(5, 1, 12, 26.0000, 0.0000, 26.0000, N'RESERVED', DATEADD(day, -3, GETUTCDATE())),
+(6, 1, 13, 260.0000, 0.0000, 260.0000, N'RESERVED', DATEADD(day, -3, GETUTCDATE())),
+(7, 1, 14, 624.0000, 0.0000, 624.0000, N'RESERVED', DATEADD(day, -3, GETUTCDATE())),
+-- Đơn hàng 2 (OrderItem 2 - 350x Bàn ăn thông minh): Đã giữ chỗ phụ kiện/sơn/thùng, còn thiếu Gỗ sồi (0 / 28.98 M3) -> WAITING_MAT
+(8, 2, 1, 0.0000, 0.0000, 28.9800, N'RESERVED', DATEADD(day, -2, GETUTCDATE())),
+(9, 2, 9, 362.2500, 0.0000, 362.2500, N'RESERVED', DATEADD(day, -2, GETUTCDATE())),
+(10, 2, 6, 8694.0000, 0.0000, 8694.0000, N'RESERVED', DATEADD(day, -2, GETUTCDATE())),
+(11, 2, 10, 162.9900, 0.0000, 162.9900, N'RESERVED', DATEADD(day, -2, GETUTCDATE())),
+(12, 2, 11, 108.6800, 0.0000, 108.6800, N'RESERVED', DATEADD(day, -2, GETUTCDATE())),
+(13, 2, 13, 724.5000, 0.0000, 724.5000, N'RESERVED', DATEADD(day, -2, GETUTCDATE()));
+SET IDENTITY_INSERT [material_allocations] OFF;
+GO
+
+-- 16. NẠP CONSOLIDATED PRS & PR ITEMS (Phiếu PR Tổng hợp trong ngày - SC-15 / Iteration 2)
+SET IDENTITY_INSERT [consolidated_prs] ON;
+INSERT INTO [consolidated_prs] ([pr_id], [pr_code], [aggregation_date], [created_by], [approved_by], [pr_status], [rejection_reason], [created_at], [reviewed_at], [updated_at])
+VALUES
+(1, N'PR-20261101-001', DATEADD(day, -2, CAST(GETUTCDATE() AS date)), 5, 2, N'PO_ISSUED', NULL, DATEADD(day, -2, GETUTCDATE()), DATEADD(day, -1, GETUTCDATE()), DATEADD(day, -1, GETUTCDATE())),
+(2, N'PR-20261104-001', CAST(GETUTCDATE() AS date), 5, NULL, N'PENDING_APPROVAL', NULL, GETUTCDATE(), NULL, GETUTCDATE());
+SET IDENTITY_INSERT [consolidated_prs] OFF;
+GO
+
+SET IDENTITY_INSERT [consolidated_pr_items] ON;
+INSERT INTO [consolidated_pr_items] ([pr_item_id], [pr_id], [material_id], [total_shortage_qty], [suggested_order_qty], [source_order_ids_json])
+VALUES
+(1, 1, 1, 28.9800, 35.0000, N'[{"OrderId":2,"PoNumber":"ASH-2026-OCT-880505","SpaceKey":"SPACE-PO-880505","OrderItemId":2,"ProductSku":"TABLE-DINING-EXT-02","ShortageQty":28.98}]'),
+(2, 2, 7, 1890.0000, 2000.0000, N'[{"OrderId":3,"PoNumber":"IKE-2026-OCT-990102","SpaceKey":"SPACE-PO-990102","OrderItemId":3,"ProductSku":"CABINET-SIDEBOARD-03","ShortageQty":1890.00}]');
+SET IDENTITY_INSERT [consolidated_pr_items] OFF;
+GO
+
+-- 17. NẠP PURCHASE ORDERS, PO DETAILS & GOODS RECEIPT NOTES (SC-16, SC-17 / Iteration 2)
+SET IDENTITY_INSERT [purchase_orders] ON;
+INSERT INTO [purchase_orders] ([po_id], [po_code], [pr_id], [supplier_id], [created_by], [issue_date], [expected_arrival_date], [total_amount], [po_status], [created_at], [updated_at])
+VALUES
+(1, N'PO-SUP-20261102-001', 1, 1, 6, DATEADD(day, -1, GETUTCDATE()), DATEADD(day, 9, GETUTCDATE()), 29750.00, N'ISSUED', DATEADD(day, -1, GETUTCDATE()), DATEADD(day, -1, GETUTCDATE()));
+SET IDENTITY_INSERT [purchase_orders] OFF;
+GO
+
+SET IDENTITY_INSERT [purchase_order_details] ON;
+INSERT INTO [purchase_order_details] ([po_detail_id], [po_id], [material_id], [ordered_qty], [received_qty], [unit_price])
+VALUES
+(1, 1, 1, 35.0000, 0.0000, 850.00);
+SET IDENTITY_INSERT [purchase_order_details] OFF;
+GO
+
+-- 18. NẠP PRODUCTION BATCHES, ROUTING STEPS & QC INSPECTIONS (SC-18, SC-19, SC-20 / Iteration 3)
+SET IDENTITY_INSERT [production_batches] ON;
+INSERT INTO [production_batches] ([batch_id], [batch_code], [order_item_id], [parent_batch_id], [batch_type], [batch_qty], [current_stage_seq], [is_overdriver], [hold_point_stage_seq], [goods_issued_unlocked], [batch_status], [created_at], [updated_at])
+VALUES
+(1, N'KBN-880504-MAIN-01', 1, NULL, N'MAIN_CARD', 500, 2, 0, 5, 1, N'IN_PROGRESS', DATEADD(day, -1, GETUTCDATE()), GETUTCDATE());
+SET IDENTITY_INSERT [production_batches] OFF;
+GO
+
+SET IDENTITY_INSERT [batch_routing_steps] ON;
+INSERT INTO [batch_routing_steps] ([batch_step_id], [batch_id], [stage_sequence], [stage_name], [is_hold_point], [target_qty], [passed_qty], [defect_qty], [step_status], [completed_at])
+VALUES
+(1, 1, 1, N'1. Pha phôi gỗ thô', 0, 500, 500, 0, N'PASSED', DATEADD(hour, -12, GETUTCDATE())),
+(2, 1, 2, N'2. Cắt/Xẻ định hình chi tiết', 0, 500, 0, 0, N'IN_PROGRESS', NULL),
+(3, 1, 3, N'3. Bào 4 mặt & Chà nhám phẳng mịn', 0, 500, 0, 0, N'WAITING', NULL),
+(4, 1, 4, N'4. Khoan lỗ chốt & Phay mộng âm dương', 0, 500, 0, 0, N'WAITING', NULL),
+(5, 1, 5, N'5. Lắp ráp kết cấu & Vào mộng dán keo ép vam', 1, 500, 0, 0, N'WAITING', NULL),
+(6, 1, 6, N'6. Phun sơn lót PU & Sơn phủ hoàn thiện', 0, 500, 0, 0, N'WAITING', NULL),
+(7, 1, 7, N'7. Kiểm tra xuất xưởng KCS & Đóng thùng carton', 0, 500, 0, 0, N'WAITING', NULL);
+SET IDENTITY_INSERT [batch_routing_steps] OFF;
+GO
+
+SET IDENTITY_INSERT [qc_inspections] ON;
+INSERT INTO [qc_inspections] ([qc_id], [batch_step_id], [inspector_id], [inspected_qty], [pass_qty], [fail_qty], [result_status], [inspected_at])
+VALUES
+(1, 1, 9, 500, 500, 0, N'FULL_PASS_100', DATEADD(hour, -12, GETUTCDATE()));
+SET IDENTITY_INSERT [qc_inspections] OFF;
+GO
+
+-- 19. NẠP AUDIT LOGS (Nhật ký kiểm toán mẫu phục vụ demo màn hình Audit Logs)
 SET IDENTITY_INSERT [audit_logs] ON;
 INSERT INTO [audit_logs] ([log_id], [user_id], [action_type], [entity_name], [entity_id], [before_state], [after_state], [reason], [created_at], [ip_address])
 VALUES
 (1, 1, N'AUTH_LOGIN_SUCCESS', N'User', N'1', NULL, N'{"username": "admin", "role": "ADMIN"}', N'Đăng nhập quản trị viên thành công', DATEADD(minute, -120, GETUTCDATE()), N'127.0.0.1'),
 (2, 1, N'USER_CREATED', N'User', N'2', NULL, N'{"username": "owner", "full_name": "Nguyen Khoa"}', N'Khởi tạo tài khoản Giám đốc xưởng mộc', DATEADD(minute, -110, GETUTCDATE()), N'127.0.0.1'),
 (3, 3, N'ORDER_CREATED', N'SalesOrder', N'1', NULL, N'{"po_number": "ASH-2026-OCT-880504", "status": "CONFIRMED"}', N'Tiếp nhận và xác nhận đơn hàng Master Case 500 cái ghế Ashley', DATEADD(minute, -90, GETUTCDATE()), N'192.168.1.15'),
-(4, 5, N'BOM_APPROVED', N'BomHeader', N'1', N'{"bom_status": "DRAFT"}', N'{"bom_status": "APPROVED", "scrap_rate": 4.0}', N'Phê duyệt định mức kỹ thuật BOM ghế ăn sồi v1.0', DATEADD(minute, -60, GETUTCDATE()), N'192.168.1.20'),
-(5, 7, N'STOCK_INITIAL_IMPORT', N'MaterialStock', N'1', NULL, N'{"material_code": "WOOD_OAK_01", "physical_qty": 60.0}', N'Kiểm kê và nạp số dư tồn kho ban đầu', DATEADD(minute, -30, GETUTCDATE()), N'192.168.1.25');
+(4, 5, N'BOM_APPROVED', N'BomHeader', N'1', N'{"bom_status": "DRAFT"}', N'{"bom_status": "READY_FOR_PRODUCTION", "scrap_rate": 4.0}', N'Phê duyệt định mức kỹ thuật BOM ghế ăn sồi v1.0', DATEADD(minute, -60, GETUTCDATE()), N'192.168.1.20'),
+(5, 7, N'STOCK_INITIAL_IMPORT', N'MaterialStock', N'1', NULL, N'{"material_code": "WOOD_OAK_01", "physical_qty": 60.0}', N'Kiểm kê và nạp số dư tồn kho ban đầu', DATEADD(minute, -30, GETUTCDATE()), N'192.168.1.25'),
+(6, 5, N'INVENTORY_AUTO_ALLOCATED', N'CustomerOrder', N'1', NULL, N'{"po_number": "ASH-2026-OCT-880504", "status": "READY_TO_PRODUCE"}', N'Thực thi tính toán MRP & Phân bổ tồn kho tự động (SC-14) cho đơn hàng ASH-2026-OCT-880504', DATEADD(minute, -20, GETUTCDATE()), N'192.168.1.20');
 SET IDENTITY_INSERT [audit_logs] OFF;
 GO
 
 PRINT N'==============================================================================================';
-PRINT N'== BÁO CÁO TỔNG HỢP DỮ LIỆU NẠP THÀNH CÔNG VÀO CSDL WMMS_DB                                ==';
+PRINT N'== BÁO CÁO TỔNG HỢP DỮ LIỆU NẠP THÀNH CÔNG VÀO 32 BẢNG CSDL WMMS_DB                         ==';
 PRINT N'==============================================================================================';
 
 SELECT N'1. Roles (Vai trò RBAC)' AS [Phân hệ], COUNT(*) AS [Số bản ghi] FROM [roles]
@@ -785,10 +1125,16 @@ UNION ALL SELECT N'11. Sales Orders (Đơn hàng Master Case)', COUNT(*) FROM [s
 UNION ALL SELECT N'12. Order Items & Order Spaces', COUNT(*) FROM [order_spaces]
 UNION ALL SELECT N'13. BOM Headers & BOM Details', COUNT(*) FROM [bom_details]
 UNION ALL SELECT N'14. Inventory Stocks (Tồn kho 3 cấp)', COUNT(*) FROM [inventory_stocks]
-UNION ALL SELECT N'15. Inventory Transactions (Sổ kho)', COUNT(*) FROM [inventory_transactions]
-UNION ALL SELECT N'16. Audit Logs (Nhật ký hệ thống)', COUNT(*) FROM [audit_logs];
+UNION ALL SELECT N'15. Material Allocations (Giữ chỗ SC-14)', COUNT(*) FROM [material_allocations]
+UNION ALL SELECT N'16. Consolidated PRs (PR tổng hợp SC-15)', COUNT(*) FROM [consolidated_prs]
+UNION ALL SELECT N'17. Purchase Orders (Đơn mua PO SC-16)', COUNT(*) FROM [purchase_orders]
+UNION ALL SELECT N'18. Production Batches (Thẻ Kanban SC-18)', COUNT(*) FROM [production_batches]
+UNION ALL SELECT N'19. Batch Routing Steps (Công đoạn SC-19)', COUNT(*) FROM [batch_routing_steps]
+UNION ALL SELECT N'20. QC Inspections (Kiểm định QC SC-20)', COUNT(*) FROM [qc_inspections]
+UNION ALL SELECT N'21. Inventory Transactions (Sổ kho)', COUNT(*) FROM [inventory_transactions]
+UNION ALL SELECT N'22. Audit Logs (Nhật ký hệ thống)', COUNT(*) FROM [audit_logs];
 GO
 
 PRINT N'==============================================================================================';
-PRINT N'== HOÀN TẤT THÀNH CÔNG! HỆ THỐNG ĐÃ SẴN SÀNG CHO BUỔI DEMO INTERATION 1                     ==';
+PRINT N'== HOÀN TẤT THÀNH CÔNG! CSDL 32 BẢNG ĐÃ SẴN SÀNG CHO ITERATION 1, ITERATION 2 & ITERATION 3 ==';
 PRINT N'==============================================================================================';
