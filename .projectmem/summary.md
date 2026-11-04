@@ -24,7 +24,6 @@ Replace this placeholder with a concise description of what this project does, w
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- Merged origin/hunganh commit 545dab6 (feat(fe/inventory): add 3-tier stock grid and electronic stock ledger) into branch luong (commit 6b511d3) with 0 conflicts. Verified dotnet build 0 errors, and synced to origin/luong and origin/dev.
 - Merge: docs(projectmem): sync merge note for hunganh inventory
 - Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.1: synchronized 100% of demo accounts with Database seed data (operational factory staff accounts: admin, owner, sales01, sales02, planner01, purchasing01, warehouse01, leader01, qc01 and 5 SEP490_G122 team multi-role accounts: luonghd, duynd, duongnt, cuonghd, anhth, all with password Admin@123).
 - Merge: docs(projectmem): sync update for demo script db accounts
@@ -34,6 +33,7 @@ Replace this placeholder with a concise description of what this project does, w
 - Merge: docs(projectmem): record BRD document creation
 - Merge: Merge remote-tracking branch 'origin/dev' into luong
 - New feature: feat(assets): track sample product images and sync projectmem summary [be/WMMS_BE/src/WMMS.API/wwwroot/uploads/products/881314.jpg]
+- Merge: docs(projectmem): auto-sync summary
 
 ## Key files
 - `WMMS_BE.sln`
