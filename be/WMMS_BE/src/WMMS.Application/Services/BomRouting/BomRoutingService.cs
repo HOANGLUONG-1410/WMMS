@@ -702,6 +702,27 @@ public class BomRoutingService : IBomRoutingService
             });
         }
 
+        // Kiểm tra xem OrderItem đã có bản BOM nào chưa (BR-001)
+        var existingBom = await _bomRepository.GetByOrderItemIdAsync(request.OrderItemId);
+        if (existingBom != null)
+        {
+            // Nếu đã có BOM nhưng không phải DRAFT (đã duyệt/chốt sản xuất), chặn không cho ghi đè từ Staging
+            if (existingBom.BomStatus != BomStatusEnum.DRAFT)
+            {
+                throw new DomainException(
+                    $"Cannot import BOM. Existing BOM #{existingBom.BomId} is already approved ({existingBom.BomStatus}). Only DRAFT BOMs can be updated from Staging.",
+                    "BOM_ALREADY_APPROVED");
+            }
+
+            // Nếu BOM đang ở trạng thái DRAFT, cập nhật ghi đè các dòng chi tiết vật tư từ file Staging
+            var updateRequest = new UpdateBomRequestDto
+            {
+                ScrapRatePercent = request.ScrapRatePercent,
+                Details = detailDtos
+            };
+            return await UpdateBomAsync(existingBom.BomId, updateRequest, currentUserId);
+        }
+
         var createRequest = new CreateBomRequestDto
         {
             OrderItemId = request.OrderItemId,
