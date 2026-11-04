@@ -24,8 +24,6 @@ Replace this placeholder with a concise description of what this project does, w
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- Merge: docs(projectmem): sync merge note for hunganh inventory
-- Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.1: synchronized 100% of demo accounts with Database seed data (operational factory staff accounts: admin, owner, sales01, sales02, planner01, purchasing01, warehouse01, leader01, qc01 and 5 SEP490_G122 team multi-role accounts: luonghd, duynd, duongnt, cuonghd, anhth, all with password Admin@123).
 - Merge: docs(projectmem): sync update for demo script db accounts
 - Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.2: added explicit 'Mật khẩu' (Password) column with value Admin@123 for all rows in both Seed Data tables (Operational Staff and Team Member Multi-Roles).
 - Merge: docs(projectmem): sync password column note
@@ -34,6 +32,8 @@ Replace this placeholder with a concise description of what this project does, w
 - Merge: Merge remote-tracking branch 'origin/dev' into luong
 - New feature: feat(assets): track sample product images and sync projectmem summary [be/WMMS_BE/src/WMMS.API/wwwroot/uploads/products/881314.jpg]
 - Merge: docs(projectmem): auto-sync summary
+- Merge: docs(projectmem): sync summary on dev
+- Successfully released and pushed complete Intern 1 deliverables (209 files changed, 35k insertions across Backend, Frontend, and Seed Data) to branch main (commit aec9a94). Verified dotnet build 0 errors, and returned working branch to luong.
 
 ## Key files
 - `WMMS_BE.sln`
