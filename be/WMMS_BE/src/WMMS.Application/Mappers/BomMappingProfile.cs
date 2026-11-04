@@ -23,9 +23,17 @@ public class BomMappingProfile : Profile
             .ForMember(dest => dest.MaterialGroup, opt => opt.MapFrom(src => src.Material != null ? src.Material.MaterialGroup.ToString() : string.Empty))
             .ForMember(dest => dest.UnitOfMeasure, opt => opt.MapFrom(src => src.Material != null ? src.Material.UnitOfMeasure : string.Empty))
             .ForMember(dest => dest.DimensionSpec, opt => opt.MapFrom(src => src.Material != null ? src.Material.DimensionSpec : null))
-            .ForMember(dest => dest.FscCertified, opt => opt.MapFrom(src => src.Material != null && src.Material.FscCertified));
+            .ForMember(dest => dest.FscCertified, opt => opt.MapFrom(src => src.Material != null && src.Material.FscCertified))
+            .ForMember(dest => dest.PhysicalStock, opt => opt.MapFrom(src => src.Material != null && src.Material.MaterialStock != null ? src.Material.MaterialStock.PhysicalQty : 0m))
+            .ForMember(dest => dest.AllocatedStock, opt => opt.MapFrom(src => src.Material != null && src.Material.MaterialStock != null ? src.Material.MaterialStock.AllocatedQty : 0m))
+            .ForMember(dest => dest.AvailableStock, opt => opt.MapFrom(src => src.Material != null && src.Material.MaterialStock != null ? src.Material.MaterialStock.AvailableQty : 0m));
 
         CreateMap<RoutingStage, RoutingStageDto>();
+
+        CreateMap<RoutingTemplate, RoutingDto>()
+            .ForMember(dest => dest.ProductSku, opt => opt.MapFrom(src => src.Product != null ? src.Product.ProductSku : string.Empty))
+            .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.ProductName : string.Empty))
+            .ForMember(dest => dest.Stages, opt => opt.MapFrom(src => src.RoutingStages));
 
         CreateMap<Product, VisualCatalogProductDto>()
             .ForMember(dest => dest.HasActiveBom, opt => opt.MapFrom(src => src.BomHeaders.Any(b => b.BomStatus == Domain.Enums.BomStatusEnum.READY_FOR_PRODUCTION || b.BomStatus == Domain.Enums.BomStatusEnum.DRAFT)))

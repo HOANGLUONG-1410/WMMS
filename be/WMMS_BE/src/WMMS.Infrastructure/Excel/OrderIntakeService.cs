@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using WMMS.Application.DTOs.Orders;
+using WMMS.Application.Interfaces.External;
 using WMMS.Application.Interfaces.Services;
 using WMMS.Domain.Constants;
 using WMMS.Domain.Entities.CatalogBom;
@@ -30,10 +31,17 @@ public class OrderIntakeService : IOrderIntakeService
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private readonly WmmsDbContext _context;
+    private readonly IExcelOrderParser _excelOrderParser;
+    private readonly INotificationHubService? _notificationHubService;
 
-    public OrderIntakeService(WmmsDbContext context)
+    public OrderIntakeService(
+        WmmsDbContext context,
+        IExcelOrderParser? excelOrderParser = null,
+        INotificationHubService? notificationHubService = null)
     {
         _context = context;
+        _excelOrderParser = excelOrderParser ?? new ExcelOrderParser();
+        _notificationHubService = notificationHubService;
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     }
 
@@ -49,6 +57,7 @@ public class OrderIntakeService : IOrderIntakeService
         var detectedPoNumber = !string.IsNullOrWhiteSpace(poNumberOverride) ? poNumberOverride.Trim() : ExtractPoNumberFromFileName(fileName);
         var detectedCustomerName = "Target Home US / Ashley Furniture";
         var sheetName = "OrderDetails";
+        ExcelOrderParseResultDto? parsedExcel = null;
 
         if (excelStream is not null && excelStream.Length > 0)
         {
@@ -63,18 +72,19 @@ public class OrderIntakeService : IOrderIntakeService
 
             try
             {
-                using var package = new ExcelPackage(excelStream);
-                var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-                if (worksheet is null || worksheet.Dimension is null)
+                parsedExcel = await _excelOrderParser.ParseOrderExcelAsync(excelStream, fileName, cancellationToken);
+                sheetName = parsedExcel.SheetName;
+                extractedRows = parsedExcel.Rows;
+
+                if (string.IsNullOrWhiteSpace(poNumberOverride) && !string.IsNullOrWhiteSpace(parsedExcel.DetectedPoNumber))
                 {
-                    throw new AppException(
-                        "Invalid Excel template. Worksheet is empty (UC030.E1).",
-                        400,
-                        MessageCodes.Msg13ValidationError);
+                    detectedPoNumber = parsedExcel.DetectedPoNumber;
                 }
 
-                sheetName = worksheet.Name;
-                extractedRows = ParseWorksheetRows(worksheet, ref detectedPoNumber, ref detectedCustomerName);
+                if (!string.IsNullOrWhiteSpace(parsedExcel.DetectedCustomerName))
+                {
+                    detectedCustomerName = parsedExcel.DetectedCustomerName;
+                }
             }
             catch (AppException)
             {
@@ -114,6 +124,15 @@ public class OrderIntakeService : IOrderIntakeService
 
         var result = await ValidateStagingGridAsync(validateRequest, cancellationToken);
         result.SheetName = sheetName;
+        result.DetectedTargetEtd = parsedExcel?.DetectedTargetEtd ?? result.Rows.FirstOrDefault()?.TargetEtd;
+        result.TotalOrderQty = parsedExcel?.TotalOrderQty ?? result.Rows.Sum(r => r.OrderQty);
+        result.TotalCartons = parsedExcel?.TotalCartons;
+        result.TotalCbm = parsedExcel?.TotalCbm;
+        result.ContainerSpec = parsedExcel?.ContainerSpec;
+        if (parsedExcel?.StrippedCommercialFields is { Count: > 0 })
+        {
+            result.StrippedCommercialFields = parsedExcel.StrippedCommercialFields;
+        }
         return result;
     }
 
@@ -182,7 +201,8 @@ public class OrderIntakeService : IOrderIntakeService
             }
             else
             {
-                var match = DimensionRegex.Match(row.DimensionsMm);
+                var normalizedDim = ExcelOrderParser.NormalizeRawDimensionString(row.DimensionsMm);
+                var match = DimensionRegex.Match(normalizedDim);
                 if (!match.Success)
                 {
                     row.CellErrors.Add(new StagingCellErrorDto
@@ -258,6 +278,14 @@ public class OrderIntakeService : IOrderIntakeService
                 row.MatchedProductId = matchedProduct.ProductId;
                 row.IsNewProduct = false;
                 matchedCatalogCount++;
+                if (string.IsNullOrWhiteSpace(row.ProductImageUrl))
+                {
+                    row.ProductImageUrl = matchedProduct.ImageUrl ?? matchedProduct.CadDrawingUrl;
+                }
+                if (string.IsNullOrWhiteSpace(row.TechnicalDrawingUrl))
+                {
+                    row.TechnicalDrawingUrl = row.ProductImageUrl ?? matchedProduct.CadDrawingUrl;
+                }
                 if (string.IsNullOrWhiteSpace(row.TechnicalDrawingName))
                 {
                     row.TechnicalDrawingName = !string.IsNullOrWhiteSpace(matchedProduct.CadDrawingUrl)
@@ -414,17 +442,20 @@ public class OrderIntakeService : IOrderIntakeService
             foreach (var row in validationResult.Rows)
             {
                 Product? product = null;
+                var persistedImageUrl = await PersistProductImageFromDataUriAsync(row.ProductSku, row.ProductImageUrl ?? row.TechnicalDrawingUrl, cancellationToken);
                 if (row.MatchedProductId.HasValue)
                 {
                     product = await _context.Products
                         .FirstOrDefaultAsync(p => p.ProductId == row.MatchedProductId.Value, cancellationToken);
                 }
 
+
                 if (product is null)
                 {
                     product = await _context.Products
                         .FirstOrDefaultAsync(p => p.ProductSku.ToUpper() == row.ProductSku, cancellationToken);
                 }
+
 
                 if (product is null)
                 {
@@ -436,12 +467,28 @@ public class OrderIntakeService : IOrderIntakeService
                         DimensionsCm = row.DimensionsMm,
                         WoodSpecies = "American White Oak",
                         FinishColor = row.FinishColor,
-                        CadDrawingUrl = row.TechnicalDrawingUrl ?? $"/drawings/{row.TechnicalDrawingName ?? $"CAD_{row.ProductSku}.pdf"}",
+
+
+                        ImageUrl = persistedImageUrl,
+                        CadDrawingUrl = persistedImageUrl ?? $"/drawings/{row.TechnicalDrawingName ?? $"CAD_{row.ProductSku}.pdf"}",
                         Status = "ACTIVE",
                         CreatedAt = now,
                         UpdatedAt = now
                     };
                     await _context.Products.AddAsync(product, cancellationToken);
+                }
+                else if (!string.IsNullOrWhiteSpace(persistedImageUrl))
+                {
+                    product.ImageUrl = persistedImageUrl;
+                    if (string.IsNullOrWhiteSpace(product.CadDrawingUrl))
+                    {
+                        product.CadDrawingUrl = persistedImageUrl;
+                    }
+                    product.UpdatedAt = now;
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                if (product.ProductId == 0)
+                {
                     await _context.SaveChangesAsync(cancellationToken);
                 }
 
@@ -522,6 +569,17 @@ public class OrderIntakeService : IOrderIntakeService
 
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+
+            if (_notificationHubService != null)
+            {
+                await _notificationHubService.NotifyOrderSpaceCreatedAsync(
+                    orderSpace.SpaceKey,
+                    salesOrder.PoNumber,
+                    customer.CompanyName,
+                    totalUnits,
+                    validationResult.Rows.Count,
+                    cancellationToken);
+            }
 
             return await GetOrderSpaceDetailAsync(orderSpace.SpaceKey, false, cancellationToken);
         }
@@ -695,7 +753,8 @@ public class OrderIntakeService : IOrderIntakeService
                 OrderedQty = oi.OrderedQty,
                 FscCertifiedReq = oi.FscCertifiedReq,
                 AttachedCadFileName = cadFile,
-                AttachedCadUrl = oi.Product.CadDrawingUrl ?? $"/drawings/{cadFile}",
+                ProductImageUrl = oi.Product.ImageUrl ?? oi.Product.CadDrawingUrl,
+                AttachedCadUrl = oi.Product.CadDrawingUrl ?? oi.Product.ImageUrl ?? $"/drawings/{cadFile}",
                 BomId = oi.BomHeader?.BomId,
                 ScrapRatePct = oi.BomHeader?.ScrapRatePercent,
                 ItemStatus = oi.Status.ToString(),
@@ -931,137 +990,6 @@ public class OrderIntakeService : IOrderIntakeService
         };
     }
 
-    private static List<StagingOrderRowDto> ParseWorksheetRows(
-        ExcelWorksheet worksheet,
-        ref string detectedPoNumber,
-        ref string detectedCustomerName)
-    {
-        var rows = new List<StagingOrderRowDto>();
-        var maxRow = worksheet.Dimension.End.Row;
-        var maxCol = worksheet.Dimension.End.Column;
-
-        var headerRow = 1;
-        var colMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        // Quét 10 dòng đầu tiên để tìm dòng tiêu đề bảng và thông tin PO / Khách hàng
-        for (var r = 1; r <= Math.Min(10, maxRow); r++)
-        {
-            for (var c = 1; c <= maxCol; c++)
-            {
-                var cellText = worksheet.Cells[r, c].Text?.Trim() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(cellText))
-                {
-                    continue;
-                }
-
-                if (cellText.StartsWith("PO#", StringComparison.OrdinalIgnoreCase) ||
-                    cellText.StartsWith("PO Number", StringComparison.OrdinalIgnoreCase))
-                {
-                    var parts = cellText.Split(':', '#');
-                    if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[^1]))
-                    {
-                        detectedPoNumber = parts[^1].Trim();
-                    }
-                }
-
-                var lower = cellText.ToLowerInvariant();
-                if (lower.Contains("sku") || lower.Contains("item no") || lower.Contains("product code") || lower == "code")
-                {
-                    headerRow = r;
-                    colMap["sku"] = c;
-                }
-                else if (lower.Contains("description") || lower.Contains("product name") || lower.Contains("item name"))
-                {
-                    colMap["desc"] = c;
-                }
-                else if (lower.Contains("dimension") || lower.Contains("size"))
-                {
-                    colMap["dim"] = c;
-                }
-                else if (lower.Contains("finish") || lower.Contains("color"))
-                {
-                    colMap["finish"] = c;
-                }
-                else if (lower.Contains("qty") || lower.Contains("quantity"))
-                {
-                    colMap["qty"] = c;
-                }
-                else if (lower.Contains("etd") || lower.Contains("delivery"))
-                {
-                    colMap["etd"] = c;
-                }
-                else if (lower.Contains("fsc"))
-                {
-                    colMap["fsc"] = c;
-                }
-                else if (lower.Contains("drawing") || lower.Contains("cad"))
-                {
-                    colMap["cad"] = c;
-                }
-            }
-        }
-
-        if (!colMap.ContainsKey("sku"))
-        {
-            colMap["sku"] = 1;
-            colMap["desc"] = 2;
-            colMap["dim"] = 3;
-            colMap["finish"] = 4;
-            colMap["qty"] = 5;
-            colMap["etd"] = 6;
-        }
-
-        for (var r = headerRow + 1; r <= maxRow; r++)
-        {
-            var sku = GetCellString(worksheet, r, colMap.GetValueOrDefault("sku", 1));
-            var desc = GetCellString(worksheet, r, colMap.GetValueOrDefault("desc", 2));
-            var dim = GetCellString(worksheet, r, colMap.GetValueOrDefault("dim", 3));
-            var finish = GetCellString(worksheet, r, colMap.GetValueOrDefault("finish", 4));
-            var qtyStr = GetCellString(worksheet, r, colMap.GetValueOrDefault("qty", 5));
-            var etdStr = GetCellString(worksheet, r, colMap.GetValueOrDefault("etd", 6));
-            var fscStr = colMap.TryGetValue("fsc", out var fscCol) ? GetCellString(worksheet, r, fscCol) : "FSC 100%";
-            var cadStr = colMap.TryGetValue("cad", out var cadCol) ? GetCellString(worksheet, r, cadCol) : string.Empty;
-
-            if (string.IsNullOrWhiteSpace(sku) && string.IsNullOrWhiteSpace(desc) && string.IsNullOrWhiteSpace(qtyStr))
-            {
-                continue;
-            }
-
-            _ = int.TryParse(qtyStr.Replace(",", "").Trim(), out var parsedQty);
-
-            rows.Add(new StagingOrderRowDto
-            {
-                RowNumber = rows.Count + 1,
-                ProductSku = sku,
-                ProductDescription = desc,
-                DimensionsMm = dim,
-                FinishColor = finish,
-                OrderQty = parsedQty,
-                TargetEtd = etdStr,
-                FscRequired = string.IsNullOrWhiteSpace(fscStr) || fscStr.Contains("FSC", StringComparison.OrdinalIgnoreCase) || fscStr.Contains("100", StringComparison.OrdinalIgnoreCase),
-                TechnicalDrawingName = cadStr
-            });
-        }
-
-        return rows;
-    }
-
-    private static string GetCellString(ExcelWorksheet sheet, int row, int col)
-    {
-        if (col <= 0 || col > sheet.Dimension.End.Column)
-        {
-            return string.Empty;
-        }
-
-        var val = sheet.Cells[row, col].Value;
-        if (val is DateTime dt)
-        {
-            return dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        }
-
-        return sheet.Cells[row, col].Text?.Trim() ?? string.Empty;
-    }
-
     private static List<StagingOrderRowDto> BuildDefaultSampleStagingRows()
     {
         return new List<StagingOrderRowDto>
@@ -1119,14 +1047,15 @@ public class OrderIntakeService : IOrderIntakeService
 
     private static bool TryParseFlexibleDate(string input, out DateTime parsedDate)
     {
+        var normalized = ExcelOrderParser.NormalizeDateString(input);
         var formats = new[] { "yyyy-MM-dd", "dd/MM/yyyy", "MM/dd/yyyy", "yyyy/MM/dd", "d/M/yyyy" };
         return DateTime.TryParseExact(
-                   input.Trim(),
+                   normalized,
                    formats,
                    CultureInfo.InvariantCulture,
                    DateTimeStyles.None,
                    out parsedDate)
-               || DateTime.TryParse(input.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate);
+               || DateTime.TryParse(normalized, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate);
     }
 
     private static string ExtractPoNumberFromFileName(string fileName)
@@ -1173,5 +1102,64 @@ public class OrderIntakeService : IOrderIntakeService
             return "BEDROOM & CABINETS";
         }
         return "SOLID WOOD FURNITURE";
+    }
+
+    /// <summary>
+    /// Giai đoạn 2 của kiến trúc Hybrid: Giải mã chuỗi Base64 Data URI (nếu có) khi Owner bấm Confirm
+    /// và lưu thành file ảnh vật lý tại <c>wwwroot/uploads/products/{sku}.{ext}</c>, trả về URL tĩnh lưu vào CSDL.
+    /// </summary>
+    private static async Task<string?> PersistProductImageFromDataUriAsync(
+        string? sku,
+        string? imageUrlOrDataUri,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrlOrDataUri))
+        {
+            return null;
+        }
+
+        var trimmed = imageUrlOrDataUri.Trim();
+        if (!trimmed.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        var commaIndex = trimmed.IndexOf(',');
+        if (commaIndex <= 0 || commaIndex >= trimmed.Length - 1)
+        {
+            return null;
+        }
+
+        var header = trimmed[..commaIndex].ToLowerInvariant();
+        var base64Payload = trimmed[(commaIndex + 1)..];
+
+        var ext = header.Contains("jpeg") || header.Contains("jpg")
+            ? ".jpg"
+            : header.Contains("gif")
+                ? ".gif"
+                : header.Contains("webp")
+                    ? ".webp"
+                    : ".png";
+
+        byte[] imageBytes;
+        try
+        {
+            imageBytes = Convert.FromBase64String(base64Payload);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var safeSku = Regex.Replace(string.IsNullOrWhiteSpace(sku) ? "ITEM" : sku.Trim(), @"[^a-zA-Z0-9_\-]", "_");
+        var fileName = $"{safeSku}{ext}";
+
+        var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products");
+        Directory.CreateDirectory(uploadDir);
+
+        var fullPath = Path.Combine(uploadDir, fileName);
+        await File.WriteAllBytesAsync(fullPath, imageBytes, cancellationToken);
+
+        return $"/uploads/products/{fileName}";
     }
 }

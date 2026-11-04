@@ -57,7 +57,7 @@ public class AuthController : ControllerBase
         await _loginValidator.ValidateAndThrowAsync(request, cancellationToken);
 
         var result = await _authService.AuthenticateAsync(request, GetClientIpAddress(), cancellationToken);
-        SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
+        SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt, result.RememberMe);
 
         return Ok(ApiResponse<AuthResponseDto>.Ok(result, "Logged in successfully (UC-01)."));
     }
@@ -65,6 +65,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// UC-01 / BR-SEC-01: Làm mới JWT Access Token bằng Refresh Token (Token Rotation).
     /// Hỗ trợ đọc Refresh Token từ JSON body hoặc từ HttpOnly Cookie <c>wmms_refresh_token</c>.
+    /// Bảo toàn tính chất Session Cookie (nếu RememberMe = false) hoặc Persistent Cookie (nếu RememberMe = true).
     /// </summary>
     [HttpPost("refresh")]
     [AllowAnonymous]
@@ -82,7 +83,7 @@ public class AuthController : ControllerBase
         }
 
         var result = await _authService.RefreshTokenAsync(rawToken, GetClientIpAddress(), cancellationToken);
-        SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
+        SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt, result.RememberMe);
 
         return Ok(ApiResponse<AuthResponseDto>.Ok(result, "Access token refreshed successfully."));
     }
@@ -90,9 +91,10 @@ public class AuthController : ControllerBase
     /// <summary>
     /// UC-02: Đăng xuất khỏi hệ thống (Log Out System).
     /// Thu hồi Refresh Token hiện tại trong cơ sở dữ liệu, xóa HttpOnly Cookie và ghi nhận vào bảng <c>audit_logs</c>.
+    /// Cho phép gọi cả khi Access Token đã hết hạn (dựa trên HttpOnly Cookie) để đảm bảo dọn sạch phiên trên trình duyệt.
     /// </summary>
     [HttpPost("logout")]
-    [Authorize]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> RevokeTokenAsync([FromBody] RefreshTokenRequestDto? request, CancellationToken cancellationToken)
     {
@@ -103,7 +105,7 @@ public class AuthController : ControllerBase
         var currentUserId = TryGetCurrentUserId();
         await _authService.RevokeTokenAsync(rawToken, currentUserId, GetClientIpAddress(), cancellationToken);
 
-        Response.Cookies.Delete(RefreshTokenCookieName);
+        DeleteRefreshTokenCookie();
 
         return Ok(ApiResponse<object?>.Ok(null, "Logged out successfully and session token revoked (UC-02)."));
     }
@@ -138,7 +140,7 @@ public class AuthController : ControllerBase
         var userId = GetRequiredCurrentUserId();
         await _authService.ChangePasswordAsync(userId, request, GetClientIpAddress(), cancellationToken);
 
-        Response.Cookies.Delete(RefreshTokenCookieName);
+        DeleteRefreshTokenCookie();
 
         return Ok(ApiResponse<object?>.Ok(null, "Password changed successfully. Please log in again with your new password (UC-03)."));
     }
@@ -175,16 +177,37 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<object?>.Ok(null, "Password has been reset successfully. You can now log in with your new password (UC-05)."));
     }
 
-    private void SetRefreshTokenCookie(string rawRefreshToken, DateTime expiresAtUtc)
+    /// <summary>
+    /// Thiết lập HttpOnly Cookie <c>wmms_refresh_token</c> theo chuẩn công nghiệp MES:
+    /// - Khi <c>isPersistent = false</c> (RememberMe = false, mặc định cho trạm Kiosk/Xưởng): không đặt <c>Expires</c> (Session Cookie),
+    ///   cookie tự động bị trình duyệt xóa ngay khi đóng cửa sổ trình duyệt.
+    /// - Khi <c>isPersistent = true</c> (RememberMe = true, máy cá nhân văn phòng): đặt <c>Expires = expiresAtUtc</c> (Persistent Cookie 30 ngày).
+    /// </summary>
+    private void SetRefreshTokenCookie(string rawRefreshToken, DateTime expiresAtUtc, bool isPersistent)
     {
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
             Secure = Request.IsHttps,
             SameSite = SameSiteMode.Lax,
-            Expires = expiresAtUtc
+            Path = "/",
+            Expires = isPersistent ? expiresAtUtc : null
         };
         Response.Cookies.Append(RefreshTokenCookieName, rawRefreshToken, cookieOptions);
+    }
+
+    /// <summary>
+    /// Xóa triệt để HttpOnly Cookie <c>wmms_refresh_token</c> trên trình duyệt khi Logout hoặc Đổi mật khẩu.
+    /// </summary>
+    private void DeleteRefreshTokenCookie()
+    {
+        Response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = Request.IsHttps,
+            SameSite = SameSiteMode.Lax,
+            Path = "/"
+        });
     }
 
     private long GetRequiredCurrentUserId()

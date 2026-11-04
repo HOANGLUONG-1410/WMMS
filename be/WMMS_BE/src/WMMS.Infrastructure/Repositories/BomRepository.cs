@@ -27,6 +27,7 @@ public class BomRepository : IBomRepository
             .Include(b => b.Creator)
             .Include(b => b.BomDetails)
                 .ThenInclude(d => d.Material)
+                    .ThenInclude(m => m.MaterialStock)
             .FirstOrDefaultAsync(b => b.BomId == bomId);
     }
 
@@ -38,6 +39,7 @@ public class BomRepository : IBomRepository
             .Include(b => b.Creator)
             .Include(b => b.BomDetails)
                 .ThenInclude(d => d.Material)
+                    .ThenInclude(m => m.MaterialStock)
             .FirstOrDefaultAsync(b => b.OrderItemId == orderItemId);
     }
 
@@ -47,6 +49,7 @@ public class BomRepository : IBomRepository
             .Include(b => b.Product)
             .Include(b => b.BomDetails)
                 .ThenInclude(d => d.Material)
+                    .ThenInclude(m => m.MaterialStock)
             .Where(b => b.ProductId == productId &&
                        (b.BomStatus == BomStatusEnum.READY_FOR_PRODUCTION || b.BomStatus == BomStatusEnum.DRAFT))
             .OrderByDescending(b => b.CreatedAt)

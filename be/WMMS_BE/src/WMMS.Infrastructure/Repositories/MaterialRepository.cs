@@ -38,6 +38,7 @@ public class MaterialRepository : IMaterialRepository
     public async Task<Dictionary<string, Material>> GetByCodesAsync(IEnumerable<string> materialCodes)
     {
         var list = await _context.Materials
+            .Include(m => m.MaterialStock)
             .Where(m => materialCodes.Contains(m.MaterialCode))
             .ToListAsync();
 
