@@ -142,6 +142,29 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
         return true;
     }
 
+    public async Task<bool> TryMarkPoIssuedAsync(long prId, DateTime updatedAt, CancellationToken cancellationToken = default)
+    {
+        var affected = await _context.PurchaseRequests
+            .Where(pr => pr.PrId == prId && pr.PrStatus == PrStatusEnum.APPROVED)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(pr => pr.PrStatus, PrStatusEnum.PO_ISSUED)
+                .SetProperty(pr => pr.UpdatedAt, updatedAt),
+                cancellationToken);
+
+        if (affected == 0)
+        {
+            return false;
+        }
+
+        var tracked = _context.ChangeTracker.Entries<PurchaseRequest>().FirstOrDefault(e => e.Entity.PrId == prId);
+        if (tracked != null)
+        {
+            await tracked.ReloadAsync(cancellationToken);
+        }
+
+        return true;
+    }
+
     public async Task AddAsync(PurchaseRequest pr, CancellationToken cancellationToken = default)
     {
         await _context.PurchaseRequests.AddAsync(pr, cancellationToken);

@@ -1613,6 +1613,11 @@ namespace WMMS.Infrastructure.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("supplier_id");
 
+                    b.Property<string>("Terms")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("terms");
+
                     b.Property<decimal?>("TotalAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
