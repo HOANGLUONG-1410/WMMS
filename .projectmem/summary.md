@@ -1,6 +1,6 @@
 # projectmem - WMMS
 
-_Last updated: 2026-11-03_
+_Last updated: 2026-11-04_
 
 ## Project purpose
 Replace this placeholder with a concise description of what this project does, who it serves, and the main technologies or runtime assumptions.
@@ -24,7 +24,6 @@ Replace this placeholder with a concise description of what this project does, w
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- Merge: Merge remote-tracking branch 'origin/hunganh' into luong
 - Merged origin/hunganh commit 545dab6 (feat(fe/inventory): add 3-tier stock grid and electronic stock ledger) into branch luong (commit 6b511d3) with 0 conflicts. Verified dotnet build 0 errors, and synced to origin/luong and origin/dev.
 - Merge: docs(projectmem): sync merge note for hunganh inventory
 - Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.1: synchronized 100% of demo accounts with Database seed data (operational factory staff accounts: admin, owner, sales01, sales02, planner01, purchasing01, warehouse01, leader01, qc01 and 5 SEP490_G122 team multi-role accounts: luonghd, duynd, duongnt, cuonghd, anhth, all with password Admin@123).
@@ -34,6 +33,7 @@ Replace this placeholder with a concise description of what this project does, w
 - Created comprehensive Business Requirements Document (BRD) at WMMS_BRD_Business_Requirements_Document.docx containing 8 detailed chapters: Project Vision & As-Is/To-Be, User Personas & RACI Matrix, Core Business Rules (BR-ORD-01/02, BR-BOM-01/02, BR-INV-01/02, BR-PUR-01, BR-PRD-01/02, BR-SEC-01), 6 End-to-End Business Process Flows, Non-Functional Requirements, State Machine, QC Defect Catalog, and Acceptance Criteria.
 - Merge: docs(projectmem): record BRD document creation
 - Merge: Merge remote-tracking branch 'origin/dev' into luong
+- New feature: feat(assets): track sample product images and sync projectmem summary [be/WMMS_BE/src/WMMS.API/wwwroot/uploads/products/881314.jpg]
 
 ## Key files
 - `WMMS_BE.sln`
