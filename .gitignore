@@ -100,3 +100,11 @@ $RECYCLE.BIN/
 .AppleDouble
 .LSOverride
 
+.specify/integrations/gemini.manifest.json
+.specify/integrations/gemini.manifest.json
+.specify/integrations/speckit.manifest.json
+.specify/workflows/workflow-registry.json
+.specify/integrations/gemini.manifest.json
+
+# Local AI Agent Rules
+AGENTS.md

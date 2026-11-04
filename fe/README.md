@@ -1,23 +1,78 @@
-# WMMS — Frontend Workspace (ReactJS SPA)
+# React + TypeScript + Vite
 
-> **Hệ thống Quản lý Sản xuất Xưởng gỗ (Wooden Manufacturing Management System)**  
-> **Phân hệ:** Frontend Single Page Application (ReactJS)  
-> **Tài liệu tham chiếu:** `Report 4 – Software Design Specification` (Mục I.2.1, Table 1.2 & Figure 1.5)
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
----
+Currently, two official plugins are available:
 
-## 1. Cấu trúc Gói Frontend Đề xuất (Theo Report 4 Figure 1.5)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-Toàn bộ mã nguồn ứng dụng client ReactJS sẽ được nhóm FE phát triển bên trong thư mục này theo 9 gói chuẩn:
+## React Compiler
 
-| Gói (Package) | Mô tả trách nhiệm |
-| :--- | :--- |
-| `src/pages/` | Các trang giao diện chính: `StagingOrderPage`, `OrderSpacePage`, `BomBuilderPage`, `StockReconcilePage`, `FactoryKanbanPage`, `ExecutiveDashboardPage` |
-| `src/components/` | Các component tương tác: `StagingGridEditor`, `VisualCatalogModal`, `DynamicRoutingBuilder`, `KanbanBoard`, `QcInspectionModal` |
-| `src/services/` | Module gọi REST API (Axios) và kết nối WebSocket thời gian thực (SignalR Client tới `WorkspaceHub` và `KanbanHub`) |
-| `src/context/` | Quản lý state toàn cục (Auth, Multi-Role RBAC permissions, active Order Space) |
-| `src/routes/` | Điều hướng URL và các `ProtectedRoute` chặn quyền theo 8 vai trò |
-| `src/utils/` | Hàm tiện ích: tính toán hao hụt BOM (3%–5%), định dạng ngày ETD, kiểm tra hợp lệ |
-| `src/assets/` | File tĩnh: ảnh 3D sản phẩm đồ gỗ, icons, CSS/Tailwind styles |
-| `src/constant/` | Hằng số hệ thống: API base URLs, mã lỗi QC (`ERR_CUT_01`..`ERR_PAINT_04`), Status enums |
-| `src/common/` | Các UI component dùng chung: Buttons, Modals, Drawers, Jira-like Sidebar, Badges |
+The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+
+Note: This will impact Vite dev & build performances.
+You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
+```
+
+You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
+```

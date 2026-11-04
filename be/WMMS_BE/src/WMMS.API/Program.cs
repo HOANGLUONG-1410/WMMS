@@ -1,14 +1,30 @@
+using System.Reflection;
 using System.Text;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using WMMS.API.Hubs;
+using WMMS.API.Middlewares;
+using WMMS.API.Schedulers;
+using WMMS.Application.Interfaces.External;
+using WMMS.Application.Interfaces.Repositories;
+using WMMS.Application.Interfaces.Services;
+using WMMS.Application.Mappers;
+using WMMS.Application.Services.BomRouting;
+using WMMS.Application.Validators.Auth;
+using WMMS.Application.Validators.BomRouting;
+using WMMS.Infrastructure.Excel;
+using WMMS.Infrastructure.Mail;
 using WMMS.Infrastructure.Persistence;
 using WMMS.Infrastructure.Persistence.Seed;
+using WMMS.Infrastructure.Repositories;
+using WMMS.Infrastructure.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Database Context
+// 1. Database Context (Code-First with SQL Server)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<WmmsDbContext>(options =>
 {
@@ -18,7 +34,50 @@ builder.Services.AddDbContext<WmmsDbContext>(options =>
     });
 });
 
-// 2. JWT Authentication
+// 2. Application & Infrastructure Services (DI)
+builder.Services.AddAutoMapper(typeof(BomMappingProfile).Assembly);
+builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateBomRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<WMMS.Application.Validators.MasterData.CreateMaterialValidator>();
+
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+
+// Phân hệ 1: Authentication & Session Security (AUT - UC-01..UC-05)
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Phân hệ 3: System Administration & Multi-Role RBAC (ADM - UC-06..UC-15)
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+// Phân hệ 4: Order Intake & Order Space Initialization (ORD - UC-30..UC-35)
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationHubService, SignalRNotificationHubService>();
+builder.Services.AddScoped<IExcelOrderParser, ExcelOrderParser>();
+builder.Services.AddScoped<IOrderIntakeService, OrderIntakeService>();
+
+// Phân hệ 5: Material Breakdown & BOM Preparation (BOM - UC-38..UC-41)
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IBomRepository, BomRepository>();
+builder.Services.AddScoped<IRoutingRepository, RoutingRepository>();
+builder.Services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IMaterialRepository, MaterialRepository>();
+builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+builder.Services.AddScoped<IExcelBomParser, ExcelBomParser>();
+builder.Services.AddScoped<IBomRoutingService, BomRoutingService>();
+// Master Data (SC-04, SC-05, SC-06 / UC-17..UC-29)
+builder.Services.AddScoped<IMaterialService, WMMS.Infrastructure.Services.MasterData.MaterialService>();
+builder.Services.AddScoped<IProductService, WMMS.Infrastructure.Services.MasterData.ProductService>();
+builder.Services.AddScoped<ISupplierService, WMMS.Infrastructure.Services.MasterData.SupplierService>();
+builder.Services.AddScoped<IInventoryService, WMMS.Infrastructure.Services.Inventory.InventoryService>();
+
+// Background Scheduler JOB-01: Auto-unlock expired locked accounts
+builder.Services.AddHostedService<AccountUnlockBackgroundService>();
+
+// 3. JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"] ?? "WMMS_DEFAULT_FALLBACK_KEY_AT_LEAST_32_CHARS_LONG";
 
@@ -46,7 +105,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// 3. CORS
+// 4. CORS
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:5173" };
 builder.Services.AddCors(options =>
 {
@@ -59,23 +118,31 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 4. API Controllers & JSON Formatting
+// 5. API Controllers & JSON Formatting
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-// 5. Swagger with JWT Support
+// 6. Swagger with JWT Support & XML Comments
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    options.CustomSchemaIds(type => (type.FullName ?? type.Name).Replace("+", "."));
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "WMMS Web API",
         Version = "v1",
-        Description = "Wooden Manufacturing Management System API"
+        Description = "Wooden Manufacturing Management System API - Clean Architecture & Multi-Role RBAC"
     });
+
+    var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -105,6 +172,12 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+// Global Exception Handling Middleware (standardized JSON ApiResponse with MSG01..MSG13)
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
+// CORS MUST be placed before UseStaticFiles and UseHttpsRedirection to handle cross-origin browser requests properly
+app.UseCors("WmmsCorsPolicy");
+
 // Auto-seed database during development if needed
 if (app.Environment.IsDevelopment())
 {
@@ -114,10 +187,13 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "WMMS API v1");
     });
 }
+else
+{
+    app.UseHttpsRedirection();
+}
 
-app.UseHttpsRedirection();
-
-app.UseCors("WmmsCorsPolicy");
+Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads", "products"));
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -139,5 +215,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
+app.MapHub<WmmsNotificationHub>("/hubs/notifications");
 
 app.Run();
