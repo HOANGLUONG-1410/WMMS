@@ -1,10 +1,7 @@
 # ==========================================
-# projectmem (Keep persistent memory clean)
+# projectmem (Keep persistent memory clean & completely local)
 # ==========================================
-.projectmem/events.jsonl
-.projectmem/watch.pid
-.projectmem/watch.log
-.projectmem/structure.json
+.projectmem/
 
 # ==========================================
 # .NET & Visual Studio
@@ -101,10 +98,8 @@ $RECYCLE.BIN/
 .LSOverride
 
 .specify/integrations/gemini.manifest.json
-.specify/integrations/gemini.manifest.json
 .specify/integrations/speckit.manifest.json
 .specify/workflows/workflow-registry.json
-.specify/integrations/gemini.manifest.json
 
 # Local AI Agent Rules
 AGENTS.md

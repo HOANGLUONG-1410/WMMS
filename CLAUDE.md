@@ -78,6 +78,10 @@ Mỗi khi thực hiện coding hoặc thay đổi quan trọng trong dự án WM
 3. **Chuẩn hóa Commit & Code Quality**:
    - Tuân thủ quy chuẩn Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`.
    - Đảm bảo dự án build thành công (`dotnet build` 0 errors) trước khi tạo commit và push.
+4. **Quy tắc cô lập `.projectmem/` (Local Only)**:
+   - Thư mục `.projectmem/` chứa cơ sở dữ liệu và bộ nhớ AI cục bộ, tuyệt đối KHÔNG commit hoặc push lên Git.
+   - Thư mục `.projectmem/` đã được cấu hình trong `.gitignore` để cách ly hoàn toàn.
+   - Tuyệt đối không dùng `git add .projectmem` hoặc stage bất kỳ file nào trong thư mục này để tránh xung đột hoặc làm bẩn nhánh khi các thành viên khác (duy, duong, cuong, hunganh) merge nhánh.
 <!-- <<< git workflow bridge <<< -->
 
 <!-- >>> docs synchronization bridge >>> -->
@@ -110,12 +114,10 @@ Mỗi khi thực hiện coding hoặc thay đổi quan trọng trong dự án WM
 ## Testing & Backend Scope Protocol (MANDATORY)
 
 1. **Thư mục Unit Test Biệt Lập**:
-   - Khi viết hoặc chạy test (`test run`), TOÀN BỘ file test, project test và kịch bản kiểm thử PHẢI đặt tại thư mục: `D:\dotnet\unitestWMMS`.
-   - **Tuyệt đối KHÔNG tạo file test rác** bên trong thư mục code chính của dự án WMMS (`c:\Users\ADMIN\Documents\github\WMMS`). Không thêm test project, test class hay mock data tạm bợ vào solution chính nhằm giữ source code sạch sẽ 100%.
+   - Khi viết hoặc chạy test (`test run`), TOÀN BỘ file test, project test và kịch bản kiểm thử PHẢI đặt tại thư mục: `D:\WMMS_TEST`.
+   - **Tuyệt đối KHÔNG tạo file test rác** bên trong thư mục code chính của dự án WMMS. Không thêm test project, test class hay mock data tạm bợ vào solution chính nhằm giữ source code sạch sẽ 100%.
 
 2. **Phạm vi Phát triển (Backend Only)**:
    - **Chỉ code ở `be` (`be/WMMS_BE`)**: Mọi chức năng, API, xử lý nghiệp vụ, database chỉ được thực hiện trong thư mục Backend `be/`.
    - **Không thao tác với `fe`**: Tuyệt đối không chỉnh sửa, không tạo file và không can thiệp vào thư mục `fe/` (Frontend).
 <!-- <<< testing and backend-only scope bridge <<< -->
-
-
