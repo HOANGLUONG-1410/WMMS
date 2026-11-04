@@ -98,6 +98,9 @@ public static class AuditActionConstants
     public const string BomCreated = "BOM_CREATED";
     public const string BomUpdated = "BOM_UPDATED";
     public const string BomApproved = "BOM_APPROVED";
+
+    // Phân hệ 6: Purchasing, Goods Receipt & Auto-Allocation (WHS - SC-17, UC-56, UC-57)
+    public const string CommitGrn = "COMMIT_GRN";
 }
 
 public static class DefectCodeConstants

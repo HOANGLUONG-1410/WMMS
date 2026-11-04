@@ -69,6 +69,8 @@ builder.Services.AddScoped<IMaterialService, WMMS.Infrastructure.Services.Master
 builder.Services.AddScoped<IProductService, WMMS.Infrastructure.Services.MasterData.ProductService>();
 builder.Services.AddScoped<ISupplierService, WMMS.Infrastructure.Services.MasterData.SupplierService>();
 builder.Services.AddScoped<IInventoryService, WMMS.Infrastructure.Services.Inventory.InventoryService>();
+// Warehouse GRN & Auto-Allocation (SC-17 / UC-56, UC-57)
+builder.Services.AddScoped<IGoodsReceiptService, WMMS.Infrastructure.Services.Warehouse.GoodsReceiptService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();
