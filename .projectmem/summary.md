@@ -24,8 +24,6 @@ Replace this placeholder with a concise description of what this project does, w
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
 
 ## Notes
-- Merge: docs(projectmem): update summary
-- Generated comprehensive Dual Demo Scripts document (WMMS_Iteration1_Demo_Scripts.docx) covering both Mentor/Instructor business flow perspective and MES Technical Expert deep-dive architecture (OpenXML Excel parsing, Base64 drawing extraction, UoM volumetric conversion, 3-tier BOM, dynamic routing with Critical Hold Point, and Session vs Persistent Cookie authentication).
 - Merge: Merge remote-tracking branch 'origin/hunganh' into luong
 - Merged origin/hunganh commit 545dab6 (feat(fe/inventory): add 3-tier stock grid and electronic stock ledger) into branch luong (commit 6b511d3) with 0 conflicts. Verified dotnet build 0 errors, and synced to origin/luong and origin/dev.
 - Merge: docs(projectmem): sync merge note for hunganh inventory
@@ -34,6 +32,8 @@ Replace this placeholder with a concise description of what this project does, w
 - Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.2: added explicit 'Mật khẩu' (Password) column with value Admin@123 for all rows in both Seed Data tables (Operational Staff and Team Member Multi-Roles).
 - Merge: docs(projectmem): sync password column note
 - Created comprehensive Business Requirements Document (BRD) at WMMS_BRD_Business_Requirements_Document.docx containing 8 detailed chapters: Project Vision & As-Is/To-Be, User Personas & RACI Matrix, Core Business Rules (BR-ORD-01/02, BR-BOM-01/02, BR-INV-01/02, BR-PUR-01, BR-PRD-01/02, BR-SEC-01), 6 End-to-End Business Process Flows, Non-Functional Requirements, State Machine, QC Defect Catalog, and Acceptance Criteria.
+- Merge: docs(projectmem): record BRD document creation
+- Merge: Merge remote-tracking branch 'origin/dev' into luong
 
 ## Key files
 - `WMMS_BE.sln`
