@@ -22,10 +22,9 @@ Replace this placeholder with a concise description of what this project does, w
 - Enforce Frontend Error Handling Protocol: Khi kiem tra ma nguon neu phat hien loi Frontend (FE) thi tuyet doi KHONG duoc tu y sua code; chi ghi nhan, phan tich nguyen nhan va bao cao chi tiet danh sach loi cho nguoi dung.
 - Adopt Hybrid 2-Stage Product Image Architecture for Excel PO Intake: Stage 1 (Staging Preview) extracts embedded OpenXML ExcelPicture drawings by row into Base64 Data URIs (ProductImageUrl / TechnicalDrawingUrl) for immediate UI rendering without disk garbage; Stage 2 (Order Confirm) decodes and persists confirmed images to wwwroot/uploads/products/{sku}.{ext}, stores static URLs in Product.ImageUrl, and serves them via UseStaticFiles(). [be/WMMS_BE/src/WMMS.Infrastructure/Excel/ExcelOrderParser.cs]
 - Implement industrial MES Session vs Persistent Cookie architecture in AuthController & AuthService: when RememberMe=false (default for shop-floor/kiosk), issue Session Cookie (Expires=null) that auto-destroys on browser close; when RememberMe=true, issue 30-day Persistent Cookie; preserve RememberMe state across RefreshToken rotation and allow anonymous cookie-based logout cleanup.
+- Lock in full 32-table DB schema, Repositories, and IUnitOfWork for both Iteration 2 (MRP, MaterialAllocation, ConsolidatedPR, PurchaseOrder, GoodsReceipt) and Iteration 3 (ProductionBatch, BatchRoutingStep, QcInspection, DefectLog, OverdriveLog) upfront in Iteration 2 to prevent schema drift across the team, and implement core SC-14 MrpAllocationService with BR-INV-01 allocated stock exclusion, BR-INV-02 soft-allocation lock, BR-PUR-01 daily PR shortage aggregation, and FIFO-by-ETD re-allocation.
 
 ## Notes
-- Updated WMMS_Iteration1_Demo_Scripts.docx to version 1.2: added explicit 'Mật khẩu' (Password) column with value Admin@123 for all rows in both Seed Data tables (Operational Staff and Team Member Multi-Roles).
-- Merge: docs(projectmem): sync password column note
 - Created comprehensive Business Requirements Document (BRD) at WMMS_BRD_Business_Requirements_Document.docx containing 8 detailed chapters: Project Vision & As-Is/To-Be, User Personas & RACI Matrix, Core Business Rules (BR-ORD-01/02, BR-BOM-01/02, BR-INV-01/02, BR-PUR-01, BR-PRD-01/02, BR-SEC-01), 6 End-to-End Business Process Flows, Non-Functional Requirements, State Machine, QC Defect Catalog, and Acceptance Criteria.
 - Merge: docs(projectmem): record BRD document creation
 - Merge: Merge remote-tracking branch 'origin/dev' into luong
@@ -34,6 +33,8 @@ Replace this placeholder with a concise description of what this project does, w
 - Merge: docs(projectmem): sync summary on dev
 - Successfully released and pushed complete Intern 1 deliverables (209 files changed, 35k insertions across Backend, Frontend, and Seed Data) to branch main (commit aec9a94). Verified dotnet build 0 errors, and returned working branch to luong.
 - Merge: docs(projectmem): sync milestone for main release
+- Merge: docs(projectmem): auto-sync summary on luong
+- Implemented Iteration 2 + Iteration 3 full repository layer (IMaterialStockRepository, IMaterialAllocationRepository, IPurchaseRequestRepository, IPurchaseOrderRepository, IProductionBatchRepository, IQcInspectionRepository, enhanced IOrderItemRepository & IUnitOfWork), updated WMMS_DB_Test_Iteration1.sql to create and seed all 32 physical tables, and implemented SC-14 MRP & Auto-Allocation Engine (IMrpAllocationService, MrpAllocationService, MrpController, InventoryController MRP routes).
 
 ## Key files
 - `WMMS_BE.sln`

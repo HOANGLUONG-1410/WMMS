@@ -13,6 +13,7 @@ using WMMS.Application.Interfaces.Repositories;
 using WMMS.Application.Interfaces.Services;
 using WMMS.Application.Mappers;
 using WMMS.Application.Services.BomRouting;
+using WMMS.Application.Services.InventoryPr;
 using WMMS.Application.Validators.Auth;
 using WMMS.Application.Validators.BomRouting;
 using WMMS.Infrastructure.Excel;
@@ -58,7 +59,7 @@ builder.Services.AddScoped<INotificationHubService, SignalRNotificationHubServic
 builder.Services.AddScoped<IExcelOrderParser, ExcelOrderParser>();
 builder.Services.AddScoped<IOrderIntakeService, OrderIntakeService>();
 
-// Phân hệ 5: Material Breakdown & BOM Preparation (BOM - UC-38..UC-41)
+// Phân hệ 5, 6, 7, 8: Repositories & Unit of Work (Iteration 1, Iteration 2 & Iteration 3)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IBomRepository, BomRepository>();
 builder.Services.AddScoped<IRoutingRepository, RoutingRepository>();
@@ -66,13 +67,22 @@ builder.Services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IMaterialRepository, MaterialRepository>();
 builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+builder.Services.AddScoped<IMaterialStockRepository, MaterialStockRepository>();
+builder.Services.AddScoped<IMaterialAllocationRepository, MaterialAllocationRepository>();
+builder.Services.AddScoped<IPurchaseRequestRepository, PurchaseRequestRepository>();
+builder.Services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
+builder.Services.AddScoped<IProductionBatchRepository, ProductionBatchRepository>();
+builder.Services.AddScoped<IQcInspectionRepository, QcInspectionRepository>();
+
 builder.Services.AddScoped<IExcelBomParser, ExcelBomParser>();
 builder.Services.AddScoped<IBomRoutingService, BomRoutingService>();
-// Master Data (SC-04, SC-05, SC-06 / UC-17..UC-29)
+
+// Master Data & Inventory & MRP Auto-Allocation (SC-04..SC-06, SC-12..SC-14)
 builder.Services.AddScoped<IMaterialService, WMMS.Infrastructure.Services.MasterData.MaterialService>();
 builder.Services.AddScoped<IProductService, WMMS.Infrastructure.Services.MasterData.ProductService>();
 builder.Services.AddScoped<ISupplierService, WMMS.Infrastructure.Services.MasterData.SupplierService>();
 builder.Services.AddScoped<IInventoryService, WMMS.Infrastructure.Services.Inventory.InventoryService>();
+builder.Services.AddScoped<IMrpAllocationService, MrpAllocationService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();
