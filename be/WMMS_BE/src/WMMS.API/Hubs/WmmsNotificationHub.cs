@@ -74,6 +74,31 @@ public class SignalRNotificationHubService : INotificationHubService
         await _hubContext.Clients.All.SendAsync("ReceiveNotification", payload, cancellationToken);
     }
 
+    public async Task NotifyPurchaseRequestDecidedAsync(
+        string prCode,
+        bool approved,
+        string? reasonOrNotes,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new
+        {
+            EventType = approved ? "PR_APPROVED" : "PR_REJECTED",
+            PrCode = prCode,
+            Approved = approved,
+            Detail = reasonOrNotes,
+            Message = approved
+                ? $"[SC-15] PR gộp {prCode} đã được Chủ xưởng phê duyệt. Bộ phận Mua hàng có thể phân nhóm theo NCC và phát hành PO."
+                : $"[SC-15] PR gộp {prCode} đã bị Chủ xưởng từ chối. Lý do: {reasonOrNotes}. KHVT vui lòng điều chỉnh và gom lại.",
+            TimestampUtc = DateTime.UtcNow
+        };
+
+        var targetRoles = approved
+            ? new[] { "PURCHASING", "PLANNER", "OWNER" }
+            : new[] { "PLANNER", "OWNER" };
+
+        await _hubContext.Clients.Groups(targetRoles).SendAsync("ReceiveNotification", payload, cancellationToken);
+    }
+
     public async Task NotifyGoodsReceiptCommittedAsync(
         string grnCode,
         string poCode,

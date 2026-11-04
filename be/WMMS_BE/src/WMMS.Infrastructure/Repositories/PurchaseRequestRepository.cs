@@ -60,6 +60,88 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
         return await _context.PurchaseRequests.CountAsync(pr => pr.AggregationDate == dateOnly, cancellationToken);
     }
 
+    public async Task<(List<PurchaseRequest> Items, int TotalCount)> SearchAsync(
+        IReadOnlyCollection<PrStatusEnum>? statuses,
+        DateTime? fromDate,
+        DateTime? toDate,
+        string? keyword,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = BuildFullPrQuery().AsNoTracking();
+
+        if (statuses is { Count: > 0 })
+        {
+            query = query.Where(pr => statuses.Contains(pr.PrStatus));
+        }
+
+        if (fromDate.HasValue)
+        {
+            var from = fromDate.Value.Date;
+            query = query.Where(pr => pr.AggregationDate >= from);
+        }
+
+        if (toDate.HasValue)
+        {
+            var to = toDate.Value.Date;
+            query = query.Where(pr => pr.AggregationDate <= to);
+        }
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var kw = keyword.Trim().ToLower();
+            query = query.Where(pr =>
+                pr.PrCode.ToLower().Contains(kw) ||
+                pr.Items.Any(i => i.Material.MaterialCode.ToLower().Contains(kw) ||
+                                  i.Material.MaterialName.ToLower().Contains(kw)));
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(pr => pr.AggregationDate)
+            .ThenByDescending(pr => pr.PrId)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
+    public async Task<bool> TryTransitionStatusAsync(
+        long prId,
+        PrStatusEnum expectedStatus,
+        PrStatusEnum newStatus,
+        long reviewerUserId,
+        string? rejectionReason,
+        DateTime reviewedAt,
+        CancellationToken cancellationToken = default)
+    {
+        var affected = await _context.PurchaseRequests
+            .Where(pr => pr.PrId == prId && pr.PrStatus == expectedStatus)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(pr => pr.PrStatus, newStatus)
+                .SetProperty(pr => pr.ApprovedBy, reviewerUserId)
+                .SetProperty(pr => pr.ReviewedAt, reviewedAt)
+                .SetProperty(pr => pr.RejectionReason, rejectionReason)
+                .SetProperty(pr => pr.UpdatedAt, reviewedAt),
+                cancellationToken);
+
+        if (affected == 0)
+        {
+            return false;
+        }
+
+        // Đồng bộ lại thực thể đang được theo dõi (nếu có) để tránh dữ liệu cũ sau khi UPDATE trực tiếp
+        var tracked = _context.ChangeTracker.Entries<PurchaseRequest>().FirstOrDefault(e => e.Entity.PrId == prId);
+        if (tracked != null)
+        {
+            await tracked.ReloadAsync(cancellationToken);
+        }
+
+        return true;
+    }
+
     public async Task AddAsync(PurchaseRequest pr, CancellationToken cancellationToken = default)
     {
         await _context.PurchaseRequests.AddAsync(pr, cancellationToken);

@@ -27,6 +27,16 @@ public interface INotificationHubService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Phát thông báo real-time khi Chủ xưởng phê duyệt hoặc từ chối PR gộp ngày (SC-15, UC-47, UC-48):
+    /// phê duyệt thông báo cho Mua hàng; từ chối thông báo lại cho KHVT kèm lý do.
+    /// </summary>
+    Task NotifyPurchaseRequestDecidedAsync(
+        string prCode,
+        bool approved,
+        string? reasonOrNotes,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Phát thông báo real-time khi Thủ kho bấm Commit phiếu nhập kho GRN &amp; kích hoạt Auto-Allocation (SC-17, UC-57, BR-WHS-01).
     /// </summary>
     Task NotifyGoodsReceiptCommittedAsync(
