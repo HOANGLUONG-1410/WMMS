@@ -13,10 +13,9 @@ interface UnderConstructionPageProps {
 
 export default function UnderConstructionPage({
   title,
-  screenCode,
-  moduleName = "Operational Screen",
+  moduleName = "Màn hình nghiệp vụ",
   allowedRoles = [],
-  description = "Màn hình chức năng này đã được định nghĩa trong kiến trúc luồng màn hình (Report 3 - SRS Screen Inventory). Giao diện chi tiết và API nghiệp vụ đang trong quá trình phát triển.",
+  description = "Màn hình chức năng này đã được định nghĩa trong kiến trúc luồng màn hình. Giao diện chi tiết và API nghiệp vụ đang trong quá trình phát triển.",
 }: UnderConstructionPageProps) {
   const navigate = useNavigate();
   const { currentUser } = useSession();
@@ -52,11 +51,6 @@ export default function UnderConstructionPage({
           <span className="uppercase tracking-wider">{moduleName}</span>
           <span>/</span>
           <span className="text-slate-800 font-semibold">{title}</span>
-          {screenCode && (
-            <span className="ml-2 font-mono text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">
-              {screenCode}
-            </span>
-          )}
         </div>
 
         {/* Main Card */}

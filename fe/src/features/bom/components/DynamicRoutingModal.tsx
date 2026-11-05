@@ -81,7 +81,7 @@ export default function DynamicRoutingModal({
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-sm font-extrabold text-slate-900">
-            Customize Dynamic Routing Sequence
+            Tùy chỉnh chuỗi công đoạn động
           </h2>
           <button
             type="button"
@@ -96,15 +96,15 @@ export default function DynamicRoutingModal({
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs text-slate-500">
-              Re-order workstation sequence, inject specialized steps (e.g., Cushion Upholstery),
-              remove unnecessary steps, or mark critical Hold Points.
+              Sắp xếp lại thứ tự công đoạn, thêm công đoạn đặc thù (VD: bọc nệm),
+              bỏ công đoạn không cần thiết hoặc đánh dấu Hold Point quan trọng.
             </p>
             <button
               type="button"
               onClick={() => setShowAddInput((v) => !v)}
               className="shrink-0 px-2.5 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 border border-blue-200 rounded transition"
             >
-              + Inject Step
+              + Thêm công đoạn
             </button>
           </div>
 
@@ -122,7 +122,7 @@ export default function DynamicRoutingModal({
                 onClick={handleAddStep}
                 className="px-3 py-1.5 bg-[#2563eb] text-white text-xs font-semibold rounded hover:bg-blue-700 transition"
               >
-                Add
+                Thêm
               </button>
             </div>
           )}
@@ -147,7 +147,7 @@ export default function DynamicRoutingModal({
                         onClick={() => handleMoveStep(idx, -1)}
                         disabled={idx === 0}
                         className="hover:text-slate-700 disabled:opacity-25 leading-none"
-                        title="Move Up"
+                        title="Chuyển lên"
                       >
                         ▲
                       </button>
@@ -156,14 +156,14 @@ export default function DynamicRoutingModal({
                         onClick={() => handleMoveStep(idx, 1)}
                         disabled={idx === localStages.length - 1}
                         className="hover:text-slate-700 disabled:opacity-25 leading-none"
-                        title="Move Down"
+                        title="Chuyển xuống"
                       >
                         ▼
                       </button>
                     </div>
                     <div className="text-xs text-slate-800 truncate">
                       <strong className="font-bold text-slate-900">
-                        Step {idx + 1}:
+                        Công đoạn {idx + 1}:
                       </strong>{" "}
                       <span>{stg.stageName}</span>
                     </div>
@@ -173,14 +173,14 @@ export default function DynamicRoutingModal({
                     <button
                       type="button"
                       onClick={() => handleToggleHoldPoint(idx)}
-                      title="Click to toggle Standard vs Critical Hold Point"
+                      title="Bấm để chuyển giữa Chuẩn và Hold Point quan trọng"
                       className={`px-2.5 py-0.5 text-[10px] font-bold rounded transition cursor-pointer ${
                         isHold
                           ? "bg-yellow-100 text-amber-800 border border-yellow-300"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
-                      {isHold ? "Critical Hold Point (Hardware Lock)" : "STANDARD"}
+                      {isHold ? "Hold Point quan trọng (Khóa phụ kiện)" : "CHUẨN"}
                     </button>
 
                     <button
@@ -189,8 +189,8 @@ export default function DynamicRoutingModal({
                       disabled={localStages.length <= 1}
                       title={
                         localStages.length <= 1
-                          ? "At least 1 routing step is required"
-                          : "Delete this step"
+                          ? "Cần ít nhất 1 công đoạn"
+                          : "Xóa công đoạn này"
                       }
                       className="px-2 py-0.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-slate-200 rounded transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
@@ -210,14 +210,14 @@ export default function DynamicRoutingModal({
             onClick={onClose}
             className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
           >
-            Close
+            Đóng
           </button>
           <button
             type="button"
             onClick={handleSave}
             className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition"
           >
-            Save Routing Sequence
+            Lưu chuỗi công đoạn
           </button>
         </div>
       </div>

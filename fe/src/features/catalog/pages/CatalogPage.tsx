@@ -37,17 +37,17 @@ export default function CatalogPage() {
             <div className="flex items-center gap-2">
               <span className="text-xl">🪵</span>
               <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-                Master Product &amp; Material Catalog
+                Danh mục sản phẩm &amp; vật tư gốc
               </h1>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Centralized engineering repository for standardized finished goods, routing stages, and factory raw materials.
+              Kho dữ liệu kỹ thuật tập trung cho thành phẩm chuẩn, các công đoạn sản xuất và vật tư thô của xưởng.
             </p>
           </div>
 
           {/* Role Access Indicator Badge */}
           <div className="flex items-center gap-2 self-start sm:self-auto bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs text-xs">
-            <span className="text-slate-400 font-medium">Access Scope:</span>
+            <span className="text-slate-400 font-medium">Phạm vi truy cập:</span>
             <span className="font-bold text-slate-800 uppercase">
               {currentUser?.activeRole || "OPERATIONAL"}
             </span>
@@ -58,38 +58,38 @@ export default function CatalogPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Standard SKUs</span>
+              <span className="text-xs font-semibold text-slate-500">SKU chuẩn</span>
               <span className="text-base">🪑</span>
             </div>
             <div className="text-xl font-bold text-slate-900 mt-1">{totalProducts}</div>
-            <span className="text-[10px] text-slate-400">Products in visual library</span>
+            <span className="text-[10px] text-slate-400">Sản phẩm trong thư viện trực quan</span>
           </div>
 
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Active BOMs</span>
+              <span className="text-xs font-semibold text-slate-500">BOM đang hoạt động</span>
               <span className="text-base">📋</span>
             </div>
             <div className="text-xl font-bold text-emerald-600 mt-1">{activeBomProducts}</div>
-            <span className="text-[10px] text-emerald-600 font-medium">Production ready models</span>
+            <span className="text-[10px] text-emerald-600 font-medium">Mẫu sẵn sàng sản xuất</span>
           </div>
 
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Raw Material Items</span>
+              <span className="text-xs font-semibold text-slate-500">Mã vật tư thô</span>
               <span className="text-base">📦</span>
             </div>
             <div className="text-xl font-bold text-slate-900 mt-1">{totalMaterials}</div>
-            <span className="text-[10px] text-slate-400">Lumber, HW, Paint &amp; PKG</span>
+            <span className="text-[10px] text-slate-400">Gỗ, phụ kiện, sơn &amp; bao bì</span>
           </div>
 
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">FSC 100% Certified</span>
+              <span className="text-xs font-semibold text-slate-500">Chứng nhận FSC 100%</span>
               <span className="text-base">🌿</span>
             </div>
             <div className="text-xl font-bold text-emerald-700 mt-1">{fscMaterialsCount}</div>
-            <span className="text-[10px] text-emerald-700 font-medium">Eco certified supplies</span>
+            <span className="text-[10px] text-emerald-700 font-medium">Vật tư có chứng nhận sinh thái</span>
           </div>
         </div>
 
@@ -105,7 +105,7 @@ export default function CatalogPage() {
             }`}
           >
             <span>🪑</span>
-            <span>Finished Goods Catalog (Visual Product Library)</span>
+            <span>Danh mục thành phẩm (Thư viện sản phẩm trực quan)</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
               {totalProducts}
             </span>
@@ -121,7 +121,7 @@ export default function CatalogPage() {
             }`}
           >
             <span>🪵</span>
-            <span>Raw Material Catalog (Lumber, Hardware, Paint, Packaging)</span>
+            <span>Danh mục vật tư thô (Gỗ, phụ kiện, sơn, bao bì)</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
               {totalMaterials}
             </span>

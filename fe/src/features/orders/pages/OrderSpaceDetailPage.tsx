@@ -2,26 +2,27 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import WmmsAppShell from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
+import { bomStatusLabel, lifecycleStatusLabel } from '../../../lib/statusLabels';
 
 /**
  * Màn hình III.4.3: Order Space Detail Dashboard (SCR-ORD-03)
  * Tuân thủ 100% thiết kế giao diện và bảng Field Description trong Report 3 (Section III.4.3):
  * - Header Top-Left (Field #1): `Active Order Space: SPACE-PO-880504 (Dining Sets - Ashley US)`
  * - Khối tiêu đề Space:
- *   + `SPACE-PO-880504: Ashley Furniture Homestore (USA)` + huy hiệu `IN_PRODUCTION` & `FSC 100% CERTIFIED`
+ *   + `SPACE-PO-880504: Ashley Furniture Homestore (USA)` + huy hiệu `IN_PRODUCTION` & `CHỨNG NHẬN FSC 100%`
  *   + Dòng thông tin: `Customer Ref: ASH-2026-OCT-880504 | Order Intake: Oct 12, 2026 | Target Delivery (ETD): Oct 28, 2026 (8 Days Remaining)`
  *   + Field #2: Nút màu cam `📐 Manage BOM & Routing →`
  *   + Field #3: Nút trắng `📋 View on Kanban`
  * - 4 Thẻ KPI:
- *   + `TOTAL ORDERED UNITS`: `500 Pcs` (`400 Dining Chairs + 100 Tables`)
- *   + `BOM STATUS`: `100% Ready` (`Active breakdown with 3.5% scrap rate`)
- *   + `MATERIAL ALLOCATION`: `Fully Locked` (`Allocated Stock secured by Warehouse`)
- *   + `FLOOR PROGRESS`: `62% Done` (`Station 4: Structure Assembly in progress`)
- * - Bảng `Ordered Product Line Items in this Space` (Field #6):
- *   + Ghi chú góc phải: `View-only PO specifications (Protected by RBAC)` (BR-ORD-04)
- *   + Các cột: `SKU Code`, `Product Model & Specs`, `Finish Spec`, `Order Quantity`, `Attached Engineering CAD/PDF` (Field #4), `BOM Lifecycle`, `Action` (`Inspect BOM →` - Field #5)
+ *   + `TỔNG SỐ LƯỢNG ĐẶT`: `500 Pcs` (`400 ghế ăn + 100 bàn`)
+ *   + `TRẠNG THÁI BOM`: `Sẵn sàng 100%` (`Bóc tách đang hoạt động, tỷ lệ hao hụt 3,5%`)
+ *   + `PHÂN BỔ VẬT TƯ`: `Đã khóa đủ` (`Tồn kho đã được Kho giữ chỗ`)
+ *   + `TIẾN ĐỘ XƯỞNG`: `Hoàn thành 62%` (`Trạm 4: Đang lắp ráp kết cấu`)
+ * - Bảng `Các dòng sản phẩm đặt hàng trong Space này` (Field #6):
+ *   + Ghi chú góc phải: `Quy cách PO chỉ xem (được bảo vệ bởi RBAC)` (BR-ORD-04)
+ *   + Các cột: `Mã SKU`, `Product Model & Specs`, `Quy cách hoàn thiện`, `Số lượng đặt`, `Bản vẽ CAD/PDF đính kèm` (Field #4), `Vòng đời BOM`, `Thao tác` (`Xem BOM →` - Field #5)
  * - Khối `Recent Space Activity & Milestones` (Field #7):
- *   + Dòng thời gian 3 mốc: `Goods Issue Released to Floor`, `BOM & Routing Approved`, `Order Space Initialized`.
+ *   + Dòng thời gian 3 mốc: `Đã xuất kho xuống xưởng`, `BOM & Routing Approved`, `Đã khởi tạo Order Space`.
  */
 export default function OrderSpaceDetailPage() {
   const { spaceKey } = useParams();
@@ -46,19 +47,19 @@ export default function OrderSpaceDetailPage() {
       ? [
           {
             skuCode: 'CHAIR-OAK-01',
-            productName: 'Nordic Oak Dining Chair',
-            specsSubtext: '450 x 520 x 850 mm | American White Oak',
-            finishSpec: 'Natural PU Clear Coat',
-            orderQty: '400 Pcs',
+            productName: 'Ghế ăn gỗ sồi phong cách Bắc Âu',
+            specsSubtext: '450 x 520 x 850 mm | Gỗ sồi trắng Mỹ',
+            finishSpec: 'Sơn phủ PU trong tự nhiên',
+            orderQty: '400 cái',
             cadFile: 'CAD_Chair_880504_Rev2.pdf',
             bomStatus: 'READY_FOR_PRODUCTION'
           },
           {
             skuCode: 'TABLE-OAK-02',
-            productName: 'Solid Oak Dining Table 1.8m',
-            specsSubtext: '1800 x 900 x 750 mm | American White Oak + Steel Bracket',
-            finishSpec: 'Natural PU Clear Coat',
-            orderQty: '100 Pcs',
+            productName: 'Bàn ăn gỗ sồi nguyên khối 1,8 m',
+            specsSubtext: '1800 x 900 x 750 mm | Gỗ sồi trắng Mỹ + Giá đỡ thép',
+            finishSpec: 'Sơn phủ PU trong tự nhiên',
+            orderQty: '100 cái',
             cadFile: 'CAD_Table_180_Rev1.pdf',
             bomStatus: 'READY_FOR_PRODUCTION'
           }
@@ -67,19 +68,19 @@ export default function OrderSpaceDetailPage() {
       ? selectedSpace.customRows.map((r) => ({
           skuCode: r.productSku,
           productName: r.productDescription,
-          specsSubtext: `${r.dimensionsMm} mm | American White Oak`,
+          specsSubtext: `${r.dimensionsMm} mm | Gỗ sồi trắng Mỹ`,
           finishSpec: r.finishColor,
-          orderQty: `${r.orderQty} Pcs`,
+          orderQty: `${r.orderQty} cái`,
           cadFile: r.technicalDrawingName || `CAD_${r.productSku}.pdf`,
           bomStatus: 'READY_FOR_PRODUCTION'
         }))
       : [
           {
             skuCode: 'CHAIR-OAK-01',
-            productName: selectedSpace?.lineItemsVolumeSummary || 'Solid Oak Furniture Item',
-            specsSubtext: '1200 x 600 x 450 mm | American White Oak',
-            finishSpec: 'Natural PU Clear Coat',
-            orderQty: `${selectedSpace?.totalOrderedUnits || 250} Pcs`,
+            productName: selectedSpace?.lineItemsVolumeSummary || 'Sản phẩm nội thất gỗ sồi nguyên khối',
+            specsSubtext: '1200 x 600 x 450 mm | Gỗ sồi trắng Mỹ',
+            finishSpec: 'Sơn phủ PU trong tự nhiên',
+            orderQty: `${selectedSpace?.totalOrderedUnits || 250} cái`,
             cadFile: `CAD_${selectedSpace?.spaceKey || '880504'}_Rev1.pdf`,
             bomStatus: 'READY_FOR_PRODUCTION'
           }
@@ -96,27 +97,27 @@ export default function OrderSpaceDetailPage() {
                 {selectedSpace.spaceKey}: {selectedSpace.customerName}
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-blue-100 text-blue-700">
-                {selectedSpace.lifecycleStatusBadge || 'IN_PRODUCTION'}
+                {lifecycleStatusLabel(selectedSpace.lifecycleStatusBadge || 'IN_PRODUCTION')}
               </span>
               <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700">
-                FSC 100% CERTIFIED
+                CHỨNG NHẬN FSC 100%
               </span>
             </div>
 
             <div className="text-xs text-slate-500 mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               <span>
-                Customer Ref:{' '}
+                Mã tham chiếu khách:{' '}
                 <strong className="text-slate-800">{selectedSpace.poNumber}</strong>
               </span>
               <span>|</span>
               <span>
-                Order Intake: <strong className="text-slate-800">Oct 12, 2026</strong>
+                Ngày tiếp nhận: <strong className="text-slate-800">12/10/2026</strong>
               </span>
               <span>|</span>
               <span>
-                Target Delivery (ETD):{' '}
+                Hạn giao (ETD):{' '}
                 <strong className="text-rose-600">
-                  Oct 28, 2026 ({selectedSpace.daysRemaining} Days Remaining)
+                  28/10/2026 (còn {selectedSpace.daysRemaining} ngày)
                 </strong>
               </span>
             </div>
@@ -130,7 +131,7 @@ export default function OrderSpaceDetailPage() {
               className="px-3.5 py-2 bg-[#d97706] hover:bg-amber-700 text-white text-xs font-semibold rounded-md shadow-sm transition flex items-center gap-1.5"
             >
               <span>📐</span>
-              <span>Manage BOM &amp; Routing →</span>
+              <span>Quản lý BOM &amp; quy trình →</span>
             </button>
 
             {/* Field #3: View on Kanban */}
@@ -140,7 +141,7 @@ export default function OrderSpaceDetailPage() {
               className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition flex items-center gap-1.5"
             >
               <span>📋</span>
-              <span>View on Kanban</span>
+              <span>Xem trên Kanban</span>
             </button>
           </div>
         </div>
@@ -149,41 +150,41 @@ export default function OrderSpaceDetailPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              TOTAL ORDERED UNITS
+              TỔNG SỐ LƯỢNG ĐẶT
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-1">
-              {selectedSpace.totalOrderedUnits} Pcs
+              {selectedSpace.totalOrderedUnits} cái
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">400 Dining Chairs + 100 Tables</div>
+            <div className="text-[11px] text-slate-400 mt-1">400 ghế ăn + 100 bàn</div>
           </div>
 
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              BOM STATUS
+              TRẠNG THÁI BOM
             </div>
-            <div className="text-2xl font-extrabold text-emerald-600 mt-1">100% Ready</div>
+            <div className="text-2xl font-extrabold text-emerald-600 mt-1">Sẵn sàng 100%</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Active breakdown with 3.5% scrap rate
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              MATERIAL ALLOCATION
-            </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1">Fully Locked</div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Allocated Stock secured by Warehouse
+              Bóc tách đang hoạt động, tỷ lệ hao hụt 3,5%
             </div>
           </div>
 
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              FLOOR PROGRESS
+              PHÂN BỔ VẬT TƯ
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1">62% Done</div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-1">Đã khóa đủ</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Station 4: Structure Assembly in progress
+              Tồn kho đã được Kho giữ chỗ
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              TIẾN ĐỘ XƯỞNG
+            </div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-1">Hoàn thành 62%</div>
+            <div className="text-[11px] text-slate-400 mt-1">
+              Trạm 4: Đang lắp ráp kết cấu
             </div>
           </div>
         </div>
@@ -192,10 +193,10 @@ export default function OrderSpaceDetailPage() {
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="text-xs font-bold text-slate-800">
-              Ordered Product Line Items in this Space
+              Các dòng sản phẩm đặt hàng trong Space này
             </h2>
             <span className="text-[11px] text-slate-400">
-              View-only PO specifications (Protected by RBAC)
+              Quy cách PO chỉ xem (được bảo vệ bởi RBAC)
             </span>
           </div>
 
@@ -203,13 +204,13 @@ export default function OrderSpaceDetailPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
-                  <th className="py-3 px-5">SKU Code</th>
-                  <th className="py-3 px-4">Product Model &amp; Specs</th>
-                  <th className="py-3 px-4">Finish Spec</th>
-                  <th className="py-3 px-4">Order Quantity</th>
-                  <th className="py-3 px-4">Attached Engineering CAD/PDF</th>
-                  <th className="py-3 px-4">BOM Lifecycle</th>
-                  <th className="py-3 px-5 text-right">Action</th>
+                  <th className="py-3 px-5">Mã SKU</th>
+                  <th className="py-3 px-4">Mẫu sản phẩm &amp; quy cách</th>
+                  <th className="py-3 px-4">Quy cách hoàn thiện</th>
+                  <th className="py-3 px-4">Số lượng đặt</th>
+                  <th className="py-3 px-4">Bản vẽ CAD/PDF đính kèm</th>
+                  <th className="py-3 px-4">Vòng đời BOM</th>
+                  <th className="py-3 px-5 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-xs">
@@ -237,7 +238,7 @@ export default function OrderSpaceDetailPage() {
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700">
-                        {item.bomStatus}
+                        {bomStatusLabel(item.bomStatus)}
                       </span>
                     </td>
                     <td className="py-3.5 px-5 text-right">
@@ -247,7 +248,7 @@ export default function OrderSpaceDetailPage() {
                         onClick={() => navigate('/orders/staging')}
                         className="px-3 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50"
                       >
-                        Inspect BOM →
+                        Xem BOM →
                       </button>
                     </td>
                   </tr>
@@ -260,7 +261,7 @@ export default function OrderSpaceDetailPage() {
         {/* Field #7: Recent Space Activity & Milestones */}
         <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
           <h2 className="text-xs font-bold text-slate-800 mb-4">
-            Recent Space Activity &amp; Milestones
+            Hoạt động gần đây &amp; Mốc của Space
           </h2>
 
           <div className="relative pl-5 border-l border-slate-200 space-y-5 text-xs">
@@ -268,13 +269,13 @@ export default function OrderSpaceDetailPage() {
             <div className="relative">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -left-[25px] top-1 ring-4 ring-white" />
               <div className="text-slate-800">
-                <strong className="font-bold">Goods Issue Released to Floor</strong>{' '}
+                <strong className="font-bold">Đã xuất kho xuống xưởng</strong>{' '}
                 <span className="text-slate-400">
-                  — Oct 16, 2026 14:20 by Vu Duc Thang (Warehouse)
+                  — 16/10/2026 14:20 bởi Vu Duc Thang (Thủ kho)
                 </span>
               </div>
               <p className="text-slate-500 text-[11px] mt-0.5">
-                Handed over 100% lumber and hardware to Production Leader. Kanban card unlocked.
+                Đã bàn giao 100% gỗ và phụ kiện cho quản đốc sản xuất. Thẻ Kanban đã được mở khóa.
               </p>
             </div>
 
@@ -282,14 +283,14 @@ export default function OrderSpaceDetailPage() {
             <div className="relative">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600 absolute -left-[25px] top-1 ring-4 ring-white" />
               <div className="text-slate-800">
-                <strong className="font-bold">BOM &amp; Routing Approved</strong>{' '}
+                <strong className="font-bold">BOM &amp; quy trình đã được duyệt</strong>{' '}
                 <span className="text-slate-400">
-                  — Oct 13, 2026 10:15 by Nguyen Van Khoa (Owner)
+                  — 13/10/2026 10:15 bởi Nguyen Van Khoa (Chủ xưởng)
                 </span>
               </div>
               <p className="text-slate-500 text-[11px] mt-0.5">
-                Configured 6-step dynamic routing and calculated gross raw material demand with
-                3.5% loss allowance.
+                Đã cấu hình quy trình động 6 bước và tính tổng nhu cầu vật tư thô với
+                hao hụt cho phép 3,5%.
               </p>
             </div>
 
@@ -297,13 +298,13 @@ export default function OrderSpaceDetailPage() {
             <div className="relative">
               <span className="w-2.5 h-2.5 rounded-full bg-slate-400 absolute -left-[25px] top-1 ring-4 ring-white" />
               <div className="text-slate-800">
-                <strong className="font-bold">Order Space Initialized</strong>{' '}
+                <strong className="font-bold">Đã khởi tạo Order Space</strong>{' '}
                 <span className="text-slate-400">
-                  — Oct 12, 2026 09:30 by Tran Thi Mai (Sales)
+                  — 12/10/2026 09:30 bởi Tran Thi Mai (Kinh doanh)
                 </span>
               </div>
               <p className="text-slate-500 text-[11px] mt-0.5">
-                PO confirmed via Staging Area. Attached CAD drawings and buyer packaging specs.
+                PO đã được xác nhận qua khu Staging. Đã đính kèm bản vẽ CAD và quy cách đóng gói của người mua.
               </p>
             </div>
           </div>
@@ -316,7 +317,7 @@ export default function OrderSpaceDetailPage() {
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200 p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900">
-                Engineering CAD Drawing Attachment
+                Bản vẽ kỹ thuật CAD đính kèm
               </h3>
               <button
                 type="button"
@@ -327,10 +328,10 @@ export default function OrderSpaceDetailPage() {
               </button>
             </div>
             <p className="text-xs text-slate-600">
-              File: <strong className="font-mono">{previewAttachment}</strong>
+              Tệp: <strong className="font-mono">{previewAttachment}</strong>
             </p>
             <p className="text-[11px] text-slate-500">
-              Pre-signed private storage URL verified (SI-03). Ready for shop-floor tablet viewing.
+              Đã xác minh URL kho lưu trữ riêng có chữ ký trước. Sẵn sàng xem trên máy tính bảng tại xưởng.
             </p>
             <div className="flex justify-end pt-2">
               <button
@@ -338,7 +339,7 @@ export default function OrderSpaceDetailPage() {
                 onClick={() => setPreviewAttachment(null)}
                 className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-md"
               >
-                Close Preview
+                Đóng xem trước
               </button>
             </div>
           </div>

@@ -74,14 +74,14 @@ export default function StockDetailModal({
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-blue-100 text-blue-800 border border-blue-300">
-                SC-12 &amp; SC-13 DETAIL
+                CHI TIẾT TỒN KHO
               </span>
               <h2 className="text-sm font-extrabold text-slate-900">
-                Stock Reservation &amp; Material Ledger Inspector
+                Tra cứu giữ chỗ tồn kho &amp; sổ kho vật tư
               </h2>
             </div>
             <p className="text-xs text-slate-600 mt-0.5">
-              Material:{" "}
+              Vật tư:{" "}
               <strong className="font-mono text-slate-900">{activeData.materialCode}</strong> —{" "}
               {activeData.materialName}{" "}
               {activeData.dimensionSpec ? `(${activeData.dimensionSpec})` : ""}
@@ -108,7 +108,7 @@ export default function StockDetailModal({
                 {formatQty(activeData.physicalQty, activeData.unitOfMeasure)}
               </div>
               <div className="text-[11px] text-slate-500 mt-0.5">
-                On-hand stock in warehouse racks
+                Hàng đang có trên kệ kho
               </div>
             </div>
 
@@ -120,7 +120,7 @@ export default function StockDetailModal({
                 − {formatQty(activeData.allocatedQty, activeData.unitOfMeasure)}
               </div>
               <div className="text-[11px] text-amber-700 mt-0.5">
-                Locked for approved BOM orders
+                Đã khóa cho các đơn có BOM được duyệt
               </div>
             </div>
 
@@ -150,7 +150,7 @@ export default function StockDetailModal({
                 = {formatQty(activeData.availableQty, activeData.unitOfMeasure)}
               </div>
               <div className="text-[11px] text-slate-600 mt-0.5">
-                Safety Buffer: {formatQty(activeData.safetyStockQty, activeData.unitOfMeasure)}
+                Tồn an toàn: {formatQty(activeData.safetyStockQty, activeData.unitOfMeasure)}
               </div>
             </div>
           </div>
@@ -167,12 +167,6 @@ export default function StockDetailModal({
                   <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">
                     🔒 Danh sách Đơn hàng đang Giữ chỗ (Active Order Space Reservations)
                   </h3>
-                  <span className="text-[11px] text-slate-500">
-                    Endpoint:{" "}
-                    <code className="font-mono text-slate-700">
-                      GET /api/v1/inventory/stocks/{activeData.materialId}
-                    </code>
-                  </span>
                 </div>
 
                 <div className="border border-slate-200 rounded-lg overflow-x-auto">
@@ -180,12 +174,12 @@ export default function StockDetailModal({
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500">
                         <th className="py-2.5 px-3">Order Space</th>
-                        <th className="py-2.5 px-3">PO Number</th>
-                        <th className="py-2.5 px-3">Product SKU</th>
-                        <th className="py-2.5 px-3 text-right">Required Qty</th>
-                        <th className="py-2.5 px-3 text-right">Reserved (Allocated)</th>
-                        <th className="py-2.5 px-3">ETD Date</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
+                        <th className="py-2.5 px-3">Số PO</th>
+                        <th className="py-2.5 px-3">Mã SKU sản phẩm</th>
+                        <th className="py-2.5 px-3 text-right">SL cần</th>
+                        <th className="py-2.5 px-3 text-right">Đã giữ chỗ (Phân bổ)</th>
+                        <th className="py-2.5 px-3">Ngày ETD</th>
+                        <th className="py-2.5 px-3 text-center">Trạng thái</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">

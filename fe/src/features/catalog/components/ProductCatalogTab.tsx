@@ -4,12 +4,12 @@ import type { VisualCatalogProductDto } from "../types";
 import RoutingDetailModal from "./RoutingDetailModal";
 
 const CATEGORIES = [
-  { key: "ALL", label: "All Categories", icon: "🪑" },
-  { key: "CHAIR", label: "Chairs (Ghế)", icon: "💺" },
-  { key: "TABLE", label: "Tables (Bàn)", icon: "🪵" },
-  { key: "CABINET", label: "Cabinets (Tủ)", icon: "🗄️" },
-  { key: "BED", label: "Beds (Giường)", icon: "🛏️" },
-  { key: "SHELF", label: "Shelves (Kệ)", icon: "📚" },
+  { key: "ALL", label: "Tất cả nhóm", icon: "🪑" },
+  { key: "CHAIR", label: "Ghế", icon: "💺" },
+  { key: "TABLE", label: "Bàn", icon: "🪵" },
+  { key: "CABINET", label: "Tủ", icon: "🗄️" },
+  { key: "BED", label: "Giường", icon: "🛏️" },
+  { key: "SHELF", label: "Kệ", icon: "📚" },
 ];
 
 export default function ProductCatalogTab() {
@@ -66,7 +66,7 @@ export default function ProductCatalogTab() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by SKU, name, wood species..."
+            placeholder="Tìm theo SKU, tên, loại gỗ..."
             className="w-full px-3.5 py-1.5 pl-9 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
           />
           <span className="absolute left-3 top-2 text-slate-400 text-xs">🔍</span>
@@ -86,14 +86,14 @@ export default function ProductCatalogTab() {
       {isLoading && (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 shadow-xs">
           <div className="inline-block w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
-          <p className="text-xs font-medium">Fetching Visual Product Catalog from backend...</p>
+          <p className="text-xs font-medium">Đang tải danh mục sản phẩm trực quan từ máy chủ...</p>
         </div>
       )}
 
       {/* Error state */}
       {isError && (
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 text-center text-rose-700 text-xs font-medium">
-          {(error as { message?: string })?.message || "Unable to load visual products."}
+          {(error as { message?: string })?.message || "Không tải được danh mục sản phẩm."}
         </div>
       )}
 
@@ -101,9 +101,9 @@ export default function ProductCatalogTab() {
       {!isLoading && !isError && filteredProducts.length === 0 && (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 shadow-xs">
           <div className="text-3xl mb-2">🪵</div>
-          <p className="text-sm font-semibold text-slate-700">No standard products found</p>
+          <p className="text-sm font-semibold text-slate-700">Không tìm thấy sản phẩm chuẩn</p>
           <p className="text-xs text-slate-400 mt-1">
-            Try switching category or clearing the search keyword.
+            Hãy đổi nhóm sản phẩm hoặc xóa từ khóa tìm kiếm.
           </p>
         </div>
       )}
@@ -128,11 +128,11 @@ export default function ProductCatalogTab() {
                     {prod.hasActiveBom ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                        Active BOM
+                        BOM đang dùng
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded bg-amber-50 text-amber-700 border border-amber-200">
-                        Default Routing
+                        Quy trình mặc định
                       </span>
                     )}
                   </div>
@@ -164,21 +164,21 @@ export default function ProductCatalogTab() {
 
                   <div className="space-y-1.5 text-xs text-slate-600">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400 text-[11px]">Dimensions:</span>
+                      <span className="text-slate-400 text-[11px]">Kích thước:</span>
                       <span className="font-semibold text-slate-800 font-mono text-[11px]">
                         {prod.dimensionsCm || "N/A"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400 text-[11px]">Wood Species:</span>
+                      <span className="text-slate-400 text-[11px]">Loại gỗ:</span>
                       <span className="font-semibold text-slate-800">
-                        {prod.woodSpecies || "Standard Hardwood"}
+                        {prod.woodSpecies || "Gỗ cứng tiêu chuẩn"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400 text-[11px]">Finish / Color:</span>
+                      <span className="text-slate-400 text-[11px]">Hoàn thiện / Màu:</span>
                       <span className="font-semibold text-slate-800">
-                        {prod.finishColor || "Natural PU Clear"}
+                        {prod.finishColor || "PU trong tự nhiên"}
                       </span>
                     </div>
                   </div>
@@ -193,7 +193,7 @@ export default function ProductCatalogTab() {
                   className="w-full py-2 px-3 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-semibold text-xs rounded-lg border border-slate-200 hover:border-blue-200 transition flex items-center justify-center gap-1.5"
                 >
                   <span>🔄</span>
-                  <span>View Standard Routing Stages</span>
+                  <span>Xem các công đoạn chuẩn</span>
                 </button>
               </div>
             </div>

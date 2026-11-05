@@ -5,6 +5,7 @@ import {
   usePurchaseOrders,
 } from "../hooks/usePurchaseOrders";
 import type { SupplierPurchaseOrderDto } from "../types";
+import { fulfillmentStatusLabel } from "../types";
 import GeneratePoModal from "../components/GeneratePoModal";
 import UpdateEtaModal from "../components/UpdateEtaModal";
 
@@ -29,7 +30,7 @@ export default function PurchaseOrderManagementPage() {
     await batchIssueMutation.mutateAsync();
     setToastBanner({
       type: "success",
-      text: "All endorsed supplier purchase orders have been batch-issued and dispatched to vendors!",
+      text: "Tất cả đơn đặt hàng nhà cung cấp đã được duyệt đã được phát hành hàng loạt và gửi tới NCC!",
     });
   };
 
@@ -53,7 +54,7 @@ export default function PurchaseOrderManagementPage() {
       mode="purchasing"
       customTopLeft={
         <div className="px-3 py-1.5 rounded-md bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
-          Supplier Requisition Tracking
+          Theo dõi yêu cầu mua hàng theo nhà cung cấp
         </div>
       }
     >
@@ -82,11 +83,11 @@ export default function PurchaseOrderManagementPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Vendor Purchase Orders Management
+              Quản lý đơn đặt hàng nhà cung cấp
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Group approved requisitions by supplier, issue official purchasing contracts, and
-              record vendor promised ETA dates.
+              Gom các yêu cầu mua đã duyệt theo nhà cung cấp, phát hành đơn đặt hàng chính thức và
+              ghi nhận ngày giao hàng (ETA) mà nhà cung cấp cam kết.
             </p>
           </div>
 
@@ -95,7 +96,7 @@ export default function PurchaseOrderManagementPage() {
             onClick={() => setShowGeneratePoModal(true)}
             className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition self-start sm:self-auto"
           >
-            + Generate PO from PR
+            + Lập PO từ PR
           </button>
         </div>
 
@@ -103,9 +104,9 @@ export default function PurchaseOrderManagementPage() {
         <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="text-xs text-slate-800">
             <strong className="font-bold text-slate-900">
-              New Endorsement from Workshop Owner:
+              Phê duyệt mới từ Chủ xưởng:
             </strong>{" "}
-            Daily PR-2026-10-20 has been endorsed. 3 Vendor Purchase Orders ready to dispatch.
+            PR gộp ngày 2026-10-20 đã được phê duyệt. 3 đơn đặt hàng NCC sẵn sàng phát hành.
           </div>
 
           <button
@@ -114,7 +115,7 @@ export default function PurchaseOrderManagementPage() {
             disabled={batchIssueMutation.isPending}
             className="px-3.5 py-1.5 bg-[#16a34a] hover:bg-emerald-700 text-white text-xs font-bold rounded-md shadow-2xs transition self-start sm:self-auto shrink-0 disabled:opacity-60"
           >
-            {batchIssueMutation.isPending ? "Issuing..." : "Batch Issue POs"}
+            {batchIssueMutation.isPending ? "Đang phát hành..." : "Phát hành PO hàng loạt"}
           </button>
         </div>
 
@@ -122,7 +123,7 @@ export default function PurchaseOrderManagementPage() {
         <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="text-xs font-bold text-slate-800">
-              Active Supplier Purchase Orders
+              Đơn đặt hàng NCC đang hoạt động
             </h2>
 
             {/* Field #4: Search PO #, supplier... */}
@@ -130,7 +131,7 @@ export default function PurchaseOrderManagementPage() {
               type="text"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
-              placeholder="Search PO #, supplier..."
+              placeholder="Tìm số PO, nhà cung cấp..."
               className="w-full sm:w-60 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -140,21 +141,21 @@ export default function PurchaseOrderManagementPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
-                  <th className="py-3 px-5">PO Reference</th>
-                  <th className="py-3 px-4">Supplier / Vendor</th>
-                  <th className="py-3 px-4">Material Category</th>
-                  <th className="py-3 px-4">Order Items Summary</th>
-                  <th className="py-3 px-4">Issue Date</th>
-                  <th className="py-3 px-4">Promised ETA Date</th>
-                  <th className="py-3 px-4">Fulfillment Status</th>
-                  <th className="py-3 px-5 text-right">Action</th>
+                  <th className="py-3 px-5">Mã PO</th>
+                  <th className="py-3 px-4">Nhà cung cấp</th>
+                  <th className="py-3 px-4">Nhóm vật tư</th>
+                  <th className="py-3 px-4">Tóm tắt hàng đặt</th>
+                  <th className="py-3 px-4">Ngày phát hành</th>
+                  <th className="py-3 px-4">Ngày giao cam kết (ETA)</th>
+                  <th className="py-3 px-4">Trạng thái thực hiện</th>
+                  <th className="py-3 px-5 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-xs">
                 {isLoading && (
                   <tr>
                     <td colSpan={8} className="py-10 text-center text-slate-400">
-                      Loading supplier purchase orders...
+                      Đang tải đơn đặt hàng nhà cung cấp...
                     </td>
                   </tr>
                 )}
@@ -162,7 +163,7 @@ export default function PurchaseOrderManagementPage() {
                 {!isLoading && purchaseOrders.length === 0 && (
                   <tr>
                     <td colSpan={8} className="py-8 text-center text-slate-400 italic">
-                      No supplier purchase orders found matching your search.
+                      Không có đơn đặt hàng nào khớp với tìm kiếm.
                     </td>
                   </tr>
                 )}
@@ -205,14 +206,14 @@ export default function PurchaseOrderManagementPage() {
                               po.fulfillmentStatus,
                             )}`}
                           >
-                            {po.fulfillmentStatus}
+                            {fulfillmentStatusLabel(po.fulfillmentStatus)}
                           </span>
                         </td>
                         <td className="py-3.5 px-5 text-right">
                           {/* Field #6: Track Arrival → / Update ETA / Completed */}
                           {isCompleted ? (
                             <span className="inline-block px-3 py-1 bg-slate-50 text-slate-400 border border-slate-200 text-[11px] font-medium rounded select-none">
-                              Completed
+                              Hoàn tất
                             </span>
                           ) : isConfirmed ? (
                             <button
@@ -220,7 +221,7 @@ export default function PurchaseOrderManagementPage() {
                               onClick={() => setSelectedPoForEta(po)}
                               className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-[11px] font-semibold rounded transition"
                             >
-                              Update ETA
+                              Cập nhật ETA
                             </button>
                           ) : (
                             <button
@@ -228,7 +229,7 @@ export default function PurchaseOrderManagementPage() {
                               onClick={() => setSelectedPoForEta(po)}
                               className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-[11px] font-semibold rounded transition"
                             >
-                              Track Arrival →
+                              Theo dõi hàng về →
                             </button>
                           )}
                         </td>

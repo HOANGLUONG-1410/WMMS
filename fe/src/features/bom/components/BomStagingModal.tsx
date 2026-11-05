@@ -97,7 +97,7 @@ export default function BomStagingModal({
     }
 
     if (Number.isNaN(Number(row.netQtyPerUnit)) || Number(row.netQtyPerUnit) <= 0) {
-      errors.push("Định mức 1 sản phẩm (NetQtyPerUnit) phải lớn hơn 0 (BR-005).");
+      errors.push("Định mức 1 sản phẩm (NetQtyPerUnit) phải lớn hơn 0.");
     }
 
     return {
@@ -307,14 +307,14 @@ export default function BomStagingModal({
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-amber-100 text-amber-800 border border-amber-300">
-                OWNER BOM STAGING
+                STAGING BOM CỦA CHỦ XƯỞNG
               </span>
               <h2 className="text-sm font-extrabold text-slate-900">
-                Import &amp; Validate BOM Excel Staging Grid (.xlsx / .xls)
+                Nhập &amp; kiểm tra lưới Staging BOM Excel (.xlsx / .xls)
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Target Order Item #{orderItemId} • SKU:{" "}
+              Dòng hàng mục tiêu #{orderItemId} • SKU:{" "}
               <strong className="font-mono text-slate-800">{productSku}</strong> ({productName})
             </p>
           </div>
@@ -333,8 +333,7 @@ export default function BomStagingModal({
           <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="text-xs font-bold text-blue-900">
-                📋 Hỗ trợ đồng thời 2 định dạng Excel BOM trên Server (
-                <code className="font-mono">ExcelBomParser.cs</code>):
+                📋 Hỗ trợ đồng thời 2 định dạng Excel BOM:
               </div>
               <div className="text-[11px] text-blue-800 space-y-0.5">
                 <div>
@@ -427,12 +426,12 @@ export default function BomStagingModal({
             <div className="flex flex-wrap items-center gap-3 text-xs">
               {selectedFileName && (
                 <span className="font-semibold text-slate-700">
-                  File: <code className="font-mono text-blue-700">{selectedFileName}</code>
+                  Tệp: <code className="font-mono text-blue-700">{selectedFileName}</code>
                 </span>
               )}
               {sheetMeta?.sheetName && (
                 <span className="text-slate-600">
-                  Sheet: <strong className="text-slate-800">{sheetMeta.sheetName}</strong>
+                  Trang tính: <strong className="text-slate-800">{sheetMeta.sheetName}</strong>
                 </span>
               )}
               {sheetMeta?.detectedProductSku && (
@@ -459,13 +458,13 @@ export default function BomStagingModal({
                     : "bg-amber-100 text-amber-800 border border-amber-300"
                 }`}
               >
-                {isReadyToConfirm ? "READY TO CONFIRM" : "AWAITING VALIDATION"}
+                {isReadyToConfirm ? "SẴN SÀNG XÁC NHẬN" : "CHỜ KIỂM TRA"}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <label className="text-xs font-semibold text-slate-700">
-                Scrap Rate % (3.0% - 5.0%):
+                Tỷ lệ hao hụt % (3,0% - 5,0%):
               </label>
               <input
                 type="number"
@@ -501,8 +500,7 @@ export default function BomStagingModal({
                   <tr>
                     <td colSpan={9} className="py-10 text-center text-slate-400">
                       Chưa có dữ liệu Staging. Nhấn{" "}
-                      <strong>&ldquo;Chọn file Excel (.xlsx / .xls)&rdquo;</strong> để gửi lên{" "}
-                      <code className="font-mono">POST /api/v1/bom/staging/preview</code> hoặc nhấn{" "}
+                      <strong>&ldquo;Chọn file Excel (.xlsx / .xls)&rdquo;</strong> để tải lên hoặc nhấn{" "}
                       <strong>&ldquo;+ Thêm dòng thủ công&rdquo;</strong>.
                     </td>
                   </tr>
@@ -689,10 +687,7 @@ export default function BomStagingModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-[11px] text-slate-500">
-            Endpoint xác nhận:{" "}
-            <code className="font-mono text-slate-700">POST /api/v1/bom/staging/confirm</code>
-          </div>
+          <div />
           <div className="flex items-center gap-2.5">
             <button
               type="button"

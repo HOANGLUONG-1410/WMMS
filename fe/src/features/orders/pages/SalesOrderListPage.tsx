@@ -2,22 +2,23 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WmmsAppShell from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
+import { lifecycleStatusLabel } from '../../../lib/statusLabels';
 
 /**
- * Màn hình III.4.1: Sales Order List Screen — Sales Orders Directory (SCR-ORD-01)
+ * Màn hình III.4.1: Sales Order List Screen — Sales Orders Directory
  * Tuân thủ 100% thiết kế giao diện và bảng Field Description trong Report 3 (Section III.4.1):
- * - Tiêu đề: `Sales Orders Directory (SCR-ORD-01)`
- * - Phụ đề: `Track customer PO fulfillment, target ETD ship dates, and launch Excel staging intake.`
- * - Field #1: Nút `+ Import Customer Excel PO (Staging Area)` màu xanh ở góc phải trên cùng.
+ * - Tiêu đề: `Danh mục đơn hàng bán`
+ * - Phụ đề: `Theo dõi tiến độ thực hiện PO của khách, ngày giao dự kiến (ETD) và mở màn hình nhập PO Excel qua Staging.`
+ * - Field #1: Nút `+ Nhập PO Excel của khách (Khu Staging)` màu xanh ở góc phải trên cùng.
  * - 3 Thẻ KPI:
- *   + `ACTIVE ORDERS`: `8` (`4 In Production, 2 BOM Setting, 2 Newly Received`)
- *   + `URGENT ETD (< 10 DAYS)`: `2` (`High priority for factory schedule`)
- *   + `TOTAL UNITS ON FLOOR`: `1,450` (`Dining chairs, tables, bed frames`)
+ *   + `ĐƠN ĐANG THỰC HIỆN`: `8` (`4 đang sản xuất, 2 đang lập BOM, 2 mới nhận`)
+ *   + `URGENT ETD (< 10 DAYS)`: `2` (`Ưu tiên cao trong kế hoạch xưởng`)
+ *   + `TỔNG SỐ SẢN PHẨM TRÊN XƯỞNG`: `1,450` (`Ghế ăn, bàn ăn, khung giường`)
  * - Bảng `Official Orders & Production Spaces`:
- *   + Field #2: Dropdown `Order Status Filter` (`All Statuses`)
- *   + Field #3: Search Bar `Search customer, PO #...`
- *   + Field #4: Bảng dữ liệu với 6 cột: `Order Space Key`, `Customer / Buyer`, `PO Reference`, `Target ETD (Delivery)`, `Line Items / Volume`, `Lifecycle Status`, `Action`
- *   + Field #5: Nút `Open Space →` mở màn hình `Order Space Detail Dashboard (SCR-ORD-03)`.
+ *   + Field #2: Dropdown `Order Status Filter` (`Tất cả trạng thái`)
+ *   + Field #3: Search Bar `Tìm khách hàng, số PO...`
+ *   + Field #4: Bảng dữ liệu với 6 cột: `Mã Order Space`, `Khách hàng / Người mua`, `Mã PO`, `ETD mục tiêu (Giao hàng)`, `Dòng hàng / Số lượng`, `Trạng thái vòng đời`, `Thao tác`
+ *   + Field #5: Nút `Mở Space →` mở màn hình `Order Space Detail Dashboard (SCR-ORD-03)`.
  */
 export default function SalesOrderListPage() {
   const navigate = useNavigate();
@@ -71,14 +72,14 @@ export default function SalesOrderListPage() {
   return (
     <WmmsAppShell mode="sales">
       <div className="max-w-[1400px] mx-auto space-y-5">
-        {/* Hàng tiêu đề + Field #1: + Import Customer Excel PO (Staging Area) */}
+        {/* Hàng tiêu đề + Field #1: + Nhập PO Excel của khách (Khu Staging) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Sales Orders Directory (SCR-ORD-01)
+              Danh mục đơn hàng bán
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Track customer PO fulfillment, target ETD ship dates, and launch Excel staging intake.
+              Theo dõi tiến độ thực hiện PO của khách, ngày giao dự kiến (ETD) và mở màn hình nhập PO Excel qua Staging.
             </p>
           </div>
 
@@ -87,7 +88,7 @@ export default function SalesOrderListPage() {
             onClick={() => navigate('/orders/staging')}
             className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition self-start sm:self-auto"
           >
-            + Import Customer Excel PO (Staging Area)
+            + Nhập PO Excel của khách (Khu Staging)
           </button>
         </div>
 
@@ -95,31 +96,31 @@ export default function SalesOrderListPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              ACTIVE ORDERS
+              ĐƠN ĐANG THỰC HIỆN
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-1">8</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              4 In Production, 2 BOM Setting, 2 Newly Received
+              4 đang sản xuất, 2 đang lập BOM, 2 mới nhận
             </div>
           </div>
 
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              URGENT ETD (&lt; 10 DAYS)
+              ETD GẤP (&lt; 10 NGÀY)
             </div>
             <div className="text-2xl font-extrabold text-rose-600 mt-1">2</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              High priority for factory schedule
+              Ưu tiên cao trong kế hoạch xưởng
             </div>
           </div>
 
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              TOTAL UNITS ON FLOOR
+              TỔNG SỐ SẢN PHẨM TRÊN XƯỞNG
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-1">1,450</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Dining chairs, tables, bed frames
+              Ghế ăn, bàn ăn, khung giường
             </div>
           </div>
         </div>
@@ -128,7 +129,7 @@ export default function SalesOrderListPage() {
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="text-xs font-bold text-slate-800">
-              Official Orders &amp; Production Spaces
+              Đơn hàng chính thức &amp; Không gian sản xuất
             </h2>
 
             <div className="flex flex-wrap items-center gap-2.5">
@@ -138,10 +139,10 @@ export default function SalesOrderListPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="ALL">All Statuses</option>
-                <option value="IN_PRODUCTION">IN_PRODUCTION</option>
-                <option value="BOM_SETTING">BOM_SETTING</option>
-                <option value="NEWLY_RECEIVED">NEWLY_RECEIVED</option>
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="IN_PRODUCTION">Đang sản xuất</option>
+                <option value="BOM_SETTING">Đang lập BOM</option>
+                <option value="NEWLY_RECEIVED">Mới nhận</option>
               </select>
 
               {/* Field #3: Search customer, PO #... */}
@@ -149,7 +150,7 @@ export default function SalesOrderListPage() {
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Search customer, PO #..."
+                placeholder="Tìm khách hàng, số PO..."
                 className="w-full sm:w-56 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -160,13 +161,13 @@ export default function SalesOrderListPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
-                  <th className="py-3 px-5">Order Space Key</th>
-                  <th className="py-3 px-4">Customer / Buyer</th>
-                  <th className="py-3 px-4">PO Reference</th>
-                  <th className="py-3 px-4">Target ETD (Delivery)</th>
-                  <th className="py-3 px-4">Line Items / Volume</th>
-                  <th className="py-3 px-4">Lifecycle Status</th>
-                  <th className="py-3 px-5 text-right">Action</th>
+                  <th className="py-3 px-5">Mã Order Space</th>
+                  <th className="py-3 px-4">Khách hàng / Người mua</th>
+                  <th className="py-3 px-4">Mã PO</th>
+                  <th className="py-3 px-4">ETD mục tiêu (Giao hàng)</th>
+                  <th className="py-3 px-4">Dòng hàng / Số lượng</th>
+                  <th className="py-3 px-4">Trạng thái vòng đời</th>
+                  <th className="py-3 px-5 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-xs">
@@ -191,7 +192,7 @@ export default function SalesOrderListPage() {
                           ord.daysRemaining
                         )}`}
                       >
-                        {ord.etdDate} ({ord.daysRemaining} DAYS)
+                        {ord.etdDate} ({ord.daysRemaining} NGÀY)
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-700">{ord.lineItemsVolumeSummary}</td>
@@ -201,17 +202,17 @@ export default function SalesOrderListPage() {
                           ord.lifecycleStatusBadge
                         )}`}
                       >
-                        {ord.lifecycleStatusBadge}
+                        {lifecycleStatusLabel(ord.lifecycleStatusBadge)}
                       </span>
                     </td>
                     <td className="py-3.5 px-5 text-right">
-                      {/* Field #5: Open Space → */}
+                      {/* Field #5: Mở Space → */}
                       <button
                         type="button"
                         onClick={() => handleOpenSpace(ord.spaceKey)}
                         className="px-3 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
                       >
-                        Open Space →
+                        Mở Space →
                       </button>
                     </td>
                   </tr>

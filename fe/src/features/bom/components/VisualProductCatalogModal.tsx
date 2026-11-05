@@ -25,11 +25,11 @@ export const VISUAL_CATALOG_MODELS: VisualModelOption[] = [
   {
     id: 1,
     key: "chair-dining-oak-01",
-    label: "Solid Dining Chair",
+    label: "Ghế ăn gỗ nguyên khối",
     sku: "CHAIR-DINING-OAK-01",
     productName: "Ghế ăn tựa nan gỗ sồi Bắc Mỹ",
     dimensions: "45 x 52 x 88 cm",
-    finishSpec: "Natural Walnut",
+    finishSpec: "Óc chó tự nhiên",
     cadDrawing: "CAD_Chair_880504.pdf",
     orderQty: 400,
     icon: "🪑",
@@ -39,11 +39,11 @@ export const VISUAL_CATALOG_MODELS: VisualModelOption[] = [
   {
     id: 2,
     key: "table-dining-ext-02",
-    label: "Dining Table",
+    label: "Bàn ăn",
     sku: "TABLE-DINING-EXT-02",
     productName: "Bàn ăn thông minh kéo dài gỗ sồi",
     dimensions: "160/210 x 90 x 75 cm",
-    finishSpec: "Smoked Oak",
+    finishSpec: "Sồi xông khói",
     cadDrawing: "CAD_Table_180_Rev1.pdf",
     orderQty: 150,
     icon: "🪵",
@@ -53,11 +53,11 @@ export const VISUAL_CATALOG_MODELS: VisualModelOption[] = [
   {
     id: 3,
     key: "cabinet-sideboard-03",
-    label: "Sideboard Cabinet",
+    label: "Tủ buffet",
     sku: "CABINET-SIDEBOARD-03",
     productName: "Tủ sideboard 3 cánh 2 hộc kéo",
     dimensions: "150 x 42 x 82 cm",
-    finishSpec: "Warm Chestnut",
+    finishSpec: "Hạt dẻ ấm",
     cadDrawing: "CAD_Sideboard_03.pdf",
     orderQty: 100,
     icon: "🚪",
@@ -87,8 +87,8 @@ function mapBackendProductToVisualModel(p: VisualCatalogProductDto): VisualModel
     label: p.productName,
     sku: p.productSku,
     productName: p.productName,
-    dimensions: p.dimensionsCm || "Standard Spec",
-    finishSpec: p.finishColor || p.woodSpecies || "Standard Export Finish",
+    dimensions: p.dimensionsCm || "Quy cách chuẩn",
+    finishSpec: p.finishColor || p.woodSpecies || "Hoàn thiện xuất khẩu chuẩn",
     cadDrawing: p.cadDrawingUrl || `CAD_${p.productSku}.pdf`,
     orderQty: 200,
     icon,
@@ -189,13 +189,8 @@ export default function VisualProductCatalogModal({
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-extrabold text-slate-900">
-              Visual Product Catalog Selection (Server Database)
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Connected to <code className="font-mono text-slate-700">GET /api/v1/bom/visual-catalog</code> &amp;{" "}
-              <code className="font-mono text-slate-700">check-product</code>
-            </p>
-          </div>
+              Chọn từ danh mục sản phẩm trực quan (CSDL máy chủ)
+            </h2>          </div>
           <button
             type="button"
             onClick={onClose}
@@ -209,20 +204,20 @@ export default function VisualProductCatalogModal({
         <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
           {isLoading ? (
             <div className="py-8 text-center text-xs text-slate-500">
-              Loading visual product catalog from server...
+              Đang tải danh mục sản phẩm trực quan từ máy chủ...
             </div>
           ) : (
             <>
               <p className="text-xs text-slate-500">
-                Select a visual product model from the factory catalog to inherit its existing BOM
-                breakdown and default workstation routing sequence:
+                Chọn một mẫu sản phẩm từ danh mục của xưởng để kế thừa BOM hiện có
+                và chuỗi công đoạn mặc định tại các trạm:
               </p>
 
               {/* Category 1: Chairs & Seating */}
               {seatingModels.length > 0 && (
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
-                    CATEGORY: CHAIRS &amp; SEATING
+                    NHÓM: GHẾ &amp; CHỖ NGỒI
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {seatingModels.map((item) => {
@@ -242,7 +237,7 @@ export default function VisualProductCatalogModal({
                             <span className="text-2xl">{item.icon}</span>
                             {item.hasActiveBom && (
                               <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase rounded bg-emerald-100 text-emerald-700">
-                                Active BOM
+                                BOM đang dùng
                               </span>
                             )}
                           </div>
@@ -268,7 +263,7 @@ export default function VisualProductCatalogModal({
               {tableStorageModels.length > 0 && (
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
-                    CATEGORY: TABLES &amp; STORAGE
+                    NHÓM: BÀN &amp; TỦ LƯU TRỮ
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {tableStorageModels.map((item) => {
@@ -288,7 +283,7 @@ export default function VisualProductCatalogModal({
                             <span className="text-2xl">{item.icon}</span>
                             {item.hasActiveBom && (
                               <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase rounded bg-emerald-100 text-emerald-700">
-                                Active BOM
+                                BOM đang dùng
                               </span>
                             )}
                           </div>
@@ -320,7 +315,7 @@ export default function VisualProductCatalogModal({
             onClick={onClose}
             className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
           >
-            Cancel
+            Hủy
           </button>
           <button
             type="button"
@@ -328,7 +323,7 @@ export default function VisualProductCatalogModal({
             disabled={isApplying}
             className="px-4 py-2 bg-[#d97706] hover:bg-amber-700 text-white text-xs font-semibold rounded-md shadow-sm transition disabled:opacity-60"
           >
-            {isApplying ? "Querying Server BOM..." : "Inherit Default Routing & BOM Template"}
+            {isApplying ? "Đang truy vấn BOM từ máy chủ..." : "Kế thừa quy trình mặc định & mẫu BOM"}
           </button>
         </div>
       </div>

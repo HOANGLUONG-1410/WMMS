@@ -8,10 +8,10 @@ type ErrorAction = (error: ApiError) => void;
 
 const handlers: Partial<Record<number, ErrorAction>> = {
   [HttpStatus.NETWORK_ERROR]: (e) =>
-    toast.error("Network error", { description: e.message, id: "network" }),
+    toast.error("Lỗi mạng", { description: e.message, id: "network" }),
 
   [HttpStatus.BAD_REQUEST]: (e) =>
-    toast.error("Validation error", {
+    toast.error("Lỗi dữ liệu không hợp lệ", {
       description: e.errors[0] || e.message,
       id: "400",
     }),
@@ -23,8 +23,8 @@ const handlers: Partial<Record<number, ErrorAction>> = {
     }
 
     setAccessToken(null);
-    toast.error("Session expired", {
-      description: e.message || "Please sign in again.",
+    toast.error("Phiên đăng nhập đã hết hạn", {
+      description: e.message || "Vui lòng đăng nhập lại.",
       id: "401",
     });
     if (window.location.pathname !== "/login") {
@@ -33,41 +33,41 @@ const handlers: Partial<Record<number, ErrorAction>> = {
   },
 
   [HttpStatus.FORBIDDEN]: (e) =>
-    toast.error("Access denied", { description: e.message, id: "403" }),
+    toast.error("Không có quyền truy cập", { description: e.message, id: "403" }),
 
   [HttpStatus.NOT_FOUND]: (e) =>
-    toast.error("Not found", { description: e.message, id: "404" }),
+    toast.error("Không tìm thấy", { description: e.message, id: "404" }),
 
   [HttpStatus.METHOD_NOT_ALLOWED]: (e) =>
-    toast.error("Method not allowed", { description: e.message, id: "405" }),
+    toast.error("Phương thức không được phép", { description: e.message, id: "405" }),
 
   [HttpStatus.CONFLICT]: (e) =>
-    toast.error("Data conflict", {
+    toast.error("Xung đột dữ liệu", {
       description: e.errors[0] || e.message,
       id: "409",
     }),
 
   [HttpStatus.UNPROCESSABLE]: (e) =>
-    toast.error("Unprocessable entity", {
+    toast.error("Dữ liệu không thể xử lý", {
       description: e.errors[0] || e.message,
       id: "422",
     }),
 
   [HttpStatus.LOCKED]: (e) =>
-    toast.error("Account temporarily locked", {
+    toast.error("Tài khoản tạm thời bị khóa", {
       description: e.message,
       id: "423",
     }),
 
   [HttpStatus.TOO_MANY_REQUESTS]: (e) =>
-    toast.error("Too many requests", {
-      description: e.message || "Please wait before trying again.",
+    toast.error("Quá nhiều yêu cầu", {
+      description: e.message || "Vui lòng đợi một lúc rồi thử lại.",
       id: "429",
     }),
 };
 
 const fallback: ErrorAction = (e) =>
-  toast.error(e.status >= 500 ? "Server error" : "Request failed", {
+  toast.error(e.status >= 500 ? "Lỗi máy chủ" : "Yêu cầu thất bại", {
     description: e.message,
     id: `err-${e.status}`,
   });

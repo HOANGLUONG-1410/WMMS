@@ -111,9 +111,9 @@ export default function StagingGridPage() {
     const newRow = validateStagingRowClient({
       rowNumber: nextNum,
       productSku: `SKU-PROD-0${nextNum}`,
-      productDescription: 'Solid Wood Dining Chair',
+      productDescription: 'Ghế ăn gỗ nguyên khối',
       dimensionsMm: '450 x 520 x 850',
-      finishColor: 'Walnut Stain',
+      finishColor: 'Nhuộm màu óc chó',
       orderQty: 100,
       targetEtd: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
       fscRequired: true,
@@ -163,7 +163,7 @@ export default function StagingGridPage() {
 
   /** Nạp dữ liệu mẫu thử nghiệm */
   const handleLoadSampleData = () => {
-    setUploadedFileName('PO_Target_Home_US_880515.xlsx (Sample Demo)');
+    setUploadedFileName('PO_Target_Home_US_880515.xlsx (Dữ liệu mẫu)');
     setSheetName('OrderDetails');
     setPoNumber('ASH-2026-OCT-880515');
     setCustomerName('Target Home US');
@@ -171,7 +171,7 @@ export default function StagingGridPage() {
     setRows(INITIAL_STAGING_GRID_ROWS.map((r) => validateStagingRowClient(r)));
     setBannerAlert({
       type: 'success',
-      text: 'Đã nạp 4 dòng dữ liệu mẫu chuẩn Report 3. Các ô lỗi cú pháp được đánh dấu viền đỏ.',
+      text: 'Đã nạp 4 dòng dữ liệu mẫu. Các ô lỗi cú pháp được đánh dấu viền đỏ.',
     });
   };
 
@@ -194,7 +194,7 @@ export default function StagingGridPage() {
       const data = apiRes?.data;
       if (data && Array.isArray(data.rows)) {
         setRows(data.rows.map((r: any) => validateStagingRowClient(r)));
-        setSheetName(data.sheetName || 'Worksheet');
+        setSheetName(data.sheetName || 'Trang tính');
         if (data.poNumber) setPoNumber(data.poNumber);
         if (data.customerName) setCustomerName(data.customerName);
 
@@ -206,7 +206,7 @@ export default function StagingGridPage() {
         return;
       }
     } catch (err: any) {
-      console.warn('Backend parse error, falling back to local validation:', err);
+      console.warn('Lỗi phân tích từ máy chủ, chuyển sang kiểm tra cục bộ:', err);
       // Fallback cục bộ
       setBannerAlert({
         type: 'error',
@@ -220,7 +220,7 @@ export default function StagingGridPage() {
     }
   };
 
-  /** Nút "Validate Grid Again": Gửi lên Backend hoặc kiểm tra client */
+  /** Nút "Kiểm tra lại lưới": Gửi lên Backend hoặc kiểm tra client */
   const handleValidateGridAgain = async () => {
     setIsValidating(true);
     const revalidated = rows.map((r, i) =>
@@ -295,7 +295,7 @@ export default function StagingGridPage() {
       const apiRes = await orderIntakeApi.confirmSalesOrder({
         poNumber: poNumber.trim(),
         customerId: selectedCustomerId || null,
-        customerName: customerName.trim() || 'Direct Customer',
+        customerName: customerName.trim() || 'Khách hàng trực tiếp',
         customerCountry: customerCountry.trim() || 'Vietnam',
         targetEtd: finalRows[0]?.targetEtd || new Date().toISOString(),
         rows: finalRows,
@@ -320,7 +320,7 @@ export default function StagingGridPage() {
         daysRemaining: 30,
         isUrgentEtd: false,
         totalOrderedUnits: totalUnits,
-        lineItemsVolumeSummary: `${totalUnits} Pcs (${finalRows.length} SKUs)`,
+        lineItemsVolumeSummary: `${totalUnits} cái (${finalRows.length} SKU)`,
         lifecycleStatusBadge: 'NEWLY_RECEIVED',
         overallProgressPct: 0,
         customRows: finalRows,
@@ -338,7 +338,7 @@ export default function StagingGridPage() {
         'CONFIRM_PO_STAGING',
         `Order Space #${spaceKey}`,
         'STAGING_RAW → NEWLY_RECEIVED',
-        `Created space for PO ${poNumber.trim()} with ${totalUnits} units across ${finalRows.length} line items.`
+        `Đã tạo Space cho PO ${poNumber.trim()} gồm ${totalUnits} sản phẩm trên ${finalRows.length} dòng hàng.`
       );
 
       setCurrentSpaceKey(spaceKey);
@@ -361,7 +361,7 @@ export default function StagingGridPage() {
       customTopLeft={
         <span className="text-xs font-bold text-blue-600 tracking-tight flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-          Staging Isolation Sandbox (Data Sanitization)
+          Vùng cách ly Staging (Làm sạch dữ liệu)
         </span>
       }
     >
@@ -370,7 +370,7 @@ export default function StagingGridPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Safe Excel PO Staging Grid (SCR-ORD-02)
+              Lưới Staging PO Excel an toàn
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
               Tự động làm sạch thông tin thương mại nhạy cảm và đánh dấu đỏ các ô lỗi định dạng trước khi lưu vào CSDL.
@@ -386,7 +386,7 @@ export default function StagingGridPage() {
               className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md shadow-sm transition flex items-center gap-1.5"
             >
               <span>{isValidating ? '⏳' : '🔄'}</span>
-              <span>{isValidating ? 'Validating...' : 'Validate Grid Again'}</span>
+              <span>{isValidating ? 'Đang kiểm tra...' : 'Kiểm tra lại lưới'}</span>
             </button>
 
             {/* Field #2: Confirm & Create Order Space */}
@@ -403,10 +403,10 @@ export default function StagingGridPage() {
               <span>✓</span>
               <span>
                 {isSubmitting
-                  ? 'Initializing Order Space...'
+                  ? 'Đang khởi tạo Order Space...'
                   : canConfirmOrder
-                  ? 'Confirm & Create Order Space (Ready)'
-                  : `Confirm & Create Order Space (${totalErrorCells} Errors)`}
+                  ? 'Xác nhận & Tạo Order Space (Sẵn sàng)'
+                  : `Xác nhận & Tạo Order Space (${totalErrorCells} lỗi)`}
               </span>
             </button>
           </div>
@@ -466,7 +466,7 @@ export default function StagingGridPage() {
                 type="text"
                 value={customerCountry}
                 onChange={(e) => setCustomerCountry(e.target.value)}
-                placeholder="USA / EU / Vietnam"
+                placeholder="Mỹ / EU / Việt Nam"
                 className="w-full px-3 py-1.5 text-xs rounded border border-slate-300 bg-white text-slate-800 focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -539,13 +539,13 @@ export default function StagingGridPage() {
             <div className="text-2xl mb-1">📄</div>
             <div className="text-xs font-bold text-slate-900">
               {uploadedFileName
-                ? `Tệp đã tải lên: ${uploadedFileName} ${sheetName ? `(Sheet: ${sheetName})` : ''}`
+                ? `Tệp đã tải lên: ${uploadedFileName} ${sheetName ? `(Trang tính: ${sheetName})` : ''}`
                 : 'Kéo thả hoặc chọn file Excel PO (.xlsx / .xls) từ máy tính'}
             </div>
             <p className="text-[11px] text-slate-500 mt-1 max-w-xl mx-auto">
               Hệ thống tự động loại bỏ các cột nhạy cảm{' '}
               <span className="font-bold text-slate-700">
-                Container No, Shipping Port, Proforma Invoice (PI), Unit Prices (CBD)
+                Số container, Cảng xuất, Hóa đơn chiếu lệ (PI), Đơn giá (CBD)
               </span>{' '}
               để đảm bảo tính toàn vẹn và bảo mật dữ liệu xưởng.
             </p>
@@ -615,7 +615,7 @@ export default function StagingGridPage() {
                         }
                         className="rounded text-blue-600"
                       />
-                      <span>Finish / Color</span>
+                      <span>Hoàn thiện / Màu</span>
                     </label>
                     <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 cursor-pointer">
                       <input
@@ -626,7 +626,7 @@ export default function StagingGridPage() {
                         }
                         className="rounded text-blue-600"
                       />
-                      <span>FSC Standard</span>
+                      <span>Tiêu chuẩn FSC</span>
                     </label>
                     <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 cursor-pointer">
                       <input
@@ -640,7 +640,7 @@ export default function StagingGridPage() {
                         }
                         className="rounded text-blue-600"
                       />
-                      <span>Technical Drawing</span>
+                      <span>Bản vẽ kỹ thuật</span>
                     </label>
                   </div>
                 )}
@@ -663,19 +663,19 @@ export default function StagingGridPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
                   <th className="py-3 px-3 w-10 text-center">#</th>
-                  <th className="py-3 px-3 w-44">Internal Product SKU *</th>
-                  <th className="py-3 px-3 min-w-[200px]">Product Description *</th>
-                  <th className="py-3 px-3 w-48">Dimensions (L x W x H mm) *</th>
+                  <th className="py-3 px-3 w-44">Mã SKU nội bộ *</th>
+                  <th className="py-3 px-3 min-w-[200px]">Mô tả sản phẩm *</th>
+                  <th className="py-3 px-3 w-48">Kích thước (D x R x C mm) *</th>
                   {visibleColumns.finishColor && (
-                    <th className="py-3 px-3 w-36">Finish / Color</th>
+                    <th className="py-3 px-3 w-36">Hoàn thiện / Màu</th>
                   )}
-                  <th className="py-3 px-3 w-28">Order Qty *</th>
-                  <th className="py-3 px-3 w-36">Target ETD *</th>
+                  <th className="py-3 px-3 w-28">Số lượng đặt *</th>
+                  <th className="py-3 px-3 w-36">ETD mục tiêu *</th>
                   {visibleColumns.fscRequired && (
-                    <th className="py-3 px-3 w-28">FSC Standard</th>
+                    <th className="py-3 px-3 w-28">Tiêu chuẩn FSC</th>
                   )}
                   {visibleColumns.technicalDrawing && (
-                    <th className="py-3 px-4 min-w-[150px]">Technical Drawing</th>
+                    <th className="py-3 px-4 min-w-[150px]">Bản vẽ kỹ thuật</th>
                   )}
                   <th className="py-3 px-3 w-12 text-center">Xóa</th>
                 </tr>
@@ -792,7 +792,7 @@ export default function StagingGridPage() {
                           className="w-full px-2 py-1.5 text-xs rounded border border-slate-300 bg-white font-medium"
                         >
                           <option value="true">FSC 100%</option>
-                          <option value="false">None</option>
+                          <option value="false">Không</option>
                         </select>
                       </td>
                     )}

@@ -87,17 +87,17 @@ export default function WmmsAppShell({
       case ROLES.ADMIN:
         return [
           {
-            heading: 'SYSTEM ADMINISTRATION',
+            heading: 'QUẢN TRỊ HỆ THỐNG',
             items: [
-              { icon: '👥', label: 'User & Multi-Role RBAC', path: '/admin/users' },
-              { icon: '🛡️', label: 'System Audit Logs', path: '/admin/audit-logs' },
+              { icon: '👥', label: 'Người dùng & phân quyền đa vai trò', path: '/admin/users' },
+              { icon: '🛡️', label: 'Nhật ký kiểm toán hệ thống', path: '/admin/audit-logs' },
             ],
           },
           {
-            heading: 'ANALYTICS & STOCK',
+            heading: 'BÁO CÁO & TỒN KHO',
             items: [
-              { icon: '📈', label: 'Production & Quality Reports', path: '/analytics/reports' },
-              { icon: '🏬', label: '3-Tier Inventory Stock', path: '/inventory/stock' },
+              { icon: '📈', label: 'Báo cáo sản xuất & chất lượng', path: '/analytics/reports' },
+              { icon: '🏬', label: 'Tồn kho 3 cấp', path: '/inventory/stock' },
             ],
           },
         ];
@@ -105,39 +105,39 @@ export default function WmmsAppShell({
       case ROLES.OWNER:
         return [
           {
-            heading: 'EXECUTIVE & ORDERS',
+            heading: 'ĐIỀU HÀNH & ĐƠN HÀNG',
             items: [
-              { icon: '📊', label: 'Executive Dashboard & ETD', path: '/dashboard' },
-              { icon: '📦', label: 'Sales Orders List', path: '/orders' },
-              { icon: '🗂️', label: 'Active Order Space', path: `/orders/spaces/${currentSpaceKey}` },
+              { icon: '📊', label: 'Bảng điều hành & ETD', path: '/dashboard' },
+              { icon: '📦', label: 'Danh sách đơn hàng bán', path: '/orders' },
+              { icon: '🗂️', label: 'Không gian đơn hàng đang mở', path: `/orders/spaces/${currentSpaceKey}` },
             ],
           },
           {
-            heading: 'TECHNICAL & ROUTING',
+            heading: 'KỸ THUẬT & QUY TRÌNH',
             items: [
-              { icon: '📐', label: 'BOM & Routing Builder', path: '/bom' },
-              { icon: '⚙️', label: 'Dynamic Routing Config', path: '/production/routing-config' },
-              { icon: '🪵', label: 'Master Material Catalog', path: '/catalog' },
-              { icon: '🖼️', label: 'Visual Product Catalog', path: '/catalog/visual' },
+              { icon: '📐', label: 'Lập BOM & quy trình sản xuất', path: '/bom' },
+              { icon: '⚙️', label: 'Cấu hình quy trình động', path: '/production/routing-config' },
+              { icon: '🪵', label: 'Danh mục vật tư gốc', path: '/catalog' },
+              { icon: '🖼️', label: 'Danh mục sản phẩm trực quan', path: '/catalog/visual' },
             ],
           },
           {
-            heading: 'INVENTORY & PURCHASING',
+            heading: 'TỒN KHO & MUA HÀNG',
             items: [
-              { icon: '⚖️', label: 'Inventory Reconciliation', path: '/inventory/reconciliation' },
-              { icon: '🏬', label: '3-Tier Stock Grid', path: '/inventory/stock' },
-              { icon: '🛒', label: 'Purchase Orders (PO)', path: '/purchasing/orders' },
-              { icon: '📝', label: 'Daily Consolidated PR', path: '/purchasing/requisitions' },
+              { icon: '⚖️', label: 'Đối chiếu tồn kho', path: '/inventory/reconciliation' },
+              { icon: '🏬', label: 'Lưới tồn kho 3 cấp', path: '/inventory/stock' },
+              { icon: '🛒', label: 'Đơn đặt hàng (PO)', path: '/purchasing/orders' },
+              { icon: '📝', label: 'PR gộp theo ngày', path: '/purchasing/requisitions' },
             ],
           },
           {
-            heading: 'SHOP FLOOR & AUDIT',
+            heading: 'XƯỞNG & KIỂM TOÁN',
             items: [
-              { icon: '📋', label: 'Production Kanban', path: '/production/kanban' },
-              { icon: '⚡', label: 'Overdriver Approvals', path: '/production/overdriver' },
-              { icon: '🔄', label: 'Replacement Approvals', path: '/production/replacement-approvals' },
-              { icon: '📈', label: 'Quality & Analytics Reports', path: '/analytics/reports' },
-              { icon: '🛡️', label: 'System Audit Logs', path: '/admin/audit-logs' },
+              { icon: '📋', label: 'Bảng Kanban sản xuất', path: '/production/kanban' },
+              { icon: '⚡', label: 'Duyệt vượt chốt (Overdriver)', path: '/production/overdriver' },
+              { icon: '🔄', label: 'Duyệt sản xuất bù', path: '/production/replacement-approvals' },
+              { icon: '📈', label: 'Báo cáo chất lượng & phân tích', path: '/analytics/reports' },
+              { icon: '🛡️', label: 'Nhật ký kiểm toán hệ thống', path: '/admin/audit-logs' },
             ],
           },
         ];
@@ -145,18 +145,18 @@ export default function WmmsAppShell({
       case ROLES.SALES:
         return [
           {
-            heading: 'ORDER INTAKE & MANAGEMENT',
+            heading: 'TIẾP NHẬN & QUẢN LÝ ĐƠN HÀNG',
             items: [
-              { icon: '📦', label: 'Sales Orders List', path: '/orders' },
-              { icon: '📄', label: 'PO Excel Staging Grid', path: '/orders/staging' },
-              { icon: '🗂️', label: 'Active Order Space', path: `/orders/spaces/${currentSpaceKey}` },
+              { icon: '📦', label: 'Danh sách đơn hàng bán', path: '/orders' },
+              { icon: '📄', label: 'Lưới Staging PO Excel', path: '/orders/staging' },
+              { icon: '🗂️', label: 'Không gian đơn hàng đang mở', path: `/orders/spaces/${currentSpaceKey}` },
             ],
           },
           {
-            heading: 'TECHNICAL & INVENTORY',
+            heading: 'KỸ THUẬT & TỒN KHO',
             items: [
-              { icon: '📐', label: 'BOM & Routing Breakdown', path: '/bom' },
-              { icon: '⚖️', label: 'Inventory Reconciliation', path: '/inventory/reconciliation' },
+              { icon: '📐', label: 'Bóc tách BOM & quy trình', path: '/bom' },
+              { icon: '⚖️', label: 'Đối chiếu tồn kho', path: '/inventory/reconciliation' },
             ],
           },
         ];
@@ -164,12 +164,12 @@ export default function WmmsAppShell({
       case ROLES.PLANNER:
         return [
           {
-            heading: 'MATERIAL PLANNING & BOM',
+            heading: 'KẾ HOẠCH VẬT TƯ & BOM',
             items: [
-              { icon: '📐', label: 'BOM & Routing Builder', path: '/bom' },
-              { icon: '⚖️', label: 'Inventory Reconciliation', path: '/inventory/reconciliation' },
-              { icon: '🪵', label: 'Master Materials & SKUs', path: '/catalog' },
-              { icon: '🛒', label: 'Purchase Orders (PO)', path: '/purchasing/orders' },
+              { icon: '📐', label: 'Lập BOM & quy trình sản xuất', path: '/bom' },
+              { icon: '⚖️', label: 'Đối chiếu tồn kho', path: '/inventory/reconciliation' },
+              { icon: '🪵', label: 'Vật tư gốc & mã SKU', path: '/catalog' },
+              { icon: '🛒', label: 'Đơn đặt hàng (PO)', path: '/purchasing/orders' },
             ],
           },
         ];
@@ -177,17 +177,17 @@ export default function WmmsAppShell({
       case ROLES.PURCHASING:
         return [
           {
-            heading: 'PURCHASING OPERATIONS',
+            heading: 'NGHIỆP VỤ MUA HÀNG',
             items: [
-              { icon: '🛒', label: 'Purchase Orders (PO)', path: '/purchasing/orders' },
-              { icon: '📝', label: 'Daily Consolidated PR', path: '/purchasing/requisitions' },
-              { icon: '🪵', label: 'Vendor & Material Catalog', path: '/catalog' },
+              { icon: '🛒', label: 'Đơn đặt hàng (PO)', path: '/purchasing/orders' },
+              { icon: '📝', label: 'PR gộp theo ngày', path: '/purchasing/requisitions' },
+              { icon: '🪵', label: 'Danh mục NCC & vật tư', path: '/catalog' },
             ],
           },
           {
-            heading: 'WAREHOUSE & STOCK',
+            heading: 'KHO & TỒN KHO',
             items: [
-              { icon: '🏬', label: '3-Tier Inventory Stock', path: '/inventory/stock' },
+              { icon: '🏬', label: 'Tồn kho 3 cấp', path: '/inventory/stock' },
             ],
           },
         ];
@@ -195,19 +195,19 @@ export default function WmmsAppShell({
       case ROLES.WAREHOUSE:
         return [
           {
-            heading: 'WAREHOUSE OPERATIONS',
+            heading: 'NGHIỆP VỤ KHO',
             items: [
-              { icon: '🏬', label: '3-Tier Stock Grid', path: '/inventory/stock' },
-              { icon: '📥', label: 'Goods Receipt & Commit', path: '/warehouse/receipts' },
-              { icon: '📤', label: 'Goods Issue & Handover', path: '/warehouse/issues' },
-              { icon: '📦', label: 'Finished Goods Receipt', path: '/warehouse/finished-goods' },
+              { icon: '🏬', label: 'Lưới tồn kho 3 cấp', path: '/inventory/stock' },
+              { icon: '📥', label: 'Nhập kho & xác nhận', path: '/warehouse/receipts' },
+              { icon: '📤', label: 'Xuất kho & bàn giao', path: '/warehouse/issues' },
+              { icon: '📦', label: 'Nhập kho thành phẩm', path: '/warehouse/finished-goods' },
             ],
           },
           {
-            heading: 'CATALOG & FLOOR',
+            heading: 'DANH MỤC & XƯỞNG',
             items: [
-              { icon: '🪵', label: 'Master Material Catalog', path: '/catalog' },
-              { icon: '📋', label: 'Production Kanban', path: '/production/kanban' },
+              { icon: '🪵', label: 'Danh mục vật tư gốc', path: '/catalog' },
+              { icon: '📋', label: 'Bảng Kanban sản xuất', path: '/production/kanban' },
             ],
           },
         ];
@@ -215,19 +215,19 @@ export default function WmmsAppShell({
       case ROLES.LEADER:
         return [
           {
-            heading: 'PRODUCTION FLOOR',
+            heading: 'XƯỞNG SẢN XUẤT',
             items: [
-              { icon: '📊', label: 'Executive Dashboard & ETD', path: '/dashboard' },
-              { icon: '📋', label: 'Production Kanban Board', path: '/production/kanban' },
-              { icon: '⏱️', label: 'Workstation Stage Progress', path: '/production/progress' },
-              { icon: '🗂️', label: 'Active Order Space', path: `/orders/spaces/${currentSpaceKey}` },
+              { icon: '📊', label: 'Bảng điều hành & ETD', path: '/dashboard' },
+              { icon: '📋', label: 'Bảng Kanban sản xuất', path: '/production/kanban' },
+              { icon: '⏱️', label: 'Tiến độ công đoạn tại trạm', path: '/production/progress' },
+              { icon: '🗂️', label: 'Không gian đơn hàng đang mở', path: `/orders/spaces/${currentSpaceKey}` },
             ],
           },
           {
-            heading: 'APPROVALS & ANALYTICS',
+            heading: 'PHÊ DUYỆT & PHÂN TÍCH',
             items: [
-              { icon: '⚡', label: 'Overdriver Requests', path: '/production/overdriver' },
-              { icon: '📈', label: 'Production & Quality Reports', path: '/analytics/reports' },
+              { icon: '⚡', label: 'Yêu cầu vượt chốt (Overdriver)', path: '/production/overdriver' },
+              { icon: '📈', label: 'Báo cáo sản xuất & chất lượng', path: '/analytics/reports' },
             ],
           },
         ];
@@ -235,10 +235,10 @@ export default function WmmsAppShell({
       case ROLES.QC:
         return [
           {
-            heading: 'QUALITY CONTROL',
+            heading: 'KIỂM SOÁT CHẤT LƯỢNG',
             items: [
-              { icon: '🔍', label: 'QC Inspection & Defect Log', path: '/qc/inspection' },
-              { icon: '📋', label: 'Production Kanban Board', path: '/production/kanban' },
+              { icon: '🔍', label: 'Kiểm tra QC & nhật ký lỗi', path: '/qc/inspection' },
+              { icon: '📋', label: 'Bảng Kanban sản xuất', path: '/production/kanban' },
             ],
           },
         ];
@@ -246,8 +246,8 @@ export default function WmmsAppShell({
       default:
         return [
           {
-            heading: 'OPERATIONAL SCREENS',
-            items: [{ icon: '📦', label: 'Sales Orders', path: '/orders' }],
+            heading: 'MÀN HÌNH NGHIỆP VỤ',
+            items: [{ icon: '📦', label: 'Đơn hàng bán', path: '/orders' }],
           },
         ];
     }
@@ -349,9 +349,9 @@ export default function WmmsAppShell({
 
         {/* Chân trang Sidebar */}
         <div className="px-4 py-3 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-0.5">
-          <div className="font-medium text-slate-400">WMMS System v2.6.4</div>
+          <div className="font-medium text-slate-400">Hệ thống WMMS v2.6.4</div>
           <div className="text-slate-500 truncate" title={displayUser.roleTitle}>
-            Role: {displayUser.roleTitle}
+            Vai trò: {displayUser.roleTitle}
           </div>
         </div>
       </aside>
@@ -368,10 +368,10 @@ export default function WmmsAppShell({
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-xs">
                 <span className="text-slate-500 font-medium">
                   {location.pathname.startsWith('/bom')
-                    ? 'Target Order Space:'
+                    ? 'Order Space mục tiêu:'
                     : activeRole === ROLES.OWNER
-                    ? 'Active Order Space:'
-                    : 'Current Space:'}
+                    ? 'Order Space đang mở:'
+                    : 'Space hiện tại:'}
                 </span>
                 <select
                   value={currentSpaceKey}
@@ -439,7 +439,7 @@ export default function WmmsAppShell({
               onClick={handleLogout}
               className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition shadow-sm"
             >
-              Logout
+              Đăng xuất
             </button>
           </div>
         </header>

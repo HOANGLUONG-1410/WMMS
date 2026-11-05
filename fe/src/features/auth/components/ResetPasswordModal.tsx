@@ -29,7 +29,7 @@ export default function ResetPasswordModal({
         text:
           apiRes?.message ||
           apiRes?.data?.message ||
-          "Password reset instructions have been sent to your email.",
+          "Hướng dẫn đặt lại mật khẩu đã được gửi tới email của bạn.",
       });
     },
     onError: (err: unknown) => {
@@ -47,7 +47,7 @@ export default function ResetPasswordModal({
     if (!recoveryEmail.trim()) {
       setRecoveryFeedback({
         type: "error",
-        text: "Please enter your registered employee email address.",
+        text: "Vui lòng nhập email nhân viên đã đăng ký.",
       });
       return;
     }
@@ -61,13 +61,13 @@ export default function ResetPasswordModal({
       <div className="w-full max-w-[490px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-slate-100">
           <h2 className="text-sm font-bold text-slate-900">
-            Reset Personal Password
+            Đặt lại mật khẩu cá nhân
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-1"
-            aria-label="Close modal"
+            aria-label="Đóng hộp thoại"
           >
             ×
           </button>
@@ -78,8 +78,8 @@ export default function ResetPasswordModal({
           className="px-6 py-4 space-y-4"
         >
           <p className="text-xs text-slate-500 leading-relaxed">
-            Enter your registered employee email. System will generate a
-            single-use authentication token sent to your company inbox.
+            Nhập email nhân viên đã đăng ký. Hệ thống sẽ tạo một mã
+            xác thực dùng một lần và gửi vào hộp thư công ty của bạn.
           </p>
 
           <div>
@@ -87,14 +87,14 @@ export default function ResetPasswordModal({
               htmlFor="recovery-email-input"
               className="block text-xs font-semibold text-slate-700 mb-1.5"
             >
-              Employee Email Address
+              Địa chỉ email nhân viên
             </label>
             <input
               id="recovery-email-input"
               type="email"
               value={recoveryEmail}
               onChange={(e) => setRecoveryEmail(e.target.value)}
-              placeholder="employee@nguyenkhoa.vn"
+              placeholder="nhanvien@nguyenkhoa.vn"
               className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -118,7 +118,7 @@ export default function ResetPasswordModal({
               disabled={forgotPasswordMutation.isPending}
               className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition disabled:opacity-60"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
@@ -149,8 +149,8 @@ export default function ResetPasswordModal({
                 </svg>
               )}
               {forgotPasswordMutation.isPending
-                ? "Sending..."
-                : "Send Recovery Token"}
+                ? "Đang gửi..."
+                : "Gửi mã khôi phục"}
             </button>
           </div>
         </form>
