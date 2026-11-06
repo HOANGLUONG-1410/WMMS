@@ -124,7 +124,14 @@ public class PurchaseRequestService : IPurchaseRequestService
         string? ipAddress,
         CancellationToken cancellationToken = default)
     {
-        var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+        var notes = string.IsNullOrWhiteSpace(request?.Notes) ? null : request.Notes.Trim();
+        if (notes != null && notes.Length > 500)
+        {
+            throw new AppException(
+                "Approval notes must not exceed 500 characters.",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
 
         var decided = await DecideAsync(
             prId,
@@ -148,7 +155,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         string? ipAddress,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Reason))
+        if (request == null || string.IsNullOrWhiteSpace(request.Reason))
         {
             throw new AppException(
                 "Rejection reason is required (UC048.E1).",
@@ -157,6 +164,13 @@ public class PurchaseRequestService : IPurchaseRequestService
         }
 
         var reason = request.Reason.Trim();
+        if (reason.Length > 500)
+        {
+            throw new AppException(
+                "Rejection reason must not exceed 500 characters.",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
 
         var decided = await DecideAsync(
             prId,
