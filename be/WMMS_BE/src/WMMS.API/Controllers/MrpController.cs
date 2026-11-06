@@ -32,7 +32,7 @@ public class MrpController : MasterDataControllerBase
     public async Task<IActionResult> AnalyzeFactoryMrpAsync(CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.AnalyzeFactoryMrpAsync(cancellationToken);
-        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Analyzed factory-wide MRP material requirements and shortages (SC-14)."));
+        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Phân tích nhu cầu nguyên vật liệu và thiếu hụt MRP toàn nhà máy thành công (SC-14)."));
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class MrpController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.AnalyzeOrderMrpAsync(orderId, cancellationToken);
-        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Analyzed order MRP material requirements and net shortage (SC-14)."));
+        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Phân tích nhu cầu vật tư và thiếu hụt ròng MRP cho đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public class MrpController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.AnalyzeOrderSpaceMrpAsync(spaceId, cancellationToken);
-        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Analyzed order space MRP material requirements and net shortage (SC-14)."));
+        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Phân tích nhu cầu vật tư và thiếu hụt ròng MRP cho không gian đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ public class MrpController : MasterDataControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _mrpAllocationService.ExecuteAutoAllocationForOrderAsync(orderId, request, userId, cancellationToken);
-        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Executed automated MRP inventory allocation for order (SC-14)."));
+        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Thực thi phân bổ tồn kho tự động MRP cho đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public class MrpController : MasterDataControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _mrpAllocationService.ExecuteAutoAllocationForOrderSpaceAsync(spaceId, request, userId, cancellationToken);
-        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Executed automated MRP inventory allocation for order space (SC-14)."));
+        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Thực thi phân bổ tồn kho tự động MRP cho không gian đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ public class MrpController : MasterDataControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _mrpAllocationService.ExecuteAutoAllocationForOrderItemAsync(orderItemId, request, userId, cancellationToken);
-        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Executed automated MRP inventory allocation for order item (SC-14)."));
+        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Thực thi phân bổ tồn kho tự động MRP cho dòng sản phẩm thành công (SC-14)."));
     }
 
     /// <summary>
@@ -130,7 +130,7 @@ public class MrpController : MasterDataControllerBase
             userId,
             cancellationToken);
 
-        return Ok(ApiResponse<ReallocateByEtdResultDto>.Ok(result, "Executed FIFO ETD-prioritized inventory re-allocation (SC-14)."));
+        return Ok(ApiResponse<ReallocateByEtdResultDto>.Ok(result, "Tái phân bổ tồn kho khả dụng theo thứ tự ưu tiên hạn giao hàng ETD (FIFO by ETD) thành công (SC-14)."));
     }
 
     /// <summary>
@@ -151,7 +151,7 @@ public class MrpController : MasterDataControllerBase
             userId,
             cancellationToken);
 
-        return Ok(ApiResponse<List<MaterialOrderAllocationDto>>.Ok(result, "Released reserved inventory allocations for order."));
+        return Ok(ApiResponse<List<MaterialOrderAllocationDto>>.Ok(result, "Giải phóng giữ chỗ vật tư cho đơn hàng thành công."));
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ public class MrpController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.GetAllocationsByOrderIdAsync(orderId, cancellationToken);
-        return Ok(ApiResponse<List<MaterialOrderAllocationDto>>.Ok(result, "Fetched material allocations for order (SC-14)."));
+        return Ok(ApiResponse<List<MaterialOrderAllocationDto>>.Ok(result, "Lấy danh sách phân bổ vật tư của đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -177,6 +177,6 @@ public class MrpController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.GetAllocationsBySpaceIdAsync(spaceId, cancellationToken);
-        return Ok(ApiResponse<List<MaterialOrderAllocationDto>>.Ok(result, "Fetched material allocations for order space (SC-14)."));
+        return Ok(ApiResponse<List<MaterialOrderAllocationDto>>.Ok(result, "Lấy danh sách phân bổ vật tư của không gian đơn hàng thành công (SC-14)."));
     }
 }

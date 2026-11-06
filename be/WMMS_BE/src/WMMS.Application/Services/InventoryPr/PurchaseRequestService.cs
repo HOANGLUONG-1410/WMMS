@@ -59,7 +59,7 @@ public class PurchaseRequestService : IPurchaseRequestService
             if (!Enum.TryParse<PrStatusEnum>(filter.Status.Trim(), ignoreCase: true, out var parsed))
             {
                 throw new AppException(
-                    "Invalid PR status. Allowed values: PENDING_APPROVAL, APPROVED, REJECTED, PO_ISSUED.",
+                    "Trạng thái PR không hợp lệ. Các giá trị hợp lệ: PENDING_APPROVAL, APPROVED, REJECTED, PO_ISSUED.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -109,7 +109,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (restrictToApprovedOnly && !ApprovedVisibleStatuses.Contains(pr.PrStatus))
         {
             throw AppException.Forbidden(
-                "Purchasing Staff can only view PRs that have been approved by the Factory Owner (BR-PUR-02).",
+                "Nhân viên Thu mua chỉ được xem các Phiếu Yêu cầu Mua hàng (PR) đã được Chủ xưởng phê duyệt (BR-PUR-02).",
                 MessageCodes.Msg11ForbiddenRule);
         }
 
@@ -128,7 +128,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (notes != null && notes.Length > 500)
         {
             throw new AppException(
-                "Approval notes must not exceed 500 characters.",
+                "Ghi chú phê duyệt không được vượt quá 500 ký tự.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -137,7 +137,7 @@ public class PurchaseRequestService : IPurchaseRequestService
             prId,
             PrStatusEnum.APPROVED,
             rejectionReason: null,
-            reasonForAudit: notes ?? $"Factory Owner approved consolidated PR #{prId} (UC-47, BR-PUR-02).",
+            reasonForAudit: notes ?? $"Chủ xưởng đã phê duyệt Phiếu PR tổng hợp #{prId} (UC-47, BR-PUR-02).",
             actionType: AuditActionConstants.ConsolidatedPrApproved,
             ownerUserId,
             ipAddress,
@@ -158,7 +158,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (request == null || string.IsNullOrWhiteSpace(request.Reason))
         {
             throw new AppException(
-                "Rejection reason is required (UC048.E1).",
+                "Lý do từ chối là bắt buộc (UC048.E1).",
                 400,
                 MessageCodes.Msg01RequiredField);
         }
@@ -167,7 +167,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (reason.Length > 500)
         {
             throw new AppException(
-                "Rejection reason must not exceed 500 characters.",
+                "Lý do từ chối không được vượt quá 500 ký tự.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -208,7 +208,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (previousStatus != PrStatusEnum.PENDING_APPROVAL)
         {
             throw AppException.Conflict(
-                $"PR {pr.PrCode} is already {previousStatus} and can no longer be reviewed (UC047.E1).",
+                $"Phiếu PR {pr.PrCode} đã ở trạng thái {previousStatus} và không thể duyệt lại (UC047.E1).",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -230,7 +230,7 @@ public class PurchaseRequestService : IPurchaseRequestService
             if (!transitioned)
             {
                 throw AppException.Conflict(
-                    $"PR {pr.PrCode} was already processed in another session (UC047.E1).",
+                    $"Phiếu PR {pr.PrCode} đã được xử lý ở một phiên làm việc khác (UC047.E1).",
                     MessageCodes.Msg08DuplicateConflict);
             }
 
@@ -287,7 +287,7 @@ public class PurchaseRequestService : IPurchaseRequestService
     private async Task<PurchaseRequest> GetOrThrowAsync(long prId, CancellationToken cancellationToken)
     {
         return await _purchaseRequestRepository.GetByIdAsync(prId, cancellationToken)
-            ?? throw AppException.NotFound($"Purchase Request with ID = {prId} was not found.");
+            ?? throw AppException.NotFound($"Không tìm thấy Phiếu Yêu cầu Mua hàng với ID = {prId}.");
     }
 
     private static PurchaseRequestListItemDto MapToListItem(PurchaseRequest pr)
