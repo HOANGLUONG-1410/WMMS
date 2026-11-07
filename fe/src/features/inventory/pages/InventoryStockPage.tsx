@@ -158,15 +158,15 @@ export default function InventoryStockPage() {
 
   return (
     <WmmsAppShell>
-      <div className="max-w-[1400px] mx-auto space-y-4">
-        {/* Top Context Bar: Warehouse Yard Selector (Theo đúng Mockup 7.1) */}
-        <div className="bg-white border border-slate-200 rounded-lg px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="max-w-[1400px] mx-auto space-y-6">
+        {/* Top Context Bar: Warehouse Yard Selector */}
+        <div className="bg-white border border-slate-200 rounded-xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+          <div className="flex flex-wrap items-center gap-2.5 text-sm">
             <span className="font-semibold text-slate-600">Bãi kho:</span>
             <select
               value={selectedYard}
               onChange={(e) => setSelectedYard(e.target.value)}
-              className="px-2.5 py-1 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
             >
               <option value="Bãi gỗ & nguyên liệu chính (Hà Nam)">
                 Bãi gỗ &amp; nguyên liệu chính (Hà Nam)
@@ -180,10 +180,7 @@ export default function InventoryStockPage() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[11px] font-bold">
-              ● BỘ XỬ LÝ TỒN KHO 3 CẤP ĐANG HOẠT ĐỘNG
-            </span>
+          <div className="flex items-center gap-2.5 text-sm">
             <button
               type="button"
               onClick={() => {
@@ -191,130 +188,152 @@ export default function InventoryStockPage() {
                 refetchAllStocks();
                 refetchLedger();
               }}
-              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-semibold transition"
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-sm font-semibold transition shadow-2xs"
             >
-              ↻ Làm mới dữ liệu
+              Làm mới dữ liệu
             </button>
             <button
               type="button"
               onClick={handleExportCsv}
-              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-semibold transition"
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-sm font-semibold transition shadow-2xs inline-flex items-center gap-1.5"
             >
-              📥 Xuất CSV
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Xuất CSV
             </button>
           </div>
         </div>
 
-        {/* Page Title & Action Buttons (Fields #1 & #2 in Report 3 - 7.1) */}
+        {/* Page Title & Action Buttons */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Lưới tồn kho 3 cấp
+            <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Tồn kho vật tư 3 cấp
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Tách bạch chặt chẽ giữa tồn vật lý, tồn đã giữ chỗ (phân bổ) và tồn khả dụng
-              để tránh tính trùng.
+            <p className="text-sm text-slate-500 mt-1">
+              Tách bạch chặt chẽ giữa tồn vật lý, tồn đã giữ chỗ (phân bổ) và tồn khả dụng để tránh tính trùng.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {/* Field #1: + Inbound Receipt (Commit) */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {/* + Inbound Receipt (Commit) */}
             <button
               type="button"
               onClick={() => navigate("/warehouse/receipts")}
-              className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold rounded-md shadow-xs transition"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition inline-flex items-center gap-2"
             >
-              + Nhập kho (Xác nhận)
+              <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Nhập kho (Xác nhận)</span>
             </button>
 
-            {/* Field #2: Goods Issue to Floor */}
+            {/* Goods Issue to Floor */}
             <button
               type="button"
               onClick={() => navigate("/warehouse/issues")}
-              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-semibold rounded-md shadow-2xs transition"
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-2xs transition"
             >
               Xuất kho xuống xưởng
             </button>
           </div>
         </div>
 
-        {/* 3 KPI Summary Cards (Theo đúng Mockup 7.1) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 3 KPI Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Card 1: TOTAL PHYSICAL STOCK ITEMS */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              TỔNG MÃ TỒN VẬT LÝ
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                TỔNG MÃ TỒN VẬT LÝ
+              </div>
+              <span className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                </svg>
+              </span>
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1.5">
+            <div className="text-2xl font-extrabold text-slate-900 mt-2">
               {totalSkuCount} SKU
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">
+            <div className="text-xs text-slate-500 mt-1">
               Hàng thực tế trên kệ kho
             </div>
           </div>
 
           {/* Card 2: TOTAL ALLOCATED STOCK */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              TỔNG TỒN ĐÃ PHÂN BỔ
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                TỔNG TỒN ĐÃ PHÂN BỔ
+              </div>
+              <span className="p-2 rounded-lg bg-amber-50 text-amber-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </span>
             </div>
-            <div className="text-2xl font-extrabold text-[#d97706] mt-1.5">
-              {allocatedItemsCount} mã đang bị khóa
+            <div className="text-2xl font-extrabold text-amber-600 mt-2">
+              {allocatedItemsCount} mã đang giữ chỗ
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">
+            <div className="text-xs text-slate-500 mt-1">
               Chỉ giữ chỗ cho các đơn đang thực hiện
             </div>
           </div>
 
           {/* Card 3: BELOW SAFETY BUFFER */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              DƯỚI MỨC TỒN AN TOÀN
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                DƯỚI MỨC TỒN AN TOÀN
+              </div>
+              <span className="p-2 rounded-lg bg-rose-50 text-rose-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </span>
             </div>
-            <div className="text-2xl font-extrabold text-rose-600 mt-1.5">
+            <div className="text-2xl font-extrabold text-rose-600 mt-2">
               {belowSafetyCount} mã
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">
+            <div className="text-xs text-slate-500 mt-1">
               Được đưa vào gom mua hàng theo ngày
             </div>
           </div>
         </div>
 
-        {/* Thanh chuyển đổi 2 Tabs chính: Tab 1 (Tồn kho 3 cấp) & Tab 2 (Sổ kho điện tử) */}
-        <div className="border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab("balance")}
-              className={`px-4 py-2.5 text-xs font-extrabold border-b-2 transition flex items-center gap-2 ${
-                activeTab === "balance"
-                  ? "border-[#2563eb] text-[#2563eb] bg-blue-50/40 rounded-t-lg"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <span>🏬</span>
-              <span>Tab 1: Bảng cân đối tồn kho 3 cấp (3-Tier Stock Balance)</span>
-              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-800">
-                {totalStocksCount}
-              </span>
-            </button>
+        {/* Thanh chuyển đổi 2 Tabs chính */}
+        <div className="flex border-b border-slate-200 gap-2 bg-white px-5 pt-2 rounded-xl border shadow-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("balance")}
+            className={`px-4 py-3 text-sm font-bold border-b-2 -mb-px transition flex items-center gap-2 ${
+              activeTab === "balance"
+                ? "border-blue-600 text-blue-700 bg-blue-50/40 rounded-t-lg"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <span>Bảng cân đối tồn kho 3 cấp ({totalStocksCount})</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("ledger")}
-              className={`px-4 py-2.5 text-xs font-extrabold border-b-2 transition flex items-center gap-2 ${
-                activeTab === "ledger"
-                  ? "border-[#2563eb] text-[#2563eb] bg-blue-50/40 rounded-t-lg"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <span>📒</span>
-              <span>Tab 2: Sổ kho điện tử (Electronic Stock Ledger)</span>
-              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-800">
-                {totalLedgerCount}
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab("ledger")}
+            className={`px-4 py-3 text-sm font-bold border-b-2 -mb-px transition flex items-center gap-2 ${
+              activeTab === "ledger"
+                ? "border-blue-600 text-blue-700 bg-blue-50/40 rounded-t-lg"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <span>Sổ kho điện tử ({totalLedgerCount})</span>
+          </button>
         </div>
 
         {/* Nội dung Tab đang chọn */}

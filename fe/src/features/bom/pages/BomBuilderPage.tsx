@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
@@ -28,8 +28,9 @@ import BomStagingModal from "../components/BomStagingModal";
 import { bomStatusLabel } from "../../../lib/statusLabels";
 
 export default function BomBuilderPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentSpaceKey, setCurrentSpaceKey, setOrderSpaces } = useWmms();
+  const { orderSpaces, currentSpaceKey, setCurrentSpaceKey, setOrderSpaces } = useWmms();
 
   // State danh sách Line Items thực tế của Order Space đang chọn
   const [spaceLineItems, setSpaceLineItems] = useState<OrderSpaceLineItemForBom[]>([]);
@@ -111,17 +112,18 @@ export default function BomBuilderPage() {
         const items = res?.data?.orders || res?.data?.items || [];
         if (Array.isArray(items) && items.length > 0) {
           const mappedSpaces = items.map((o: Record<string, unknown>) => ({
-            spaceId: Number(o.spaceId || o.orderId || 1),
-            spaceKey: String(o.orderSpaceKey || `SPACE-${o.poNumber}`),
-            orderId: Number(o.orderId || 1),
-            poNumber: String(o.poNumber || ""),
+            spaceKey: String(o.orderSpaceKey || o.spaceKey || `SPACE-${o.poNumber}`),
+            spaceLabel: `${String(o.orderSpaceKey || o.spaceKey || `SPACE-${o.poNumber}`)} (${String(o.customerName || "")})`,
             customerName: String(o.customerName || ""),
-            country: String(o.shippingCountry || "Xuất khẩu"),
-            containerSpec: String(o.containerSpec || "1x40HC"),
+            poNumber: String(o.poNumber || ""),
+            orderDate: o.orderDate ? String(o.orderDate).slice(0, 10) : "",
             etdDate: o.etdDate ? String(o.etdDate).slice(0, 10) : "",
-            daysLeft: Number(o.daysRemaining || 30),
-            lifecycleStatus: String(o.orderStatus || "CONFIRMED"),
-            progressPct: Number(o.bomReadinessPct || 0),
+            daysRemaining: Number(o.daysRemaining ?? 30),
+            isUrgentEtd: Boolean(o.isUrgentEtd),
+            totalOrderedUnits: Number(o.totalOrderedUnits ?? 0),
+            lineItemsVolumeSummary: String(o.lineItemsVolumeSummary || "Đơn hàng xuất khẩu"),
+            lifecycleStatusBadge: String(o.lifecycleStatusBadge || o.orderStatus || "CONFIRMED"),
+            overallProgressPct: Number(o.overallProgressPct ?? o.bomReadinessPct ?? 0),
           }));
           setOrderSpaces(mappedSpaces);
 
@@ -601,31 +603,43 @@ export default function BomBuilderPage() {
     });
   };
 
-  // Màu sắc huy hiệu Category
   const getCategoryBadgeClass = (category: string) => {
     const upper = String(category || "").toUpperCase();
     if (upper.includes("LUMBER") || upper.includes("WOOD")) {
-      return "bg-yellow-100 text-amber-800";
+      return "bg-amber-50 text-amber-800 border-amber-200";
     }
     if (upper.includes("HARDWARE")) {
-      return "bg-blue-100 text-blue-700";
+      return "bg-blue-50 text-blue-700 border-blue-200";
     }
     if (upper.includes("FINISH") || upper.includes("PAINT")) {
-      return "bg-orange-100 text-orange-800";
+      return "bg-orange-50 text-orange-800 border-orange-200";
     }
     if (upper.includes("PACKAGING")) {
-      return "bg-emerald-100 text-emerald-700";
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
     }
-    return "bg-slate-100 text-slate-700";
+    return "bg-slate-100 text-slate-700 border-slate-200";
   };
 
   return (
-    <WmmsAppShell>
-      <div className="max-w-[1400px] mx-auto space-y-4">
-        {/* Thông báo phản hồi */}
+    <WmmsAppShell
+      customTopLeft={
+        <button
+          type="button"
+          onClick={() => navigate("/orders")}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs cursor-pointer"
+        >
+          <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Danh sách đơn hàng</span>
+        </button>
+      }
+    >
+      <div className="max-w-[1400px] mx-auto space-y-6">
+        {/* Feedback Banner */}
         {toastBanner && (
           <div
-            className={`px-4 py-3 rounded-lg border text-xs font-semibold flex items-center justify-between ${
+            className={`px-4 py-3 rounded-lg border text-sm font-medium flex items-center justify-between shadow-xs ${
               toastBanner.type === "success"
                 ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                 : toastBanner.type === "error"
@@ -637,9 +651,9 @@ export default function BomBuilderPage() {
             <button
               type="button"
               onClick={() => setToastBanner(null)}
-              className="text-slate-400 hover:text-slate-600 ml-3 font-bold"
+              className="text-slate-400 hover:text-slate-600 ml-3 font-bold text-base leading-none cursor-pointer"
             >
-              ✕
+              ×
             </button>
           </div>
         )}
@@ -647,101 +661,114 @@ export default function BomBuilderPage() {
         {/* Header + Action Buttons */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Đặc tả BOM, Excel Staging &amp; Lập quy trình động
+            <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Định mức BOM &amp; Quy trình sản xuất động
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Bóc tách kỹ thuật của Chủ xưởng / Kế hoạch: nhập BOM Excel qua lưới Staging, kế thừa
-              mẫu từ danh mục trực quan, cấu hình quy trình &amp; khóa BOM để sản xuất.
+            <p className="text-sm text-slate-600 mt-1">
+              Bóc tách định mức vật tư, nhập BOM Excel qua Staging, kế thừa mẫu sản phẩm và khóa BOM đưa vào sản xuất.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {/* Nút mở BOM Excel Staging Modal */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => setShowStagingModal(true)}
-              className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300 text-xs font-bold rounded-md shadow-2xs transition flex items-center gap-1.5"
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
             >
-              <span>📥</span>
-              <span>Nhập BOM Excel (Staging)</span>
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span>Nhập BOM Excel</span>
             </button>
 
-            {/* Field #1: Visual Product Catalog */}
             <button
               type="button"
               onClick={() => setShowVisualCatalogModal(true)}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-semibold rounded-md shadow-2xs transition flex items-center gap-1.5"
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
             >
-              <span>🖼️</span>
-              <span>Danh mục sản phẩm trực quan</span>
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              <span>Kế thừa từ danh mục</span>
             </button>
 
-            {/* Field #2: Dynamic Routing Engine */}
             <button
               type="button"
               onClick={() => setShowRoutingModal(true)}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-semibold rounded-md shadow-2xs transition flex items-center gap-1.5"
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
             >
-              <span>🔀</span>
-              <span>Bộ quy trình động</span>
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              <span>Cấu hình quy trình</span>
             </button>
 
-            {/* Field #3: Save Draft & Run Stock Reconciliation → */}
             <button
               type="button"
               onClick={handleSaveDraftAndReconcile}
               disabled={saveBomMutation.isPending}
-              className="px-4 py-2 bg-[#d97706] hover:bg-amber-700 text-white text-xs font-bold rounded-md shadow-sm transition disabled:opacity-50"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
             >
               {saveBomMutation.isPending
-                ? "Đang lưu lên máy chủ..."
+                ? "Đang lưu..."
                 : activeBomId
-                  ? "Cập nhật BOM nháp & đối chiếu →"
-                  : "Lưu BOM nháp mới →"}
+                  ? "Lưu bản nháp & Đối chiếu"
+                  : "Lưu BOM nháp mới"}
             </button>
 
-            {/* Nút Phê duyệt & Chốt khóa BOM (PATCH /api/v1/bom/{bomId}/approve) */}
             {activeBomId && !isLockedForProduction && (
               <button
                 type="button"
                 onClick={handleApproveAndLockBom}
                 disabled={approveBomMutation.isPending}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md shadow-sm transition disabled:opacity-50"
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
               >
-                {approveBomMutation.isPending ? "Đang duyệt..." : "✓ Duyệt & khóa BOM"}
+                {approveBomMutation.isPending ? "Đang duyệt..." : "Duyệt & Khóa BOM"}
               </button>
             )}
           </div>
         </div>
 
-        {/* Thanh chọn hạng mục sản phẩm (Order Line Items) thuộc Order Space hiện tại */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs space-y-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="px-2 py-0.5 font-mono font-bold rounded bg-slate-100 text-slate-800 border border-slate-300">
-                {currentSpaceKey || "ORDER SPACE"}
-              </span>
+        {/* Order Space & Line Items Selector Card */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Order Space:
+                </span>
+                <select
+                  value={currentSpaceKey}
+                  onChange={(e) => setCurrentSpaceKey(e.target.value)}
+                  className="px-3 py-1.5 text-sm font-semibold bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                >
+                  {orderSpaces.map((sp) => (
+                    <option key={sp.spaceKey} value={sp.spaceKey}>
+                      {sp.spaceLabel || `${sp.spaceKey} (${sp.customerName})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {spacePoNumber && (
-                <span className="font-semibold text-slate-700">
-                  PO: <strong>{spacePoNumber}</strong>
+                <span className="font-medium text-slate-700">
+                  PO: <strong className="font-mono text-slate-900">{spacePoNumber}</strong>
                 </span>
               )}
               {spaceCustomerName && (
-                <span className="text-slate-500">• Khách hàng: {spaceCustomerName}</span>
+                <span className="text-slate-600">• Khách hàng: <strong className="text-slate-800">{spaceCustomerName}</strong></span>
               )}
             </div>
-            <span className="text-[11px] text-slate-400">
-              Chọn một dòng hàng bên dưới để tạo hoặc sửa BOM kỹ thuật:
+            <span className="text-xs text-slate-500">
+              Chọn dòng sản phẩm bên dưới để thiết lập hoặc chỉnh sửa BOM:
             </span>
           </div>
 
           {isLoadingSpace ? (
-            <div className="text-xs text-slate-400 py-1">
-              Đang tải các dòng hàng của Order Space...
+            <div className="text-sm text-slate-500 py-1">
+              Đang tải các dòng sản phẩm của Order Space...
             </div>
           ) : spaceLineItems.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5">
               {spaceLineItems.map((li) => {
                 const isSelected = li.orderItemId === selectedOrderItemId;
                 const isReady =
@@ -754,30 +781,30 @@ export default function BomBuilderPage() {
                     key={li.orderItemId}
                     type="button"
                     onClick={() => handleSelectOrderItem(li)}
-                    className={`px-3 py-2 rounded-lg border text-left transition flex items-center gap-2.5 ${
+                    className={`px-4 py-2.5 rounded-lg border text-left transition flex items-center gap-3 cursor-pointer ${
                       isSelected
-                        ? "border-2 border-[#d97706] bg-amber-50/60 shadow-2xs"
-                        : "border-slate-200 bg-slate-50/60 hover:bg-slate-100"
+                        ? "border-2 border-blue-600 bg-blue-50/40 shadow-2xs"
+                        : "border-slate-200 bg-white hover:bg-slate-50"
                     }`}
                   >
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[11px] font-extrabold text-slate-900">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-slate-900">
                           #{li.orderItemId} • {li.productSku}
                         </span>
                         <span
-                          className={`px-1.5 py-0.5 text-[9px] font-extrabold uppercase rounded ${
+                          className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${
                             isReady
-                              ? "bg-emerald-100 text-emerald-800"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : hasDraft
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-slate-200 text-slate-700"
+                                ? "bg-amber-50 text-amber-800 border-amber-200"
+                                : "bg-slate-100 text-slate-600 border-slate-200"
                           }`}
                         >
                           {isReady ? "SẴN SÀNG SX" : hasDraft ? `BOM #${li.bomId} NHÁP` : "CHƯA CÓ BOM"}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-600 mt-0.5">
+                      <div className="text-xs text-slate-600 mt-0.5">
                         {li.productName} ({li.orderedQty} cái)
                       </div>
                     </div>
@@ -786,104 +813,107 @@ export default function BomBuilderPage() {
               })}
             </div>
           ) : (
-            <div className="text-xs text-slate-500">
-              ID dòng hàng đang chọn: <strong className="font-mono">#{selectedOrderItemId}</strong>{" "}
-              (Đổi Order Space trên thanh trên cùng để tải các dòng hàng PO khác)
+            <div className="text-sm text-slate-600">
+              Dòng hàng đang chọn: <strong className="font-mono text-slate-900">#{selectedOrderItemId}</strong>
             </div>
           )}
         </div>
 
-        {/* Khối Active BOM Target Product Banner */}
-        <div className="bg-amber-50/50 border border-amber-300 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Active Target Product Summary Card */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
-              SẢN PHẨM MỤC TIÊU CỦA BOM (DÒNG HÀNG #{selectedOrderItemId} • MÃ SẢN PHẨM #
-              {targetProduct.productId}):
+            <div className="text-xs font-bold uppercase tracking-wider text-blue-600">
+              SẢN PHẨM ĐANG THIẾT LẬP BOM (DÒNG HÀNG #{selectedOrderItemId} • MÃ SẢN PHẨM #{targetProduct.productId})
             </div>
-            <div className="text-sm font-extrabold text-slate-900 mt-0.5">
-              SKU: {targetProduct.sku} — {targetProduct.productName} (SL đặt:{" "}
+            <div className="text-base font-extrabold text-slate-900 mt-1">
+              SKU: {targetProduct.sku} — {targetProduct.productName} (Số lượng đặt:{" "}
               {targetProduct.orderQty} cái)
             </div>
-            <div className="text-xs text-slate-600 mt-0.5">
+            <div className="text-sm text-slate-600 mt-1">
               Kích thước: {targetProduct.dimensions} | Quy cách: {targetProduct.finishSpec} |{" "}
-              {targetProduct.fscRequired ? "Yêu cầu gỗ FSC 100%" : "Gỗ tiêu chuẩn"} |
-              Bản vẽ đính kèm: {targetProduct.cadDrawing}
+              {targetProduct.fscRequired ? "Yêu cầu gỗ FSC 100%" : "Gỗ tiêu chuẩn"} | Bản vẽ:{" "}
+              <span className="font-mono text-slate-800">{targetProduct.cadDrawing}</span>
             </div>
           </div>
 
           <div className="sm:text-right shrink-0">
             <span
-              className={`inline-block px-2.5 py-1 text-[10px] font-extrabold uppercase rounded border ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold uppercase rounded-full border whitespace-nowrap ${
                 isLockedForProduction
-                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                   : targetProduct.bomStatus === "NOT_CREATED"
-                    ? "bg-slate-100 text-slate-700 border-slate-300"
-                    : "bg-yellow-100 text-amber-800 border-yellow-300"
+                    ? "bg-slate-100 text-slate-700 border-slate-200"
+                    : "bg-amber-50 text-amber-800 border-amber-200"
               }`}
             >
-              {activeBomId ? `BOM #${activeBomId} • ` : ""}TRẠNG THÁI: {bomStatusLabel(targetProduct.bomStatus)}
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isLockedForProduction
+                    ? "bg-emerald-500"
+                    : targetProduct.bomStatus === "NOT_CREATED"
+                      ? "bg-slate-500"
+                      : "bg-amber-500"
+                }`}
+              />
+              {activeBomId ? `BOM #${activeBomId} • ` : ""}{bomStatusLabel(targetProduct.bomStatus)}
             </span>
-            <div className="text-[11px] text-slate-400 mt-1">
+            <div className="text-xs text-slate-500 mt-1.5">
               Lưu lần cuối: {targetProduct.lastSaved}
             </div>
           </div>
         </div>
 
-        {/* Khối Current Configured Production Routing (Sequence of Workstations) + Field #4 */}
-        <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-2xs space-y-3.5">
+        {/* Production Routing Card */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xs font-bold text-slate-800">
-              Quy trình sản xuất hiện tại (Chuỗi các trạm làm việc)
+            <h2 className="text-base font-bold text-slate-900">
+              Quy trình công đoạn sản xuất (Chuỗi trạm làm việc)
             </h2>
-            {/* Field #4: Customize Steps & Hold Points */}
             <button
               type="button"
               onClick={() => setShowRoutingModal(true)}
-              className="px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded transition"
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg transition cursor-pointer"
             >
               Tùy chỉnh công đoạn &amp; Hold Point
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             {routingStages.map((stg, idx) => (
-              <div key={`${stg.stageId}-${idx}`} className="flex items-center gap-2">
+              <div key={`${stg.stageId}-${idx}`} className="flex items-center gap-2.5">
                 {stg.isHoldPoint ? (
-                  <div className="px-3 py-2 rounded-md border-2 border-rose-500 bg-rose-50/20 text-xs font-bold text-rose-700 flex items-center gap-2 shadow-2xs">
-                    <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase rounded bg-yellow-100 text-amber-800 border border-yellow-300">
+                  <div className="px-3.5 py-2 rounded-lg border-2 border-rose-500 bg-rose-50/40 text-sm font-bold text-rose-700 flex items-center gap-2 shadow-2xs">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-800 border border-amber-300">
                       HOLD POINT
                     </span>
                     <span>{stg.stageName}</span>
                   </div>
                 ) : (
-                  <div className="px-3.5 py-2 rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-800">
+                  <div className="px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-800">
                     {stg.stageName}
                   </div>
                 )}
 
                 {idx < routingStages.length - 1 && (
-                  <span className="text-slate-400 text-xs font-bold">→</span>
+                  <span className="text-slate-400 text-sm font-bold">→</span>
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Thanh công thức Auto-Scrap Formula + Field #5: Owner Loss Allowance % */}
-        <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="text-xs text-slate-700 flex flex-wrap items-center gap-2">
-            <span>📐</span>
-            <strong className="font-bold text-slate-900">Công thức hao hụt tự động:</strong>
-            <code className="font-mono text-[11px] text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100">
-              Tổng nhu cầu = (Định mức thực mỗi sản phẩm × Số lượng đặt {targetProduct.orderQty})
-              × (1 + % hao hụt)
+        {/* Scrap Formula & Owner Loss Allowance Bar */}
+        <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="text-sm text-slate-700 flex flex-wrap items-center gap-2">
+            <strong className="font-bold text-slate-900">Công thức tính tổng nhu cầu:</strong>
+            <code className="font-mono text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
+              Tổng nhu cầu = (Định mức 1 SP × Số lượng đặt {targetProduct.orderQty}) × (1 + % hao hụt)
             </code>
           </div>
 
-          {/* Field #5: Owner Loss Allowance % */}
-          <div className="flex items-center gap-2 shrink-0">
-            <label htmlFor="ownerScrapRate" className="text-xs font-semibold text-slate-700">
-              Hao hụt cho phép % (Cấu hình hệ thống 3% - 5%):
+          <div className="flex items-center gap-2.5 shrink-0">
+            <label htmlFor="ownerScrapRate" className="text-sm font-semibold text-slate-700">
+              Tỷ lệ hao hụt cho phép (3% - 15%):
             </label>
             <input
               id="ownerScrapRate"
@@ -893,79 +923,79 @@ export default function BomBuilderPage() {
               max="15"
               value={scrapRate}
               onChange={(e) => handleScrapRateChange(e.target.value)}
-              className="w-20 px-2.5 py-1 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+              className="w-20 px-3 py-1.5 text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-center"
             />
-            <span className="text-xs font-semibold text-slate-500">%</span>
+            <span className="text-sm font-semibold text-slate-500">%</span>
           </div>
         </div>
 
-        {/* Khối Bill of Materials (BOM) Item Breakdown + Fields #6, #7, #8 */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs font-bold text-slate-800">
-                Bóc tách vật tư BOM ({bomItems.length} mã)
+        {/* BOM Item Breakdown Table Card */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-base font-bold text-slate-900">
+                Bảng bóc tách vật tư BOM
               </h2>
               {calculateDemandMutation.isPending && (
-                <span className="text-[11px] text-blue-600 font-medium">
-                  • Đang tính nhu cầu từ máy chủ...
+                <span className="text-xs text-blue-600 font-medium">
+                  • Đang tính toán nhu cầu...
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => setShowStagingModal(true)}
-                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold rounded transition"
+                className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg transition cursor-pointer"
               >
-                📥 Tải lên BOM Excel
+                Tải lên BOM Excel
               </button>
 
-              {/* Field #6: + Add Material Item */}
               <button
                 type="button"
                 onClick={() => {
                   setEditingMaterialItem(null);
                   setShowMaterialModal(true);
                 }}
-                className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-semibold rounded transition"
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
               >
-                + Thêm vật tư
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Thêm vật tư</span>
               </button>
             </div>
           </div>
 
-          {/* Field #7: BOM Item Breakdown Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto bg-white">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
-                  <th className="py-3 px-5">Mã vật tư</th>
-                  <th className="py-3 px-4">Nhóm</th>
-                  <th className="py-3 px-4">Tên vật tư, cụm chi tiết &amp; kích thước</th>
-                  <th className="py-3 px-3">ĐVT</th>
-                  <th className="py-3 px-4">Định mức thực / SP</th>
-                  <th className="py-3 px-4">Tổng định mức thực ({targetProduct.orderQty} cái)</th>
-                  <th className="py-3 px-4">Hao hụt cho phép</th>
-                  <th className="py-3 px-4">Tổng nhu cầu &amp; Tồn kho</th>
-                  <th className="py-3 px-5 text-right">Thao tác</th>
+                <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
+                  <th className="py-3.5 px-6 min-w-[140px]">Mã vật tư</th>
+                  <th className="py-3.5 px-4 min-w-[120px]">Nhóm</th>
+                  <th className="py-3.5 px-4 min-w-[260px]">Tên vật tư &amp; Quy cách chi tiết</th>
+                  <th className="py-3.5 px-3 min-w-[80px]">ĐVT</th>
+                  <th className="py-3.5 px-4 min-w-[120px]">Định mức / SP</th>
+                  <th className="py-3.5 px-4 min-w-[150px]">Tổng định mức ({targetProduct.orderQty} cái)</th>
+                  <th className="py-3.5 px-4 min-w-[140px]">Hao hụt</th>
+                  <th className="py-3.5 px-4 min-w-[180px]">Tổng nhu cầu &amp; Tồn kho</th>
+                  <th className="py-3.5 px-6 text-right min-w-[130px]">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 text-xs">
+              <tbody className="divide-y divide-slate-200 text-sm bg-white">
                 {isLoadingBom ? (
                   <tr>
-                    <td colSpan={9} className="py-10 text-center text-slate-400">
+                    <td colSpan={9} className="py-12 text-center text-slate-500">
                       Đang tải bóc tách BOM từ máy chủ...
                     </td>
                   </tr>
                 ) : bomItems.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-10 text-center text-slate-500">
-                      Dòng hàng <strong>#{selectedOrderItemId}</strong> chưa có dòng nguyên vật liệu
-                      nào. Hãy nhấn <strong>&ldquo;📥 Nhập BOM Excel (Staging)&rdquo;</strong>,{" "}
-                      <strong>&ldquo;🖼️ Danh mục sản phẩm trực quan&rdquo;</strong> hoặc{" "}
-                      <strong>&ldquo;+ Thêm vật tư&rdquo;</strong> để thiết lập định mức.
+                    <td colSpan={9} className="py-12 text-center text-slate-500">
+                      Dòng hàng <strong>#{selectedOrderItemId}</strong> chưa có nguyên vật liệu nào. Hãy sử dụng{" "}
+                      <strong>Nhập BOM Excel</strong>, <strong>Kế thừa từ danh mục</strong> hoặc{" "}
+                      <strong>Thêm vật tư</strong> để thiết lập định mức.
                     </td>
                   </tr>
                 ) : (
@@ -974,95 +1004,94 @@ export default function BomBuilderPage() {
                     return (
                       <tr
                         key={item.bomDetailId}
-                        className="hover:bg-slate-50/80 transition-colors"
+                        className="hover:bg-slate-50/90 transition-colors"
                       >
-                        <td className="py-3.5 px-5 font-mono text-[11px] font-bold text-slate-800">
+                        <td className="py-4 px-6 font-mono text-sm font-bold text-slate-800 whitespace-nowrap">
                           {item.materialCode}
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-4 px-4 whitespace-nowrap">
                           <span
-                            className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded ${getCategoryBadgeClass(
+                            className={`inline-block px-2.5 py-0.5 text-xs font-bold uppercase rounded border ${getCategoryBadgeClass(
                               item.materialGroup,
                             )}`}
                           >
                             {item.materialGroup}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-4 px-4">
                           <div className="font-semibold text-slate-900">{item.materialName}</div>
                           {(item.subAssemblyName || item.componentDimensionSpec) && (
                             <div className="flex flex-wrap items-center gap-1.5 mt-1">
                               {item.subAssemblyName && (
-                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-100 text-amber-900 border border-amber-200">
+                                <span className="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-800 border border-amber-200">
                                   {item.subAssemblyName}
                                 </span>
                               )}
                               {item.componentDimensionSpec && (
-                                <span className="font-mono text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                <span className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                                   {item.componentDimensionSpec}
                                 </span>
                               )}
                             </div>
                           )}
                           {(item.dimensionSpec || item.notes) && (
-                            <div className="text-[11px] text-slate-500 mt-0.5">
+                            <div className="text-xs text-slate-500 mt-1">
                               {item.dimensionSpec}
                               {item.dimensionSpec && item.notes ? " • " : ""}
                               {item.notes}
                             </div>
                           )}
                         </td>
-                        <td className="py-3.5 px-3 text-slate-600">{item.unitOfMeasure}</td>
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">
+                        <td className="py-4 px-3 text-slate-600 whitespace-nowrap">{item.unitOfMeasure}</td>
+                        <td className="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">
                           {item.netQtyPerUnit}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-700">{metrics.netSubtotalText}</td>
-                        <td className="py-3.5 px-4 text-slate-600">
+                        <td className="py-4 px-4 text-slate-700 whitespace-nowrap">{metrics.netSubtotalText}</td>
+                        <td className="py-4 px-4 text-slate-600 whitespace-nowrap">
                           {metrics.scrapAllowanceText}
                         </td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-extrabold text-[#d97706]">
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <div className="font-extrabold text-blue-700">
                             {metrics.grossTotalText}
                           </div>
                           {item.availableStock !== undefined && (
-                            <div className="mt-0.5 flex items-center gap-1.5 text-[10px]">
+                            <div className="mt-1 flex items-center gap-1.5 text-xs">
                               <span className="text-slate-500">
-                                Khả dụng: <strong>{item.availableStock}</strong>
+                                Khả dụng: <strong className="text-slate-800">{item.availableStock}</strong>
                               </span>
                               {item.isShortage ? (
-                                <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-bold">
+                                <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-bold">
                                   Thiếu: {item.netDemand}
                                 </span>
                               ) : (
-                                <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 font-bold">
+                                <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
                                   Đủ tồn
                                 </span>
                               )}
                             </div>
                           )}
                         </td>
-                        <td className="py-3.5 px-5 text-right">
-                          <div className="inline-flex items-center gap-1.5">
-                            {/* Field #8: Edit Button */}
+                        <td className="py-4 px-6 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => {
                                 setEditingMaterialItem(item);
                                 setShowMaterialModal(true);
                               }}
-                              className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded transition"
+                              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg transition cursor-pointer"
                             >
-                              Sửa
+                              Chỉnh sửa
                             </button>
                             <button
                               type="button"
                               onClick={() =>
                                 handleDeleteMaterialItem(item.bomDetailId, item.materialCode)
                               }
-                              className="px-2 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-slate-200 text-[11px] font-bold rounded transition"
+                              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg transition cursor-pointer"
                               title="Xóa dòng vật tư"
                             >
-                              ✕
+                              Xóa
                             </button>
                           </div>
                         </td>
@@ -1076,7 +1105,6 @@ export default function BomBuilderPage() {
         </div>
       </div>
 
-      {/* Modal 5.2: Visual Product Catalog Selection */}
       <VisualProductCatalogModal
         isOpen={showVisualCatalogModal}
         currentModelKey={targetProduct.modelKey}
@@ -1084,7 +1112,6 @@ export default function BomBuilderPage() {
         onSelectModel={handleSelectVisualModel}
       />
 
-      {/* Modal 5.3: Customize Dynamic Routing Sequence */}
       <DynamicRoutingModal
         isOpen={showRoutingModal}
         stages={routingStages}
@@ -1092,7 +1119,6 @@ export default function BomBuilderPage() {
         onSave={handleSaveRoutingSequence}
       />
 
-      {/* Modal Add / Edit Material Item */}
       <MaterialItemModal
         isOpen={showMaterialModal}
         editingItem={editingMaterialItem}
@@ -1103,7 +1129,6 @@ export default function BomBuilderPage() {
         onSave={handleSaveMaterialItem}
       />
 
-      {/* Modal BOM Excel Staging Preview & Confirm */}
       <BomStagingModal
         isOpen={showStagingModal}
         orderItemId={selectedOrderItemId}
