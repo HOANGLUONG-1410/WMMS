@@ -1,10 +1,9 @@
 # ==========================================
-# projectmem (Keep persistent memory clean)
+# Local AI memory & Tools (Strictly isolated from Git)
 # ==========================================
-.projectmem/events.jsonl
-.projectmem/watch.pid
-.projectmem/watch.log
-.projectmem/structure.json
+.projectmem/
+CLAUDE.md
+AGENTS.md
 
 # ==========================================
 # .NET & Visual Studio
