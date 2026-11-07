@@ -10,39 +10,39 @@ export interface ProvisionUserModalProps {
 }
 
 function mapSelectedOptionToRole(optionText = "") {
-  if (optionText.includes("Sales")) {
+  if (optionText.includes("kinh doanh")) {
     return {
       code: "SALES",
-      label: "SALES STAFF",
+      label: "NHÂN VIÊN KINH DOANH",
     };
   }
-  if (optionText.includes("Leader")) {
+  if (optionText.includes("Quản đốc")) {
     return {
       code: "LEADER",
-      label: "PRODUCTION LEADER",
+      label: "QUẢN ĐỐC SẢN XUẤT",
     };
   }
   if (optionText.includes("QC")) {
     return {
       code: "QC",
-      label: "QC STAFF",
+      label: "NHÂN VIÊN QC",
     };
   }
-  if (optionText.includes("Warehouse")) {
+  if (optionText.includes("Thủ kho")) {
     return {
       code: "WAREHOUSE",
-      label: "WAREHOUSE KEEPER",
+      label: "THỦ KHO",
     };
   }
-  if (optionText.includes("Purchasing")) {
+  if (optionText.includes("mua hàng")) {
     return {
       code: "PURCHASING",
-      label: "PURCHASING STAFF",
+      label: "NHÂN VIÊN MUA HÀNG",
     };
   }
   return {
     code: "OWNER",
-    label: "WORKSHOP OWNER",
+    label: "CHỦ XƯỞNG",
   };
 }
 
@@ -62,7 +62,7 @@ export default function ProvisionUserModal({
   const [companyEmailInput, setCompanyEmailInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [assignedRoleOption, setAssignedRoleOption] = useState(
-    "Workshop Owner (Executive & Technical Planner)",
+    "Chủ xưởng (Điều hành & Kỹ thuật)",
   );
   const [initialPasswordInput, setInitialPasswordInput] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
@@ -87,14 +87,14 @@ export default function ProvisionUserModal({
       setLocalError(null);
       onSuccess(
         res?.message ||
-          "New staff account created successfully! Activation details and temporary password dispatched. (MSG-ADM-01)",
+          "Tạo tài khoản nhân viên mới thành công! Thông tin kích hoạt và mật khẩu tạm đã được gửi.",
       );
       onClose();
     },
     onError: (err: unknown) => {
       const errMsg =
         (err as { message?: string })?.message ||
-        "Unable to create account. Please check credentials.";
+        "Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin.";
       setLocalError(errMsg);
       onError(errMsg);
     },
@@ -113,7 +113,7 @@ export default function ProvisionUserModal({
 
     if (!fullName || !username || !email) {
       setLocalError(
-        "Please provide Full Employee Name, Username, and Company Email (MSG01).",
+        "Vui lòng nhập Họ tên nhân viên, Tên đăng nhập và Email công ty.",
       );
       return;
     }
@@ -137,7 +137,7 @@ export default function ProvisionUserModal({
         {/* Header Modal */}
         <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-slate-100">
           <h2 className="text-sm font-bold text-slate-900">
-            Provision New User Account (MOD-ADM-01)
+            Cấp tài khoản người dùng mới
           </h2>
           <button
             type="button"
@@ -159,14 +159,14 @@ export default function ProvisionUserModal({
           {/* Field #1: Full Employee Name */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Full Employee Name
+              Họ tên nhân viên
             </label>
             <input
               type="text"
               required
               value={fullNameInput}
               onChange={(e) => setFullNameInput(e.target.value)}
-              placeholder="e.g. Tran Van Binh"
+              placeholder="VD: Trần Văn Bình"
               className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -174,14 +174,14 @@ export default function ProvisionUserModal({
           {/* Field #2: Username */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Username
+              Tên đăng nhập
             </label>
             <input
               type="text"
               required
               value={usernameInput}
               onChange={(e) => setUsernameInput(e.target.value)}
-              placeholder="e.g. binh.tran"
+              placeholder="VD: binh.tran"
               className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -189,7 +189,7 @@ export default function ProvisionUserModal({
           {/* Field #3: Company Email */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Company Email
+              Email công ty
             </label>
             <input
               type="email"
@@ -204,8 +204,8 @@ export default function ProvisionUserModal({
           {/* Field #4: Phone Number (Optional) */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Phone Number{" "}
-              <span className="text-slate-400 font-normal">(Optional)</span>
+              Số điện thoại{" "}
+              <span className="text-slate-400 font-normal">(Không bắt buộc)</span>
             </label>
             <input
               type="tel"
@@ -219,7 +219,7 @@ export default function ProvisionUserModal({
           {/* Field #5: Assigned Role */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Assigned Role
+              Vai trò được gán
             </label>
             <select
               value={assignedRoleOption}
@@ -227,20 +227,20 @@ export default function ProvisionUserModal({
               className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option>
-                Workshop Owner (Executive &amp; Technical Planner)
+                Chủ xưởng (Điều hành &amp; Kỹ thuật)
               </option>
-              <option>Sales Staff (Excel PO Staging &amp; Space Init)</option>
-              <option>Production Leader (Kanban Floor Dispatch)</option>
-              <option>QC Staff (Workstation Quality Gate)</option>
-              <option>Warehouse Keeper (Goods Receipt &amp; Issue)</option>
-              <option>Purchasing Staff (Vendor Sourcing &amp; PO)</option>
+              <option>Nhân viên kinh doanh (Nhập PO Excel và khởi tạo Space)</option>
+              <option>Quản đốc sản xuất (Điều phối Kanban xưởng)</option>
+              <option>Nhân viên QC (Cổng chất lượng tại trạm)</option>
+              <option>Thủ kho (Nhập và xuất kho)</option>
+              <option>Nhân viên mua hàng (Tìm NCC và lập PO)</option>
             </select>
           </div>
 
           {/* Field #6: Initial Password */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Initial Password
+              Mật khẩu ban đầu
             </label>
             <input
               type="text"
@@ -258,7 +258,7 @@ export default function ProvisionUserModal({
               disabled={createMutation.isPending}
               className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
@@ -268,7 +268,7 @@ export default function ProvisionUserModal({
               {createMutation.isPending && (
                 <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              {createMutation.isPending ? "Creating..." : "Create Account"}
+              {createMutation.isPending ? "Đang tạo..." : "Tạo tài khoản"}
             </button>
           </div>
         </form>

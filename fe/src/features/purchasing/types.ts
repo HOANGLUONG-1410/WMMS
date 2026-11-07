@@ -36,3 +36,17 @@ export interface PurchaseOrderQueryParams {
   status?: string;
 }
 
+
+/** Nhãn tiếng Việt hiển thị cho trạng thái thực hiện PO (giá trị gốc vẫn giữ nguyên để so sánh logic). */
+export const fulfillmentStatusLabel = (status: PoFulfillmentStatus): string => {
+  switch (status) {
+    case "PO ISSUED / IN TRANSIT":
+      return "ĐÃ PHÁT HÀNH PO / ĐANG VẬN CHUYỂN";
+    case "SUPPLIER CONFIRMED":
+      return "NCC ĐÃ XÁC NHẬN";
+    case "RECEIVED & COMMITTED":
+      return "ĐÃ NHẬN & XÁC NHẬN NHẬP KHO";
+    default:
+      return String(status);
+  }
+};

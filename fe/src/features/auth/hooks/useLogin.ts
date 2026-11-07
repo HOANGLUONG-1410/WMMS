@@ -22,7 +22,7 @@ export function useLogin() {
     },
     onSuccess: ({ user, message }) => {
       // Hiển thị thông báo thành công từ Backend ở pop-up góc trên bên phải
-      toast.success(message || "Signed in successfully!", {
+      toast.success(message || "Đăng nhập thành công!", {
         id: "login-success",
       });
 

@@ -55,7 +55,7 @@ export default function RolePermissionMatrixModal({
         {/* Header Modal */}
         <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-slate-100">
           <h2 className="text-sm font-bold text-slate-900">
-            Role Permission Configuration Matrix (MOD-ADM-02)
+            Ma trận cấu hình phân quyền vai trò
           </h2>
           <button
             type="button"
@@ -71,12 +71,12 @@ export default function RolePermissionMatrixModal({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/70">
-                <th className="py-2.5 px-3">Functional Domain</th>
-                <th className="py-2.5 px-3">Action Scope</th>
-                <th className="py-2.5 px-3">Workshop Owner</th>
-                <th className="py-2.5 px-3">Production Leader</th>
-                <th className="py-2.5 px-3">QC Staff</th>
-                <th className="py-2.5 px-3">Warehouse</th>
+                <th className="py-2.5 px-3">Phân hệ chức năng</th>
+                <th className="py-2.5 px-3">Phạm vi thao tác</th>
+                <th className="py-2.5 px-3">Chủ xưởng</th>
+                <th className="py-2.5 px-3">Quản đốc sản xuất</th>
+                <th className="py-2.5 px-3">Nhân viên QC</th>
+                <th className="py-2.5 px-3">Thủ kho</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -111,7 +111,7 @@ export default function RolePermissionMatrixModal({
             onClick={onClose}
             className="px-4 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
           >
-            Close
+            Đóng
           </button>
         </div>
       </div>

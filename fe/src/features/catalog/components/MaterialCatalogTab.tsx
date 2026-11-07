@@ -2,11 +2,11 @@ import { useState, useMemo } from "react";
 import { useMaterials } from "../hooks/useCatalog";
 
 const MATERIAL_GROUPS = [
-  { key: "ALL", label: "All Groups", icon: "📦" },
-  { key: "LUMBER", label: "Lumber & Plywood (Gỗ)", icon: "🪵" },
-  { key: "HARDWARE", label: "Hardware & Fittings (Kim khí)", icon: "🔩" },
-  { key: "FINISH_PAINT", label: "Finishing & Paint (Sơn/Hóa chất)", icon: "🎨" },
-  { key: "PACKAGING", label: "Packaging & Protection (Bao bì)", icon: "📦" },
+  { key: "ALL", label: "Tất cả nhóm", icon: "📦" },
+  { key: "LUMBER", label: "Gỗ & ván ép", icon: "🪵" },
+  { key: "HARDWARE", label: "Phụ kiện kim khí", icon: "🔩" },
+  { key: "FINISH_PAINT", label: "Sơn & hóa chất hoàn thiện", icon: "🎨" },
+  { key: "PACKAGING", label: "Bao bì & bảo vệ", icon: "📦" },
 ];
 
 export default function MaterialCatalogTab() {
@@ -77,7 +77,7 @@ export default function MaterialCatalogTab() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search material code, name, specs..."
+            placeholder="Tìm theo mã vật tư, tên, quy cách..."
             className="w-full px-3.5 py-1.5 pl-9 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
           />
           <span className="absolute left-3 top-2 text-slate-400 text-xs">🔍</span>
@@ -99,15 +99,15 @@ export default function MaterialCatalogTab() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 bg-slate-50/80 uppercase tracking-wider">
-                <th className="py-3 px-4 w-44">Material Code</th>
-                <th className="py-3 px-4">Material Name &amp; Description</th>
-                <th className="py-3 px-4 w-32">Group</th>
-                <th className="py-3 px-4 w-48">Dimension / Spec</th>
-                <th className="py-3 px-3 w-20 text-center">UoM</th>
-                <th className="py-3 px-4 w-36 text-center">FSC Certification</th>
-                <th className="py-3 px-4 w-28 text-right">Safety Stock</th>
-                <th className="py-3 px-4 w-28 text-right">Physical Stock</th>
-                <th className="py-3 px-4 w-32 text-center">Stock Health</th>
+                <th className="py-3 px-4 w-44">Mã vật tư</th>
+                <th className="py-3 px-4">Tên &amp; mô tả vật tư</th>
+                <th className="py-3 px-4 w-32">Nhóm</th>
+                <th className="py-3 px-4 w-48">Kích thước / Quy cách</th>
+                <th className="py-3 px-3 w-20 text-center">ĐVT</th>
+                <th className="py-3 px-4 w-36 text-center">Chứng nhận FSC</th>
+                <th className="py-3 px-4 w-28 text-right">Tồn an toàn</th>
+                <th className="py-3 px-4 w-28 text-right">Tồn vật lý</th>
+                <th className="py-3 px-4 w-32 text-center">Tình trạng tồn</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -115,7 +115,7 @@ export default function MaterialCatalogTab() {
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-400">
                     <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-xs">Loading material catalog...</p>
+                    <p className="text-xs">Đang tải danh mục vật tư...</p>
                   </td>
                 </tr>
               )}
@@ -123,7 +123,7 @@ export default function MaterialCatalogTab() {
               {isError && (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-rose-600 font-medium">
-                    {(error as { message?: string })?.message || "Failed to load materials."}
+                    {(error as { message?: string })?.message || "Tải danh mục vật tư thất bại."}
                   </td>
                 </tr>
               )}
@@ -131,7 +131,7 @@ export default function MaterialCatalogTab() {
               {!isLoading && !isError && filteredMaterials.length === 0 && (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-slate-400 italic">
-                    No material records found matching your filters.
+                    Không có vật tư nào khớp với bộ lọc.
                   </td>
                 </tr>
               )}
@@ -185,7 +185,7 @@ export default function MaterialCatalogTab() {
                           </span>
                         ) : (
                           <span className="inline-block px-2 py-0.5 text-[10px] font-medium text-slate-400 bg-slate-100 rounded">
-                            Non-FSC
+                            Không FSC
                           </span>
                         )}
                       </td>
@@ -204,15 +204,15 @@ export default function MaterialCatalogTab() {
                       <td className="py-3.5 px-4 text-center">
                         {isOutOfStock ? (
                           <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-rose-100 text-rose-700 border border-rose-200">
-                            Out of Stock
+                            Hết hàng
                           </span>
                         ) : isLowStock ? (
                           <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-800 border border-amber-200">
-                            Low Stock
+                            Tồn thấp
                           </span>
                         ) : (
                           <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Optimal
+                            Ổn định
                           </span>
                         )}
                       </td>
@@ -226,12 +226,12 @@ export default function MaterialCatalogTab() {
         {/* Table Footer info */}
         <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/70 text-xs text-slate-500 flex items-center justify-between">
           <span>
-            Total standard items:{" "}
+            Tổng số mã chuẩn:{" "}
             <span className="font-bold text-slate-800">{filteredMaterials.length}</span>
           </span>
           <span className="text-[11px]">
-            Stock Health rule: Flagged as <span className="text-amber-700 font-semibold">Low Stock</span> when{" "}
-            <code className="text-slate-700 font-mono">Current &lt; SafetyStockQty</code>
+            Quy tắc tình trạng tồn: gắn cờ <span className="text-amber-700 font-semibold">Tồn thấp</span> khi{" "}
+            <code className="text-slate-700 font-mono">Hiện có &lt; Tồn an toàn</code>
           </span>
         </div>
       </div>

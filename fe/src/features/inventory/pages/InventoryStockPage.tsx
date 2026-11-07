@@ -20,7 +20,7 @@ export default function InventoryStockPage() {
 
   // Kho vật lý đang chọn (theo Mockup 7.1)
   const [selectedYard, setSelectedYard] = useState<string>(
-    "Main Raw Material & Lumber Yard (Ha Nam)",
+    "Bãi gỗ & nguyên liệu chính (Hà Nam)",
   );
 
   // Bộ lọc Tab 1: GET /api/v1/inventory/stocks (mặc định 10 dòng/trang giống UserManagementPage)
@@ -162,27 +162,27 @@ export default function InventoryStockPage() {
         {/* Top Context Bar: Warehouse Yard Selector (Theo đúng Mockup 7.1) */}
         <div className="bg-white border border-slate-200 rounded-lg px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-semibold text-slate-600">Warehouse Yard:</span>
+            <span className="font-semibold text-slate-600">Bãi kho:</span>
             <select
               value={selectedYard}
               onChange={(e) => setSelectedYard(e.target.value)}
               className="px-2.5 py-1 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="Main Raw Material & Lumber Yard (Ha Nam)">
-                Main Raw Material &amp; Lumber Yard (Ha Nam)
+              <option value="Bãi gỗ & nguyên liệu chính (Hà Nam)">
+                Bãi gỗ &amp; nguyên liệu chính (Hà Nam)
               </option>
-              <option value="Kiln-Dried Timber & Veneer Warehouse (Zone B)">
-                Kiln-Dried Timber &amp; Veneer Warehouse (Zone B)
+              <option value="Kho gỗ sấy & veneer (Khu B)">
+                Kho gỗ sấy &amp; veneer (Khu B)
               </option>
-              <option value="Hardware, Paint & Packaging Store (Zone C)">
-                Hardware, Paint &amp; Packaging Store (Zone C)
+              <option value="Kho phụ kiện, sơn & bao bì (Khu C)">
+                Kho phụ kiện, sơn &amp; bao bì (Khu C)
               </option>
             </select>
           </div>
 
           <div className="flex items-center gap-2 text-xs">
             <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[11px] font-bold">
-              ● MES 3-TIER ENGINE ACTIVE
+              ● BỘ XỬ LÝ TỒN KHO 3 CẤP ĐANG HOẠT ĐỘNG
             </span>
             <button
               type="button"
@@ -193,14 +193,14 @@ export default function InventoryStockPage() {
               }}
               className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-semibold transition"
             >
-              ↻ Refresh Data
+              ↻ Làm mới dữ liệu
             </button>
             <button
               type="button"
               onClick={handleExportCsv}
               className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-semibold transition"
             >
-              📥 Export CSV
+              📥 Xuất CSV
             </button>
           </div>
         </div>
@@ -209,11 +209,11 @@ export default function InventoryStockPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Inventory 3-Tier Stock Grid (SCR-INV-01)
+              Lưới tồn kho 3 cấp
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Strict mathematical separation of Physical, Reserved (Allocated), and Free Available
-              stock to prevent double-counting.
+              Tách bạch chặt chẽ giữa tồn vật lý, tồn đã giữ chỗ (phân bổ) và tồn khả dụng
+              để tránh tính trùng.
             </p>
           </div>
 
@@ -224,7 +224,7 @@ export default function InventoryStockPage() {
               onClick={() => navigate("/warehouse/receipts")}
               className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold rounded-md shadow-xs transition"
             >
-              + Inbound Receipt (Commit)
+              + Nhập kho (Xác nhận)
             </button>
 
             {/* Field #2: Goods Issue to Floor */}
@@ -233,26 +233,9 @@ export default function InventoryStockPage() {
               onClick={() => navigate("/warehouse/issues")}
               className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-semibold rounded-md shadow-2xs transition"
             >
-              Goods Issue to Floor
+              Xuất kho xuống xưởng
             </button>
           </div>
-        </div>
-
-        {/* Formula Callout Banner (Theo đúng Mockup 7.1) */}
-        <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-sm">💡</span>
-            <strong className="font-extrabold text-slate-900">
-              Three-Tier Core Inventory Formula (BR-003):
-            </strong>
-            <code className="font-mono text-[11px] font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
-              Available Stock = Total Physical Stock - Allocated Stock (Reserved)
-            </code>
-          </div>
-
-          <span className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-            DOUBLE-COUNTING BLOCKED
-          </span>
         </div>
 
         {/* 3 KPI Summary Cards (Theo đúng Mockup 7.1) */}
@@ -260,39 +243,39 @@ export default function InventoryStockPage() {
           {/* Card 1: TOTAL PHYSICAL STOCK ITEMS */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              TOTAL PHYSICAL STOCK ITEMS
+              TỔNG MÃ TỒN VẬT LÝ
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-1.5">
               {totalSkuCount} SKU
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Physical inventory in warehouse racks
+              Hàng thực tế trên kệ kho
             </div>
           </div>
 
           {/* Card 2: TOTAL ALLOCATED STOCK */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              TOTAL ALLOCATED STOCK
+              TỔNG TỒN ĐÃ PHÂN BỔ
             </div>
             <div className="text-2xl font-extrabold text-[#d97706] mt-1.5">
-              {allocatedItemsCount} Items Locked
+              {allocatedItemsCount} mã đang bị khóa
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Reserved strictly for active orders
+              Chỉ giữ chỗ cho các đơn đang thực hiện
             </div>
           </div>
 
           {/* Card 3: BELOW SAFETY BUFFER */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              BELOW SAFETY BUFFER
+              DƯỚI MỨC TỒN AN TOÀN
             </div>
             <div className="text-2xl font-extrabold text-rose-600 mt-1.5">
-              {belowSafetyCount} Items
+              {belowSafetyCount} mã
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Included in daily purchase aggregation
+              Được đưa vào gom mua hàng theo ngày
             </div>
           </div>
         </div>
@@ -331,15 +314,6 @@ export default function InventoryStockPage() {
                 {totalLedgerCount}
               </span>
             </button>
-          </div>
-
-          <div className="text-[11px] text-slate-400 pb-2">
-            API:{" "}
-            <code className="font-mono text-slate-600">
-              {activeTab === "balance"
-                ? "GET /api/v1/inventory/stocks"
-                : "GET /api/v1/inventory/ledger"}
-            </code>
           </div>
         </div>
 

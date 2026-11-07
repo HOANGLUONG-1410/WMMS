@@ -49,7 +49,7 @@ export default function StockLedgerTable({
         badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
         qtyClass: "text-emerald-700",
         prefix: "+",
-        label: "INITIAL_IMPORT • Tồn đầu kỳ",
+        label: "Tồn đầu kỳ",
       };
     }
     if (upper === "IN_RECEIPT") {
@@ -57,7 +57,7 @@ export default function StockLedgerTable({
         badgeClass: "bg-blue-100 text-blue-800 border-blue-300",
         qtyClass: "text-blue-700",
         prefix: "+",
-        label: "IN_RECEIPT • Nhập kho GRN",
+        label: "Nhập kho GRN",
       };
     }
     if (upper === "OUT_ISSUE") {
@@ -65,14 +65,14 @@ export default function StockLedgerTable({
         badgeClass: "bg-amber-100 text-amber-800 border-amber-300",
         qtyClass: "text-rose-600",
         prefix: "−",
-        label: "OUT_ISSUE • Xuất kho SX",
+        label: "Xuất kho sản xuất",
       };
     }
     return {
       badgeClass: "bg-purple-100 text-purple-800 border-purple-300",
       qtyClass: "text-purple-700",
       prefix: "±",
-      label: `${upper} • Kiểm kê / Điều chỉnh`,
+      label: "Kiểm kê / Điều chỉnh",
     };
   };
 
@@ -120,18 +120,18 @@ export default function StockLedgerTable({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-extrabold text-slate-900">
-                Sổ kho điện tử (Electronic Stock Transaction Ledger — SC-13)
+                Sổ kho điện tử
               </h2>
               {isFetching && !isLoading && (
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-200">
                   <span className="w-2 h-2 rounded-full border border-blue-600 border-t-transparent animate-spin" />
-                  Requesting BE...
+                  Đang gọi máy chủ...
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Immutable audit trail of initial stock imports, goods receipts (GRN), production floor
-              dispatches, and stock adjustments (<code className="font-mono">GET /api/v1/inventory/ledger</code>).
+              Nhật ký bất biến về nhập tồn đầu kỳ, phiếu nhập kho (GRN), xuất vật tư xuống xưởng
+              và điều chỉnh tồn kho.
             </p>
           </div>
           <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-300 self-start sm:self-auto">
@@ -160,7 +160,7 @@ export default function StockLedgerTable({
                     type="button"
                     onClick={handleClearSearch}
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
-                    title="Clear search"
+                    title="Xóa tìm kiếm"
                   >
                     ×
                   </button>
@@ -171,7 +171,7 @@ export default function StockLedgerTable({
                 disabled={isFetching}
                 className="px-2.5 py-1.5 text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 disabled:opacity-60 rounded-md shadow-sm transition shrink-0"
               >
-                Search
+                Tìm kiếm
               </button>
             </div>
           </form>
@@ -215,9 +215,9 @@ export default function StockLedgerTable({
             >
               <option value="ALL">Tất cả loại giao dịch</option>
               <option value="INITIAL_IMPORT">INITIAL_IMPORT (Nhập tồn đầu kỳ)</option>
-              <option value="IN_RECEIPT">IN_RECEIPT (Nhập kho mua hàng)</option>
-              <option value="OUT_ISSUE">OUT_ISSUE (Xuất kho sản xuất)</option>
-              <option value="ADJUST">ADJUST (Điều chỉnh kiểm kê)</option>
+              <option value="IN_RECEIPT">Nhập kho mua hàng</option>
+              <option value="OUT_ISSUE">Xuất kho sản xuất</option>
+              <option value="ADJUST">Điều chỉnh kiểm kê</option>
             </select>
           </div>
 
@@ -260,7 +260,7 @@ export default function StockLedgerTable({
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition shrink-0"
               title="Xóa bộ lọc"
             >
-              Reset
+              Đặt lại
             </button>
           </div>
         </div>
@@ -271,14 +271,14 @@ export default function StockLedgerTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-500 bg-slate-50/70">
-              <th className="py-3 px-4">Transaction ID</th>
-              <th className="py-3 px-4">Execution Date &amp; Time</th>
-              <th className="py-3 px-4">Transaction Type</th>
-              <th className="py-3 px-4">Reference Voucher Code</th>
-              <th className="py-3 px-4">Material Code</th>
-              <th className="py-3 px-4">Material Description &amp; Group</th>
-              <th className="py-3 px-3 text-center">UoM</th>
-              <th className="py-3 px-5 text-right">Quantity Change</th>
+              <th className="py-3 px-4">Mã giao dịch</th>
+              <th className="py-3 px-4">Ngày &amp; giờ thực hiện</th>
+              <th className="py-3 px-4">Loại giao dịch</th>
+              <th className="py-3 px-4">Mã chứng từ tham chiếu</th>
+              <th className="py-3 px-4">Mã vật tư</th>
+              <th className="py-3 px-4">Mô tả &amp; nhóm vật tư</th>
+              <th className="py-3 px-3 text-center">ĐVT</th>
+              <th className="py-3 px-5 text-right">Biến động số lượng</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-xs">
@@ -287,7 +287,7 @@ export default function StockLedgerTable({
                 <td colSpan={8} className="py-12 text-center text-slate-400">
                   <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
                   <p className="text-xs font-medium text-slate-500">
-                    Fetching electronic stock ledger from WMMS backend...
+                    Đang tải sổ kho điện tử từ máy chủ WMMS...
                   </p>
                 </td>
               </tr>
@@ -362,14 +362,14 @@ export default function StockLedgerTable({
         {/* Thống kê dòng hiển thị & chọn PageSize */}
         <div className="flex items-center gap-3">
           <span>
-            Showing <strong className="text-slate-800">{startItem}</strong> to{" "}
-            <strong className="text-slate-800">{endItem}</strong> of{" "}
+            Hiển thị <strong className="text-slate-800">{startItem}</strong> đến{" "}
+            <strong className="text-slate-800">{endItem}</strong> trên{" "}
             <strong className="text-slate-800">{totalCount}</strong>{" "}
-            transactions
+            giao dịch
           </span>
 
           <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
-            <span className="text-slate-500 text-[11px]">Rows/page:</span>
+            <span className="text-slate-500 text-[11px]">Số dòng/trang:</span>
             <select
               value={pageSize}
               onChange={(e) =>
@@ -401,7 +401,7 @@ export default function StockLedgerTable({
             }
             className="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
-            Previous
+            Trước
           </button>
 
           <div className="flex items-center gap-1 px-1">
@@ -444,7 +444,7 @@ export default function StockLedgerTable({
             }
             className="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
-            Next
+            Sau
           </button>
         </div>
       </div>

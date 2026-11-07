@@ -13,11 +13,11 @@ interface StockBalanceTableProps {
 }
 
 const CATEGORY_TABS = [
-  { key: "ALL", label: "All Materials (14)" },
-  { key: "LUMBER", label: "Solid Lumber (Gỗ)" },
-  { key: "HARDWARE", label: "Hardware (Phụ kiện)" },
-  { key: "FINISH_PAINT", label: "Finish & Paint (Sơn)" },
-  { key: "PACKAGING", label: "Packaging (Đóng gói)" },
+  { key: "ALL", label: "Tất cả vật tư (14)" },
+  { key: "LUMBER", label: "Gỗ nguyên khối" },
+  { key: "HARDWARE", label: "Phụ kiện" },
+  { key: "FINISH_PAINT", label: "Sơn & hoàn thiện" },
+  { key: "PACKAGING", label: "Bao bì" },
 ];
 
 export default function StockBalanceTable({
@@ -64,10 +64,10 @@ export default function StockBalanceTable({
     const upper = (uom || "").toUpperCase();
     if (upper === "M3" || upper === "M³") return "m³";
     if (upper === "M2" || upper === "M²") return "m²";
-    if (upper === "PCS") return "Pcs";
-    if (upper === "LITER") return "Liters";
-    if (upper === "SHEET") return "Sheets";
-    if (upper === "SET") return "Sets";
+    if (upper === "PCS") return "Cái";
+    if (upper === "LITER") return "Lít";
+    if (upper === "SHEET") return "Tấm";
+    if (upper === "SET") return "Bộ";
     return uom;
   };
 
@@ -87,10 +87,10 @@ export default function StockBalanceTable({
 
   const getCategoryDisplay = (group: string) => {
     const upper = (group || "").toUpperCase();
-    if (upper === "LUMBER") return "Solid Lumber";
-    if (upper === "HARDWARE") return "Hardware";
-    if (upper === "FINISH_PAINT") return "Finish & Paint";
-    if (upper === "PACKAGING") return "Packaging";
+    if (upper === "LUMBER") return "Gỗ nguyên khối";
+    if (upper === "HARDWARE") return "Phụ kiện";
+    if (upper === "FINISH_PAINT") return "Sơn & hoàn thiện";
+    if (upper === "PACKAGING") return "Bao bì";
     return group;
   };
 
@@ -101,15 +101,15 @@ export default function StockBalanceTable({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <h2 className="text-sm font-extrabold text-slate-900">
-              Real-time Material Inventory Balance
+              Tồn kho vật tư theo thời gian thực
             </h2>
             <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {totalCount} SKUs
+              {totalCount} SKU
             </span>
             {isFetching && !isLoading && (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-200">
                 <span className="w-2 h-2 rounded-full border border-blue-600 border-t-transparent animate-spin" />
-                Requesting BE...
+                Đang gọi máy chủ...
               </span>
             )}
           </div>
@@ -124,7 +124,7 @@ export default function StockBalanceTable({
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search by material code or description..."
+                placeholder="Tìm theo mã vật tư hoặc mô tả..."
                 className="w-full pl-3.5 pr-7 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 placeholder:text-slate-400"
               />
               {searchInput && (
@@ -132,7 +132,7 @@ export default function StockBalanceTable({
                   type="button"
                   onClick={handleClearSearch}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
-                  title="Clear search"
+                  title="Xóa tìm kiếm"
                 >
                   ×
                 </button>
@@ -144,7 +144,7 @@ export default function StockBalanceTable({
               disabled={isFetching}
               className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 disabled:opacity-60 rounded-md shadow-sm transition whitespace-nowrap"
             >
-              Search
+              Tìm kiếm
             </button>
           </form>
         </div>
@@ -200,23 +200,23 @@ export default function StockBalanceTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-500">
-              <th className="py-3 px-5 bg-slate-50/60">Material Code</th>
-              <th className="py-3 px-4 bg-slate-50/60">Category</th>
-              <th className="py-3 px-4 bg-slate-50/60">Description</th>
-              <th className="py-3 px-3 bg-slate-50/60">UoM</th>
+              <th className="py-3 px-5 bg-slate-50/60">Mã vật tư</th>
+              <th className="py-3 px-4 bg-slate-50/60">Nhóm</th>
+              <th className="py-3 px-4 bg-slate-50/60">Mô tả</th>
+              <th className="py-3 px-3 bg-slate-50/60">ĐVT</th>
               <th className="py-3 px-4 bg-slate-100/70 text-slate-700 font-bold">
-                1. Total Physical Stock
+                1. Tổng tồn vật lý
               </th>
               <th className="py-3 px-4 bg-amber-50/90 text-amber-900 font-bold">
-                2. Allocated Stock (Reserved)
+                2. Tồn đã phân bổ (Giữ chỗ)
               </th>
               <th className="py-3 px-4 bg-emerald-50/90 text-emerald-900 font-bold">
-                3. Available Stock (Free)
+                3. Tồn khả dụng (Tự do)
               </th>
               <th className="py-3 px-4 bg-slate-50/60">
-                Active Allocations (Order Spaces)
+                Phân bổ đang hoạt động (Order Space)
               </th>
-              <th className="py-3 px-5 bg-slate-50/60 text-right">Action</th>
+              <th className="py-3 px-5 bg-slate-50/60 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-xs">
@@ -225,7 +225,7 @@ export default function StockBalanceTable({
                 <td colSpan={9} className="py-12 text-center text-slate-400">
                   <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
                   <p className="text-xs font-medium text-slate-500">
-                    Fetching 3-tier inventory stocks from WMMS backend...
+                    Đang tải tồn kho 3 cấp từ máy chủ WMMS...
                   </p>
                 </td>
               </tr>
@@ -272,7 +272,7 @@ export default function StockBalanceTable({
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
                         <span>
-                          Safety Buffer:{" "}
+                          Tồn an toàn:{" "}
                           {formatQuantityWithUnit(item.safetyStockQty, item.unitOfMeasure)}
                         </span>
                         {item.fscCertified && (
@@ -309,12 +309,12 @@ export default function StockBalanceTable({
                       {formatQuantityWithUnit(item.availableQty, item.unitOfMeasure)}
                       {item.availableQty <= 0 && (
                         <span className="ml-1 text-[11px] font-bold text-rose-600">
-                          (Shortage)
+                          (Thiếu hàng)
                         </span>
                       )}
                       {item.availableQty > 0 && isShortageOrLow && (
                         <span className="ml-1 text-[10px] font-bold text-rose-600">
-                          (Low Buffer)
+                          (Tồn thấp)
                         </span>
                       )}
                     </td>
@@ -329,7 +329,7 @@ export default function StockBalanceTable({
                               type="button"
                               onClick={() => onInspectStockLedger(item)}
                               className="px-2.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-mono text-[11px] font-bold transition"
-                              title={`Click to view reservation details for ${alloc.spaceKey}`}
+                              title={`Bấm để xem chi tiết giữ chỗ của ${alloc.spaceKey}`}
                             >
                               {alloc.spaceKey} (
                               {formatQuantityWithUnit(
@@ -342,7 +342,7 @@ export default function StockBalanceTable({
                         </div>
                       ) : (
                         <span className="text-[11px] text-slate-400 italic">
-                          No active locks (Free)
+                          Không có khóa giữ chỗ (Tự do)
                         </span>
                       )}
                     </td>
@@ -354,7 +354,7 @@ export default function StockBalanceTable({
                         onClick={() => onInspectStockLedger(item)}
                         className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-semibold shadow-2xs transition"
                       >
-                        Ledger
+                        Sổ kho
                       </button>
                     </td>
                   </tr>
@@ -370,13 +370,13 @@ export default function StockBalanceTable({
         {/* Thống kê dòng hiển thị & chọn PageSize */}
         <div className="flex items-center gap-3">
           <span>
-            Showing <strong className="text-slate-800">{startItem}</strong> to{" "}
-            <strong className="text-slate-800">{endItem}</strong> of{" "}
-            <strong className="text-slate-800">{totalCount}</strong> materials
+            Hiển thị <strong className="text-slate-800">{startItem}</strong> đến{" "}
+            <strong className="text-slate-800">{endItem}</strong> trên{" "}
+            <strong className="text-slate-800">{totalCount}</strong> vật tư
           </span>
 
           <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
-            <span className="text-slate-500 text-[11px]">Rows/page:</span>
+            <span className="text-slate-500 text-[11px]">Số dòng/trang:</span>
             <select
               value={pageSize}
               onChange={(e) =>
@@ -408,7 +408,7 @@ export default function StockBalanceTable({
             }
             className="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
-            Previous
+            Trước
           </button>
 
           <div className="flex items-center gap-1 px-1">
@@ -451,7 +451,7 @@ export default function StockBalanceTable({
             }
             className="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
-            Next
+            Sau
           </button>
         </div>
       </div>

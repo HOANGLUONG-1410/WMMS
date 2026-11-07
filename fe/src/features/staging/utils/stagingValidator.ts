@@ -13,33 +13,33 @@ export function validateStagingRowClient(row) {
   const cellErrors = [];
 
   if (!row.productSku || !String(row.productSku).trim()) {
-    cellErrors.push({ fieldName: 'productSku', errorMessage: 'Internal Product SKU is required' });
+    cellErrors.push({ fieldName: 'productSku', errorMessage: 'Bắt buộc nhập mã SKU nội bộ' });
   }
 
   if (!row.productDescription || !String(row.productDescription).trim()) {
-    cellErrors.push({ fieldName: 'productDescription', errorMessage: 'Product Description is required' });
+    cellErrors.push({ fieldName: 'productDescription', errorMessage: 'Bắt buộc nhập mô tả sản phẩm' });
   }
 
   if (!row.dimensionsMm || !DIMENSION_REGEX.test(String(row.dimensionsMm))) {
     cellErrors.push({
       fieldName: 'dimensionsMm',
-      errorMessage: 'Expected L x W x H mm (e.g. 450 x 520 x 850)'
+      errorMessage: 'Định dạng D x R x C mm (VD: 450 x 520 x 850)'
     });
   }
 
   if (!row.finishColor || !String(row.finishColor).trim()) {
-    cellErrors.push({ fieldName: 'finishColor', errorMessage: 'Finish / Color is required' });
+    cellErrors.push({ fieldName: 'finishColor', errorMessage: 'Bắt buộc nhập hoàn thiện / màu' });
   }
 
   const qty = Number(row.orderQty);
   if (!Number.isFinite(qty) || qty <= 0) {
-    cellErrors.push({ fieldName: 'orderQty', errorMessage: 'Order Qty must be > 0' });
+    cellErrors.push({ fieldName: 'orderQty', errorMessage: 'Số lượng đặt phải > 0' });
   }
 
   const etdStr = String(row.targetEtd || '').trim();
   const parsedDate = new Date(etdStr);
   if (!ISO_DATE_REGEX.test(etdStr) || Number.isNaN(parsedDate.getTime())) {
-    cellErrors.push({ fieldName: 'targetEtd', errorMessage: 'Invalid ETD date (YYYY-MM-DD)' });
+    cellErrors.push({ fieldName: 'targetEtd', errorMessage: 'Ngày ETD không hợp lệ (YYYY-MM-DD)' });
   }
 
   return {

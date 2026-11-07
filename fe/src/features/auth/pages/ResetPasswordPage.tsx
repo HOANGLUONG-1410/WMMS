@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
         type: 'success',
         text:
           res?.message ||
-          'Password has been reset successfully. You can now sign in with your new password.'
+          'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.'
       });
     },
     onError: (err: unknown) => {
@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
     if (!email.trim() || !tokenOrOtp.trim()) {
       setFeedback({
         type: 'error',
-        text: 'Missing recovery email or reset token. Please use the link from your email inbox.'
+        text: 'Thiếu email khôi phục hoặc mã đặt lại. Vui lòng dùng liên kết trong hộp thư của bạn.'
       });
       return;
     }
@@ -57,7 +57,7 @@ export default function ResetPasswordPage() {
     if (!newPassword.trim() || !confirmNewPassword.trim()) {
       setFeedback({
         type: 'error',
-        text: 'Please enter both New Password and Confirm Password.'
+        text: 'Vui lòng nhập Mật khẩu mới và Xác nhận mật khẩu.'
       });
       return;
     }
@@ -65,7 +65,7 @@ export default function ResetPasswordPage() {
     if (newPassword !== confirmNewPassword) {
       setFeedback({
         type: 'error',
-        text: 'New password and confirmation password do not match.'
+        text: 'Mật khẩu mới và mật khẩu xác nhận không khớp.'
       });
       return;
     }
@@ -84,10 +84,10 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-[380px] bg-white rounded-xl shadow-2xl px-7 py-8 border border-slate-100">
         <div className="text-center mb-6">
           <h1 className="text-[17px] font-extrabold tracking-tight text-slate-900 uppercase">
-            WMMS PRODUCTION SUITE
+            BỘ GIẢI PHÁP SẢN XUẤT WMMS
           </h1>
-          <p className="text-xs text-slate-500 mt-1">Nguyen Khoa Ha Nam Wood Factory</p>
-          <p className="text-xs font-semibold text-blue-600 mt-2">Set New Account Password</p>
+          <p className="text-xs text-slate-500 mt-1">Xưởng gỗ Nguyên Khoa Hà Nam</p>
+          <p className="text-xs font-semibold text-blue-600 mt-2">Đặt mật khẩu mới cho tài khoản</p>
         </div>
 
         {feedback && (
@@ -109,7 +109,7 @@ export default function ResetPasswordPage() {
               onClick={() => navigate('/login')}
               className="w-full py-2.5 px-4 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition-colors"
             >
-              Back to Sign In
+              Quay lại đăng nhập
             </button>
           </div>
         ) : (
@@ -119,7 +119,7 @@ export default function ResetPasswordPage() {
                 htmlFor="reset-email-input"
                 className="block text-xs font-semibold text-slate-700 mb-1.5"
               >
-                Account Email
+                Email tài khoản
               </label>
               <input
                 id="reset-email-input"
@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
                 value={email}
                 readOnly={Boolean(emailFromUrl)}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="employee@nguyenkhoa.vn"
+                placeholder="nhanvien@nguyenkhoa.vn"
                 className={`w-full px-3 py-2 text-xs text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   emailFromUrl ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'
                 }`}
@@ -140,14 +140,14 @@ export default function ResetPasswordPage() {
                   htmlFor="reset-token-input"
                   className="block text-xs font-semibold text-slate-700 mb-1.5"
                 >
-                  Recovery Token / 6-Digit OTP
+                  Mã khôi phục / OTP 6 chữ số
                 </label>
                 <input
                   id="reset-token-input"
                   type="text"
                   value={tokenOrOtp}
                   onChange={(e) => setTokenOrOtp(e.target.value)}
-                  placeholder="Enter OTP or recovery token"
+                  placeholder="Nhập OTP hoặc mã khôi phục"
                   className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -158,7 +158,7 @@ export default function ResetPasswordPage() {
                 htmlFor="new-password-input"
                 className="block text-xs font-semibold text-slate-700 mb-1.5"
               >
-                New Password
+                Mật khẩu mới
               </label>
               <input
                 id="new-password-input"
@@ -175,7 +175,7 @@ export default function ResetPasswordPage() {
                 htmlFor="confirm-password-input"
                 className="block text-xs font-semibold text-slate-700 mb-1.5"
               >
-                Confirm Password
+                Xác nhận mật khẩu
               </label>
               <input
                 id="confirm-password-input"
@@ -216,7 +216,7 @@ export default function ResetPasswordPage() {
                     />
                   </svg>
                 )}
-                {resetPasswordMutation.isPending ? 'Updating Password...' : 'Confirm New Password'}
+                {resetPasswordMutation.isPending ? 'Đang cập nhật mật khẩu...' : 'Xác nhận mật khẩu mới'}
               </button>
             </div>
 
@@ -226,7 +226,7 @@ export default function ResetPasswordPage() {
                 onClick={() => navigate('/login')}
                 className="text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:underline"
               >
-                ← Back to Sign In
+                ← Quay lại đăng nhập
               </button>
             </div>
           </form>

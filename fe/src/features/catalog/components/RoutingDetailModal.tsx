@@ -26,7 +26,7 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
               </span>
             </div>
             <h2 className="text-base font-bold text-slate-900 mt-1">
-              Standard Production Routing — {product.productName}
+              Quy trình sản xuất chuẩn — {product.productName}
             </h2>
           </div>
           <button
@@ -43,34 +43,34 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
           {/* Thông tin tóm tắt sản phẩm */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px]">Dimensions:</span>
+              <span className="text-slate-400 block text-[11px]">Kích thước:</span>
               <span className="font-semibold text-slate-700">{product.dimensionsCm || "N/A"}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Wood Species:</span>
+              <span className="text-slate-400 block text-[11px]">Loại gỗ:</span>
               <span className="font-semibold text-slate-700">{product.woodSpecies || "N/A"}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Finish / Color:</span>
+              <span className="text-slate-400 block text-[11px]">Hoàn thiện / Màu:</span>
               <span className="font-semibold text-slate-700">{product.finishColor || "N/A"}</span>
             </div>
           </div>
 
           <div>
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Sequential Production Stages &amp; Quality Gates:
+              Các công đoạn sản xuất tuần tự &amp; cổng chất lượng:
             </h3>
 
             {isLoading && (
               <div className="py-8 text-center text-slate-400">
                 <span className="inline-block w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-xs">Loading standard routing sequence...</p>
+                <p className="text-xs">Đang tải chuỗi công đoạn chuẩn...</p>
               </div>
             )}
 
             {!isLoading && (!stages || stages.length === 0) && (
               <p className="py-6 text-center text-xs text-slate-400 italic">
-                No default routing stages found for this product.
+                Sản phẩm này chưa có công đoạn mặc định.
               </p>
             )}
 
@@ -93,18 +93,18 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
                         <div>
                           <p className="text-xs font-bold text-slate-800">{stg.stageName}</p>
                           <p className="text-[11px] text-slate-500">
-                            100% Quality Inspection Gate before passing to next stage
+                            Cổng kiểm tra chất lượng 100% trước khi chuyển công đoạn tiếp theo
                           </p>
                         </div>
                       </div>
 
                       {stg.isHoldPoint ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-extrabold uppercase rounded bg-rose-100 text-rose-700 border border-rose-200">
-                          <span>🛑</span> Hold Point Stage
+                          <span>🛑</span> Công đoạn Hold Point
                         </span>
                       ) : (
                         <span className="text-[10px] font-semibold text-slate-400 uppercase">
-                          Standard Stage
+                          Công đoạn chuẩn
                         </span>
                       )}
                     </div>
@@ -127,7 +127,7 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
             onClick={onClose}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-sm transition"
           >
-            Close
+            Đóng
           </button>
         </div>
       </div>

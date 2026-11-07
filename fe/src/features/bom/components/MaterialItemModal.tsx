@@ -120,11 +120,11 @@ export default function MaterialItemModal({
     e.preventDefault();
     const parsedQty = Number(netQtyPerUnit);
     if (!materialCode.trim() || !materialName.trim()) {
-      setErrorMsg("Material code and material name are required.");
+      setErrorMsg("Bắt buộc nhập mã vật tư và tên vật tư.");
       return;
     }
     if (Number.isNaN(parsedQty) || parsedQty <= 0) {
-      setErrorMsg("Net quantity per unit must be greater than 0 (BR-005).");
+      setErrorMsg("Định mức thực trên mỗi sản phẩm phải lớn hơn 0.");
       return;
     }
 
@@ -160,10 +160,10 @@ export default function MaterialItemModal({
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-extrabold text-slate-900">
-              {editingItem ? "Edit BOM Material Line Item" : "Add Raw Material Line Item"}
+              {editingItem ? "Sửa dòng vật tư trong BOM" : "Thêm dòng vật tư thô"}
             </h2>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Select from factory Master Material Catalog or enter a registered Material Code.
+              Chọn từ danh mục vật tư gốc của xưởng hoặc nhập mã vật tư đã đăng ký.
             </p>
           </div>
           <button
@@ -184,7 +184,7 @@ export default function MaterialItemModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Master Material Directory Lookup (Database Synced)
+              Tra cứu danh mục vật tư gốc (đồng bộ CSDL)
             </label>
             <select
               value={selectedMaterialId}
@@ -202,20 +202,20 @@ export default function MaterialItemModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Material Code
+                Mã vật tư
               </label>
               <input
                 type="text"
                 value={materialCode}
                 onChange={(e) => handleCodeChange(e.target.value)}
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                placeholder="e.g. WOOD_OAK_01"
+                placeholder="VD: WOOD_OAK_01"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Category Group
+                Nhóm vật tư
               </label>
               <select
                 value={materialGroup}
@@ -233,7 +233,7 @@ export default function MaterialItemModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Material Name
+              Tên vật tư
             </label>
             <input
               type="text"
@@ -247,27 +247,27 @@ export default function MaterialItemModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Dimension Specification
+                Quy cách kích thước
               </label>
               <input
                 type="text"
                 value={dimensionSpec}
                 onChange={(e) => setDimensionSpec(e.target.value)}
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. 26mm x 150mm x 2400mm"
+                placeholder="VD: 26mm x 150mm x 2400mm"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Unit of Measure (UoM)
+                Đơn vị tính (ĐVT)
               </label>
               <input
                 type="text"
                 value={unitOfMeasure}
                 onChange={(e) => setUnitOfMeasure(e.target.value)}
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="M3, PCS, LITER"
+                placeholder="M3, CÁI, LÍT"
               />
             </div>
           </div>
@@ -275,7 +275,7 @@ export default function MaterialItemModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Net Quantity per Product Unit
+                Định mức thực trên mỗi sản phẩm
               </label>
               <input
                 type="number"
@@ -289,14 +289,14 @@ export default function MaterialItemModal({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Technical Notes (Optional)
+                Ghi chú kỹ thuật (không bắt buộc)
               </label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. Main frame / Top coat"
+                placeholder="VD: Khung chính / Sơn phủ"
               />
             </div>
           </div>
@@ -307,13 +307,13 @@ export default function MaterialItemModal({
               onClick={onClose}
               className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition"
             >
-              {editingItem ? "Save Changes" : "Add Material Item"}
+              {editingItem ? "Lưu thay đổi" : "Thêm vật tư"}
             </button>
           </div>
         </form>

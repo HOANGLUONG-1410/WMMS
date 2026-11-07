@@ -45,11 +45,11 @@ export default function EditUserModal({
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      onSuccess(res?.message || "User profile updated successfully! (MSG-ADM-03)");
+      onSuccess(res?.message || "Cập nhật hồ sơ người dùng thành công!");
       onClose();
     },
     onError: (err: unknown) => {
-      onError((err as { message?: string })?.message || "Failed to update user profile.");
+      onError((err as { message?: string })?.message || "Cập nhật hồ sơ người dùng thất bại.");
     },
   });
 
@@ -59,16 +59,16 @@ export default function EditUserModal({
       if (!user) return;
       const isCurrentlyActive = user.status === "ACTIVE";
       const apiStatus = isCurrentlyActive ? "BANNED" : "ACTIVE";
-      const reason = `Admin toggled status via MOD-ADM-01`;
+      const reason = `Quản trị viên đổi trạng thái tài khoản`;
       return await adminApi.updateUserStatus(user.userId, apiStatus, reason);
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      onSuccess(res?.message || "User account status updated successfully! (UC-10)");
+      onSuccess(res?.message || "Cập nhật trạng thái tài khoản thành công!");
       onClose();
     },
     onError: (err: unknown) => {
-      onError((err as { message?: string })?.message || "Failed to change account status.");
+      onError((err as { message?: string })?.message || "Đổi trạng thái tài khoản thất bại.");
     },
   });
 
@@ -86,7 +86,7 @@ export default function EditUserModal({
       <div className="w-full max-w-[460px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
         <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-slate-100">
           <h2 className="text-sm font-bold text-slate-900">
-            Edit Employee Account &amp; Role (UC-09)
+            Sửa tài khoản &amp; vai trò nhân viên
           </h2>
           <button
             type="button"
@@ -100,7 +100,7 @@ export default function EditUserModal({
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-3.5">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Employee Name
+              Tên nhân viên
             </label>
             <input
               type="text"
@@ -113,7 +113,7 @@ export default function EditUserModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Email Address
+              Địa chỉ email
             </label>
             <input
               type="email"
@@ -126,7 +126,7 @@ export default function EditUserModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Phone Number
+              Số điện thoại
             </label>
             <input
               type="text"
@@ -149,10 +149,10 @@ export default function EditUserModal({
               }`}
             >
               {toggleStatusMutation.isPending
-                ? "Updating..."
+                ? "Đang cập nhật..."
                 : isActive
-                ? "Suspend / Ban Account"
-                : "Unban Account"}
+                ? "Tạm khóa / Cấm tài khoản"
+                : "Bỏ cấm tài khoản"}
             </button>
 
             <div className="flex items-center gap-2">
@@ -161,14 +161,14 @@ export default function EditUserModal({
                 onClick={onClose}
                 className="px-3.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 type="submit"
                 disabled={updateMutation.isPending}
                 className="px-4 py-1.5 text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 rounded-md shadow-sm transition disabled:opacity-60"
               >
-                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                {updateMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
             </div>
           </div>

@@ -25,6 +25,7 @@ import VisualProductCatalogModal, {
 import DynamicRoutingModal from "../components/DynamicRoutingModal";
 import MaterialItemModal from "../components/MaterialItemModal";
 import BomStagingModal from "../components/BomStagingModal";
+import { bomStatusLabel } from "../../../lib/statusLabels";
 
 export default function BomBuilderPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,11 +63,11 @@ export default function BomBuilderPage() {
     productName: DEFAULT_BENCHMARK_BOM.productName,
     orderQty: DEFAULT_BENCHMARK_BOM.orderedQty,
     dimensions: DEFAULT_BENCHMARK_BOM.dimensionsCm,
-    finishSpec: "Natural Walnut",
+    finishSpec: "Óc chó tự nhiên",
     fscRequired: true,
     cadDrawing: "CAD_Chair_880504.pdf",
     bomStatus: "DRAFT",
-    lastSaved: "Not saved yet",
+    lastSaved: "Chưa lưu",
   });
 
   // State quy trình công đoạn (Workstation Sequence)
@@ -115,7 +116,7 @@ export default function BomBuilderPage() {
             orderId: Number(o.orderId || 1),
             poNumber: String(o.poNumber || ""),
             customerName: String(o.customerName || ""),
-            country: String(o.shippingCountry || "Export"),
+            country: String(o.shippingCountry || "Xuất khẩu"),
             containerSpec: String(o.containerSpec || "1x40HC"),
             etdDate: o.etdDate ? String(o.etdDate).slice(0, 10) : "",
             daysLeft: Number(o.daysRemaining || 30),
@@ -189,9 +190,9 @@ export default function BomBuilderPage() {
         productName: serverBom.productName,
         orderQty: serverBom.orderedQty,
         dimensions:
-          serverBom.dimensionsCm || activeLineItem?.dimensionsSpec || "Standard Spec",
+          serverBom.dimensionsCm || activeLineItem?.dimensionsSpec || "Quy cách chuẩn",
         finishSpec:
-          activeLineItem?.finishSpec || activeLineItem?.woodSpecies || "Standard Finish",
+          activeLineItem?.finishSpec || activeLineItem?.woodSpecies || "Hoàn thiện chuẩn",
         fscRequired: activeLineItem?.fscCertifiedReq ?? true,
         cadDrawing:
           activeLineItem?.attachedCadFileName || `CAD_${serverBom.productSku}.pdf`,
@@ -200,7 +201,7 @@ export default function BomBuilderPage() {
           ? new Date(serverBom.updatedAt).toLocaleString("en-GB")
           : serverBom.createdAt
             ? new Date(serverBom.createdAt).toLocaleString("en-GB")
-            : "Synced with Server",
+            : "Đã đồng bộ với máy chủ",
       });
       setScrapRate(serverBom.scrapRatePercent || 3.5);
       setBomItems(serverBom.bomDetails || []);
@@ -225,11 +226,11 @@ export default function BomBuilderPage() {
         productName: prodName,
         orderQty: ordQty,
         dimensions: activeLineItem?.dimensionsSpec || DEFAULT_BENCHMARK_BOM.dimensionsCm,
-        finishSpec: activeLineItem?.finishSpec || activeLineItem?.woodSpecies || "Standard Finish",
+        finishSpec: activeLineItem?.finishSpec || activeLineItem?.woodSpecies || "Hoàn thiện chuẩn",
         fscRequired: activeLineItem?.fscCertifiedReq ?? true,
         cadDrawing: activeLineItem?.attachedCadFileName || `CAD_${prodSku}.pdf`,
         bomStatus: "NOT_CREATED",
-        lastSaved: "Not created in DB yet",
+        lastSaved: "Chưa tạo trong CSDL",
       });
 
       // Tự động kiểm tra xem sản phẩm này đã có BOM lịch sử để kế thừa không (GET /api/v1/bom/check-product/{productId})
@@ -506,7 +507,7 @@ export default function BomBuilderPage() {
         setTargetProduct((prev) => ({
           ...prev,
           bomStatus: res.data.bomStatusText || "DRAFT",
-          lastSaved: `Today ${nowTime}`,
+          lastSaved: `Hôm nay ${nowTime}`,
         }));
       }
 
@@ -588,7 +589,7 @@ export default function BomBuilderPage() {
     setTargetProduct((prev) => ({
       ...prev,
       bomStatus: createdBom.bomStatusText || "DRAFT",
-      lastSaved: "Just imported from Excel Staging",
+      lastSaved: "Vừa nhập từ Excel Staging",
     }));
     await refetchOrderItemBom();
     if (currentSpaceKey) {
@@ -647,11 +648,11 @@ export default function BomBuilderPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              BOM Specification, Excel Staging &amp; Dynamic Routing Builder
+              Đặc tả BOM, Excel Staging &amp; Lập quy trình động
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Owner / Planner engineering breakdown: Import BOM Excel via Staging Grid, inherit
-              visual catalog templates, configure routing &amp; lock BOM for production.
+              Bóc tách kỹ thuật của Chủ xưởng / Kế hoạch: nhập BOM Excel qua lưới Staging, kế thừa
+              mẫu từ danh mục trực quan, cấu hình quy trình &amp; khóa BOM để sản xuất.
             </p>
           </div>
 
@@ -663,7 +664,7 @@ export default function BomBuilderPage() {
               className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300 text-xs font-bold rounded-md shadow-2xs transition flex items-center gap-1.5"
             >
               <span>📥</span>
-              <span>Import BOM Excel (Staging)</span>
+              <span>Nhập BOM Excel (Staging)</span>
             </button>
 
             {/* Field #1: Visual Product Catalog */}
@@ -673,7 +674,7 @@ export default function BomBuilderPage() {
               className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-semibold rounded-md shadow-2xs transition flex items-center gap-1.5"
             >
               <span>🖼️</span>
-              <span>Visual Product Catalog</span>
+              <span>Danh mục sản phẩm trực quan</span>
             </button>
 
             {/* Field #2: Dynamic Routing Engine */}
@@ -683,7 +684,7 @@ export default function BomBuilderPage() {
               className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-semibold rounded-md shadow-2xs transition flex items-center gap-1.5"
             >
               <span>🔀</span>
-              <span>Dynamic Routing Engine</span>
+              <span>Bộ quy trình động</span>
             </button>
 
             {/* Field #3: Save Draft & Run Stock Reconciliation → */}
@@ -694,10 +695,10 @@ export default function BomBuilderPage() {
               className="px-4 py-2 bg-[#d97706] hover:bg-amber-700 text-white text-xs font-bold rounded-md shadow-sm transition disabled:opacity-50"
             >
               {saveBomMutation.isPending
-                ? "Saving to Server..."
+                ? "Đang lưu lên máy chủ..."
                 : activeBomId
-                  ? "Update BOM Draft & Reconcile →"
-                  : "Save New BOM Draft →"}
+                  ? "Cập nhật BOM nháp & đối chiếu →"
+                  : "Lưu BOM nháp mới →"}
             </button>
 
             {/* Nút Phê duyệt & Chốt khóa BOM (PATCH /api/v1/bom/{bomId}/approve) */}
@@ -708,7 +709,7 @@ export default function BomBuilderPage() {
                 disabled={approveBomMutation.isPending}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md shadow-sm transition disabled:opacity-50"
               >
-                {approveBomMutation.isPending ? "Approving..." : "✓ Approve & Lock BOM"}
+                {approveBomMutation.isPending ? "Đang duyệt..." : "✓ Duyệt & khóa BOM"}
               </button>
             )}
           </div>
@@ -727,17 +728,17 @@ export default function BomBuilderPage() {
                 </span>
               )}
               {spaceCustomerName && (
-                <span className="text-slate-500">• Customer: {spaceCustomerName}</span>
+                <span className="text-slate-500">• Khách hàng: {spaceCustomerName}</span>
               )}
             </div>
             <span className="text-[11px] text-slate-400">
-              Select an Order Line Item below to create or edit its technical BOM:
+              Chọn một dòng hàng bên dưới để tạo hoặc sửa BOM kỹ thuật:
             </span>
           </div>
 
           {isLoadingSpace ? (
             <div className="text-xs text-slate-400 py-1">
-              Loading order line items from Order Space...
+              Đang tải các dòng hàng của Order Space...
             </div>
           ) : spaceLineItems.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -773,11 +774,11 @@ export default function BomBuilderPage() {
                                 : "bg-slate-200 text-slate-700"
                           }`}
                         >
-                          {isReady ? "READY_PROD" : hasDraft ? `BOM #${li.bomId} DRAFT` : "NO BOM"}
+                          {isReady ? "SẴN SÀNG SX" : hasDraft ? `BOM #${li.bomId} NHÁP` : "CHƯA CÓ BOM"}
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-600 mt-0.5">
-                        {li.productName} ({li.orderedQty} pcs)
+                        {li.productName} ({li.orderedQty} cái)
                       </div>
                     </div>
                   </button>
@@ -786,8 +787,8 @@ export default function BomBuilderPage() {
             </div>
           ) : (
             <div className="text-xs text-slate-500">
-              Active Order Item ID: <strong className="font-mono">#{selectedOrderItemId}</strong>{" "}
-              (Switch Order Space on top bar to load other PO line items)
+              ID dòng hàng đang chọn: <strong className="font-mono">#{selectedOrderItemId}</strong>{" "}
+              (Đổi Order Space trên thanh trên cùng để tải các dòng hàng PO khác)
             </div>
           )}
         </div>
@@ -796,17 +797,17 @@ export default function BomBuilderPage() {
         <div className="bg-amber-50/50 border border-amber-300 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
-              ACTIVE BOM TARGET PRODUCT (ORDER ITEM #{selectedOrderItemId} • PRODUCT ID #
+              SẢN PHẨM MỤC TIÊU CỦA BOM (DÒNG HÀNG #{selectedOrderItemId} • MÃ SẢN PHẨM #
               {targetProduct.productId}):
             </div>
             <div className="text-sm font-extrabold text-slate-900 mt-0.5">
-              SKU: {targetProduct.sku} — {targetProduct.productName} (Order Qty:{" "}
-              {targetProduct.orderQty} Units)
+              SKU: {targetProduct.sku} — {targetProduct.productName} (SL đặt:{" "}
+              {targetProduct.orderQty} cái)
             </div>
             <div className="text-xs text-slate-600 mt-0.5">
-              Dimensions: {targetProduct.dimensions} | Spec: {targetProduct.finishSpec} |{" "}
-              {targetProduct.fscRequired ? "FSC 100% Lumber Required" : "Standard Lumber"} |
-              Attached Drawing: {targetProduct.cadDrawing}
+              Kích thước: {targetProduct.dimensions} | Quy cách: {targetProduct.finishSpec} |{" "}
+              {targetProduct.fscRequired ? "Yêu cầu gỗ FSC 100%" : "Gỗ tiêu chuẩn"} |
+              Bản vẽ đính kèm: {targetProduct.cadDrawing}
             </div>
           </div>
 
@@ -820,10 +821,10 @@ export default function BomBuilderPage() {
                     : "bg-yellow-100 text-amber-800 border-yellow-300"
               }`}
             >
-              {activeBomId ? `BOM #${activeBomId} • ` : ""}STATUS: {targetProduct.bomStatus}
+              {activeBomId ? `BOM #${activeBomId} • ` : ""}TRẠNG THÁI: {bomStatusLabel(targetProduct.bomStatus)}
             </span>
             <div className="text-[11px] text-slate-400 mt-1">
-              Last saved: {targetProduct.lastSaved}
+              Lưu lần cuối: {targetProduct.lastSaved}
             </div>
           </div>
         </div>
@@ -832,7 +833,7 @@ export default function BomBuilderPage() {
         <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-2xs space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xs font-bold text-slate-800">
-              Current Configured Production Routing (Sequence of Workstations)
+              Quy trình sản xuất hiện tại (Chuỗi các trạm làm việc)
             </h2>
             {/* Field #4: Customize Steps & Hold Points */}
             <button
@@ -840,7 +841,7 @@ export default function BomBuilderPage() {
               onClick={() => setShowRoutingModal(true)}
               className="px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded transition"
             >
-              Customize Steps &amp; Hold Points
+              Tùy chỉnh công đoạn &amp; Hold Point
             </button>
           </div>
 
@@ -872,17 +873,17 @@ export default function BomBuilderPage() {
         <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="text-xs text-slate-700 flex flex-wrap items-center gap-2">
             <span>📐</span>
-            <strong className="font-bold text-slate-900">Auto-Scrap Formula (BR-007):</strong>
+            <strong className="font-bold text-slate-900">Công thức hao hụt tự động:</strong>
             <code className="font-mono text-[11px] text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100">
-              Total Gross Demand = (Net Quantity per Unit × Order Quantity {targetProduct.orderQty})
-              × (1 + Scrap %)
+              Tổng nhu cầu = (Định mức thực mỗi sản phẩm × Số lượng đặt {targetProduct.orderQty})
+              × (1 + % hao hụt)
             </code>
           </div>
 
           {/* Field #5: Owner Loss Allowance % */}
           <div className="flex items-center gap-2 shrink-0">
             <label htmlFor="ownerScrapRate" className="text-xs font-semibold text-slate-700">
-              Owner Loss Allowance % (System Config 3% - 5%):
+              Hao hụt cho phép % (Cấu hình hệ thống 3% - 5%):
             </label>
             <input
               id="ownerScrapRate"
@@ -903,11 +904,11 @@ export default function BomBuilderPage() {
           <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h2 className="text-xs font-bold text-slate-800">
-                Bill of Materials (BOM) Item Breakdown ({bomItems.length} items)
+                Bóc tách vật tư BOM ({bomItems.length} mã)
               </h2>
               {calculateDemandMutation.isPending && (
                 <span className="text-[11px] text-blue-600 font-medium">
-                  • Calculating server demand...
+                  • Đang tính nhu cầu từ máy chủ...
                 </span>
               )}
             </div>
@@ -918,7 +919,7 @@ export default function BomBuilderPage() {
                 onClick={() => setShowStagingModal(true)}
                 className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold rounded transition"
               >
-                📥 Upload Excel BOM
+                📥 Tải lên BOM Excel
               </button>
 
               {/* Field #6: + Add Material Item */}
@@ -930,7 +931,7 @@ export default function BomBuilderPage() {
                 }}
                 className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-semibold rounded transition"
               >
-                + Add Material Item
+                + Thêm vật tư
               </button>
             </div>
           </div>
@@ -940,31 +941,31 @@ export default function BomBuilderPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
-                  <th className="py-3 px-5">Material Code</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Material Name, Sub-Assembly &amp; Dimensions</th>
-                  <th className="py-3 px-3">UoM</th>
-                  <th className="py-3 px-4">Net Qty / Unit</th>
-                  <th className="py-3 px-4">Net Subtotal ({targetProduct.orderQty} Units)</th>
-                  <th className="py-3 px-4">Scrap Allowance</th>
-                  <th className="py-3 px-4">Gross Total Demand &amp; Stock</th>
-                  <th className="py-3 px-5 text-right">Action</th>
+                  <th className="py-3 px-5">Mã vật tư</th>
+                  <th className="py-3 px-4">Nhóm</th>
+                  <th className="py-3 px-4">Tên vật tư, cụm chi tiết &amp; kích thước</th>
+                  <th className="py-3 px-3">ĐVT</th>
+                  <th className="py-3 px-4">Định mức thực / SP</th>
+                  <th className="py-3 px-4">Tổng định mức thực ({targetProduct.orderQty} cái)</th>
+                  <th className="py-3 px-4">Hao hụt cho phép</th>
+                  <th className="py-3 px-4">Tổng nhu cầu &amp; Tồn kho</th>
+                  <th className="py-3 px-5 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-xs">
                 {isLoadingBom ? (
                   <tr>
                     <td colSpan={9} className="py-10 text-center text-slate-400">
-                      Loading BOM breakdown from server...
+                      Đang tải bóc tách BOM từ máy chủ...
                     </td>
                   </tr>
                 ) : bomItems.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="py-10 text-center text-slate-500">
-                      Order Item <strong>#{selectedOrderItemId}</strong> chưa có dòng nguyên vật liệu
-                      nào. Hãy nhấn <strong>&ldquo;📥 Import BOM Excel (Staging)&rdquo;</strong>,{" "}
-                      <strong>&ldquo;🖼️ Visual Product Catalog&rdquo;</strong> hoặc{" "}
-                      <strong>&ldquo;+ Add Material Item&rdquo;</strong> để thiết lập định mức.
+                      Dòng hàng <strong>#{selectedOrderItemId}</strong> chưa có dòng nguyên vật liệu
+                      nào. Hãy nhấn <strong>&ldquo;📥 Nhập BOM Excel (Staging)&rdquo;</strong>,{" "}
+                      <strong>&ldquo;🖼️ Danh mục sản phẩm trực quan&rdquo;</strong> hoặc{" "}
+                      <strong>&ldquo;+ Thêm vật tư&rdquo;</strong> để thiết lập định mức.
                     </td>
                   </tr>
                 ) : (
@@ -1026,7 +1027,7 @@ export default function BomBuilderPage() {
                           {item.availableStock !== undefined && (
                             <div className="mt-0.5 flex items-center gap-1.5 text-[10px]">
                               <span className="text-slate-500">
-                                Avail: <strong>{item.availableStock}</strong>
+                                Khả dụng: <strong>{item.availableStock}</strong>
                               </span>
                               {item.isShortage ? (
                                 <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-bold">
@@ -1051,7 +1052,7 @@ export default function BomBuilderPage() {
                               }}
                               className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded transition"
                             >
-                              Edit
+                              Sửa
                             </button>
                             <button
                               type="button"
@@ -1059,7 +1060,7 @@ export default function BomBuilderPage() {
                                 handleDeleteMaterialItem(item.bomDetailId, item.materialCode)
                               }
                               className="px-2 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-slate-200 text-[11px] font-bold rounded transition"
-                              title="Remove material line"
+                              title="Xóa dòng vật tư"
                             >
                               ✕
                             </button>
