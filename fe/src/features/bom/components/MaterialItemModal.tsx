@@ -74,7 +74,7 @@ export default function MaterialItemModal({
         setMaterialCode(first.materialCode);
         setMaterialGroup(first.materialGroup);
         setMaterialName(first.materialName);
-        setDimensionSpec(first.dimensionSpec);
+        setDimensionSpec(first.dimensionSpec || "");
         setUnitOfMeasure(first.unitOfMeasure);
         setFscCertified(first.fscCertified);
       }
@@ -94,7 +94,7 @@ export default function MaterialItemModal({
       setMaterialCode(mat.materialCode);
       setMaterialGroup(mat.materialGroup);
       setMaterialName(mat.materialName);
-      setDimensionSpec(mat.dimensionSpec);
+      setDimensionSpec(mat.dimensionSpec || "");
       setUnitOfMeasure(mat.unitOfMeasure);
       setFscCertified(mat.fscCertified);
       setErrorMsg("");
@@ -110,7 +110,7 @@ export default function MaterialItemModal({
       setSelectedMaterialId(matched.materialId);
       setMaterialGroup(matched.materialGroup);
       setMaterialName(matched.materialName);
-      setDimensionSpec(matched.dimensionSpec);
+      setDimensionSpec(matched.dimensionSpec || "");
       setUnitOfMeasure(matched.unitOfMeasure);
       setFscCertified(matched.fscCertified);
     }
@@ -155,41 +155,41 @@ export default function MaterialItemModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[1px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-[1px]">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-extrabold text-slate-900">
-              {editingItem ? "Sửa dòng vật tư trong BOM" : "Thêm dòng vật tư thô"}
+            <h2 className="text-base font-bold text-slate-900">
+              {editingItem ? "Chỉnh sửa dòng vật tư trong BOM" : "Thêm dòng vật tư vào BOM"}
             </h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Chọn từ danh mục vật tư gốc của xưởng hoặc nhập mã vật tư đã đăng ký.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-1.5 py-0.5 rounded"
+            className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none px-1 cursor-pointer"
           >
-            ✕
+            ×
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorMsg && (
-            <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
               {errorMsg}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Tra cứu danh mục vật tư gốc (đồng bộ CSDL)
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Tra cứu danh mục vật tư gốc
             </label>
             <select
               value={selectedMaterialId}
               onChange={(e) => handleSelectMasterMaterial(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-amber-50/40 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800"
+              className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 font-semibold text-slate-800"
             >
               {masterMaterials.map((mat) => (
                 <option key={mat.materialId} value={mat.materialId}>
@@ -199,28 +199,28 @@ export default function MaterialItemModal({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Mã vật tư
               </label>
               <input
                 type="text"
                 value={materialCode}
                 onChange={(e) => handleCodeChange(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 font-mono"
                 placeholder="VD: WOOD_OAK_01"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Nhóm vật tư
               </label>
               <select
                 value={materialGroup}
                 onChange={(e) => setMaterialGroup(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -232,50 +232,50 @@ export default function MaterialItemModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Tên vật tư
             </label>
             <input
               type="text"
               value={materialName}
               onChange={(e) => setMaterialName(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. Gỗ sồi Bắc Mỹ xẻ sấy FAS (Oak)"
+              className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              placeholder="VD: Gỗ sồi Bắc Mỹ xẻ sấy FAS (Oak)"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Quy cách kích thước
               </label>
               <input
                 type="text"
                 value={dimensionSpec}
                 onChange={(e) => setDimensionSpec(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                 placeholder="VD: 26mm x 150mm x 2400mm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Đơn vị tính (ĐVT)
               </label>
               <input
                 type="text"
                 value={unitOfMeasure}
                 onChange={(e) => setUnitOfMeasure(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                 placeholder="M3, CÁI, LÍT"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Định mức thực trên mỗi sản phẩm
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Định mức trên 1 sản phẩm
               </label>
               <input
                 type="number"
@@ -283,35 +283,35 @@ export default function MaterialItemModal({
                 min="0.0001"
                 value={netQtyPerUnit}
                 onChange={(e) => setNetQtyPerUnit(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 font-bold"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Ghi chú kỹ thuật (không bắt buộc)
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Ghi chú kỹ thuật
               </label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                 placeholder="VD: Khung chính / Sơn phủ"
               />
             </div>
           </div>
 
-          <div className="pt-2 flex items-center justify-end gap-2.5">
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition cursor-pointer"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition cursor-pointer"
             >
               {editingItem ? "Lưu thay đổi" : "Thêm vật tư"}
             </button>

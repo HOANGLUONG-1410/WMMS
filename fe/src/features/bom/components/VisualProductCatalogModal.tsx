@@ -183,43 +183,46 @@ export default function VisualProductCatalogModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[1px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-[1px]">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-extrabold text-slate-900">
-              Chọn từ danh mục sản phẩm trực quan (CSDL máy chủ)
-            </h2>          </div>
+            <h2 className="text-base font-bold text-slate-900">
+              Chọn mẫu từ danh mục sản phẩm
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Kế thừa định mức BOM và quy trình sản xuất mặc định của sản phẩm mẫu
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-1.5 py-0.5 rounded"
+            className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none px-1 cursor-pointer"
           >
-            ✕
+            ×
           </button>
         </div>
 
         {/* Modal Body */}
         <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
           {isLoading ? (
-            <div className="py-8 text-center text-xs text-slate-500">
-              Đang tải danh mục sản phẩm trực quan từ máy chủ...
+            <div className="py-8 text-center text-sm text-slate-500">
+              Đang tải danh mục sản phẩm từ máy chủ...
             </div>
           ) : (
             <>
-              <p className="text-xs text-slate-500">
-                Chọn một mẫu sản phẩm từ danh mục của xưởng để kế thừa BOM hiện có
-                và chuỗi công đoạn mặc định tại các trạm:
+              <p className="text-sm text-slate-600">
+                Chọn một mẫu sản phẩm từ danh mục của xưởng để kế thừa BOM hiện có và chuỗi công đoạn mặc định:
               </p>
 
               {/* Category 1: Chairs & Seating */}
               {seatingModels.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5">
                     NHÓM: GHẾ &amp; CHỖ NGỒI
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     {seatingModels.map((item) => {
                       const isSelected = selectedKey === item.key;
                       return (
@@ -227,28 +230,28 @@ export default function VisualProductCatalogModal({
                           key={item.key}
                           type="button"
                           onClick={() => setSelectedKey(item.key)}
-                          className={`p-3.5 rounded-lg border text-left transition flex flex-col justify-between gap-2 ${
+                          className={`p-4 rounded-xl border text-left transition flex flex-col justify-between gap-2.5 cursor-pointer ${
                             isSelected
-                              ? "border-2 border-[#d97706] bg-amber-50/40 shadow-2xs"
+                              ? "border-2 border-blue-600 bg-blue-50/40 shadow-xs"
                               : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                           }`}
                         >
                           <div className="flex items-center justify-between w-full">
                             <span className="text-2xl">{item.icon}</span>
                             {item.hasActiveBom && (
-                              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase rounded bg-emerald-100 text-emerald-700">
-                                BOM đang dùng
+                              <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Có sẵn BOM
                               </span>
                             )}
                           </div>
                           <div>
-                            <div className="font-mono text-[10px] font-bold text-amber-700">
+                            <div className="font-mono text-xs font-bold text-blue-600">
                               {item.sku}
                             </div>
-                            <div className="text-xs font-bold text-slate-900 leading-tight mt-0.5">
+                            <div className="text-sm font-bold text-slate-900 leading-snug mt-0.5">
                               {item.productName}
                             </div>
-                            <div className="text-[10px] text-slate-500 mt-1">
+                            <div className="text-xs text-slate-500 mt-1">
                               {item.dimensions} • {item.finishSpec}
                             </div>
                           </div>
@@ -262,10 +265,10 @@ export default function VisualProductCatalogModal({
               {/* Category 2: Tables & Storage */}
               {tableStorageModels.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5">
                     NHÓM: BÀN &amp; TỦ LƯU TRỮ
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     {tableStorageModels.map((item) => {
                       const isSelected = selectedKey === item.key;
                       return (
@@ -273,28 +276,28 @@ export default function VisualProductCatalogModal({
                           key={item.key}
                           type="button"
                           onClick={() => setSelectedKey(item.key)}
-                          className={`p-3.5 rounded-lg border text-left transition flex flex-col justify-between gap-2 ${
+                          className={`p-4 rounded-xl border text-left transition flex flex-col justify-between gap-2.5 cursor-pointer ${
                             isSelected
-                              ? "border-2 border-[#d97706] bg-amber-50/40 shadow-2xs"
+                              ? "border-2 border-blue-600 bg-blue-50/40 shadow-xs"
                               : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                           }`}
                         >
                           <div className="flex items-center justify-between w-full">
                             <span className="text-2xl">{item.icon}</span>
                             {item.hasActiveBom && (
-                              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase rounded bg-emerald-100 text-emerald-700">
-                                BOM đang dùng
+                              <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Có sẵn BOM
                               </span>
                             )}
                           </div>
                           <div>
-                            <div className="font-mono text-[10px] font-bold text-amber-700">
+                            <div className="font-mono text-xs font-bold text-blue-600">
                               {item.sku}
                             </div>
-                            <div className="text-xs font-bold text-slate-900 leading-tight mt-0.5">
+                            <div className="text-sm font-bold text-slate-900 leading-snug mt-0.5">
                               {item.productName}
                             </div>
-                            <div className="text-[10px] text-slate-500 mt-1">
+                            <div className="text-xs text-slate-500 mt-1">
                               {item.dimensions} • {item.finishSpec}
                             </div>
                           </div>
@@ -309,11 +312,11 @@ export default function VisualProductCatalogModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50/50 flex items-center justify-end gap-2.5">
+        <div className="px-6 py-4 border-t border-slate-200 bg-[#F8FAFC] flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
+            className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition cursor-pointer"
           >
             Hủy
           </button>
@@ -321,9 +324,9 @@ export default function VisualProductCatalogModal({
             type="button"
             onClick={handleConfirmInherit}
             disabled={isApplying}
-            className="px-4 py-2 bg-[#d97706] hover:bg-amber-700 text-white text-xs font-semibold rounded-md shadow-sm transition disabled:opacity-60"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition disabled:opacity-60 cursor-pointer"
           >
-            {isApplying ? "Đang truy vấn BOM từ máy chủ..." : "Kế thừa quy trình mặc định & mẫu BOM"}
+            {isApplying ? "Đang tải BOM..." : "Kế thừa quy trình & mẫu BOM"}
           </button>
         </div>
       </div>

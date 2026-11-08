@@ -76,51 +76,55 @@ export default function DynamicRoutingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[1px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-[1px]">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-sm font-extrabold text-slate-900">
-            Tùy chỉnh chuỗi công đoạn động
-          </h2>
+          <div>
+            <h2 className="text-base font-bold text-slate-900">
+              Cấu hình chuỗi công đoạn sản xuất
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Thiết lập trình tự trạm làm việc và các điểm chặn kiểm soát (Hold Point)
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-1.5 py-0.5 rounded"
+            className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none px-1 cursor-pointer"
           >
-            ✕
+            ×
           </button>
         </div>
 
         {/* Modal Body */}
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-slate-500">
-              Sắp xếp lại thứ tự công đoạn, thêm công đoạn đặc thù (VD: bọc nệm),
-              bỏ công đoạn không cần thiết hoặc đánh dấu Hold Point quan trọng.
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              Sắp xếp thứ tự công đoạn, thêm công đoạn đặc thù hoặc đánh dấu Hold Point quan trọng.
             </p>
             <button
               type="button"
               onClick={() => setShowAddInput((v) => !v)}
-              className="shrink-0 px-2.5 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 border border-blue-200 rounded transition"
+              className="shrink-0 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition cursor-pointer"
             >
-              + Thêm công đoạn
+              Thêm công đoạn
             </button>
           </div>
 
           {showAddInput && (
-            <div className="flex items-center gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
               <input
                 type="text"
                 value={newStepName}
                 onChange={(e) => setNewStepName(e.target.value)}
-                placeholder="e.g., Cushion Upholstery (Bọc nệm da/vải)"
-                className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="VD: Bọc nệm da / vải"
+                className="flex-1 px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               />
               <button
                 type="button"
                 onClick={handleAddStep}
-                className="px-3 py-1.5 bg-[#2563eb] text-white text-xs font-semibold rounded hover:bg-blue-700 transition"
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition cursor-pointer"
               >
                 Thêm
               </button>
@@ -136,17 +140,17 @@ export default function DynamicRoutingModal({
                   key={`${stg.stageId}-${idx}`}
                   className={`px-4 py-3 rounded-lg border flex items-center justify-between gap-3 transition ${
                     isHold
-                      ? "border-rose-400 bg-rose-50/20 shadow-2xs"
-                      : "border-slate-200 bg-white hover:bg-slate-50/70"
+                      ? "border-rose-400 bg-rose-50/30 shadow-2xs"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="flex flex-col gap-0.5 text-[10px] text-slate-400">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex flex-col gap-0.5 text-xs text-slate-400">
                       <button
                         type="button"
                         onClick={() => handleMoveStep(idx, -1)}
                         disabled={idx === 0}
-                        className="hover:text-slate-700 disabled:opacity-25 leading-none"
+                        className="hover:text-slate-700 disabled:opacity-25 leading-none cursor-pointer"
                         title="Chuyển lên"
                       >
                         ▲
@@ -155,13 +159,13 @@ export default function DynamicRoutingModal({
                         type="button"
                         onClick={() => handleMoveStep(idx, 1)}
                         disabled={idx === localStages.length - 1}
-                        className="hover:text-slate-700 disabled:opacity-25 leading-none"
+                        className="hover:text-slate-700 disabled:opacity-25 leading-none cursor-pointer"
                         title="Chuyển xuống"
                       >
                         ▼
                       </button>
                     </div>
-                    <div className="text-xs text-slate-800 truncate">
+                    <div className="text-sm text-slate-800 truncate">
                       <strong className="font-bold text-slate-900">
                         Công đoạn {idx + 1}:
                       </strong>{" "}
@@ -174,13 +178,13 @@ export default function DynamicRoutingModal({
                       type="button"
                       onClick={() => handleToggleHoldPoint(idx)}
                       title="Bấm để chuyển giữa Chuẩn và Hold Point quan trọng"
-                      className={`px-2.5 py-0.5 text-[10px] font-bold rounded transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs font-bold rounded-md transition cursor-pointer ${
                         isHold
-                          ? "bg-yellow-100 text-amber-800 border border-yellow-300"
+                          ? "bg-amber-100 text-amber-800 border border-amber-300"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
-                      {isHold ? "Hold Point quan trọng (Khóa phụ kiện)" : "CHUẨN"}
+                      {isHold ? "Hold Point (Khóa phụ kiện)" : "Chuẩn"}
                     </button>
 
                     <button
@@ -192,9 +196,9 @@ export default function DynamicRoutingModal({
                           ? "Cần ít nhất 1 công đoạn"
                           : "Xóa công đoạn này"
                       }
-                      className="px-2 py-0.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-slate-200 rounded transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-md transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      ✕
+                      ×
                     </button>
                   </div>
                 </div>
@@ -204,18 +208,18 @@ export default function DynamicRoutingModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50/50 flex items-center justify-end gap-2.5">
+        <div className="px-6 py-4 border-t border-slate-200 bg-[#F8FAFC] flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
+            className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition cursor-pointer"
           >
             Đóng
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition cursor-pointer"
           >
             Lưu chuỗi công đoạn
           </button>

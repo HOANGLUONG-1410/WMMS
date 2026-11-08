@@ -41,6 +41,19 @@ export default function OrderSpaceDetailPage() {
   const selectedSpace =
     orderSpaces.find((s) => s.spaceKey === activeKey) || orderSpaces[0];
 
+  const customRows = (
+    selectedSpace as unknown as {
+      customRows?: Array<{
+        productSku: string;
+        productDescription: string;
+        dimensionsMm: string;
+        finishColor: string;
+        orderQty: number;
+        technicalDrawingName?: string;
+      }>;
+    }
+  )?.customRows;
+
   // Dữ liệu chi tiết sản phẩm trong Order Space (khớp 100% với SCR-ORD-03 cho SPACE-PO-880504 hoặc linh hoạt cho Space khác)
   const lineItems =
     selectedSpace?.spaceKey === 'SPACE-PO-880504'
@@ -64,8 +77,8 @@ export default function OrderSpaceDetailPage() {
             bomStatus: 'READY_FOR_PRODUCTION'
           }
         ]
-      : selectedSpace?.customRows?.length
-      ? selectedSpace.customRows.map((r) => ({
+      : customRows?.length
+      ? customRows.map((r) => ({
           skuCode: r.productSku,
           productName: r.productDescription,
           specsSubtext: `${r.dimensionsMm} mm | Gỗ sồi trắng Mỹ`,
@@ -87,33 +100,49 @@ export default function OrderSpaceDetailPage() {
         ];
 
   return (
-    <WmmsAppShell mode="owner">
-      <div className="max-w-[1400px] mx-auto space-y-5">
-        {/* Khung Header của Order Space + Field #2 & Field #3 */}
-        <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <WmmsAppShell
+      mode="owner"
+      customTopLeft={
+        <button
+          type="button"
+          onClick={() => navigate('/orders')}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs cursor-pointer"
+        >
+          <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Danh sách đơn hàng</span>
+        </button>
+      }
+    >
+      <div className="max-w-[1400px] mx-auto space-y-6">
+        {/* Order Space Header Card */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-base font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
                 {selectedSpace.spaceKey}: {selectedSpace.customerName}
               </h1>
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-blue-100 text-blue-700">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                 {lifecycleStatusLabel(selectedSpace.lifecycleStatusBadge || 'IN_PRODUCTION')}
               </span>
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 CHỨNG NHẬN FSC 100%
               </span>
             </div>
 
-            <div className="text-xs text-slate-500 mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="text-sm text-slate-600 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
               <span>
-                Mã tham chiếu khách:{' '}
-                <strong className="text-slate-800">{selectedSpace.poNumber}</strong>
+                Mã PO khách:{' '}
+                <strong className="font-mono text-slate-900">{selectedSpace.poNumber}</strong>
               </span>
-              <span>|</span>
+              <span className="text-slate-300">|</span>
               <span>
-                Ngày tiếp nhận: <strong className="text-slate-800">12/10/2026</strong>
+                Ngày tiếp nhận: <strong className="text-slate-900">12/10/2026</strong>
               </span>
-              <span>|</span>
+              <span className="text-slate-300">|</span>
               <span>
                 Hạn giao (ETD):{' '}
                 <strong className="text-rose-600">
@@ -123,130 +152,133 @@ export default function OrderSpaceDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Field #2: Manage BOM & Routing → */}
+          <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
-              onClick={() => navigate('/orders/staging')}
-              className="px-3.5 py-2 bg-[#d97706] hover:bg-amber-700 text-white text-xs font-semibold rounded-md shadow-sm transition flex items-center gap-1.5"
+              onClick={() => navigate('/production/kanban')}
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition flex items-center gap-2 shadow-xs cursor-pointer"
             >
-              <span>📐</span>
-              <span>Quản lý BOM &amp; quy trình →</span>
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
+              </svg>
+              <span>Xem trên Kanban</span>
             </button>
 
-            {/* Field #3: View on Kanban */}
             <button
               type="button"
-              onClick={() => navigate('/orders')}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition flex items-center gap-1.5"
+              onClick={() => navigate('/bom')}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
             >
-              <span>📋</span>
-              <span>Xem trên Kanban</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <span>Quản lý BOM &amp; quy trình →</span>
             </button>
           </div>
         </div>
 
-        {/* 4 Thẻ KPI (TOTAL ORDERED UNITS, BOM STATUS, MATERIAL ALLOCATION, FLOOR PROGRESS) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        {/* 4 KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
               TỔNG SỐ LƯỢNG ĐẶT
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1">
+            <div className="text-2xl font-extrabold text-slate-900 mt-2">
               {selectedSpace.totalOrderedUnits} cái
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">400 ghế ăn + 100 bàn</div>
+            <div className="text-xs text-slate-500 mt-1">400 ghế ăn + 100 bàn</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
               TRẠNG THÁI BOM
             </div>
-            <div className="text-2xl font-extrabold text-emerald-600 mt-1">Sẵn sàng 100%</div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Bóc tách đang hoạt động, tỷ lệ hao hụt 3,5%
+            <div className="text-2xl font-extrabold text-emerald-600 mt-2">Sẵn sàng 100%</div>
+            <div className="text-xs text-slate-500 mt-1">
+              Định mức đã duyệt, tỷ lệ hao hụt 3,5%
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
               PHÂN BỔ VẬT TƯ
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1">Đã khóa đủ</div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Tồn kho đã được Kho giữ chỗ
+            <div className="text-2xl font-extrabold text-slate-900 mt-2">Đã khóa đủ</div>
+            <div className="text-xs text-slate-500 mt-1">
+              Tồn kho đã được giữ chỗ theo lệnh
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
               TIẾN ĐỘ XƯỞNG
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-1">Hoàn thành 62%</div>
-            <div className="text-[11px] text-slate-400 mt-1">
+            <div className="text-2xl font-extrabold text-slate-900 mt-2">Hoàn thành 62%</div>
+            <div className="text-xs text-slate-500 mt-1">
               Trạm 4: Đang lắp ráp kết cấu
             </div>
           </div>
         </div>
 
-        {/* Field #6: Bảng Ordered Product Line Items in this Space */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <h2 className="text-xs font-bold text-slate-800">
-              Các dòng sản phẩm đặt hàng trong Space này
+        {/* Ordered Product Line Items Table */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white">
+            <h2 className="text-base font-bold text-slate-900">
+              Danh sách sản phẩm đặt hàng trong Space
             </h2>
-            <span className="text-[11px] text-slate-400">
-              Quy cách PO chỉ xem (được bảo vệ bởi RBAC)
+            <span className="text-xs text-slate-500">
+              Quy cách PO đã khóa chỉnh sửa sau khi xác nhận
             </span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto bg-white">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
-                  <th className="py-3 px-5">Mã SKU</th>
-                  <th className="py-3 px-4">Mẫu sản phẩm &amp; quy cách</th>
-                  <th className="py-3 px-4">Quy cách hoàn thiện</th>
-                  <th className="py-3 px-4">Số lượng đặt</th>
-                  <th className="py-3 px-4">Bản vẽ CAD/PDF đính kèm</th>
-                  <th className="py-3 px-4">Vòng đời BOM</th>
-                  <th className="py-3 px-5 text-right">Thao tác</th>
+                <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
+                  <th className="py-3.5 px-6 min-w-[140px]">Mã SKU</th>
+                  <th className="py-3.5 px-4 min-w-[240px]">Mẫu sản phẩm &amp; quy cách</th>
+                  <th className="py-3.5 px-4 min-w-[180px]">Quy cách hoàn thiện</th>
+                  <th className="py-3.5 px-4 min-w-[120px]">Số lượng đặt</th>
+                  <th className="py-3.5 px-4 min-w-[200px]">Bản vẽ kỹ thuật</th>
+                  <th className="py-3.5 px-4 min-w-[160px]">Trạng thái BOM</th>
+                  <th className="py-3.5 px-6 text-right min-w-[130px]">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 text-xs">
+              <tbody className="divide-y divide-slate-200 text-sm bg-white">
                 {lineItems.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-5 font-mono font-bold text-slate-800">
+                  <tr key={idx} className="hover:bg-slate-50/90 transition-colors">
+                    <td className="py-4 px-6 font-mono font-bold text-slate-800 whitespace-nowrap">
                       {item.skuCode}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{item.productName}</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">{item.specsSubtext}</div>
+                    <td className="py-4 px-4">
+                      <div className="font-semibold text-slate-900">{item.productName}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{item.specsSubtext}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600">{item.finishSpec}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">{item.orderQty}</td>
-                    <td className="py-3.5 px-4">
-                      {/* Field #4: Attached Engineering CAD/PDF Link */}
+                    <td className="py-4 px-4 text-slate-700 whitespace-nowrap">{item.finishSpec}</td>
+                    <td className="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">{item.orderQty}</td>
+                    <td className="py-4 px-4 whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => setPreviewAttachment(item.cadFile)}
-                        className="text-blue-600 hover:text-blue-700 hover:underline font-medium flex items-center gap-1"
+                        onClick={() => setPreviewAttachment(item.cadFile as any)}
+                        className="text-blue-600 hover:text-blue-700 hover:underline font-medium flex items-center gap-1.5 text-sm cursor-pointer"
                       >
-                        <span>📐</span>
+                        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                         <span>{item.cadFile}</span>
                       </button>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700">
+                    <td className="py-4 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         {bomStatusLabel(item.bomStatus)}
                       </span>
                     </td>
-                    <td className="py-3.5 px-5 text-right">
-                      {/* Field #5: Inspect BOM → */}
+                    <td className="py-4 px-6 text-right whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => navigate('/orders/staging')}
-                        className="px-3 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50"
+                        onClick={() => navigate('/bom')}
+                        className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer"
                       >
                         Xem BOM →
                       </button>
@@ -258,52 +290,48 @@ export default function OrderSpaceDetailPage() {
           </div>
         </div>
 
-        {/* Field #7: Recent Space Activity & Milestones */}
-        <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
-          <h2 className="text-xs font-bold text-slate-800 mb-4">
-            Hoạt động gần đây &amp; Mốc của Space
+        {/* Recent Space Activity & Milestones */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+          <h2 className="text-base font-bold text-slate-900 mb-4">
+            Nhật ký tiến độ &amp; Cột mốc đơn hàng
           </h2>
 
-          <div className="relative pl-5 border-l border-slate-200 space-y-5 text-xs">
-            {/* Milestone 1 */}
+          <div className="relative pl-6 border-l-2 border-slate-200 space-y-5 text-sm">
             <div className="relative">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -left-[25px] top-1 ring-4 ring-white" />
-              <div className="text-slate-800">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 absolute -left-[31px] top-1 ring-4 ring-white" />
+              <div className="text-slate-900">
                 <strong className="font-bold">Đã xuất kho xuống xưởng</strong>{' '}
-                <span className="text-slate-400">
+                <span className="text-slate-500 text-xs">
                   — 16/10/2026 14:20 bởi Vu Duc Thang (Thủ kho)
                 </span>
               </div>
-              <p className="text-slate-500 text-[11px] mt-0.5">
+              <p className="text-slate-600 text-sm mt-0.5">
                 Đã bàn giao 100% gỗ và phụ kiện cho quản đốc sản xuất. Thẻ Kanban đã được mở khóa.
               </p>
             </div>
 
-            {/* Milestone 2 */}
             <div className="relative">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 absolute -left-[25px] top-1 ring-4 ring-white" />
-              <div className="text-slate-800">
+              <span className="w-3 h-3 rounded-full bg-blue-600 absolute -left-[31px] top-1 ring-4 ring-white" />
+              <div className="text-slate-900">
                 <strong className="font-bold">BOM &amp; quy trình đã được duyệt</strong>{' '}
-                <span className="text-slate-400">
+                <span className="text-slate-500 text-xs">
                   — 13/10/2026 10:15 bởi Nguyen Van Khoa (Chủ xưởng)
                 </span>
               </div>
-              <p className="text-slate-500 text-[11px] mt-0.5">
-                Đã cấu hình quy trình động 6 bước và tính tổng nhu cầu vật tư thô với
-                hao hụt cho phép 3,5%.
+              <p className="text-slate-600 text-sm mt-0.5">
+                Đã cấu hình quy trình động 6 bước và tính tổng nhu cầu vật tư thô với hao hụt cho phép 3,5%.
               </p>
             </div>
 
-            {/* Milestone 3 */}
             <div className="relative">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-400 absolute -left-[25px] top-1 ring-4 ring-white" />
-              <div className="text-slate-800">
+              <span className="w-3 h-3 rounded-full bg-slate-400 absolute -left-[31px] top-1 ring-4 ring-white" />
+              <div className="text-slate-900">
                 <strong className="font-bold">Đã khởi tạo Order Space</strong>{' '}
-                <span className="text-slate-400">
+                <span className="text-slate-500 text-xs">
                   — 12/10/2026 09:30 bởi Tran Thi Mai (Kinh doanh)
                 </span>
               </div>
-              <p className="text-slate-500 text-[11px] mt-0.5">
+              <p className="text-slate-600 text-sm mt-0.5">
                 PO đã được xác nhận qua khu Staging. Đã đính kèm bản vẽ CAD và quy cách đóng gói của người mua.
               </p>
             </div>
@@ -311,33 +339,32 @@ export default function OrderSpaceDetailPage() {
         </div>
       </div>
 
-      {/* Modal xem trước bản vẽ kỹ thuật CAD/PDF khi bấm vào link Field #4 */}
       {previewAttachment && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200 p-5 space-y-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-base font-bold text-slate-900">
                 Bản vẽ kỹ thuật CAD đính kèm
               </h3>
               <button
                 type="button"
                 onClick={() => setPreviewAttachment(null)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none cursor-pointer"
               >
                 ×
               </button>
             </div>
-            <p className="text-xs text-slate-600">
+            <p className="text-sm text-slate-700">
               Tệp: <strong className="font-mono">{previewAttachment}</strong>
             </p>
-            <p className="text-[11px] text-slate-500">
-              Đã xác minh URL kho lưu trữ riêng có chữ ký trước. Sẵn sàng xem trên máy tính bảng tại xưởng.
+            <p className="text-xs text-slate-500">
+              Đã xác minh URL kho lưu trữ riêng có chữ ký. Sẵn sàng xem trên thiết bị tại xưởng.
             </p>
             <div className="flex justify-end pt-2">
               <button
                 type="button"
                 onClick={() => setPreviewAttachment(null)}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-md"
+                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer"
               >
                 Đóng xem trước
               </button>

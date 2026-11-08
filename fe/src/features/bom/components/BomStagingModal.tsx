@@ -300,20 +300,20 @@ export default function BomStagingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[1px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-[1px]">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-6xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-amber-100 text-amber-800 border border-amber-300">
-                STAGING BOM CỦA CHỦ XƯỞNG
+            <div className="flex items-center gap-2.5">
+              <span className="px-2.5 py-0.5 text-xs font-bold uppercase rounded bg-blue-50 text-blue-700 border border-blue-200">
+                STAGING BOM
               </span>
-              <h2 className="text-sm font-extrabold text-slate-900">
-                Nhập &amp; kiểm tra lưới Staging BOM Excel (.xlsx / .xls)
+              <h2 className="text-base font-bold text-slate-900">
+                Nhập &amp; kiểm tra dữ liệu BOM Excel (.xlsx / .xls)
               </h2>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-1">
               Dòng hàng mục tiêu #{orderItemId} • SKU:{" "}
               <strong className="font-mono text-slate-800">{productSku}</strong> ({productName})
             </p>
@@ -321,48 +321,46 @@ export default function BomStagingModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-2 py-1 rounded"
+            className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none px-2 py-1 rounded cursor-pointer"
           >
-            ✕
+            ×
           </button>
         </div>
 
         {/* Body */}
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
-          {/* Hướng dẫn cấu trúc cột Excel theo ExcelBomParser.cs */}
-          <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="text-xs font-bold text-blue-900">
-                📋 Hỗ trợ đồng thời 2 định dạng Excel BOM:
+          {/* Hướng dẫn cấu trúc cột Excel */}
+          <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="text-sm font-bold text-blue-900">
+                Hỗ trợ 2 định dạng Excel BOM:
               </div>
-              <div className="text-[11px] text-blue-800 space-y-0.5">
+              <div className="text-xs text-blue-800 space-y-1">
                 <div>
-                  1. <strong>Sổ bóc tách phôi xưởng (.xls / .xlsx)</strong>: Tự động tách cụm BTP (
-                  <em>phụ kiện veneer, phụ kiện sồi, phụ kiện lắp ráp</em>), tên chi tiết (
-                  <em>mặt, chân, xà chân...</em>) &amp; quy đổi <code className="font-mono">Dài x Bản x Dầy</code> sang ĐVT tồn kho.
+                  1. <strong>Sổ bóc tách phôi xưởng (.xls / .xlsx)</strong>: Tự động tách cụm BTP, tên chi tiết và quy đổi <code className="font-mono">Dài x Bản x Dầy</code> sang ĐVT tồn kho.
                 </div>
                 <div>
                   2. <strong>Bảng BOM tiêu chuẩn</strong>:{" "}
-                  <code className="font-mono bg-white px-1 py-0.5 rounded border border-blue-200">
+                  <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">
                     Mã NVL / Material Code
                   </code>{" "}
                   •{" "}
-                  <code className="font-mono bg-white px-1 py-0.5 rounded border border-blue-200">
+                  <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">
                     Tên NVL / Material Name
                   </code>{" "}
                   •{" "}
-                  <code className="font-mono bg-white px-1 py-0.5 rounded border border-blue-200">
+                  <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">
                     ĐVT / Unit
                   </code>{" "}
                   •{" "}
-                  <code className="font-mono bg-white px-1 py-0.5 rounded border border-blue-200">
+                  <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">
                     Định mức / NetQtyPerUnit
                   </code>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -374,24 +372,24 @@ export default function BomStagingModal({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={previewMutation.isPending}
-                className="px-3.5 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold rounded-md shadow-xs transition disabled:opacity-60"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition disabled:opacity-60 cursor-pointer"
               >
                 {previewMutation.isPending
-                  ? "Đang phân tích trên Server..."
-                  : "📂 Chọn file Excel (.xlsx / .xls)"}
+                  ? "Đang phân tích..."
+                  : "Chọn file Excel (.xlsx / .xls)"}
               </button>
               <button
                 type="button"
                 onClick={handleAddBlankStagingRow}
-                className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
+                className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition cursor-pointer"
               >
-                + Thêm dòng thủ công
+                Thêm dòng thủ công
               </button>
               {rows.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClearAllRows}
-                  className="px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-semibold rounded-md transition"
+                  className="px-3.5 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-sm font-semibold rounded-lg transition cursor-pointer"
                 >
                   Xóa trắng bảng
                 </button>
@@ -402,7 +400,7 @@ export default function BomStagingModal({
           {/* Thông báo từ Server */}
           {serverBanner && (
             <div
-              className={`px-4 py-2.5 rounded-lg border text-xs font-semibold flex items-center justify-between ${
+              className={`px-4 py-3 rounded-lg border text-sm font-medium flex items-center justify-between ${
                 serverBanner.type === "success"
                   ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                   : serverBanner.type === "error"
@@ -414,16 +412,16 @@ export default function BomStagingModal({
               <button
                 type="button"
                 onClick={() => setServerBanner(null)}
-                className="text-slate-400 hover:text-slate-600 ml-3 font-bold"
+                className="text-slate-400 hover:text-slate-600 ml-3 font-bold cursor-pointer"
               >
-                ✕
+                ×
               </button>
             </div>
           )}
 
           {/* Thanh KPI thống kê Staging & Scrap Rate */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
-            <div className="flex flex-wrap items-center gap-3 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
               {selectedFileName && (
                 <span className="font-semibold text-slate-700">
                   Tệp: <code className="font-mono text-blue-700">{selectedFileName}</code>
@@ -435,7 +433,7 @@ export default function BomStagingModal({
                 </span>
               )}
               {sheetMeta?.detectedProductSku && (
-                <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-mono text-[11px] font-bold">
+                <span className="px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono text-xs font-bold">
                   Mã SP phát hiện: {sheetMeta.detectedProductSku}
                   {sheetMeta.detectedProductDimensions
                     ? ` (${sheetMeta.detectedProductDimensions})`
@@ -452,10 +450,10 @@ export default function BomStagingModal({
                 Lỗi: <strong>{errorRows}</strong>
               </span>
               <span
-                className={`px-2 py-0.5 text-[10px] font-extrabold uppercase rounded ${
+                className={`px-2.5 py-0.5 text-xs font-bold uppercase rounded border ${
                   isReadyToConfirm
-                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                    : "bg-amber-100 text-amber-800 border border-amber-300"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-800 border-amber-200"
                 }`}
               >
                 {isReadyToConfirm ? "SẴN SÀNG XÁC NHẬN" : "CHỜ KIỂM TRA"}
@@ -463,7 +461,7 @@ export default function BomStagingModal({
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-sm font-semibold text-slate-700">
                 Tỷ lệ hao hụt % (3,0% - 5,0%):
               </label>
               <input
@@ -473,35 +471,35 @@ export default function BomStagingModal({
                 max="5"
                 value={scrapRate}
                 onChange={(e) => setScrapRate(parseFloat(e.target.value) || 3.0)}
-                className="w-20 px-2.5 py-1 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded text-center"
+                className="w-20 px-2.5 py-1.5 text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg text-center"
               />
-              <span className="text-xs text-slate-500">%</span>
+              <span className="text-sm text-slate-500">%</span>
             </div>
           </div>
 
           {/* Bảng BOM Staging Grid */}
-          <div className="border border-slate-200 rounded-lg overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="border border-slate-200 rounded-xl overflow-x-auto bg-white">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-slate-100 border-b border-slate-200 text-[11px] font-bold text-slate-600">
-                  <th className="py-2.5 px-2.5 w-12">Dòng</th>
-                  <th className="py-2.5 px-3 w-48">Cụm BTP / Chi tiết phôi</th>
-                  <th className="py-2.5 px-3 w-52">Mã NVL (Material Code)</th>
-                  <th className="py-2.5 px-3">Tên nguyên vật liệu &amp; Ghi chú</th>
-                  <th className="py-2.5 px-2.5 w-24">Nhóm</th>
-                  <th className="py-2.5 px-2.5 w-18 text-center">ĐVT</th>
-                  <th className="py-2.5 px-3 w-28 text-right">Định mức / SP</th>
-                  <th className="py-2.5 px-3 w-52">Đối chiếu DB &amp; Tồn kho</th>
-                  <th className="py-2.5 px-2.5 w-12 text-right">Xóa</th>
+                <tr className="bg-[#F8FAFC] border-b border-slate-200 text-xs uppercase tracking-wider font-bold text-slate-500">
+                  <th className="py-3 px-3 w-12">Dòng</th>
+                  <th className="py-3 px-3 w-48">Cụm BTP / Chi tiết phôi</th>
+                  <th className="py-3 px-3 w-52">Mã NVL</th>
+                  <th className="py-3 px-3">Tên nguyên vật liệu &amp; Ghi chú</th>
+                  <th className="py-3 px-2.5 w-28">Nhóm</th>
+                  <th className="py-3 px-2.5 w-20 text-center">ĐVT</th>
+                  <th className="py-3 px-3 w-28 text-right">Định mức / SP</th>
+                  <th className="py-3 px-3 w-52">Đối chiếu DB &amp; Tồn kho</th>
+                  <th className="py-3 px-2.5 w-14 text-right">Xóa</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-10 text-center text-slate-400">
+                    <td colSpan={9} className="py-12 text-center text-slate-500 text-sm">
                       Chưa có dữ liệu Staging. Nhấn{" "}
-                      <strong>&ldquo;Chọn file Excel (.xlsx / .xls)&rdquo;</strong> để tải lên hoặc nhấn{" "}
-                      <strong>&ldquo;+ Thêm dòng thủ công&rdquo;</strong>.
+                      <strong>Chọn file Excel (.xlsx / .xls)</strong> để tải lên hoặc nhấn{" "}
+                      <strong>Thêm dòng thủ công</strong>.
                     </td>
                   </tr>
                 ) : (
@@ -512,13 +510,12 @@ export default function BomStagingModal({
                         key={`${displayRowNum}-${idx}`}
                         className={row.isValid ? "bg-white hover:bg-slate-50" : "bg-rose-50/60"}
                       >
-                        <td className="py-2.5 px-2.5 font-mono text-slate-500 font-semibold">
+                        <td className="py-3 px-3 font-mono text-slate-500 font-semibold">
                           #{displayRowNum}
                         </td>
 
-                        {/* Cột Cụm BTP & Quy cách chi tiết phôi bóc tách từ sổ xưởng */}
-                        <td className="py-2.5 px-3">
-                          <div className="space-y-1">
+                        <td className="py-3 px-3">
+                          <div className="space-y-1.5">
                             <input
                               type="text"
                               value={row.subAssemblyName || ""}
@@ -526,7 +523,7 @@ export default function BomStagingModal({
                                 handleUpdateRowField(idx, "subAssemblyName", e.target.value)
                               }
                               placeholder="Cụm BTP (VD: phụ kiện sồi)"
-                              className="w-full px-2 py-0.5 text-[11px] font-semibold border border-slate-200 rounded bg-amber-50/40 text-amber-900"
+                              className="w-full px-2.5 py-1 text-xs font-semibold border border-slate-300 rounded-md bg-white text-slate-800"
                             />
                             <input
                               type="text"
@@ -535,21 +532,20 @@ export default function BomStagingModal({
                                 handleUpdateRowField(idx, "componentDimensionSpec", e.target.value)
                               }
                               placeholder="Quy cách phôi (Dài x Bản x Dầy)"
-                              className="w-full px-2 py-0.5 text-[10px] font-mono border border-slate-200 rounded bg-white text-slate-600"
+                              className="w-full px-2.5 py-1 text-xs font-mono border border-slate-200 rounded-md bg-slate-50 text-slate-600"
                             />
                           </div>
                         </td>
 
-                        {/* Cột Mã NVL + Dropdown 14 vật tư trong DB */}
-                        <td className="py-2.5 px-3">
-                          <div className="space-y-1">
+                        <td className="py-3 px-3">
+                          <div className="space-y-1.5">
                             <input
                               type="text"
                               value={row.materialCode}
                               onChange={(e) =>
                                 handleUpdateRowField(idx, "materialCode", e.target.value)
                               }
-                              className={`w-full px-2 py-1 text-xs font-mono font-bold rounded border ${
+                              className={`w-full px-2.5 py-1 text-sm font-mono font-bold rounded-md border ${
                                 row.isValid
                                   ? "border-slate-300 bg-white text-slate-900"
                                   : "border-rose-400 bg-white text-rose-800"
@@ -560,7 +556,7 @@ export default function BomStagingModal({
                               onChange={(e) =>
                                 handleUpdateRowField(idx, "materialCode", e.target.value)
                               }
-                              className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded text-slate-600"
+                              className="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-md text-slate-600"
                             >
                               <option value="">-- Đổi mã vật tư chuẩn DB --</option>
                               {masterMaterials.map((m) => (
@@ -572,50 +568,49 @@ export default function BomStagingModal({
                           </div>
                         </td>
 
-                        {/* Cột Tên NVL & Ghi chú */}
-                        <td className="py-2.5 px-3">
-                          <div className="space-y-1">
+                        <td className="py-3 px-3">
+                          <div className="space-y-1.5">
                             <input
                               type="text"
                               value={row.materialName}
                               onChange={(e) =>
                                 handleUpdateRowField(idx, "materialName", e.target.value)
                               }
-                              className="w-full px-2 py-1 text-xs font-medium border border-slate-200 rounded bg-white text-slate-800"
+                              className="w-full px-2.5 py-1 text-sm font-medium border border-slate-300 rounded-md bg-white text-slate-800"
                             />
                             <input
                               type="text"
                               value={row.notes || ""}
                               onChange={(e) => handleUpdateRowField(idx, "notes", e.target.value)}
                               placeholder="Ghi chú chi tiết..."
-                              className="w-full px-2 py-0.5 text-[11px] border border-slate-200 rounded bg-slate-50/60 text-slate-600"
+                              className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-600"
                             />
                           </div>
                         </td>
 
-                        <td className="py-2.5 px-2.5">
+                        <td className="py-3 px-2.5">
                           <input
                             type="text"
                             value={row.materialGroup}
                             onChange={(e) =>
                               handleUpdateRowField(idx, "materialGroup", e.target.value)
                             }
-                            className="w-full px-2 py-1 text-[10px] font-bold border border-slate-200 rounded bg-white text-slate-700"
+                            className="w-full px-2 py-1 text-xs font-bold border border-slate-300 rounded-md bg-white text-slate-700"
                           />
                         </td>
 
-                        <td className="py-2.5 px-2.5">
+                        <td className="py-3 px-2.5">
                           <input
                             type="text"
                             value={row.unitOfMeasure}
                             onChange={(e) =>
                               handleUpdateRowField(idx, "unitOfMeasure", e.target.value)
                             }
-                            className="w-full px-1.5 py-1 text-xs border border-slate-200 rounded bg-white text-slate-700 text-center"
+                            className="w-full px-2 py-1 text-xs border border-slate-300 rounded-md bg-white text-slate-700 text-center"
                           />
                         </td>
 
-                        <td className="py-2.5 px-3">
+                        <td className="py-3 px-3">
                           <input
                             type="number"
                             step="any"
@@ -627,27 +622,27 @@ export default function BomStagingModal({
                                 parseFloat(e.target.value) || 0,
                               )
                             }
-                            className={`w-full px-2 py-1 text-xs font-bold rounded border text-right ${
+                            className={`w-full px-2.5 py-1 text-sm font-bold rounded-md border text-right ${
                               row.netQtyPerUnit > 0
                                 ? "border-slate-300 bg-white text-slate-900"
                                 : "border-rose-400 bg-white text-rose-700"
                             }`}
                           />
                           {row.rawPiecesPerUnit !== undefined && row.rawPiecesPerUnit !== null && (
-                            <div className="text-[10px] text-slate-400 text-right mt-0.5">
+                            <div className="text-xs text-slate-500 text-right mt-0.5">
                               ({row.rawPiecesPerUnit} thanh/tấm)
                             </div>
                           )}
                         </td>
 
-                        <td className="py-2.5 px-3">
+                        <td className="py-3 px-3">
                           {row.isValid ? (
-                            <div className="space-y-0.5">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                                ✓ Khớp DB (ID #{row.resolvedMaterialId})
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                                ✓ Khớp DB (#{row.resolvedMaterialId})
                               </span>
                               {row.availableStock !== undefined && (
-                                <div className="text-[10px] text-slate-600 font-medium">
+                                <div className="text-xs text-slate-600 font-medium">
                                   Tồn khả dụng:{" "}
                                   <strong className="text-slate-900">
                                     {row.availableStock} {row.unitOfMeasure}
@@ -658,7 +653,7 @@ export default function BomStagingModal({
                           ) : (
                             <div className="space-y-0.5">
                               {row.errors.map((errText, i) => (
-                                <div key={i} className="text-[10px] font-semibold text-rose-700">
+                                <div key={i} className="text-xs font-semibold text-rose-700">
                                   • {errText}
                                 </div>
                               ))}
@@ -666,14 +661,14 @@ export default function BomStagingModal({
                           )}
                         </td>
 
-                        <td className="py-2.5 px-2.5 text-right">
+                        <td className="py-3 px-2.5 text-right">
                           <button
                             type="button"
                             onClick={() => handleRemoveRow(idx)}
-                            className="px-2 py-1 text-rose-600 hover:bg-rose-100 rounded text-xs font-bold transition"
+                            className="px-2 py-1 text-rose-600 hover:bg-rose-50 rounded-md text-xs font-bold transition cursor-pointer"
                             title="Xóa dòng này"
                           >
-                            ✕
+                            ×
                           </button>
                         </td>
                       </tr>
@@ -686,13 +681,13 @@ export default function BomStagingModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-6 py-4 border-t border-slate-200 bg-[#F8FAFC] flex flex-wrap items-center justify-between gap-3">
           <div />
           <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition cursor-pointer"
             >
               Đóng
             </button>
@@ -700,11 +695,11 @@ export default function BomStagingModal({
               type="button"
               onClick={handleConfirmStaging}
               disabled={!isReadyToConfirm || confirmMutation.isPending}
-              className="px-4 py-2 bg-[#d97706] hover:bg-amber-700 text-white text-xs font-bold rounded-md shadow-sm transition disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
             >
               {confirmMutation.isPending
-                ? "Đang lưu BOM lên Server..."
-                : `Xác nhận & Lưu BOM từ Staging (${validRows} dòng)`}
+                ? "Đang lưu BOM..."
+                : `Xác nhận & Lưu BOM (${validRows} dòng)`}
             </button>
           </div>
         </div>

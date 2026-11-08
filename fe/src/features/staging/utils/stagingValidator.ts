@@ -5,12 +5,26 @@
 const DIMENSION_REGEX = /^\s*(\d+(?:\.\d+)?)\s*[xX*×]\s*(\d+(?:\.\d+)?)\s*[xX*×]\s*(\d+(?:\.\d+)?)\s*(?:mm|cm)?\s*$/;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
+export interface StagingRowData {
+  rowNumber?: number;
+  productSku?: string;
+  productDescription?: string;
+  dimensionsMm?: string;
+  finishColor?: string;
+  orderQty?: number | string;
+  targetEtd?: string;
+  technicalDrawingName?: string;
+  cellErrors?: Array<{ fieldName: string; errorMessage: string }>;
+  isRowValid?: boolean;
+  [key: string]: unknown;
+}
+
 /**
  * Kiểm tra hợp lệ một dòng sản phẩm trên bảng Staging Grid (SCR-ORD-02).
  * Trả về danh sách các trường bị lỗi để UI hiển thị viền đỏ (Red Cells = Syntax / Format Error).
  */
-export function validateStagingRowClient(row) {
-  const cellErrors = [];
+export function validateStagingRowClient<T extends StagingRowData>(row: T) {
+  const cellErrors: Array<{ fieldName: string; errorMessage: string }> = [];
 
   if (!row.productSku || !String(row.productSku).trim()) {
     cellErrors.push({ fieldName: 'productSku', errorMessage: 'Bắt buộc nhập mã SKU nội bộ' });
@@ -52,9 +66,9 @@ export function validateStagingRowClient(row) {
 /**
  * Kiểm tra một ô cụ thể trong dòng có bị lỗi định dạng hay không
  */
-export function hasCellError(row, fieldName: string) {
+export function hasCellError(row: StagingRowData | null | undefined, fieldName: string) {
   if (!row || !Array.isArray(row.cellErrors)) return false;
   return row.cellErrors.some(
-    (err) => String(err.fieldName).toLowerCase() === String(fieldName).toLowerCase()
+    (err: { fieldName: string }) => String(err.fieldName).toLowerCase() === String(fieldName).toLowerCase()
   );
 }
