@@ -1,32 +1,82 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WmmsAppShell from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
+import { orderIntakeApi } from '../../../services/wmmsApi';
 import { lifecycleStatusLabel } from '../../../lib/statusLabels';
 
-/**
- * Màn hình III.4.1: Sales Order List Screen — Sales Orders Directory
- * Tuân thủ 100% thiết kế giao diện và bảng Field Description trong Report 3 (Section III.4.1):
- * - Tiêu đề: `Danh mục đơn hàng bán`
- * - Phụ đề: `Theo dõi tiến độ thực hiện PO của khách, ngày giao dự kiến (ETD) và mở màn hình nhập PO Excel qua Staging.`
- * - Field #1: Nút `+ Nhập PO Excel của khách (Khu Staging)` màu xanh ở góc phải trên cùng.
- * - 3 Thẻ KPI:
- *   + `ĐƠN ĐANG THỰC HIỆN`: `8` (`4 đang sản xuất, 2 đang lập BOM, 2 mới nhận`)
- *   + `URGENT ETD (< 10 DAYS)`: `2` (`Ưu tiên cao trong kế hoạch xưởng`)
- *   + `TỔNG SỐ SẢN PHẨM TRÊN XƯỞNG`: `1,450` (`Ghế ăn, bàn ăn, khung giường`)
- * - Bảng `Official Orders & Production Spaces`:
- *   + Field #2: Dropdown `Order Status Filter` (`Tất cả trạng thái`)
- *   + Field #3: Search Bar `Tìm khách hàng, số PO...`
- *   + Field #4: Bảng dữ liệu với 6 cột: `Mã Order Space`, `Khách hàng / Người mua`, `Mã PO`, `ETD mục tiêu (Giao hàng)`, `Dòng hàng / Số lượng`, `Trạng thái vòng đời`, `Thao tác`
- *   + Field #5: Nút `Mở Space →` mở màn hình `Order Space Detail Dashboard (SCR-ORD-03)`.
- */
 export default function SalesOrderListPage() {
   const navigate = useNavigate();
-  const { orderSpaces, setCurrentSpaceKey } = useWmms();
+  const { orderSpaces, setOrderSpaces, setCurrentSpaceKey } = useWmms();
 
   // State cho bộ lọc trạng thái và tìm kiếm (Fields #2 & #3)
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [kpiStats, setKpiStats] = useState<{
+    activeOrdersCount: number;
+    urgentEtdCount: number;
+    totalUnitsOnFloor: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    orderIntakeApi
+      .getSalesOrders({ pageNumber: 1, pageSize: 100 })
+      .then((res) => {
+        if (!isMounted) return;
+        const data = res?.data;
+        const items = data?.items || data?.orders || [];
+        if (Array.isArray(items)) {
+          const mappedSpaces = items.map((o: Record<string, unknown>) => ({
+            spaceKey: String(o.orderSpaceKey || o.spaceKey || `SPACE-${o.poNumber}`),
+            spaceLabel: String(
+              o.spaceName ||
+                `${String(o.orderSpaceKey || o.spaceKey || `SPACE-${o.poNumber}`)} (${String(o.customerName || '')})`
+            ),
+            customerName: String(o.customerName || ''),
+            poNumber: String(o.poNumber || ''),
+            orderDate: o.orderDate ? String(o.orderDate).slice(0, 10) : '',
+            etdDate: o.etdDate ? String(o.etdDate).slice(0, 10) : '',
+            daysRemaining: Number(o.daysRemaining ?? 0),
+            isUrgentEtd: Boolean(o.isUrgentEtd),
+            totalOrderedUnits: Number(o.totalOrderedUnits ?? 0),
+            lineItemsVolumeSummary: String(o.lineItemsVolumeSummary || ''),
+            lifecycleStatusBadge: String(o.lifecycleStatusBadge || o.orderStatus || 'CONFIRMED'),
+            overallProgressPct: Number(o.overallProgressPct ?? 0),
+          }));
+          setOrderSpaces(mappedSpaces);
+          setKpiStats({
+            activeOrdersCount: Number(data?.activeOrdersCount ?? mappedSpaces.length),
+            urgentEtdCount: Number(
+              data?.urgentEtdCount ?? mappedSpaces.filter((s) => s.daysRemaining <= 10).length
+            ),
+            totalUnitsOnFloor: Number(
+              data?.totalUnitsOnFloor ??
+                mappedSpaces.reduce((sum, s) => sum + s.totalOrderedUnits, 0)
+            ),
+          });
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setLoadError(
+          err?.response?.data?.message ||
+            'Không thể tải danh sách Không gian đơn hàng từ máy chủ.'
+        );
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setOrderSpaces]);
 
   // Lọc danh sách đơn hàng theo Status và Keyword (UC-34)
   const filteredOrders = useMemo(() => {
@@ -46,6 +96,13 @@ export default function SalesOrderListPage() {
       return true;
     });
   }, [orderSpaces, statusFilter, searchKeyword]);
+
+  const activeCount = kpiStats?.activeOrdersCount ?? orderSpaces.length;
+  const urgentCount =
+    kpiStats?.urgentEtdCount ?? orderSpaces.filter((s) => s.daysRemaining <= 10).length;
+  const totalUnits =
+    kpiStats?.totalUnitsOnFloor ??
+    orderSpaces.reduce((sum, s) => sum + (s.totalOrderedUnits || 0), 0);
 
   const getLifecycleBadgeClass = (badge: string) => {
     if (badge === 'IN_PRODUCTION')
@@ -107,6 +164,12 @@ export default function SalesOrderListPage() {
           </button>
         </div>
 
+        {loadError && (
+          <div className="px-4 py-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium">
+            {loadError}
+          </div>
+        )}
+
         {/* 3 KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
@@ -121,7 +184,7 @@ export default function SalesOrderListPage() {
               </span>
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-2">
-              {orderSpaces.length}
+              {activeCount}
             </div>
             <div className="text-xs text-slate-500 mt-1">
               Đang triển khai sản xuất, lập BOM và mới tiếp nhận
@@ -139,7 +202,7 @@ export default function SalesOrderListPage() {
                 </svg>
               </span>
             </div>
-            <div className="text-2xl font-extrabold text-rose-600 mt-2">2</div>
+            <div className="text-2xl font-extrabold text-rose-600 mt-2">{urgentCount}</div>
             <div className="text-xs text-slate-500 mt-1">
               Ưu tiên cao trong kế hoạch điều độ xưởng
             </div>
@@ -156,9 +219,11 @@ export default function SalesOrderListPage() {
                 </svg>
               </span>
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">1,450</div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-2">
+              {totalUnits.toLocaleString("vi-VN")}
+            </div>
             <div className="text-xs text-slate-500 mt-1">
-              Ghế ăn, bàn ăn, khung giường xuất khẩu
+              Tổng số lượng sản phẩm từ các đơn hàng thực tế
             </div>
           </div>
         </div>
@@ -218,60 +283,74 @@ export default function SalesOrderListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-sm bg-white">
-                {filteredOrders.map((ord) => (
-                  <tr key={ord.spaceKey} className="hover:bg-slate-50/90 transition-colors">
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenSpace(ord.spaceKey)}
-                        className="font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
-                      >
-                        {ord.spaceKey}
-                      </button>
-                    </td>
-                    <td className="py-4 px-4 font-semibold text-slate-900 whitespace-nowrap">
-                      {ord.customerName}
-                    </td>
-                    <td className="py-4 px-4 font-mono text-sm text-slate-700 whitespace-nowrap">
-                      {ord.poNumber}
-                    </td>
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 text-xs font-bold uppercase rounded border whitespace-nowrap ${getEtdBadgeClass(
-                          ord.daysRemaining
-                        )}`}
-                      >
-                        {ord.etdDate} ({ord.daysRemaining} NGÀY)
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-slate-700 whitespace-nowrap">
-                      {ord.lineItemsVolumeSummary}
-                    </td>
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full border whitespace-nowrap ${getLifecycleBadgeClass(
-                          ord.lifecycleStatusBadge
-                        )}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${getLifecycleDotClass(
-                            ord.lifecycleStatusBadge
-                          )}`}
-                        />
-                        {lifecycleStatusLabel(ord.lifecycleStatusBadge)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenSpace(ord.spaceKey)}
-                        className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition cursor-pointer"
-                      >
-                        Mở Space →
-                      </button>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 px-6 text-center text-slate-500">
+                      Đang tải danh sách đơn hàng bán...
                     </td>
                   </tr>
-                ))}
+                ) : filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 px-6 text-center text-rose-600 font-medium">
+                      Không tìm thấy đơn hàng hoặc Không gian đơn hàng nào phù hợp.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOrders.map((ord) => (
+                    <tr key={ord.spaceKey} className="hover:bg-slate-50/90 transition-colors">
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenSpace(ord.spaceKey)}
+                          className="font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                        >
+                          {ord.spaceKey}
+                        </button>
+                      </td>
+                      <td className="py-4 px-4 font-semibold text-slate-900 whitespace-nowrap">
+                        {ord.customerName}
+                      </td>
+                      <td className="py-4 px-4 font-mono text-sm text-slate-700 whitespace-nowrap">
+                        {ord.poNumber}
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 text-xs font-bold uppercase rounded border whitespace-nowrap ${getEtdBadgeClass(
+                            ord.daysRemaining
+                          )}`}
+                        >
+                          {ord.etdDate} ({ord.daysRemaining} NGÀY)
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-slate-700 whitespace-nowrap">
+                        {ord.lineItemsVolumeSummary}
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full border whitespace-nowrap ${getLifecycleBadgeClass(
+                            ord.lifecycleStatusBadge
+                          )}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${getLifecycleDotClass(
+                              ord.lifecycleStatusBadge
+                            )}`}
+                          />
+                          {lifecycleStatusLabel(ord.lifecycleStatusBadge)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenSpace(ord.spaceKey)}
+                          className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition cursor-pointer"
+                        >
+                          Mở Space →
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

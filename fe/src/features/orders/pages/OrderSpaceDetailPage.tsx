@@ -3,34 +3,57 @@ import { useNavigate, useParams } from 'react-router-dom';
 import WmmsAppShell from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
 import { bomStatusLabel, lifecycleStatusLabel } from '../../../lib/statusLabels';
+import { orderIntakeApi } from '../../../services/wmmsApi';
+import type { OrderSpaceLineItemForBom } from '../../bom/types';
+
+interface OrderSpaceMilestoneDto {
+  title: string;
+  timestamp: string;
+  actorName: string;
+  actorRole: string;
+  description: string;
+}
+
+interface OrderSpaceDetailData {
+  spaceId?: number;
+  spaceKey: string;
+  spaceName?: string;
+  orderId?: number;
+  poNumber: string;
+  customerName: string;
+  orderDate?: string;
+  etdDate?: string;
+  daysRemaining?: number;
+  isUrgentEtd?: boolean;
+  orderStatus?: string;
+  lifecycleStatusBadge?: string;
+  fscCertified100?: boolean;
+  totalOrderedUnits?: number;
+  totalOrderedSubtitle?: string;
+  bomStatusTitle?: string;
+  bomStatusSubtitle?: string;
+  materialAllocationTitle?: string;
+  materialAllocationSubtitle?: string;
+  floorProgressPct?: number;
+  floorProgressSubtitle?: string;
+  lineItems?: OrderSpaceLineItemForBom[];
+  milestones?: OrderSpaceMilestoneDto[];
+}
 
 /**
  * Màn hình III.4.3: Order Space Detail Dashboard (SCR-ORD-03)
- * Tuân thủ 100% thiết kế giao diện và bảng Field Description trong Report 3 (Section III.4.3):
- * - Header Top-Left (Field #1): `Active Order Space: SPACE-PO-880504 (Dining Sets - Ashley US)`
- * - Khối tiêu đề Space:
- *   + `SPACE-PO-880504: Ashley Furniture Homestore (USA)` + huy hiệu `IN_PRODUCTION` & `CHỨNG NHẬN FSC 100%`
- *   + Dòng thông tin: `Customer Ref: ASH-2026-OCT-880504 | Order Intake: Oct 12, 2026 | Target Delivery (ETD): Oct 28, 2026 (8 Days Remaining)`
- *   + Field #2: Nút màu cam `📐 Manage BOM & Routing →`
- *   + Field #3: Nút trắng `📋 View on Kanban`
- * - 4 Thẻ KPI:
- *   + `TỔNG SỐ LƯỢNG ĐẶT`: `500 Pcs` (`400 ghế ăn + 100 bàn`)
- *   + `TRẠNG THÁI BOM`: `Sẵn sàng 100%` (`Bóc tách đang hoạt động, tỷ lệ hao hụt 3,5%`)
- *   + `PHÂN BỔ VẬT TƯ`: `Đã khóa đủ` (`Tồn kho đã được Kho giữ chỗ`)
- *   + `TIẾN ĐỘ XƯỞNG`: `Hoàn thành 62%` (`Trạm 4: Đang lắp ráp kết cấu`)
- * - Bảng `Các dòng sản phẩm đặt hàng trong Space này` (Field #6):
- *   + Ghi chú góc phải: `Quy cách PO chỉ xem (được bảo vệ bởi RBAC)` (BR-ORD-04)
- *   + Các cột: `Mã SKU`, `Product Model & Specs`, `Quy cách hoàn thiện`, `Số lượng đặt`, `Bản vẽ CAD/PDF đính kèm` (Field #4), `Vòng đời BOM`, `Thao tác` (`Xem BOM →` - Field #5)
- * - Khối `Recent Space Activity & Milestones` (Field #7):
- *   + Dòng thời gian 3 mốc: `Đã xuất kho xuống xưởng`, `BOM & Routing Approved`, `Đã khởi tạo Order Space`.
  */
 export default function OrderSpaceDetailPage() {
   const { spaceKey } = useParams();
   const navigate = useNavigate();
   const { orderSpaces, currentSpaceKey, setCurrentSpaceKey } = useWmms();
-  const [previewAttachment, setPreviewAttachment] = useState(null);
+  const [previewAttachment, setPreviewAttachment] = useState<string | null>(null);
 
-  const activeKey = spaceKey || currentSpaceKey || 'SPACE-PO-880504';
+  const activeKey = spaceKey || currentSpaceKey || orderSpaces[0]?.spaceKey || '';
+
+  const [spaceDetail, setSpaceDetail] = useState<OrderSpaceDetailData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (spaceKey && spaceKey !== currentSpaceKey) {
@@ -38,66 +61,67 @@ export default function OrderSpaceDetailPage() {
     }
   }, [spaceKey, currentSpaceKey, setCurrentSpaceKey]);
 
-  const selectedSpace =
-    orderSpaces.find((s) => s.spaceKey === activeKey) || orderSpaces[0];
-
-  const customRows = (
-    selectedSpace as unknown as {
-      customRows?: Array<{
-        productSku: string;
-        productDescription: string;
-        dimensionsMm: string;
-        finishColor: string;
-        orderQty: number;
-        technicalDrawingName?: string;
-      }>;
+  useEffect(() => {
+    if (!activeKey) {
+      setIsLoading(false);
+      setLoadError('Không xác định được mã Không gian đơn hàng (Order Space). Vui lòng chọn từ Danh sách đơn hàng bán.');
+      return;
     }
-  )?.customRows;
 
-  // Dữ liệu chi tiết sản phẩm trong Order Space (khớp 100% với SCR-ORD-03 cho SPACE-PO-880504 hoặc linh hoạt cho Space khác)
-  const lineItems =
-    selectedSpace?.spaceKey === 'SPACE-PO-880504'
-      ? [
-          {
-            skuCode: 'CHAIR-OAK-01',
-            productName: 'Ghế ăn gỗ sồi phong cách Bắc Âu',
-            specsSubtext: '450 x 520 x 850 mm | Gỗ sồi trắng Mỹ',
-            finishSpec: 'Sơn phủ PU trong tự nhiên',
-            orderQty: '400 cái',
-            cadFile: 'CAD_Chair_880504_Rev2.pdf',
-            bomStatus: 'READY_FOR_PRODUCTION'
-          },
-          {
-            skuCode: 'TABLE-OAK-02',
-            productName: 'Bàn ăn gỗ sồi nguyên khối 1,8 m',
-            specsSubtext: '1800 x 900 x 750 mm | Gỗ sồi trắng Mỹ + Giá đỡ thép',
-            finishSpec: 'Sơn phủ PU trong tự nhiên',
-            orderQty: '100 cái',
-            cadFile: 'CAD_Table_180_Rev1.pdf',
-            bomStatus: 'READY_FOR_PRODUCTION'
-          }
-        ]
-      : customRows?.length
-      ? customRows.map((r) => ({
-          skuCode: r.productSku,
-          productName: r.productDescription,
-          specsSubtext: `${r.dimensionsMm} mm | Gỗ sồi trắng Mỹ`,
-          finishSpec: r.finishColor,
-          orderQty: `${r.orderQty} cái`,
-          cadFile: r.technicalDrawingName || `CAD_${r.productSku}.pdf`,
-          bomStatus: 'READY_FOR_PRODUCTION'
-        }))
-      : [
-          {
-            skuCode: 'CHAIR-OAK-01',
-            productName: selectedSpace?.lineItemsVolumeSummary || 'Sản phẩm nội thất gỗ sồi nguyên khối',
-            specsSubtext: '1200 x 600 x 450 mm | Gỗ sồi trắng Mỹ',
-            finishSpec: 'Sơn phủ PU trong tự nhiên',
-            orderQty: `${selectedSpace?.totalOrderedUnits || 250} cái`,
-            cadFile: `CAD_${selectedSpace?.spaceKey || '880504'}_Rev1.pdf`,
-            bomStatus: 'READY_FOR_PRODUCTION'
-          }
-        ];
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
+
+    orderIntakeApi
+      .getOrderSpaceDetail(activeKey)
+      .then((res: { data?: OrderSpaceDetailData }) => {
+        if (cancelled) return;
+        const data = res?.data;
+        if (data) {
+          setSpaceDetail(data);
+        } else {
+          setSpaceDetail(null);
+          setLoadError(`Không tìm thấy dữ liệu Không gian đơn hàng "${activeKey}".`);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSpaceDetail(null);
+          setLoadError(`Không thể tải dữ liệu Không gian đơn hàng "${activeKey}" từ máy chủ.`);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeKey]);
+
+  const fallbackSpace = orderSpaces.find((s) => s.spaceKey === activeKey);
+  const lineItems = spaceDetail?.lineItems || [];
+  const milestones = spaceDetail?.milestones || [];
+
+  const getBomBadgeStyle = (status: string) => {
+    const s = (status || '').toUpperCase();
+    if (s.includes('READY') || s.includes('APPROVED') || s.includes('LOCKED')) {
+      return {
+        badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        dot: 'bg-emerald-500',
+      };
+    }
+    if (s.includes('DRAFT') || s.includes('PENDING')) {
+      return {
+        badge: 'bg-amber-50 text-amber-700 border-amber-200',
+        dot: 'bg-amber-500',
+      };
+    }
+    return {
+      badge: 'bg-slate-100 text-slate-700 border-slate-300',
+      dot: 'bg-slate-400',
+    };
+  };
 
   return (
     <WmmsAppShell
@@ -116,37 +140,60 @@ export default function OrderSpaceDetailPage() {
       }
     >
       <div className="max-w-[1400px] mx-auto space-y-6">
+        {loadError && (
+          <div className="px-4 py-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium">
+            {loadError}
+          </div>
+        )}
+
         {/* Order Space Header Card */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-                {selectedSpace.spaceKey}: {selectedSpace.customerName}
+                {spaceDetail?.spaceKey || fallbackSpace?.spaceKey || activeKey}:{' '}
+                {spaceDetail?.customerName || fallbackSpace?.customerName || 'Đang tải...'}
               </h1>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                {lifecycleStatusLabel(selectedSpace.lifecycleStatusBadge || 'IN_PRODUCTION')}
+                {lifecycleStatusLabel(
+                  spaceDetail?.lifecycleStatusBadge ||
+                    fallbackSpace?.lifecycleStatusBadge ||
+                    'BOM_SETTING'
+                )}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                CHỨNG NHẬN FSC 100%
-              </span>
+              {(spaceDetail?.fscCertified100 ?? true) && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  CHỨNG NHẬN FSC 100%
+                </span>
+              )}
             </div>
 
             <div className="text-sm text-slate-600 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
               <span>
                 Mã PO khách:{' '}
-                <strong className="font-mono text-slate-900">{selectedSpace.poNumber}</strong>
+                <strong className="font-mono text-slate-900">
+                  {spaceDetail?.poNumber || fallbackSpace?.poNumber || '—'}
+                </strong>
               </span>
               <span className="text-slate-300">|</span>
               <span>
-                Ngày tiếp nhận: <strong className="text-slate-900">12/10/2026</strong>
+                Ngày tiếp nhận:{' '}
+                <strong className="text-slate-900">
+                  {spaceDetail?.orderDate
+                    ? new Date(spaceDetail.orderDate).toLocaleDateString('vi-VN')
+                    : '—'}
+                </strong>
               </span>
               <span className="text-slate-300">|</span>
               <span>
                 Hạn giao (ETD):{' '}
                 <strong className="text-rose-600">
-                  28/10/2026 (còn {selectedSpace.daysRemaining} ngày)
+                  {spaceDetail?.etdDate
+                    ? new Date(spaceDetail.etdDate).toLocaleDateString('vi-VN')
+                    : fallbackSpace?.etdDate || '—'}{' '}
+                  ({spaceDetail?.daysRemaining ?? fallbackSpace?.daysRemaining ?? 0} ngày)
                 </strong>
               </span>
             </div>
@@ -166,7 +213,7 @@ export default function OrderSpaceDetailPage() {
 
             <button
               type="button"
-              onClick={() => navigate('/bom')}
+              onClick={() => navigate(`/bom?spaceKey=${encodeURIComponent(activeKey)}`)}
               className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -184,18 +231,22 @@ export default function OrderSpaceDetailPage() {
               TỔNG SỐ LƯỢNG ĐẶT
             </div>
             <div className="text-2xl font-extrabold text-slate-900 mt-2">
-              {selectedSpace.totalOrderedUnits} cái
+              {spaceDetail?.totalOrderedUnits ?? fallbackSpace?.totalOrderedUnits ?? 0} cái
             </div>
-            <div className="text-xs text-slate-500 mt-1">400 ghế ăn + 100 bàn</div>
+            <div className="text-xs text-slate-500 mt-1">
+              {spaceDetail?.totalOrderedSubtitle || `${lineItems.length} dòng sản phẩm`}
+            </div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
               TRẠNG THÁI BOM
             </div>
-            <div className="text-2xl font-extrabold text-emerald-600 mt-2">Sẵn sàng 100%</div>
+            <div className="text-2xl font-extrabold text-emerald-600 mt-2">
+              {spaceDetail?.bomStatusTitle || 'Đang kiểm tra'}
+            </div>
             <div className="text-xs text-slate-500 mt-1">
-              Định mức đã duyệt, tỷ lệ hao hụt 3,5%
+              {spaceDetail?.bomStatusSubtitle || 'Cập nhật từ định mức sản phẩm'}
             </div>
           </div>
 
@@ -203,9 +254,11 @@ export default function OrderSpaceDetailPage() {
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
               PHÂN BỔ VẬT TƯ
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">Đã khóa đủ</div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-2">
+              {spaceDetail?.materialAllocationTitle || 'Chưa phân bổ'}
+            </div>
             <div className="text-xs text-slate-500 mt-1">
-              Tồn kho đã được giữ chỗ theo lệnh
+              {spaceDetail?.materialAllocationSubtitle || 'Theo dõi giữ chỗ tồn kho'}
             </div>
           </div>
 
@@ -213,9 +266,11 @@ export default function OrderSpaceDetailPage() {
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
               TIẾN ĐỘ XƯỞNG
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">Hoàn thành 62%</div>
+            <div className="text-2xl font-extrabold text-slate-900 mt-2">
+              Hoàn thành {spaceDetail?.floorProgressPct ?? 0}%
+            </div>
             <div className="text-xs text-slate-500 mt-1">
-              Trạm 4: Đang lắp ráp kết cấu
+              {spaceDetail?.floorProgressSubtitle || 'Tiến độ sản xuất tại xưởng'}
             </div>
           </div>
         </div>
@@ -224,7 +279,7 @@ export default function OrderSpaceDetailPage() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white">
             <h2 className="text-base font-bold text-slate-900">
-              Danh sách sản phẩm đặt hàng trong Space
+              Danh sách sản phẩm đặt hàng trong Space ({lineItems.length} sản phẩm)
             </h2>
             <span className="text-xs text-slate-500">
               Quy cách PO đã khóa chỉnh sửa sau khi xác nhận
@@ -245,46 +300,80 @@ export default function OrderSpaceDetailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-sm bg-white">
-                {lineItems.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/90 transition-colors">
-                    <td className="py-4 px-6 font-mono font-bold text-slate-800 whitespace-nowrap">
-                      {item.skuCode}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="font-semibold text-slate-900">{item.productName}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{item.specsSubtext}</div>
-                    </td>
-                    <td className="py-4 px-4 text-slate-700 whitespace-nowrap">{item.finishSpec}</td>
-                    <td className="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">{item.orderQty}</td>
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewAttachment(item.cadFile as any)}
-                        className="text-blue-600 hover:text-blue-700 hover:underline font-medium flex items-center gap-1.5 text-sm cursor-pointer"
-                      >
-                        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span>{item.cadFile}</span>
-                      </button>
-                    </td>
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        {bomStatusLabel(item.bomStatus)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => navigate('/bom')}
-                        className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer"
-                      >
-                        Xem BOM →
-                      </button>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 px-6 text-center text-slate-500">
+                      Đang tải danh sách sản phẩm trong Không gian đơn hàng...
                     </td>
                   </tr>
-                ))}
+                ) : lineItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 px-6 text-center text-rose-600 font-semibold">
+                      Lỗi: Không tìm thấy dữ liệu sản phẩm nào trong Không gian đơn hàng này.
+                    </td>
+                  </tr>
+                ) : (
+                  lineItems.map((item) => {
+                    const statusText = item.bomLifecycleBadge || item.itemStatus || 'PENDING';
+                    const badgeStyle = getBomBadgeStyle(statusText);
+                    return (
+                      <tr key={item.orderItemId} className="hover:bg-slate-50/90 transition-colors">
+                        <td className="py-4 px-6 font-mono font-bold text-slate-800 whitespace-nowrap">
+                          {item.productSku}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="font-semibold text-slate-900">{item.productName}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {item.dimensionsSpec} | {item.woodSpecies}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-slate-700 whitespace-nowrap">
+                          {item.finishSpec || '—'}
+                        </td>
+                        <td className="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">
+                          {item.orderedQty} cái
+                        </td>
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          {item.attachedCadFileName ? (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewAttachment(item.attachedCadFileName || null)}
+                              className="text-blue-600 hover:text-blue-700 hover:underline font-medium flex items-center gap-1.5 text-sm cursor-pointer"
+                            >
+                              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span>{item.attachedCadFileName}</span>
+                            </button>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Chưa đính kèm</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full border whitespace-nowrap ${badgeStyle.badge}`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${badgeStyle.dot}`} />
+                            {bomStatusLabel(statusText)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/bom?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}`
+                              )
+                            }
+                            className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer"
+                          >
+                            Xem BOM →
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -296,46 +385,28 @@ export default function OrderSpaceDetailPage() {
             Nhật ký tiến độ &amp; Cột mốc đơn hàng
           </h2>
 
-          <div className="relative pl-6 border-l-2 border-slate-200 space-y-5 text-sm">
-            <div className="relative">
-              <span className="w-3 h-3 rounded-full bg-emerald-500 absolute -left-[31px] top-1 ring-4 ring-white" />
-              <div className="text-slate-900">
-                <strong className="font-bold">Đã xuất kho xuống xưởng</strong>{' '}
-                <span className="text-slate-500 text-xs">
-                  — 16/10/2026 14:20 bởi Vu Duc Thang (Thủ kho)
-                </span>
-              </div>
-              <p className="text-slate-600 text-sm mt-0.5">
-                Đã bàn giao 100% gỗ và phụ kiện cho quản đốc sản xuất. Thẻ Kanban đã được mở khóa.
-              </p>
+          {milestones.length === 0 ? (
+            <p className="text-sm text-slate-500">Chưa có cột mốc hoạt động nào được ghi nhận.</p>
+          ) : (
+            <div className="relative pl-6 border-l-2 border-slate-200 space-y-5 text-sm">
+              {milestones.map((m, i) => (
+                <div key={i} className="relative">
+                  <span
+                    className={`w-3 h-3 rounded-full absolute -left-[31px] top-1 ring-4 ring-white ${
+                      i === 0 ? 'bg-emerald-500' : i === 1 ? 'bg-blue-600' : 'bg-slate-400'
+                    }`}
+                  />
+                  <div className="text-slate-900">
+                    <strong className="font-bold">{m.title}</strong>{' '}
+                    <span className="text-slate-500 text-xs">
+                      — {new Date(m.timestamp).toLocaleString('vi-VN')} bởi {m.actorName} ({m.actorRole})
+                    </span>
+                  </div>
+                  <p className="text-slate-600 text-sm mt-0.5">{m.description}</p>
+                </div>
+              ))}
             </div>
-
-            <div className="relative">
-              <span className="w-3 h-3 rounded-full bg-blue-600 absolute -left-[31px] top-1 ring-4 ring-white" />
-              <div className="text-slate-900">
-                <strong className="font-bold">BOM &amp; quy trình đã được duyệt</strong>{' '}
-                <span className="text-slate-500 text-xs">
-                  — 13/10/2026 10:15 bởi Nguyen Van Khoa (Chủ xưởng)
-                </span>
-              </div>
-              <p className="text-slate-600 text-sm mt-0.5">
-                Đã cấu hình quy trình động 6 bước và tính tổng nhu cầu vật tư thô với hao hụt cho phép 3,5%.
-              </p>
-            </div>
-
-            <div className="relative">
-              <span className="w-3 h-3 rounded-full bg-slate-400 absolute -left-[31px] top-1 ring-4 ring-white" />
-              <div className="text-slate-900">
-                <strong className="font-bold">Đã khởi tạo Order Space</strong>{' '}
-                <span className="text-slate-500 text-xs">
-                  — 12/10/2026 09:30 bởi Tran Thi Mai (Kinh doanh)
-                </span>
-              </div>
-              <p className="text-slate-600 text-sm mt-0.5">
-                PO đã được xác nhận qua khu Staging. Đã đính kèm bản vẽ CAD và quy cách đóng gói của người mua.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
