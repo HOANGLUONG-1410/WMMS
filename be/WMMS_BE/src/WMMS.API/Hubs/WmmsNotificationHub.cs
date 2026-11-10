@@ -146,4 +146,31 @@ public class SignalRNotificationHubService : INotificationHubService
 
         await _hubContext.Clients.All.SendAsync("ReceiveNotification", payload, cancellationToken);
     }
+
+    public async Task NotifyProductionOrderReleasedAsync(
+        long orderItemId,
+        string poNumber,
+        string productSku,
+        int totalBatches,
+        int totalQty,
+        bool isOverdriver,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new
+        {
+            EventType = "PRODUCTION_ORDER_RELEASED",
+            OrderItemId = orderItemId,
+            PoNumber = poNumber,
+            ProductSku = productSku,
+            TotalBatches = totalBatches,
+            TotalQty = totalQty,
+            IsOverdriver = isOverdriver,
+            Message = isOverdriver
+                ? $"[SC-19] Lệnh sản xuất PO {poNumber} (SKU: {productSku}) đã được phát hành với {totalBatches} lô ({totalQty} SP) ở chế độ Overdrive. Thẻ lô được phép thực hiện công đoạn sơ chế phôi trước điểm dừng Hold Point."
+                : $"[SC-19] Lệnh sản xuất PO {poNumber} (SKU: {productSku}) đã phát hành {totalBatches} thẻ lô Kanban ({totalQty} SP) thành công lên bảng điều độ phân xưởng.",
+            TimestampUtc = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.All.SendAsync("ReceiveNotification", payload, cancellationToken);
+    }
 }

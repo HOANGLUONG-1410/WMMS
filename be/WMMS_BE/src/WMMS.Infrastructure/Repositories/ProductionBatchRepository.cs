@@ -56,6 +56,17 @@ public class ProductionBatchRepository : IProductionBatchRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<ProductionBatch>> GetBySpaceKeyAsync(string spaceKey, CancellationToken cancellationToken = default)
+    {
+        var upper = (spaceKey ?? string.Empty).Trim().ToUpper();
+        return await BuildFullBatchQuery()
+            .Where(pb => pb.OrderItem.CustomerOrder.OrderSpace != null &&
+                         (pb.OrderItem.CustomerOrder.OrderSpace.SpaceKey.ToUpper() == upper ||
+                          pb.OrderItem.CustomerOrder.PoNumber.ToUpper() == upper))
+            .OrderBy(pb => pb.BatchId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<List<ProductionBatch>> GetAllActiveBatchesAsync(
         BatchStatusEnum? status = null,
         CancellationToken cancellationToken = default)

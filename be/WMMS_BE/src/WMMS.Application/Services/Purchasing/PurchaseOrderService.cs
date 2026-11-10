@@ -439,6 +439,99 @@ public class PurchaseOrderService : IPurchaseOrderService
         return MapToDetail(po, today);
     }
 
+    /// <inheritdoc />
+    public async Task<PurchaseOrderDetailDto> UpdateTermsAsync(
+        long poId,
+        UpdatePoTermsDto request,
+        long purchasingUserId,
+        string? ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        var po = await GetOrThrowAsync(poId, cancellationToken);
+        var oldTerms = po.Terms;
+        var newTerms = request.Terms?.Trim();
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            po.Terms = newTerms;
+            po.UpdatedAt = DateTime.UtcNow;
+
+            await _purchaseOrderRepository.UpdateAsync(po);
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = purchasingUserId,
+                ActionType = AuditActionConstants.PurchaseOrderUpdated,
+                EntityName = nameof(PurchaseOrder),
+                EntityId = po.PoCode,
+                BeforeState = JsonSerializer.Serialize(new { Terms = oldTerms }),
+                AfterState = JsonSerializer.Serialize(new { Terms = newTerms, Notes = request.Notes }),
+                Reason = request.Notes ?? $"Updated payment/delivery terms of PO {po.PoCode} (SC-16).",
+                IpAddress = ipAddress,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+
+        return MapToDetail(po, DateTime.UtcNow.Date);
+    }
+
+    /// <inheritdoc />
+    public async Task<PurchaseOrderDetailDto> UpdateStatusAsync(
+        long poId,
+        UpdatePoStatusDto request,
+        long purchasingUserId,
+        string? ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        var po = await GetOrThrowAsync(poId, cancellationToken);
+        if (!Enum.TryParse<PoStatusEnum>(request.Status, true, out var newStatus))
+        {
+            throw new AppException($"Invalid PO Status: '{request.Status}'. Valid values are: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.");
+        }
+
+        var oldStatus = po.PoStatus;
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            po.PoStatus = newStatus;
+            po.UpdatedAt = DateTime.UtcNow;
+
+            await _purchaseOrderRepository.UpdateAsync(po);
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = purchasingUserId,
+                ActionType = AuditActionConstants.PurchaseOrderUpdated,
+                EntityName = nameof(PurchaseOrder),
+                EntityId = po.PoCode,
+                BeforeState = JsonSerializer.Serialize(new { Status = oldStatus.ToString() }),
+                AfterState = JsonSerializer.Serialize(new { Status = newStatus.ToString(), Reason = request.Reason }),
+                Reason = request.Reason ?? $"Changed lifecycle status of PO {po.PoCode} from {oldStatus} to {newStatus} (SC-16).",
+                IpAddress = ipAddress,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+
+        return MapToDetail(po, DateTime.UtcNow.Date);
+    }
+
     // =========================================================================
     // PRIVATE
     // =========================================================================
