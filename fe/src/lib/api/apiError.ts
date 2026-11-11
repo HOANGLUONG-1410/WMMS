@@ -48,7 +48,7 @@ export class ApiError extends Error {
       // No response received (backend offline, CORS, timeout)
       if (!error.response) {
         return new ApiError(
-          error.message || "Unable to connect to WMMS server.",
+          error.message || "Không thể kết nối tới máy chủ WMMS.",
           HttpStatus.NETWORK_ERROR,
           "NETWORK_ERROR",
           [],
@@ -73,7 +73,7 @@ export class ApiError extends Error {
         normalizedErrors.length > 0 &&
         (!rawMessage || rawMessage === "Validation failed.")
           ? normalizedErrors[0]
-          : rawMessage || error.message || `Request failed with status ${status}`;
+          : rawMessage || error.message || `Yêu cầu thất bại (mã trạng thái ${status})`;
 
       return new ApiError(
         message,

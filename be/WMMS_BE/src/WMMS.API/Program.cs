@@ -91,6 +91,8 @@ builder.Services.AddScoped<IPurchaseRequestService, PurchaseRequestService>();
 // SC-16: PO gom theo Supplier & theo dõi ETA (UC-49..UC-53, BR-PUR-02, BR-PUR-03)
 builder.Services.AddScoped<IPurchaseOrderService, WMMS.Application.Services.Purchasing.PurchaseOrderService>();
 builder.Services.AddScoped<IGoodsReceiptService, WMMS.Infrastructure.Services.Warehouse.GoodsReceiptService>();
+// SC-20: Kiểm soát Hold Point & luồng phê duyệt ghi đè Overdriver (KBN02, GBR-05)
+builder.Services.AddScoped<IHoldPointService, WMMS.Infrastructure.Services.KanbanQc.HoldPointService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();

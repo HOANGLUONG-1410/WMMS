@@ -34,7 +34,7 @@ apiClient.interceptors.response.use(
 
       return Promise.reject(
         new ApiError(
-          body.message || normalizedErrors[0] || "Request failed.",
+          body.message || normalizedErrors[0] || "Yêu cầu thất bại.",
           response.status || HttpStatus.BAD_REQUEST,
           body.messageCode,
           normalizedErrors,

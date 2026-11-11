@@ -49,7 +49,7 @@ export default function StockLedgerTable({
         badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
         qtyClass: "text-emerald-700",
         prefix: "+",
-        label: "INITIAL_IMPORT • Tồn đầu kỳ",
+        label: "Tồn đầu kỳ",
       };
     }
     if (upper === "IN_RECEIPT") {
@@ -57,7 +57,7 @@ export default function StockLedgerTable({
         badgeClass: "bg-blue-100 text-blue-800 border-blue-300",
         qtyClass: "text-blue-700",
         prefix: "+",
-        label: "IN_RECEIPT • Nhập kho GRN",
+        label: "Nhập kho GRN",
       };
     }
     if (upper === "OUT_ISSUE") {
@@ -65,23 +65,23 @@ export default function StockLedgerTable({
         badgeClass: "bg-amber-100 text-amber-800 border-amber-300",
         qtyClass: "text-rose-600",
         prefix: "−",
-        label: "OUT_ISSUE • Xuất kho SX",
+        label: "Xuất kho sản xuất",
       };
     }
     return {
       badgeClass: "bg-purple-100 text-purple-800 border-purple-300",
       qtyClass: "text-purple-700",
       prefix: "±",
-      label: `${upper} • Kiểm kê / Điều chỉnh`,
+      label: "Kiểm kê / Điều chỉnh",
     };
   };
 
   const getCategoryLabel = (group: string) => {
     const upper = (group || "").toUpperCase();
-    if (upper === "LUMBER") return "Solid Lumber (Gỗ)";
-    if (upper === "HARDWARE") return "Hardware (Phụ kiện)";
-    if (upper === "FINISH_PAINT") return "Finish & Paint (Sơn)";
-    if (upper === "PACKAGING") return "Packaging (Đóng gói)";
+    if (upper === "LUMBER") return "Gỗ nguyên khối";
+    if (upper === "HARDWARE") return "Phụ kiện";
+    if (upper === "FINISH_PAINT") return "Sơn & hoàn thiện";
+    if (upper === "PACKAGING") return "Bao bì & đóng gói";
     return group;
   };
 
@@ -113,38 +113,34 @@ export default function StockLedgerTable({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
       {/* Header & Filter Bar */}
-      <div className="p-4 border-b border-slate-200 space-y-3">
+      <div className="p-6 border-b border-slate-200 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-extrabold text-slate-900">
-                Sổ kho điện tử (Electronic Stock Transaction Ledger — SC-13)
+              <h2 className="text-base font-bold text-slate-900">
+                Sổ kho điện tử
               </h2>
               {isFetching && !isLoading && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-200">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200">
                   <span className="w-2 h-2 rounded-full border border-blue-600 border-t-transparent animate-spin" />
-                  Requesting BE...
+                  Đang đồng bộ...
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Immutable audit trail of initial stock imports, goods receipts (GRN), production floor
-              dispatches, and stock adjustments (<code className="font-mono">GET /api/v1/inventory/ledger</code>).
+            <p className="text-sm text-slate-500 mt-0.5">
+              Nhật ký bất biến về nhập tồn đầu kỳ, phiếu nhập kho (GRN), xuất vật tư xuống xưởng và điều chỉnh tồn kho.
             </p>
           </div>
-          <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-300 self-start sm:self-auto">
-            Tổng bút toán: <strong>{totalCount}</strong> giao dịch
-          </span>
         </div>
 
         {/* Bộ lọc Sổ kho */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
           {/* Tìm theo mã phiếu / vật tư */}
           <form onSubmit={handleSearchSubmit}>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
-              Tìm Mã phiếu / Vật tư
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Tìm mã phiếu / vật tư
             </label>
             <div className="flex items-center gap-1.5">
               <div className="relative flex-1">
@@ -152,15 +148,15 @@ export default function StockLedgerTable({
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="VD: INIT-STOCK-2026, WOOD_OAK..."
-                  className="w-full pl-3 pr-6 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="VD: INIT-STOCK, WOOD..."
+                  className="w-full pl-3 pr-7 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
                 />
                 {searchInput && (
                   <button
                     type="button"
                     onClick={handleClearSearch}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
-                    title="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold px-1"
+                    title="Xóa tìm kiếm"
                   >
                     ×
                   </button>
@@ -169,17 +165,17 @@ export default function StockLedgerTable({
               <button
                 type="submit"
                 disabled={isFetching}
-                className="px-2.5 py-1.5 text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 disabled:opacity-60 rounded-md shadow-sm transition shrink-0"
+                className="px-3 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg shadow-xs transition shrink-0"
               >
-                Search
+                Tìm
               </button>
             </div>
           </form>
 
           {/* Lọc theo Vật tư */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
-              Vật tư (Material SKU)
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Vật tư
             </label>
             <select
               value={filter.materialId || ""}
@@ -190,9 +186,9 @@ export default function StockLedgerTable({
                   page: 1,
                 })
               }
-              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
             >
-              <option value="">-- Tất cả {materialOptions.length} vật tư --</option>
+              <option value="">Tất cả vật tư</option>
               {materialOptions.map((m) => (
                 <option key={m.materialId} value={m.materialId}>
                   {m.materialCode} — {m.materialName}
@@ -203,28 +199,28 @@ export default function StockLedgerTable({
 
           {/* Lọc theo Loại giao dịch */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
-              Loại giao dịch (TxType)
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Loại giao dịch
             </label>
             <select
               value={filter.txType || "ALL"}
               onChange={(e) =>
                 onChangeFilter({ ...filter, txType: e.target.value, page: 1 })
               }
-              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
             >
               <option value="ALL">Tất cả loại giao dịch</option>
-              <option value="INITIAL_IMPORT">INITIAL_IMPORT (Nhập tồn đầu kỳ)</option>
-              <option value="IN_RECEIPT">IN_RECEIPT (Nhập kho mua hàng)</option>
-              <option value="OUT_ISSUE">OUT_ISSUE (Xuất kho sản xuất)</option>
-              <option value="ADJUST">ADJUST (Điều chỉnh kiểm kê)</option>
+              <option value="INITIAL_IMPORT">Nhập tồn đầu kỳ</option>
+              <option value="IN_RECEIPT">Nhập kho mua hàng</option>
+              <option value="OUT_ISSUE">Xuất kho sản xuất</option>
+              <option value="ADJUST">Điều chỉnh kiểm kê</option>
             </select>
           </div>
 
           {/* Từ ngày */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
-              Từ ngày (Start Date)
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Từ ngày
             </label>
             <input
               type="date"
@@ -232,15 +228,15 @@ export default function StockLedgerTable({
               onChange={(e) =>
                 onChangeFilter({ ...filter, startDate: e.target.value || undefined, page: 1 })
               }
-              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
             />
           </div>
 
           {/* Đến ngày + Reset */}
-          <div className="flex items-end gap-1.5">
+          <div className="flex items-end gap-2">
             <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
-                Đến ngày (End Date)
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Đến ngày
               </label>
               <input
                 type="date"
@@ -248,7 +244,7 @@ export default function StockLedgerTable({
                 onChange={(e) =>
                   onChangeFilter({ ...filter, endDate: e.target.value || undefined, page: 1 })
                 }
-                className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
               />
             </div>
             <button
@@ -257,10 +253,10 @@ export default function StockLedgerTable({
                 setSearchInput("");
                 onResetFilter();
               }}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition shrink-0"
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition shrink-0 shadow-2xs"
               title="Xóa bộ lọc"
             >
-              Reset
+              Đặt lại
             </button>
           </div>
         </div>
@@ -270,30 +266,30 @@ export default function StockLedgerTable({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-500 bg-slate-50/70">
-              <th className="py-3 px-4">Transaction ID</th>
-              <th className="py-3 px-4">Execution Date &amp; Time</th>
-              <th className="py-3 px-4">Transaction Type</th>
-              <th className="py-3 px-4">Reference Voucher Code</th>
-              <th className="py-3 px-4">Material Code</th>
-              <th className="py-3 px-4">Material Description &amp; Group</th>
-              <th className="py-3 px-3 text-center">UoM</th>
-              <th className="py-3 px-5 text-right">Quantity Change</th>
+            <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
+              <th className="py-3.5 px-6">Mã giao dịch</th>
+              <th className="py-3.5 px-4">Ngày &amp; giờ thực hiện</th>
+              <th className="py-3.5 px-4">Loại giao dịch</th>
+              <th className="py-3.5 px-4">Mã chứng từ tham chiếu</th>
+              <th className="py-3.5 px-4">Mã vật tư</th>
+              <th className="py-3.5 px-4">Mô tả &amp; nhóm vật tư</th>
+              <th className="py-3.5 px-3 text-center">ĐVT</th>
+              <th className="py-3.5 px-6 text-right">Biến động số lượng</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 text-xs">
+          <tbody className="divide-y divide-slate-200 text-sm">
             {isFetching ? (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-slate-400">
                   <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
-                  <p className="text-xs font-medium text-slate-500">
-                    Fetching electronic stock ledger from WMMS backend...
+                  <p className="text-sm font-medium text-slate-500">
+                    Đang tải sổ kho điện tử...
                   </p>
                 </td>
               </tr>
             ) : transactions.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-10 text-center text-slate-400">
+                <td colSpan={8} className="py-10 text-center text-slate-500 text-sm">
                   Không tìm thấy giao dịch sổ kho nào khớp với điều kiện lọc hiện tại.
                 </td>
               </tr>
@@ -305,10 +301,10 @@ export default function StockLedgerTable({
                     key={tx.transactionId}
                     className="hover:bg-slate-50/80 transition-colors"
                   >
-                    <td className="py-3.5 px-4 font-mono text-[11px] font-bold text-slate-600">
+                    <td className="py-4 px-6 font-mono text-sm font-bold text-slate-600 whitespace-nowrap">
                       #TX-{String(tx.transactionId).padStart(4, "0")}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600">
+                    <td className="py-4 px-4 text-slate-600 whitespace-nowrap">
                       {new Date(tx.createdAt).toLocaleString("en-GB", {
                         day: "2-digit",
                         month: "2-digit",
@@ -317,35 +313,35 @@ export default function StockLedgerTable({
                         minute: "2-digit",
                       })}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-4 px-4 whitespace-nowrap">
                       <span
-                        className={`inline-block px-2.5 py-0.5 text-[10px] font-extrabold rounded border ${meta.badgeClass}`}
+                        className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full border ${meta.badgeClass}`}
                       >
                         {meta.label}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-300 font-mono text-[11px] font-bold">
+                    <td className="py-4 px-4 whitespace-nowrap">
+                      <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-800 border border-slate-300 font-mono text-xs font-bold">
                         {tx.referenceCode || "N/A"}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] font-bold text-slate-900">
+                    <td className="py-4 px-4 font-mono text-sm font-bold text-slate-900 whitespace-nowrap">
                       {tx.materialCode}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-800">{tx.materialName}</div>
-                      <div className="text-[11px] text-slate-500">
+                    <td className="py-4 px-4">
+                      <div className="font-semibold text-slate-900">{tx.materialName}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">
                         {getCategoryLabel(tx.materialGroup)}
                       </div>
                     </td>
-                    <td className="py-3.5 px-3 text-center text-slate-600 font-medium">
+                    <td className="py-4 px-3 text-center text-slate-600 font-medium whitespace-nowrap">
                       {tx.unitOfMeasure === "M3"
                         ? "m³"
                         : tx.unitOfMeasure === "M2"
                           ? "m²"
                           : tx.unitOfMeasure}
                     </td>
-                    <td className={`py-3.5 px-5 text-right font-extrabold ${meta.qtyClass}`}>
+                    <td className={`py-4 px-6 text-right font-extrabold whitespace-nowrap ${meta.qtyClass}`}>
                       {meta.prefix}
                       {formatQty(tx.quantity, tx.unitOfMeasure)}
                     </td>
@@ -357,19 +353,17 @@ export default function StockLedgerTable({
         </table>
       </div>
 
-      {/* Thanh Phân trang (Pagination Footer — đồng bộ giao diện với UserManagementPage) */}
-      <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600">
-        {/* Thống kê dòng hiển thị & chọn PageSize */}
+      {/* Thanh Phân trang */}
+      <div className="px-6 py-4 border-t border-slate-200 bg-[#F8FAFC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-slate-600">
         <div className="flex items-center gap-3">
           <span>
-            Showing <strong className="text-slate-800">{startItem}</strong> to{" "}
-            <strong className="text-slate-800">{endItem}</strong> of{" "}
-            <strong className="text-slate-800">{totalCount}</strong>{" "}
-            transactions
+            Hiển thị <strong className="text-slate-900">{startItem}</strong>–
+            <strong className="text-slate-900">{endItem}</strong> trong tổng số{" "}
+            <strong className="text-slate-900">{totalCount}</strong> giao dịch
           </span>
 
-          <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
-            <span className="text-slate-500 text-[11px]">Rows/page:</span>
+          <div className="flex items-center gap-2 ml-2 border-l border-slate-200 pl-3">
+            <span className="text-slate-500 text-xs">Hiển thị:</span>
             <select
               value={pageSize}
               onChange={(e) =>
@@ -379,17 +373,16 @@ export default function StockLedgerTable({
                   page: 1,
                 })
               }
-              className="px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
+              <option value={10}>10 dòng</option>
+              <option value={20}>20 dòng</option>
+              <option value={50}>50 dòng</option>
             </select>
           </div>
         </div>
 
-        {/* Các nút bấm chuyển trang */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             disabled={pageNumber <= 1 || isFetching}
@@ -399,9 +392,9 @@ export default function StockLedgerTable({
                 page: Math.max(1, pageNumber - 1),
               })
             }
-            className="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
-            Previous
+            Trước
           </button>
 
           <div className="flex items-center gap-1 px-1">
@@ -415,15 +408,15 @@ export default function StockLedgerTable({
               .map((p, idx, arr) => (
                 <Fragment key={p}>
                   {idx > 0 && arr[idx - 1] !== p - 1 && (
-                    <span className="px-1 text-slate-400 text-xs">...</span>
+                    <span className="px-1 text-slate-400 text-sm">...</span>
                   )}
                   <button
                     type="button"
                     disabled={isFetching}
                     onClick={() => onChangeFilter({ ...filter, page: p })}
-                    className={`w-7 h-7 text-xs font-semibold rounded transition ${
+                    className={`w-8 h-8 text-sm font-semibold rounded-lg transition ${
                       p === pageNumber
-                        ? "bg-[#2563eb] text-white shadow-sm"
+                        ? "bg-blue-600 text-white shadow-xs"
                         : "text-slate-700 bg-white border border-slate-300 hover:bg-slate-50"
                     }`}
                   >
@@ -442,9 +435,9 @@ export default function StockLedgerTable({
                 page: Math.min(totalPages, pageNumber + 1),
               })
             }
-            className="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
-            Next
+            Sau
           </button>
         </div>
       </div>

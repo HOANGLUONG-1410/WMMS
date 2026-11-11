@@ -68,4 +68,25 @@ public interface INotificationHubService
         int totalQty,
         bool isOverdriver,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Phát thông báo real-time khi Tổ trưởng SX gửi yêu cầu ghi đè điểm dừng Hold Point (SC-20, KBN02).
+    /// </summary>
+    Task NotifyHoldPointOverrideRequestedAsync(
+        string batchCode,
+        int holdPointStageSeq,
+        string requesterName,
+        string justification,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Phát thông báo real-time khi Chủ xưởng phê duyệt hoặc từ chối ghi đè điểm dừng Hold Point (SC-20, KBN02).
+    /// </summary>
+    Task NotifyHoldPointOverrideDecidedAsync(
+        string batchCode,
+        int holdPointStageSeq,
+        bool isApproved,
+        string approverName,
+        string justification,
+        CancellationToken cancellationToken = default);
 }

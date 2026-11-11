@@ -26,7 +26,7 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
               </span>
             </div>
             <h2 className="text-base font-bold text-slate-900 mt-1">
-              Standard Production Routing — {product.productName}
+              Quy trình sản xuất chuẩn — {product.productName}
             </h2>
           </div>
           <button
@@ -41,36 +41,36 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
         {/* Body */}
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           {/* Thông tin tóm tắt sản phẩm */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm">
             <div>
-              <span className="text-slate-400 block text-[11px]">Dimensions:</span>
-              <span className="font-semibold text-slate-700">{product.dimensionsCm || "N/A"}</span>
+              <span className="text-slate-500 block text-xs">Kích thước:</span>
+              <span className="font-semibold text-slate-800">{product.dimensionsCm || "N/A"}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Wood Species:</span>
-              <span className="font-semibold text-slate-700">{product.woodSpecies || "N/A"}</span>
+              <span className="text-slate-500 block text-xs">Loại gỗ:</span>
+              <span className="font-semibold text-slate-800">{product.woodSpecies || "N/A"}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Finish / Color:</span>
-              <span className="font-semibold text-slate-700">{product.finishColor || "N/A"}</span>
+              <span className="text-slate-500 block text-xs">Hoàn thiện / Màu:</span>
+              <span className="font-semibold text-slate-800">{product.finishColor || "N/A"}</span>
             </div>
           </div>
 
           <div>
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Sequential Production Stages &amp; Quality Gates:
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+              Các công đoạn sản xuất tuần tự &amp; cổng chất lượng:
             </h3>
 
             {isLoading && (
               <div className="py-8 text-center text-slate-400">
                 <span className="inline-block w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-xs">Loading standard routing sequence...</p>
+                <p className="text-sm">Đang tải chuỗi công đoạn chuẩn...</p>
               </div>
             )}
 
             {!isLoading && (!stages || stages.length === 0) && (
-              <p className="py-6 text-center text-xs text-slate-400 italic">
-                No default routing stages found for this product.
+              <p className="py-6 text-center text-sm text-slate-500 italic">
+                Sản phẩm này chưa có công đoạn mặc định.
               </p>
             )}
 
@@ -85,26 +85,27 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
                       }`}
                     />
 
-                    <div className="p-3 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition flex items-center justify-between gap-3">
+                    <div className="p-3.5 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
+                        <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
                           {stg.stageSequence}
                         </span>
                         <div>
-                          <p className="text-xs font-bold text-slate-800">{stg.stageName}</p>
-                          <p className="text-[11px] text-slate-500">
-                            100% Quality Inspection Gate before passing to next stage
+                          <p className="text-sm font-bold text-slate-800">{stg.stageName}</p>
+                          <p className="text-xs text-slate-500">
+                            Cổng kiểm tra chất lượng 100% trước khi chuyển công đoạn tiếp theo
                           </p>
                         </div>
                       </div>
 
                       {stg.isHoldPoint ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-extrabold uppercase rounded bg-rose-100 text-rose-700 border border-rose-200">
-                          <span>🛑</span> Hold Point Stage
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                          Hold Point
                         </span>
                       ) : (
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase">
-                          Standard Stage
+                        <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">
+                          Công đoạn chuẩn
                         </span>
                       )}
                     </div>
@@ -114,20 +115,20 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
             )}
           </div>
 
-          <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-lg text-xs text-blue-900 leading-relaxed">
-            <span className="font-bold text-blue-700">💡 Quy tắc chốt chặn kỹ thuật (Hold Point):</span>{" "}
-            Tại các công đoạn được đánh dấu <span className="font-semibold text-rose-700">Hold Point</span>, nếu vật tư phụ kiện chưa được Thủ kho xuất cấp thực tế (`Goods Issue`), hệ thống sẽ tự động khóa cứng không cho phép phôi chạy tiếp.
+          <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-lg text-sm text-blue-900 leading-relaxed">
+            <span className="font-bold text-blue-700">Quy tắc chốt chặn kỹ thuật (Hold Point):</span>{" "}
+            Tại các công đoạn được đánh dấu <span className="font-semibold text-rose-700">Hold Point</span>, nếu vật tư phụ kiện chưa được Thủ kho xuất cấp thực tế, hệ thống sẽ tự động khóa cứng không cho phép phôi chạy tiếp.
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex justify-end">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+            className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-2xs transition"
           >
-            Close
+            Đóng
           </button>
         </div>
       </div>
