@@ -173,4 +173,51 @@ public class SignalRNotificationHubService : INotificationHubService
 
         await _hubContext.Clients.All.SendAsync("ReceiveNotification", payload, cancellationToken);
     }
+
+    public async Task NotifyHoldPointOverrideRequestedAsync(
+        string batchCode,
+        int holdPointStageSeq,
+        string requesterName,
+        string justification,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new
+        {
+            EventType = "HOLD_POINT_OVERDRIVE_REQUESTED",
+            BatchCode = batchCode,
+            HoldPointStageSeq = holdPointStageSeq,
+            RequesterName = requesterName,
+            Justification = justification,
+            Message = $"[SC-20] Tổ trưởng {requesterName} vừa gửi yêu cầu ghi đè điểm dừng Hold Point cho lô {batchCode} (Công đoạn #{holdPointStageSeq}). Lý do: {justification}.",
+            TimestampUtc = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.Groups(new[] { "OWNER", "ADMIN", "PLANNER" })
+            .SendAsync("ReceiveNotification", payload, cancellationToken);
+    }
+
+    public async Task NotifyHoldPointOverrideDecidedAsync(
+        string batchCode,
+        int holdPointStageSeq,
+        bool isApproved,
+        string approverName,
+        string justification,
+        CancellationToken cancellationToken = default)
+    {
+        var actionText = isApproved ? "PHÊ DUYỆT" : "TỪ CHỐI";
+        var payload = new
+        {
+            EventType = isApproved ? "HOLD_POINT_OVERDRIVE_APPROVED" : "HOLD_POINT_OVERDRIVE_REJECTED",
+            BatchCode = batchCode,
+            HoldPointStageSeq = holdPointStageSeq,
+            IsApproved = isApproved,
+            ApproverName = approverName,
+            Justification = justification,
+            Message = $"[SC-20] Yêu cầu ghi đè điểm dừng Hold Point lô {batchCode} (Công đoạn #{holdPointStageSeq}) đã được Chủ xưởng {approverName} {actionText}. Ghi chú: {justification}.",
+            TimestampUtc = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.Groups(new[] { "LEADER", "PLANNER", "OWNER", "ADMIN" })
+            .SendAsync("ReceiveNotification", payload, cancellationToken);
+    }
 }
