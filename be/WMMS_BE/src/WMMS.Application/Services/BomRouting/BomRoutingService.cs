@@ -186,12 +186,12 @@ public class BomRoutingService : IBomRoutingService
         var product = await _productRepository.GetByIdAsync(productId);
         if (product == null)
         {
-            throw new NotFoundException($"Product with ID {productId} was not found.");
+            throw new NotFoundException($"Không tìm thấy sản phẩm với ID {productId}.");
         }
 
         if (request.Stages == null || !request.Stages.Any())
         {
-            throw new DomainException("Workstation routing stages cannot be empty.", "INVALID_ROUTING_SEQUENCE");
+            throw new DomainException("Danh sách công đoạn quy trình sản xuất không được để trống.", "INVALID_ROUTING_SEQUENCE");
         }
 
         // Kiểm tra thứ tự các công đoạn phải liên tục từ 1..N không ngắt quãng (BR-007, UC-37)
@@ -201,13 +201,13 @@ public class BomRoutingService : IBomRoutingService
             if (orderedStages[i].StageSequence != i + 1)
             {
                 throw new DomainException(
-                    $"Workstation stages must form a continuous sequence starting from 1 (expected {i + 1}, but found {orderedStages[i].StageSequence}).",
+                    $"Các công đoạn phải tạo thành chuỗi liên tục bắt đầu từ 1 (kỳ vọng thứ tự {i + 1}, nhưng nhận được {orderedStages[i].StageSequence}).",
                     "INVALID_ROUTING_SEQUENCE");
             }
 
             if (string.IsNullOrWhiteSpace(orderedStages[i].StageName))
             {
-                throw new DomainException($"Stage name at sequence {orderedStages[i].StageSequence} cannot be empty.", "INVALID_STAGE_NAME");
+                throw new DomainException($"Tên công đoạn tại thứ tự {orderedStages[i].StageSequence} không được để trống.", "INVALID_STAGE_NAME");
             }
         }
 
@@ -327,7 +327,7 @@ public class BomRoutingService : IBomRoutingService
         if (exists)
         {
             throw new ActiveBomConflictException(
-                $"BOM for OrderItemId {request.OrderItemId} already exists. Enforcing BR-001: Only one Active BOM is allowed per order item.");
+                $"BOM cho mục đơn hàng {request.OrderItemId} đã tồn tại. Quy tắc BR-001: Mỗi mục đơn hàng chỉ được phép có một định mức BOM hoạt động.");
         }
 
         // 2. Validate BR-002 (Tỷ lệ hao hụt tự nhiên theo SystemConfig DEFAULT_SCRAP_MIN .. DEFAULT_SCRAP_MAX)
@@ -337,13 +337,13 @@ public class BomRoutingService : IBomRoutingService
         var orderItem = await _orderItemRepository.GetByIdAsync(request.OrderItemId);
         if (orderItem == null)
         {
-            throw new NotFoundException($"OrderItem with ID {request.OrderItemId} was not found.");
+            throw new NotFoundException($"Không tìm thấy mục đơn hàng với ID {request.OrderItemId}.");
         }
 
         var product = await _productRepository.GetByIdAsync(request.ProductId);
         if (product == null)
         {
-            throw new NotFoundException($"Product with ID {request.ProductId} was not found.");
+            throw new NotFoundException($"Không tìm thấy sản phẩm với ID {request.ProductId}.");
         }
 
         await _unitOfWork.BeginTransactionAsync();
@@ -436,7 +436,7 @@ public class BomRoutingService : IBomRoutingService
         var bomHeader = await _bomRepository.GetByIdAsync(bomId);
         if (bomHeader == null)
         {
-            throw new NotFoundException($"Bom with ID {bomId} was not found.");
+            throw new NotFoundException($"Không tìm thấy định mức BOM với ID {bomId}.");
         }
 
         // Validate BR-002
@@ -534,12 +534,12 @@ public class BomRoutingService : IBomRoutingService
         var bomHeader = await _bomRepository.GetByIdAsync(bomId);
         if (bomHeader == null)
         {
-            throw new NotFoundException($"Bom with ID {bomId} was not found.");
+            throw new NotFoundException($"Không tìm thấy định mức BOM với ID {bomId}.");
         }
 
         if (!bomHeader.BomDetails.Any())
         {
-            throw new DomainException("Cannot approve an empty BOM without material lines.", "BOM_EMPTY");
+            throw new DomainException("Không thể phê duyệt định mức BOM rỗng không có dòng vật tư nào.", "BOM_EMPTY");
         }
 
         await ValidateScrapRateAsync(bomHeader.ScrapRatePercent);
@@ -675,7 +675,7 @@ public class BomRoutingService : IBomRoutingService
         if (invalidRows.Any())
         {
             throw new StagingValidationException(
-                $"Cannot confirm BOM import. There are {invalidRows.Count} invalid row(s) in staging grid. Please correct all errors before confirming.");
+                $"Không thể xác nhận nhập BOM. Còn {invalidRows.Count} dòng không hợp lệ trong lưới tạm. Vui lòng sửa tất cả lỗi trước khi xác nhận.");
         }
 
         // Convert staging rows to CreateBomRequestDto (Gộp các dòng chi tiết cùng MaterialId hoặc giữ kèm ghi chú cấu kiện)
@@ -688,7 +688,7 @@ public class BomRoutingService : IBomRoutingService
                 var mat = await _materialRepository.GetByCodeAsync(row.MaterialCode.Trim());
                 if (mat == null)
                 {
-                    throw new StagingValidationException($"Material code '{row.MaterialCode}' cannot be resolved.");
+                    throw new StagingValidationException($"Không tìm thấy thông tin cho mã nguyên vật liệu '{row.MaterialCode}'.");
                 }
                 materialId = mat.MaterialId;
             }
@@ -711,7 +711,7 @@ public class BomRoutingService : IBomRoutingService
             if (existingBom.BomStatus != BomStatusEnum.DRAFT)
             {
                 throw new DomainException(
-                    $"Cannot import BOM. Existing BOM #{existingBom.BomId} is already approved ({existingBom.BomStatus}). Only DRAFT BOMs can be updated from Staging.",
+                    $"Không thể nhập BOM. Định mức BOM #{existingBom.BomId} hiện tại đã được phê duyệt ({existingBom.BomStatus}). Chỉ có BOM ở trạng thái DRAFT mới được phép cập nhật từ Staging.",
                     "BOM_ALREADY_APPROVED");
             }
 
@@ -782,7 +782,7 @@ public class BomRoutingService : IBomRoutingService
         if (scrapRate < minScrap || scrapRate > maxScrap)
         {
             throw new InvalidScrapRateException(
-                $"Scrap rate {scrapRate:F2}% violates BR-002: Natural wood scrap rate must be between {minScrap:F2}% and {maxScrap:F2}%.");
+                $"Tỷ lệ hao hụt {scrapRate:F2}% vi phạm quy tắc BR-002: Tỷ lệ hao hụt gỗ tự nhiên phải nằm trong khoảng {minScrap:F2}% đến {maxScrap:F2}%.");
         }
     }
 
@@ -805,8 +805,8 @@ public class BomRoutingService : IBomRoutingService
             if (string.IsNullOrWhiteSpace(stage.QualityGateName))
             {
                 stage.QualityGateName = stage.IsHoldPoint
-                    ? "QC Hold Point Gate (100% Inspection)"
-                    : "In-Process Self-Check";
+                    ? "Cổng kiểm soát chất lượng QC (Kiểm định 100%)"
+                    : "Tự kiểm tra trên chuyền sản xuất";
             }
         }
 
