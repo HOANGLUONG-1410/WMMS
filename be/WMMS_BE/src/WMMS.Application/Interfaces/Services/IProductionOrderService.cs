@@ -102,5 +102,35 @@ public interface IProductionOrderService
         long batchId,
         long currentUserId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// SC-20b, KBN01 &amp; QT-06: Nghiệm thu lại (Re-inspection) cho thẻ nhánh phụ 3% Rework / Scrap Replenish
+    /// sau khi thợ mộc xử lý xong lỗi phôi gỗ hoặc bù phôi mới.
+    /// </summary>
+    Task<ReinspectSubBatchResultDto> ReinspectSubBatchAsync(
+        long subBatchId,
+        ReinspectSubBatchDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// SC-20b: Tái hòa nhập / Gộp lô (Merge Lot) thẻ nhánh phụ đã sửa chữa đạt chuẩn vào thẻ chính
+    /// khi cả hai thẻ đang ở cùng công đoạn (CurrentStageSeq) và thẻ chính chưa hoàn tất.
+    /// </summary>
+    Task<MergeSubBatchResultDto> MergeSubBatchAsync(
+        long subBatchId,
+        MergeSubBatchDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// SC-20b: Cho phép thẻ nhánh phụ 3% chuyển tiếp độc lập sang công đoạn tiếp theo
+    /// khi thẻ chính đã chạy trước sang công đoạn khác hoặc theo chỉ đạo điều độ phân xưởng.
+    /// </summary>
+    Task<ContinueSubBatchResultDto> ContinueSubBatchIndependentlyAsync(
+        long subBatchId,
+        ContinueSubBatchIndependentlyDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default);
 }
 

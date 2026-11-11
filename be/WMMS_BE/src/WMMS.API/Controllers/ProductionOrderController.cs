@@ -23,6 +23,9 @@ public class ProductionOrderController : ControllerBase
     private readonly IValidator<RecordQcInspectionDto> _qcInspectValidator;
     private readonly IValidator<RequestOverdriveDto> _requestOverdriveValidator;
     private readonly IValidator<ApproveOverdriveDto> _approveOverdriveValidator;
+    private readonly IValidator<ReinspectSubBatchDto> _reinspectSubBatchValidator;
+    private readonly IValidator<MergeSubBatchDto> _mergeSubBatchValidator;
+    private readonly IValidator<ContinueSubBatchIndependentlyDto> _continueSubBatchValidator;
 
     public ProductionOrderController(
         IProductionOrderService productionOrderService,
@@ -30,7 +33,10 @@ public class ProductionOrderController : ControllerBase
         IValidator<AdvanceStepRequestDto> advanceStepValidator,
         IValidator<RecordQcInspectionDto> qcInspectValidator,
         IValidator<RequestOverdriveDto> requestOverdriveValidator,
-        IValidator<ApproveOverdriveDto> approveOverdriveValidator)
+        IValidator<ApproveOverdriveDto> approveOverdriveValidator,
+        IValidator<ReinspectSubBatchDto> reinspectSubBatchValidator,
+        IValidator<MergeSubBatchDto> mergeSubBatchValidator,
+        IValidator<ContinueSubBatchIndependentlyDto> continueSubBatchValidator)
     {
         _productionOrderService = productionOrderService;
         _generateBatchesValidator = generateBatchesValidator;
@@ -38,6 +44,9 @@ public class ProductionOrderController : ControllerBase
         _qcInspectValidator = qcInspectValidator;
         _requestOverdriveValidator = requestOverdriveValidator;
         _approveOverdriveValidator = approveOverdriveValidator;
+        _reinspectSubBatchValidator = reinspectSubBatchValidator;
+        _mergeSubBatchValidator = mergeSubBatchValidator;
+        _continueSubBatchValidator = continueSubBatchValidator;
     }
 
     /// <summary>
@@ -164,6 +173,72 @@ public class ProductionOrderController : ControllerBase
         long currentUserId = GetCurrentUserId();
         var result = await _productionOrderService.UnlockHoldPointAsync(batchId, currentUserId);
         return Ok(ApiResponse<OverdriveOperationResultDto>.Ok(result, result.Message));
+    }
+
+    /// <summary>
+    /// SC-20b: Nghiệm thu lại (Re-inspection) cho thẻ nhánh phụ 3% Rework / Scrap Replenish sau khi thợ mộc xử lý xong lỗi phôi hoặc bù phôi.
+    /// </summary>
+    [HttpPost("batches/{subBatchId:long}/reinspect")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Qc}")]
+    public async Task<ActionResult<ApiResponse<ReinspectSubBatchResultDto>>> ReinspectSubBatch(
+        long subBatchId,
+        [FromBody] ReinspectSubBatchDto request)
+    {
+        var validation = await _reinspectSubBatchValidator.ValidateAsync(request);
+        if (!validation.IsValid)
+        {
+            return BadRequest(ApiResponse<ReinspectSubBatchResultDto>.Fail(
+                "Dữ liệu nghiệm thu lại thẻ nhánh phụ không hợp lệ.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList()));
+        }
+
+        long currentUserId = GetCurrentUserId();
+        var result = await _productionOrderService.ReinspectSubBatchAsync(subBatchId, request, currentUserId);
+        return Ok(ApiResponse<ReinspectSubBatchResultDto>.Ok(result, result.Message));
+    }
+
+    /// <summary>
+    /// SC-20b: Tái hòa nhập / Gộp lô (Merge Lot) thẻ nhánh phụ đã sửa chữa đạt chuẩn vào thẻ chính khi cùng công đoạn.
+    /// </summary>
+    [HttpPost("batches/{subBatchId:long}/merge")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Leader}")]
+    public async Task<ActionResult<ApiResponse<MergeSubBatchResultDto>>> MergeSubBatch(
+        long subBatchId,
+        [FromBody] MergeSubBatchDto request)
+    {
+        var validation = await _mergeSubBatchValidator.ValidateAsync(request);
+        if (!validation.IsValid)
+        {
+            return BadRequest(ApiResponse<MergeSubBatchResultDto>.Fail(
+                "Dữ liệu yêu cầu gộp lô không hợp lệ.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList()));
+        }
+
+        long currentUserId = GetCurrentUserId();
+        var result = await _productionOrderService.MergeSubBatchAsync(subBatchId, request, currentUserId);
+        return Ok(ApiResponse<MergeSubBatchResultDto>.Ok(result, result.Message));
+    }
+
+    /// <summary>
+    /// SC-20b: Cho phép thẻ nhánh phụ chuyển tiếp độc lập sang công đoạn tiếp theo mà không gộp vào lô chính.
+    /// </summary>
+    [HttpPost("batches/{subBatchId:long}/continue-independent")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Leader}")]
+    public async Task<ActionResult<ApiResponse<ContinueSubBatchResultDto>>> ContinueSubBatchIndependently(
+        long subBatchId,
+        [FromBody] ContinueSubBatchIndependentlyDto request)
+    {
+        var validation = await _continueSubBatchValidator.ValidateAsync(request);
+        if (!validation.IsValid)
+        {
+            return BadRequest(ApiResponse<ContinueSubBatchResultDto>.Fail(
+                "Dữ liệu yêu cầu chuyển tiếp độc lập không hợp lệ.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList()));
+        }
+
+        long currentUserId = GetCurrentUserId();
+        var result = await _productionOrderService.ContinueSubBatchIndependentlyAsync(subBatchId, request, currentUserId);
+        return Ok(ApiResponse<ContinueSubBatchResultDto>.Ok(result, result.Message));
     }
 
     /// <summary>

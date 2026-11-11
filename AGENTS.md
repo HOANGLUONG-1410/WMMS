@@ -44,3 +44,37 @@ via the MCP tools and the summary will follow.
 Do not re-scan source files when MCP tools can give you the same
 answer in a few hundred tokens instead of thousands. This is not optional.
 <!-- <<< projectmem bridge <<< -->
+<<<<<<< Updated upstream
+=======
+
+<!-- >>> projectmem local isolation bridge >>> -->
+## .projectmem Local-Only Isolation Rule (MANDATORY)
+- Thư mục `.projectmem/` chứa cơ sở dữ liệu và bộ nhớ AI cục bộ, tuyệt đối KHÔNG commit hoặc push lên Git.
+- Thư mục `.projectmem/` đã được đưa vào `.gitignore` để cách ly hoàn toàn.
+- Tuyệt đối không dùng `git add .projectmem` hoặc stage bất kỳ file nào trong thư mục này để tránh xung đột hoặc làm bẩn nhánh khi các thành viên khác (duy, duong, cuong, hunganh) merge nhánh.
+<!-- <<< projectmem local isolation bridge <<< -->
+
+<!-- >>> backend & testing scope bridge >>> -->
+## Backend-Only Scope & External Testing Rule (MANDATORY)
+- **Chỉ làm việc trong `be/` (`WMMS_BE`)**: Toàn bộ chức năng backend chỉ thêm/sửa trong `be/`.
+- **Tuyệt đối không đụng vào `fe/`**: Frontend được quản trị riêng biệt, không chỉnh sửa file hay cấu hình bên `fe/`.
+- **Thư mục kiểm thử biệt lập**: Toàn bộ Unit Test, Integration Test và Mock Data được chạy và lưu trữ độc lập tại thư mục bên ngoài (`app test AI`), tuyệt đối không tạo file test hoặc file rác trong repo `be/`.
+<!-- <<< backend & testing scope bridge <<< -->
+
+<!-- >>> red to green test logging bridge >>> -->
+## Red-to-Green Defect Logging Protocol (MANDATORY)
+- **Ghi nhận lỗi đỏ trước khi sửa**: Trong quá trình thực hiện công việc, mỗi lần chạy test hoặc build có lỗi phát sinh (Build Failed, Test Failed / Unsuccessful), **TUYỆT ĐỐI KHÔNG âm thầm sửa ngay**.
+- Bắt buộc ghi nhận đầy đủ chi tiết lỗi vào file nhật ký kiểm thử:
+  + Mã Test Case / Lỗi build
+  + File / Dòng phát sinh
+  + Chi tiết lỗi thực tế (Exception, Assertion Mismatch, HTTP Status)
+  + Nguyên nhân gốc rễ (Root Cause)
+- **Ghi nhận kết quả xanh**: Sau khi sửa và chạy lại test đạt trạng thái xanh (PASS 100%), ghi nhận tóm tắt giải pháp khắc phục.
+<!-- <<< red to green test logging bridge <<< -->
+
+<!-- >>> code documentation and comments bridge >>> -->
+## Code Documentation & XML Comments (MANDATORY)
+- Mọi hàm, Class, Interface, DTO, Controller tạo mới hoặc chỉnh sửa phải có XML Comments (`/// <summary>`) đầy đủ, giải thích rõ nghiệp vụ và mã Use Case (`UC-...`), Business Rule (`GBR-...`, `BR-...`).
+- Tất cả các thông báo trả về (Message trong `ApiResponse<T>`, Validation Messages trong FluentValidation) bắt buộc phải là **Tiếng Việt chuẩn**.
+<!-- <<< code documentation and comments bridge <<< -->
+>>>>>>> Stashed changes

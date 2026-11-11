@@ -103,7 +103,10 @@ $RECYCLE.BIN/
 .specify/integrations/gemini.manifest.json
 .specify/integrations/speckit.manifest.json
 .specify/workflows/workflow-registry.json
+<<<<<<< Updated upstream
 .specify/integrations/gemini.manifest.json
 
 # Local AI Agent Rules
 AGENTS.md
+=======
+>>>>>>> Stashed changes

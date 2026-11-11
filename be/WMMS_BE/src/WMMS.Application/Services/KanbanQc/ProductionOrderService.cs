@@ -1179,6 +1179,365 @@ public class ProductionOrderService : IProductionOrderService
         };
     }
 
+    /// <inheritdoc />
+    public async Task<ReinspectSubBatchResultDto> ReinspectSubBatchAsync(
+        long subBatchId,
+        ReinspectSubBatchDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
+        if (subBatch == null)
+        {
+            throw new NotFoundException($"Không tìm thấy thẻ nhánh phụ có ID {subBatchId}.");
+        }
+
+        if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
+        {
+            throw new DomainException("Chỉ áp dụng quy trình nghiệm thu lại cho thẻ nhánh phụ (REWORK_SUB_CARD hoặc REPLENISH_LOT).", "INVALID_SUB_BATCH_TYPE");
+        }
+
+        if (subBatch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất hoặc đã được gộp/chuyển tiếp trước đó.", "SUB_BATCH_ALREADY_DONE");
+        }
+
+        var steps = subBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
+        var step = steps.FirstOrDefault(s => s.BatchStepId == request.BatchStepId);
+        if (step == null)
+        {
+            throw new NotFoundException($"Không tìm thấy công đoạn thẻ phụ có ID {request.BatchStepId}.");
+        }
+
+        if (request.InspectedQty != subBatch.BatchQty)
+        {
+            throw new DomainException(
+                $"Quy tắc kiểm định 100% (BR-008): Số lượng nghiệm thu lại ({request.InspectedQty} SP) phải bằng đúng 100% số lượng của thẻ nhánh ({subBatch.BatchQty} SP).",
+                "QC_100_RULE_VIOLATION");
+        }
+
+        if (request.PassQty + request.FailQty != request.InspectedQty)
+        {
+            throw new DomainException(
+                $"Tổng số lượng đạt ({request.PassQty}) + lỗi ({request.FailQty}) phải bằng đúng tổng số lượng nghiệm thu lại ({request.InspectedQty}).",
+                "QC_SUM_MISMATCH");
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var inspection = new QcInspection
+            {
+                BatchStepId = step.BatchStepId,
+                InspectorId = currentUserId,
+                InspectedQty = request.InspectedQty,
+                PassQty = request.PassQty,
+                FailQty = request.FailQty,
+                ResultStatus = request.FailQty == 0
+                    ? QcResultStatusEnum.FULL_PASS_100
+                    : (request.PassQty > 0 ? QcResultStatusEnum.BRANCHED_PARTIAL : QcResultStatusEnum.FULL_REJECT),
+                InspectedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.QcInspections.AddInspectionAsync(inspection, cancellationToken);
+
+            step.PassedQty = request.PassQty;
+            step.DefectQty = request.FailQty;
+            step.StepStatus = request.PassQty > 0 ? StepStatusEnum.PASSED : StepStatusEnum.BLOCKED;
+            await _batchRepository.UpdateStepAsync(step);
+
+            if (request.FailQty > 0)
+            {
+                // Nếu vẫn có phôi không đạt sau sửa chữa, giảm số lượng thẻ phụ xuống số lượng Pass thực tế
+                subBatch.BatchQty = request.PassQty;
+                foreach (var ds in steps.Where(s => s.StageSequence > step.StageSequence))
+                {
+                    ds.TargetQty = request.PassQty;
+                    await _batchRepository.UpdateStepAsync(ds);
+                }
+            }
+
+            if (subBatch.BatchQty == 0)
+            {
+                subBatch.BatchStatus = BatchStatusEnum.DONE;
+            }
+            await _batchRepository.UpdateAsync(subBatch);
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.ReworkReinspected,
+                EntityName = "ProductionBatch",
+                EntityId = subBatch.BatchCode,
+                BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{step.StageSequence}_REPAIRING",
+                AfterState = $"SubCard_{subBatch.BatchCode}_Pass_{request.PassQty}_Fail_{request.FailQty}",
+                Reason = $"Nghiệm thu lại KCS thẻ nhánh {subBatch.BatchCode} tại {step.StageName}: {request.PassQty}/{request.InspectedQty} SP đạt chuẩn. Ghi chú: {request.Notes ?? "Không có"}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return new ReinspectSubBatchResultDto
+            {
+                QcId = inspection.QcId,
+                SubBatchId = subBatch.BatchId,
+                SubBatchCode = subBatch.BatchCode,
+                InspectedQty = request.InspectedQty,
+                PassQty = request.PassQty,
+                FailQty = request.FailQty,
+                IsFullyPassed = request.FailQty == 0,
+                SubBatchStatus = subBatch.BatchStatus.ToString(),
+                Message = request.PassQty > 0
+                    ? $"Nghiệm thu lại thành công! Thẻ phụ {subBatch.BatchCode} có {request.PassQty} SP đạt chuẩn, sẵn sàng gộp vào thẻ chính (Merge Lot) hoặc chuyển tiếp độc lập."
+                    : $"Nghiệm thu lại không đạt: toàn bộ {request.FailQty} SP không thể sửa chữa và phải hủy bỏ."
+            };
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<MergeSubBatchResultDto> MergeSubBatchAsync(
+        long subBatchId,
+        MergeSubBatchDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
+        if (subBatch == null)
+        {
+            throw new NotFoundException($"Không tìm thấy thẻ nhánh phụ có ID {subBatchId}.");
+        }
+
+        if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
+        {
+            throw new DomainException("Chỉ có thể gộp lô đối với thẻ nhánh phụ (REWORK_SUB_CARD hoặc REPLENISH_LOT).", "INVALID_SUB_BATCH_TYPE");
+        }
+
+        if (subBatch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất hoặc đã được gộp trước đó.", "SUB_BATCH_ALREADY_MERGED");
+        }
+
+        if (subBatch.BatchQty <= 0)
+        {
+            throw new DomainException("Thẻ nhánh phụ không còn số lượng đạt chuẩn (BatchQty <= 0) để gộp lô.", "EMPTY_SUB_BATCH_QTY");
+        }
+
+        if (!subBatch.ParentBatchId.HasValue)
+        {
+            throw new DomainException("Thẻ nhánh phụ không có thông tin thẻ chính (ParentBatchId bị null).", "MISSING_PARENT_BATCH");
+        }
+
+        var mainBatch = await _batchRepository.GetByIdAsync(subBatch.ParentBatchId.Value, cancellationToken);
+        if (mainBatch == null)
+        {
+            throw new NotFoundException($"Không tìm thấy thẻ chính cha có ID {subBatch.ParentBatchId.Value}.");
+        }
+
+        if (mainBatch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException($"Thẻ chính {mainBatch.BatchCode} đã hoàn tất sản xuất (DONE). Vui lòng cho thẻ phụ chuyển tiếp độc lập.", "MAIN_BATCH_ALREADY_DONE");
+        }
+
+        // Quy tắc nghiệp vụ SC-20b: Chỉ cho phép gộp khi cả hai thẻ đang ở CÙNG công đoạn
+        if (mainBatch.CurrentStageSeq != subBatch.CurrentStageSeq)
+        {
+            throw new DomainException(
+                $"Không thể gộp lô vì hai thẻ đang ở hai công đoạn khác nhau! Thẻ chính đang ở công đoạn #{mainBatch.CurrentStageSeq}, thẻ phụ đang ở công đoạn #{subBatch.CurrentStageSeq}. Hãy cho thẻ phụ chuyển tiếp độc lập (Continue Independently).",
+                "STAGE_MISMATCH_FOR_MERGE");
+        }
+
+        // Kiểm tra công đoạn hiện tại của thẻ phụ phải đạt chuẩn KCS (PASSED)
+        var subCurrentStep = subBatch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == subBatch.CurrentStageSeq);
+        if (subCurrentStep == null || subCurrentStep.StepStatus != StepStatusEnum.PASSED)
+        {
+            throw new DomainException("Thẻ nhánh phụ chưa được nghiệm thu đạt chuẩn (PASSED) tại công đoạn hiện tại, không thể gộp lô.", "SUB_BATCH_NOT_PASSED");
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            int mergeQty = subBatch.BatchQty;
+            int oldMainQty = mainBatch.BatchQty;
+            int newMainQty = oldMainQty + mergeQty;
+
+            // 1. Cập nhật thẻ chính
+            mainBatch.BatchQty = newMainQty;
+            var mainSteps = mainBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
+            foreach (var step in mainSteps.Where(s => s.StageSequence >= mainBatch.CurrentStageSeq))
+            {
+                step.TargetQty += mergeQty;
+                if (step.StageSequence == mainBatch.CurrentStageSeq)
+                {
+                    step.PassedQty += mergeQty;
+                }
+                await _batchRepository.UpdateStepAsync(step);
+            }
+            await _batchRepository.UpdateAsync(mainBatch);
+
+            // 2. Đóng thẻ phụ (Chuyển sang trạng thái DONE và ghi nhận đã tái hòa nhập)
+            subBatch.BatchStatus = BatchStatusEnum.DONE;
+            foreach (var step in subBatch.BatchRoutingSteps.Where(s => s.StageSequence > subBatch.CurrentStageSeq))
+            {
+                step.StepStatus = StepStatusEnum.PASSED;
+                await _batchRepository.UpdateStepAsync(step);
+            }
+            await _batchRepository.UpdateAsync(subBatch);
+
+            // 3. Ghi vết Audit Log bất biến (GBR-05)
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.SubBatchMerged,
+                EntityName = "ProductionBatch",
+                EntityId = mainBatch.BatchCode,
+                BeforeState = $"Main_{mainBatch.BatchCode}_Qty_{oldMainQty};Sub_{subBatch.BatchCode}_Qty_{mergeQty}",
+                AfterState = $"Main_{mainBatch.BatchCode}_MergedNewQty_{newMainQty};Sub_{subBatch.BatchCode}_DONE",
+                Reason = $"Tái hòa nhập / Gộp lô (Merge Lot) {mergeQty} SP từ thẻ phụ {subBatch.BatchCode} vào thẻ chính {mainBatch.BatchCode} tại công đoạn #{mainBatch.CurrentStageSeq}. Lý do: {request?.Reason ?? "Hoàn thành sửa chữa KCS"}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return new MergeSubBatchResultDto
+            {
+                SubBatchId = subBatch.BatchId,
+                SubBatchCode = subBatch.BatchCode,
+                MainBatchId = mainBatch.BatchId,
+                MainBatchCode = mainBatch.BatchCode,
+                MergedQty = mergeQty,
+                MainBatchNewQty = newMainQty,
+                CurrentStageSeq = mainBatch.CurrentStageSeq,
+                MainBatchStatus = mainBatch.BatchStatus.ToString(),
+                SubBatchStatus = subBatch.BatchStatus.ToString(),
+                Message = $"Gộp lô (Merge Lot) thành công! Đã hòa nhập {mergeQty} SP từ {subBatch.BatchCode} vào thẻ chính {mainBatch.BatchCode}. Tổng số lượng thẻ chính hiện tại: {newMainQty} SP."
+            };
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ContinueSubBatchResultDto> ContinueSubBatchIndependentlyAsync(
+        long subBatchId,
+        ContinueSubBatchIndependentlyDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
+        if (subBatch == null)
+        {
+            throw new NotFoundException($"Không tìm thấy thẻ nhánh phụ có ID {subBatchId}.");
+        }
+
+        if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
+        {
+            throw new DomainException("Chỉ áp dụng chuyển tiếp độc lập cho thẻ nhánh phụ (REWORK_SUB_CARD hoặc REPLENISH_LOT).", "INVALID_SUB_BATCH_TYPE");
+        }
+
+        if (subBatch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất sản xuất, không thể chuyển tiếp thêm.", "SUB_BATCH_ALREADY_DONE");
+        }
+
+        var steps = subBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
+        var currentStep = steps.FirstOrDefault(s => s.StageSequence == subBatch.CurrentStageSeq);
+        if (currentStep == null)
+        {
+            throw new DomainException($"Không tìm thấy công đoạn #{subBatch.CurrentStageSeq} trong quy trình của thẻ phụ.", "STAGE_NOT_FOUND");
+        }
+
+        if (currentStep.StepStatus != StepStatusEnum.PASSED)
+        {
+            throw new DomainException($"Công đoạn hiện tại ({currentStep.StageName}) chưa được nghiệm thu đạt chuẩn (PASSED). Không được chuyển tiếp độc lập.", "STEP_NOT_PASSED");
+        }
+
+        var nextStep = steps.FirstOrDefault(s => s.StageSequence > subBatch.CurrentStageSeq);
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            if (nextStep == null)
+            {
+                // Đã là công đoạn cuối cùng -> Hoàn tất thẻ phụ
+                subBatch.BatchStatus = BatchStatusEnum.DONE;
+                await _batchRepository.UpdateAsync(subBatch);
+
+                await _bomRepository.AddAuditLogAsync(new AuditLog
+                {
+                    UserId = currentUserId,
+                    ActionType = AuditActionConstants.SubBatchContinued,
+                    EntityName = "ProductionBatch",
+                    EntityId = subBatch.BatchCode,
+                    BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{subBatch.CurrentStageSeq}_IN_PROGRESS",
+                    AfterState = $"SubCard_{subBatch.BatchCode}_DONE",
+                    Reason = $"Thẻ nhánh phụ {subBatch.BatchCode} hoàn tất công đoạn đóng thùng cuối cùng độc lập.",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ContinueSubBatchResultDto
+                {
+                    SubBatchId = subBatch.BatchId,
+                    SubBatchCode = subBatch.BatchCode,
+                    NextStageSeq = subBatch.CurrentStageSeq,
+                    NextStageName = currentStep.StageName,
+                    BatchQty = subBatch.BatchQty,
+                    BatchStatus = subBatch.BatchStatus.ToString(),
+                    Message = $"Thẻ nhánh phụ {subBatch.BatchCode} đã hoàn tất công đoạn cuối cùng thành công (DONE)."
+                };
+            }
+
+            // Chuyển sang công đoạn tiếp theo
+            subBatch.CurrentStageSeq = nextStep.StageSequence;
+            nextStep.StepStatus = StepStatusEnum.IN_PROGRESS;
+            await _batchRepository.UpdateStepAsync(nextStep);
+            await _batchRepository.UpdateAsync(subBatch);
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.SubBatchContinued,
+                EntityName = "ProductionBatch",
+                EntityId = subBatch.BatchCode,
+                BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{currentStep.StageSequence}",
+                AfterState = $"SubCard_{subBatch.BatchCode}_Stage_{nextStep.StageSequence}_IN_PROGRESS",
+                Reason = $"Thẻ nhánh phụ {subBatch.BatchCode} chuyển tiếp độc lập sang {nextStep.StageName}. Ghi chú: {request?.Notes ?? "Điều độ phân xưởng"}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return new ContinueSubBatchResultDto
+            {
+                SubBatchId = subBatch.BatchId,
+                SubBatchCode = subBatch.BatchCode,
+                NextStageSeq = nextStep.StageSequence,
+                NextStageName = nextStep.StageName,
+                BatchQty = subBatch.BatchQty,
+                BatchStatus = subBatch.BatchStatus.ToString(),
+                Message = $"Thẻ nhánh phụ {subBatch.BatchCode} đã chuyển tiếp độc lập sang công đoạn #{nextStep.StageSequence} ({nextStep.StageName}) thành công."
+            };
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
     private static string InferQualityGateName(int seq, string stageName, bool isHoldPoint)
     {
         if (isHoldPoint) return "QC Hold Point Gate (100% Inspection bắt buộc)";
