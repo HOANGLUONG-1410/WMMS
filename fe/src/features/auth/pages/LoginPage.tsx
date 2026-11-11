@@ -21,7 +21,7 @@ export default function LoginPage() {
     if (!identifier.trim() || !password.trim()) {
       setAuthMessage({
         type: "error",
-        text: "Please enter both Work Email / Username and Password.",
+        text: "Vui lòng nhập đầy đủ Email công việc / Tên đăng nhập và Mật khẩu.",
       });
       return;
     }
@@ -44,23 +44,25 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#0d1528] flex items-center justify-center p-4 relative select-none">
-      <div className="w-full max-w-[380px] bg-white rounded-xl shadow-2xl px-7 py-8 border border-slate-100">
-        <div className="text-center mb-6">
-          <h1 className="text-[17px] font-extrabold tracking-tight text-slate-900 uppercase">
-            WMMS PRODUCTION SUITE
+    <div className="min-h-screen w-full bg-[#F8FAFC] flex items-center justify-center p-4 relative select-none">
+      <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-lg px-8 py-9 border border-slate-200">
+        <div className="text-center mb-7">
+          <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-extrabold text-xl flex items-center justify-center mx-auto mb-3 shadow-xs">
+            W
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
+            Hệ thống Quản lý Sản xuất WMMS
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Nguyen Khoa Ha Nam Wood Factory
+          <p className="text-sm text-slate-500 mt-1">
+            Xưởng gỗ Nguyên Khoa Hà Nam
           </p>
         </div>
 
-        {/* Thông báo lỗi hiển thị inline ngay trên 2 ô input khi đăng nhập thất bại */}
         {authMessage && (
           <div
-            className={`mb-4 px-3 py-2 rounded text-xs font-medium ${
+            className={`mb-5 px-4 py-3 rounded-lg text-sm font-medium ${
               authMessage.type === "error"
-                ? "bg-red-50 text-red-700 border border-red-200"
+                ? "bg-rose-50 text-rose-700 border border-rose-200"
                 : "bg-emerald-50 text-emerald-700 border border-emerald-200"
             }`}
           >
@@ -72,17 +74,17 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="identifier-input"
-              className="block text-xs font-semibold text-slate-700 mb-1.5"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
             >
-              Work Email / Username
+              Email công việc / Tên đăng nhập
             </label>
             <input
               id="identifier-input"
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="e.g. owner@nguyenkhoa.vn or admin"
-              className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="VD: owner@nguyenkhoa.vn hoặc admin"
+              className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </div>
 
@@ -90,16 +92,16 @@ export default function LoginPage() {
             <div className="flex items-center justify-between mb-1.5">
               <label
                 htmlFor="password-input"
-                className="block text-xs font-semibold text-slate-700"
+                className="block text-sm font-medium text-slate-700"
               >
-                Password
+                Mật khẩu
               </label>
               <button
                 type="button"
                 onClick={() => setShowForgotModal(true)}
-                className="text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
               >
-                Forgot password?
+                Quên mật khẩu?
               </button>
             </div>
             <input
@@ -108,20 +110,22 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </div>
 
-          <div className="pt-1">
+          <div className="pt-2">
             <button
               type="submit"
               disabled={loginMutation.isPending}
-              className="w-full py-2.5 px-4 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition-colors disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loginMutation.isPending && (
-                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              {loginMutation.isPending ? "Signing In..." : "Sign In to Workspace"}
+              {loginMutation.isPending
+                ? "Đang đăng nhập..."
+                : "Đăng nhập vào hệ thống"}
             </button>
           </div>
         </form>
@@ -134,3 +138,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

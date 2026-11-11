@@ -67,7 +67,7 @@ export function getErrorMessage(error: unknown): string {
   }
 
   // 3. Fallback cuối cùng nếu không nhận được bất kỳ phản hồi nào từ server
-  return "Unable to connect to server. Please try again.";
+  return "Không thể kết nối tới máy chủ. Vui lòng thử lại.";
 }
 
 function buildSessionUser(user: AuthUser): SessionUser {
@@ -136,7 +136,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const roles: string[] = user?.roles ?? [];
     if (roles.length === 0) {
       throw new Error(
-        "This account has no role assigned. Contact your administrator.",
+        "Tài khoản này chưa được gán vai trò. Vui lòng liên hệ quản trị viên.",
       );
     }
 
@@ -146,7 +146,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setCurrentUser(nextUser);
     return {
       user: nextUser,
-      message: res.message || "Signed in successfully!",
+      message: res.message || "Đăng nhập thành công!",
     };
   }, []);
 

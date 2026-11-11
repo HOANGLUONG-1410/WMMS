@@ -3,19 +3,20 @@ import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useAuditLogs } from "../hooks/useAuditLogs";
 import { auditLogsApi } from "../api/auditLogsApi";
 import type { AuditLogDto } from "../types";
+import { auditActionLabel } from "../../../lib/statusLabels";
 
 /**
- * Màn hình III.3.4: System Audit Log Viewer — Immutable System Audit Logs (SCR-ADM-02)
+ * Màn hình III.3.4: System Audit Log Viewer — Immutable System Audit Logs
  * Tuân thủ 100% thiết kế giao diện và bảng Field Description trong Report 3 (Section III.3.4):
- * - Tiêu đề: `Immutable System Audit Logs (SCR-ADM-02)`
+ * - Tiêu đề: `Nhật ký kiểm toán hệ thống bất biến`
  * - Phụ đề: `Complete chronological trace of high-risk actions, override authorizations, and data state transitions.`
- * - Field #1: Nút `Export CSV` ở góc phải trên cùng (gọi API /audit-logs/export-csv).
+ * - Field #1: Nút `Xuất CSV` ở góc phải trên cùng (gọi API /audit-logs/export-csv).
  * - Thanh Filter Logs:
- *   + Field #2: Dropdown `All Action Categories`
+ *   + Field #2: Dropdown `Tất cả nhóm hành động`
  *   + Field #3: Date Input
- *   + Field #4: Search Bar `Search by entity ID or user...`
+ *   + Field #4: Search Bar `Tìm theo mã đối tượng hoặc người dùng...`
  * - Field #5: Bảng dữ liệu `Audit Log Data Table` với 6 cột:
- *   `Timestamp` | `Actor & Role` | `Action Type` | `Target Entity` | `State Delta (Before → After)` | `Mandatory Justification / Notes`
+ *   `Thời gian` | `Actor & Role` | `Loại hành động` | `Đối tượng tác động` | `Thay đổi trạng thái (Trước → Sau)` | `Lý do bắt buộc / Ghi chú`
  */
 export default function SystemAuditLogPage() {
   // State bộ lọc trên thanh Filter Logs (Fields #2, #3, #4)
@@ -120,21 +121,21 @@ export default function SystemAuditLogPage() {
     } catch {
       // Fallback export từ danh sách hiện có nếu endpoint blob gặp lỗi mạng
       const headers = [
-        "Timestamp",
-        "Actor",
-        "Role",
-        "ActionType",
-        "TargetEntity",
-        "StateDelta",
-        "MandatoryJustification",
+        "Thời gian",
+        "Người thực hiện",
+        "Vai trò",
+        "Loại hành động",
+        "Đối tượng",
+        "Thay đổi trạng thái",
+        "Lý do bắt buộc",
       ];
       const rows = logsList.map((l) => [
         l.createdAt,
-        l.userFullName || l.username || "System",
+        l.userFullName || l.username || "Hệ thống",
         l.primaryRole || "SYSTEM",
         l.actionType,
         `${l.entityName} #${l.entityId}`,
-        `${l.beforeState || "NONE"} → ${l.afterState || "NONE"}`,
+        `${l.beforeState || "KHÔNG"} → ${l.afterState || "KHÔNG"}`,
         l.reason || "",
       ]);
 
@@ -158,42 +159,39 @@ export default function SystemAuditLogPage() {
     }
   };
 
-  // Màu sắc huy hiệu Action Type giống hệt ảnh SCR-ADM-02
   const getActionBadgeStyle = (actionType: string) => {
     const upper = String(actionType || "").toUpperCase();
     if (upper.includes("OVERDRIVER") || upper.includes("BAN") || upper.includes("LOCKED"))
-      return "bg-rose-100 text-rose-700";
+      return "bg-rose-50 text-rose-700 border-rose-200";
     if (upper.includes("STAGING") || upper.includes("CONFIRM") || upper.includes("CREATE"))
-      return "bg-blue-100 text-blue-700";
+      return "bg-blue-50 text-blue-700 border-blue-200";
     if (upper.includes("SCRAP") || upper.includes("PR") || upper.includes("UPDATE"))
-      return "bg-yellow-100 text-amber-800";
+      return "bg-amber-50 text-amber-800 border-amber-200";
     if (upper.includes("RECEIPT") || upper.includes("COMMIT"))
-      return "bg-emerald-100 text-emerald-700";
-    return "bg-slate-100 text-slate-700";
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    return "bg-slate-100 text-slate-700 border-slate-200";
   };
 
-  // Màu sắc huy hiệu Actor Role
   const getActorRoleBadgeStyle = (role: string) => {
     const upper = String(role || "").toUpperCase();
-    if (upper === "OWNER") return "bg-yellow-100 text-amber-800";
-    if (upper === "ADMIN") return "bg-slate-700 text-white";
-    if (upper === "SALES") return "bg-blue-100 text-blue-700";
-    if (upper === "WAREHOUSE") return "bg-orange-100 text-orange-800";
-    return "bg-slate-100 text-slate-700";
+    if (upper === "OWNER") return "bg-amber-50 text-amber-800 border-amber-200";
+    if (upper === "ADMIN") return "bg-purple-50 text-purple-700 border-purple-200";
+    if (upper === "SALES") return "bg-blue-50 text-blue-700 border-blue-200";
+    if (upper === "WAREHOUSE") return "bg-cyan-50 text-cyan-800 border-cyan-200";
+    return "bg-slate-100 text-slate-700 border-slate-200";
   };
 
   return (
     <WmmsAppShell mode="admin">
-      <div className="max-w-[1400px] mx-auto space-y-5">
-        {/* Header + Field #1: Export CSV Button */}
+      <div className="max-w-[1400px] mx-auto space-y-6">
+        {/* Header + Export CSV Button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Immutable System Audit Logs (SCR-ADM-02)
+            <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Nhật ký hoạt động hệ thống
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Complete chronological trace of high-risk actions, override authorizations, and data
-              state transitions.
+            <p className="text-sm text-slate-600 mt-1">
+              Lịch sử ghi nhận toàn bộ thao tác nghiệp vụ, cấp quyền ngoại lệ và chuyển đổi trạng thái dữ liệu.
             </p>
           </div>
 
@@ -201,102 +199,114 @@ export default function SystemAuditLogPage() {
             type="button"
             onClick={handleExportCsv}
             disabled={isExporting}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md shadow-sm transition self-start sm:self-auto disabled:opacity-60 flex items-center gap-1.5"
+            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-xs transition self-start sm:self-auto disabled:opacity-60 flex items-center gap-2 cursor-pointer"
           >
-            {isExporting && (
-              <span className="w-3.5 h-3.5 border-2 border-slate-700 border-t-transparent rounded-full animate-spin" />
+            {isExporting ? (
+              <span className="w-4 h-4 border-2 border-slate-700 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
             )}
-            {isExporting ? "Exporting..." : "Export CSV"}
+            <span>{isExporting ? "Đang xuất..." : "Xuất dữ liệu CSV"}</span>
           </button>
         </div>
 
-        {/* Khung bảng Audit Log + Thanh Filter Logs (Fields #2, #3, #4, #5) */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          {/* Thanh Filter Logs */}
-          <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center gap-3">
-            <span className="text-xs font-bold text-slate-700">Filter Logs:</span>
+        {/* Audit Log Card + Filter Toolbar */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 flex flex-wrap items-center gap-3 bg-white">
+            <span className="text-sm font-bold text-slate-800 mr-1">Bộ lọc nhật ký:</span>
 
-            {/* Field #2: Action Categories Filter */}
             <select
               value={actionCategory}
               onChange={(e) => handleCategoryChange(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Lọc theo nhóm hành động"
+              className="px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600"
             >
-              <option value="ALL">All Action Categories</option>
-              <option value="USER_CREATED">USER_CREATED</option>
-              <option value="USER_UPDATED">USER_UPDATED</option>
-              <option value="USER_STATUS_CHANGED">USER_STATUS_CHANGED</option>
-              <option value="AUTHORIZE_OVERDRIVER">AUTHORIZE_OVERDRIVER</option>
-              <option value="CONFIRM_PO_STAGING">CONFIRM_PO_STAGING</option>
-              <option value="APPROVE_SCRAP_REPLACEMENT">APPROVE_SCRAP_REPLACEMENT</option>
-              <option value="COMMIT_GOODS_RECEIPT">COMMIT_GOODS_RECEIPT</option>
-              <option value="APPROVE_CONSOLIDATED_PR">APPROVE_CONSOLIDATED_PR</option>
+              <option value="ALL">Tất cả nhóm hành động</option>
+              <option value="USER_CREATED">Tạo người dùng</option>
+              <option value="USER_UPDATED">Cập nhật người dùng</option>
+              <option value="USER_STATUS_CHANGED">Đổi trạng thái người dùng</option>
+              <option value="AUTHORIZE_OVERDRIVER">Cho phép vượt chốt (Overdriver)</option>
+              <option value="CONFIRM_PO_STAGING">Xác nhận PO Staging</option>
+              <option value="APPROVE_SCRAP_REPLACEMENT">Duyệt sản xuất bù phế phẩm</option>
+              <option value="COMMIT_GOODS_RECEIPT">Xác nhận nhập kho</option>
+              <option value="APPROVE_CONSOLIDATED_PR">Duyệt PR gộp</option>
             </select>
 
-            {/* Field #3: Date Filter */}
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => handleDateChange(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Lọc theo ngày"
+              className="px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
 
-            {/* Field #4: Search by entity ID or user... */}
-            <input
-              type="text"
-              value={searchKeyword}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search by entity ID or user..."
-              className="w-full sm:w-64 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative w-full sm:w-72">
+              <svg
+                className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Tìm theo mã đối tượng hoặc người dùng..."
+                className="w-full pl-9 pr-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              />
+            </div>
 
             {(actionCategory !== "ALL" || selectedDate || searchKeyword) && (
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="text-xs text-blue-600 hover:text-blue-800 underline font-medium ml-auto"
+                className="text-sm text-blue-600 hover:text-blue-800 font-semibold ml-auto cursor-pointer"
               >
-                Clear Filters
+                Xóa bộ lọc
               </button>
             )}
           </div>
 
-          {/* Field #5: Audit Log Data Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto bg-white">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 bg-slate-50/50">
-                  <th className="py-3 px-5 w-36">Timestamp</th>
-                  <th className="py-3 px-4 w-40">Actor &amp; Role</th>
-                  <th className="py-3 px-4 w-56">Action Type</th>
-                  <th className="py-3 px-4 w-48">Target Entity</th>
-                  <th className="py-3 px-4 w-64">State Delta (Before → After)</th>
-                  <th className="py-3 px-5">Mandatory Justification / Notes</th>
+                <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
+                  <th className="py-3.5 px-6 min-w-[140px]">Thời gian</th>
+                  <th className="py-3.5 px-4 min-w-[180px]">Người thực hiện</th>
+                  <th className="py-3.5 px-4 min-w-[200px]">Loại hành động</th>
+                  <th className="py-3.5 px-4 min-w-[180px]">Đối tượng tác động</th>
+                  <th className="py-3.5 px-4 min-w-[220px]">Thay đổi trạng thái</th>
+                  <th className="py-3.5 px-6 min-w-[220px]">Lý do / Ghi chú</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 text-xs">
+              <tbody className="divide-y divide-slate-200 text-sm bg-white">
                 {isLoading && (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                    <td colSpan={6} className="py-12 text-center text-slate-500">
                       <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2" />
-                      <p className="text-xs">Fetching immutable audit logs...</p>
+                      <p className="text-sm">Đang tải nhật ký hoạt động...</p>
                     </td>
                   </tr>
                 )}
 
                 {isError && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-rose-600 font-medium">
+                    <td colSpan={6} className="py-10 text-center text-rose-600 font-medium text-sm">
                       {(error as { message?: string })?.message ||
-                        "Unable to load audit logs. Please verify network or session."}
+                        "Không tải được nhật ký hoạt động. Vui lòng kiểm tra mạng hoặc phiên đăng nhập."}
                     </td>
                   </tr>
                 )}
 
                 {!isLoading && !isError && logsList.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400 italic">
-                      No system audit log records found matching your filters.
+                    <td colSpan={6} className="py-10 text-center text-slate-500 text-sm">
+                      Không có bản ghi nhật ký nào phù hợp với điều kiện lọc.
                     </td>
                   </tr>
                 )}
@@ -313,45 +323,45 @@ export default function SystemAuditLogPage() {
                       second: "2-digit",
                     });
                     const [datePart, timePart] = formattedDate.split(", ");
-                    const actorName = log.userFullName || log.username || "System Actor";
+                    const actorName = log.userFullName || log.username || "Hệ thống";
                     const actorRole = log.primaryRole || "SYSTEM";
                     const targetEntity = `${log.entityName} ${log.entityId ? `#${log.entityId}` : ""}`.trim();
                     const stateDelta =
                       log.beforeState || log.afterState
-                        ? `${log.beforeState || "NONE"} → ${log.afterState || "NONE"}`
-                        : "STATE_IMMUTABLE";
+                        ? `${log.beforeState || "KHÔNG"} → ${log.afterState || "KHÔNG"}`
+                        : "Không thay đổi";
 
                     return (
-                      <tr key={log.logId} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3.5 px-5 font-mono text-[11px] text-slate-700 leading-snug">
-                          <div>{datePart}</div>
-                          <div className="text-slate-400">{timePart}</div>
+                      <tr key={log.logId} className="hover:bg-slate-50/90 transition-colors">
+                        <td className="py-4 px-6 font-mono text-xs text-slate-700 leading-snug whitespace-nowrap">
+                          <div className="font-semibold text-slate-800">{datePart}</div>
+                          <div className="text-slate-500">{timePart}</div>
                         </td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-900 leading-snug">{actorName}</div>
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <div className="font-semibold text-slate-900 leading-snug">{actorName}</div>
                           <span
-                            className={`inline-block mt-1 px-1.5 py-0.5 text-[9px] font-bold uppercase rounded ${getActorRoleBadgeStyle(
+                            className={`inline-block mt-1 px-2 py-0.5 text-xs font-bold uppercase rounded border ${getActorRoleBadgeStyle(
                               actorRole,
                             )}`}
                           >
                             {actorRole}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-4 px-4 whitespace-nowrap">
                           <span
-                            className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded ${getActionBadgeStyle(
+                            className={`inline-block px-2.5 py-0.5 text-xs font-bold uppercase rounded border ${getActionBadgeStyle(
                               log.actionType,
                             )}`}
                           >
-                            {log.actionType}
+                            {auditActionLabel(log.actionType)}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 font-medium text-slate-800">{targetEntity}</td>
-                        <td className="py-3.5 px-4 font-mono text-[11px] text-slate-700">
+                        <td className="py-4 px-4 font-medium text-slate-800 whitespace-nowrap">{targetEntity}</td>
+                        <td className="py-4 px-4 font-mono text-xs text-slate-700 whitespace-nowrap">
                           {stateDelta}
                         </td>
-                        <td className="py-3.5 px-5 italic text-slate-600">
-                          {log.reason || "N/A"}
+                        <td className="py-4 px-6 text-slate-600 text-sm">
+                          {log.reason || "—"}
                         </td>
                       </tr>
                     );
@@ -360,49 +370,46 @@ export default function SystemAuditLogPage() {
             </table>
           </div>
 
-          {/* Field #6: Thanh phân trang Paging với TanStack Query */}
-          <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/70 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-            {/* Vùng bên trái: Thống kê bản ghi & Dropdown chọn 10/30/50 record / 1 trang */}
+          {/* Pagination Footer */}
+          <div className="px-6 py-4 border-t border-slate-200 bg-[#F8FAFC] flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-600">
             <div className="flex flex-wrap items-center gap-4">
               <div>
-                Showing <span className="font-semibold text-slate-900">{startRecord}</span> to{" "}
-                <span className="font-semibold text-slate-900">{endRecord}</span> of{" "}
-                <span className="font-semibold text-slate-900">{totalCount}</span> records
+                Hiển thị <span className="font-bold text-slate-900">{startRecord}</span> đến{" "}
+                <span className="font-bold text-slate-900">{endRecord}</span> trong tổng số{" "}
+                <span className="font-bold text-slate-900">{totalCount}</span> bản ghi
               </div>
 
-              {/* Dropdown chọn hiển thị 10/30/50 record / 1 trang */}
-              <div className="flex items-center gap-1.5">
-                <label htmlFor="pageSizeSelect" className="text-slate-500 font-medium">
-                  Show:
+              <div className="flex items-center gap-2">
+                <label htmlFor="pageSizeSelect" className="text-slate-500 text-xs">
+                  Số dòng:
                 </label>
                 <select
                   id="pageSizeSelect"
                   value={pageSize}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="px-2.5 py-1 text-xs bg-white border border-slate-300 rounded shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700 cursor-pointer"
+                  className="px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 font-semibold text-slate-700 cursor-pointer"
                 >
-                  <option value={10}>10 records / page</option>
-                  <option value={30}>30 records / page</option>
-                  <option value={50}>50 records / page</option>
+                  <option value={10}>10</option>
+                  <option value={30}>30</option>
+                  <option value={50}>50</option>
                 </select>
               </div>
 
               {isFetching && !isLoading && (
-                <span className="inline-flex items-center gap-1.5 text-blue-600 text-[11px] font-medium">
+                <span className="inline-flex items-center gap-1.5 text-blue-600 text-xs font-medium">
                   <span className="w-2.5 h-2.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  Updating...
+                  Đang cập nhật...
                 </span>
               )}
             </div>
 
-            {/* Vùng bên phải: Nút chuyển trang (First, Prev, Page numbers, Next, Last) */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setPageNumber(1)}
                 disabled={pageNumber <= 1 || isLoading}
-                className="px-2 py-1 text-xs font-semibold rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-slate-700"
-                title="First Page"
+                className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-slate-700 cursor-pointer"
+                title="Trang đầu"
               >
                 «
               </button>
@@ -410,15 +417,15 @@ export default function SystemAuditLogPage() {
                 type="button"
                 onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
                 disabled={!hasPreviousPage || pageNumber <= 1 || isLoading}
-                className="px-2.5 py-1 text-xs font-semibold rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-slate-700"
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-slate-700 cursor-pointer"
               >
-                Previous
+                Trước
               </button>
 
               <div className="flex items-center gap-1 px-1">
                 {getVisiblePages().map((item, idx) =>
                   item === "..." ? (
-                    <span key={`dots-${idx}`} className="px-1.5 py-1 text-slate-400 font-medium">
+                    <span key={`dots-${idx}`} className="px-1.5 py-1 text-slate-400 font-medium text-xs">
                       ...
                     </span>
                   ) : (
@@ -427,10 +434,10 @@ export default function SystemAuditLogPage() {
                       type="button"
                       onClick={() => setPageNumber(Number(item))}
                       disabled={isLoading}
-                      className={`min-w-7 px-2 py-1 text-xs font-bold rounded transition ${
+                      className={`w-8 h-8 text-xs font-bold rounded-lg transition cursor-pointer ${
                         item === pageNumber
                           ? "bg-blue-600 text-white shadow-xs"
-                          : "border border-slate-200 bg-white hover:bg-slate-100 text-slate-700"
+                          : "border border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
                       }`}
                     >
                       {item}
@@ -443,16 +450,16 @@ export default function SystemAuditLogPage() {
                 type="button"
                 onClick={() => setPageNumber((p) => Math.min(totalPages, p + 1))}
                 disabled={!hasNextPage || pageNumber >= totalPages || isLoading}
-                className="px-2.5 py-1 text-xs font-semibold rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-slate-700"
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-slate-700 cursor-pointer"
               >
-                Next
+                Sau
               </button>
               <button
                 type="button"
                 onClick={() => setPageNumber(totalPages)}
                 disabled={pageNumber >= totalPages || isLoading}
-                className="px-2.5 py-1 text-xs font-semibold rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-slate-700"
-                title="Last Page"
+                className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-slate-700 cursor-pointer"
+                title="Trang cuối"
               >
                 »
               </button>

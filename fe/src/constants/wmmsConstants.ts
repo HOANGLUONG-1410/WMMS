@@ -13,81 +13,81 @@ export const ROLE_CONFIG = {
   ADMIN: {
     code: 'ADMIN',
     badgeLabel: 'ADMIN',
-    displayName: 'System Administrator',
-    roleTitle: 'System Administrator',
+    displayName: 'Quản trị hệ thống',
+    roleTitle: 'Quản trị hệ thống',
     badgeClass: 'bg-amber-600 text-white',
     pillClass: 'bg-purple-100 text-purple-800 border-purple-200',
-    operationalScope: 'Full System Control, Multi-Role RBAC, Audit Trail',
+    operationalScope: 'Toàn quyền hệ thống, phân quyền đa vai trò (RBAC), nhật ký kiểm toán',
     defaultUser: { fullName: 'Le Van Admin', initials: 'AD', email: 'admin@nguyenkhoa.vn' }
   },
   OWNER: {
     code: 'OWNER',
     badgeLabel: 'OWNER',
-    displayName: 'WORKSHOP OWNER',
-    roleTitle: 'Workshop Owner & Technical Lead',
+    displayName: 'CHỦ XƯỞNG',
+    roleTitle: 'Chủ xưởng & Trưởng kỹ thuật',
     badgeClass: 'bg-amber-600 text-white',
     pillClass: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-    operationalScope: 'BOM Breakdown, Purchasing Approval, Dispatch Release',
+    operationalScope: 'Bóc tách BOM, duyệt mua hàng, duyệt cấp phát',
     defaultUser: { fullName: 'Nguyen Van Khoa', initials: 'NK', email: 'owner@nguyenkhoa.vn' }
   },
   SALES: {
     code: 'SALES',
     badgeLabel: 'SALES',
-    displayName: 'SALES STAFF',
-    roleTitle: 'Sales Representative',
+    displayName: 'NHÂN VIÊN KINH DOANH',
+    roleTitle: 'Nhân viên kinh doanh',
     badgeClass: 'bg-blue-600 text-white',
     pillClass: 'bg-blue-100 text-blue-700 border-blue-200',
-    operationalScope: 'Excel PO Staging, CRUD Sanitization, Space Init',
+    operationalScope: 'Nhập PO Excel qua Staging, làm sạch dữ liệu, khởi tạo Order Space',
     defaultUser: { fullName: 'Tran Thi Mai', initials: 'TM', email: 'sales@nguyenkhoa.vn' }
   },
   PLANNER: {
     code: 'PLANNER',
     badgeLabel: 'PLANNER',
-    displayName: 'MATERIAL PLANNER',
-    roleTitle: 'Material Planning Staff',
+    displayName: 'KẾ HOẠCH VẬT TƯ',
+    roleTitle: 'Nhân viên kế hoạch vật tư',
     badgeClass: 'bg-indigo-600 text-white',
     pillClass: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    operationalScope: 'BOM Breakdown, Stock Reconciliation, Daily PR Consolidation',
+    operationalScope: 'Bóc tách BOM, đối chiếu tồn kho, gom PR theo ngày',
     defaultUser: { fullName: 'Pham Minh Duc', initials: 'MD', email: 'planner@nguyenkhoa.vn' }
   },
   LEADER: {
     code: 'LEADER',
     badgeLabel: 'FLOOR',
-    displayName: 'PRODUCTION LEADER',
-    roleTitle: 'Production Leader',
+    displayName: 'QUẢN ĐỐC SẢN XUẤT',
+    roleTitle: 'Quản đốc sản xuất',
     badgeClass: 'bg-orange-700 text-white',
     pillClass: 'bg-orange-100 text-orange-800 border-orange-200',
-    operationalScope: 'Kanban Floor Dispatch, Overdriver Requests',
+    operationalScope: 'Điều phối Kanban xưởng, yêu cầu vượt chốt (Overdriver)',
     defaultUser: { fullName: 'Pham Van Tien', initials: 'PT', email: 'leader@nguyenkhoa.vn' }
   },
   QC: {
     code: 'QC',
     badgeLabel: 'QC',
-    displayName: 'QC STAFF',
-    roleTitle: 'QC Inspector',
+    displayName: 'NHÂN VIÊN QC',
+    roleTitle: 'Kiểm soát viên QC',
     badgeClass: 'bg-emerald-600 text-white',
     pillClass: 'bg-rose-100 text-rose-700 border-rose-200',
-    operationalScope: 'Workstation Quality Gate, Defect Logging',
+    operationalScope: 'Cổng chất lượng tại trạm, ghi nhận lỗi',
     defaultUser: { fullName: 'Hoang Thi Lan', initials: 'HL', email: 'qc@nguyenkhoa.vn' }
   },
   WAREHOUSE: {
     code: 'WAREHOUSE',
     badgeLabel: 'STOCK',
-    displayName: 'WAREHOUSE KEEPER',
-    roleTitle: 'Warehouse Keeper',
+    displayName: 'THỦ KHO',
+    roleTitle: 'Thủ kho',
     badgeClass: 'bg-amber-700 text-white',
     pillClass: 'bg-amber-100 text-amber-800 border-amber-200',
-    operationalScope: 'Goods Receipt Commit, Goods Issue Floor Handover',
+    operationalScope: 'Xác nhận nhập kho, xuất kho bàn giao xuống xưởng',
     defaultUser: { fullName: 'Vu Duc Thang', initials: 'VT', email: 'warehouse@nguyenkhoa.vn' }
   },
   PURCHASING: {
     code: 'PURCHASING',
     badgeLabel: 'PURCHASING',
-    displayName: 'PURCHASING STAFF',
-    roleTitle: 'Purchasing Staff',
+    displayName: 'NHÂN VIÊN MUA HÀNG',
+    roleTitle: 'Nhân viên mua hàng',
     badgeClass: 'bg-emerald-600 text-white',
     pillClass: 'bg-teal-100 text-teal-800 border-teal-200',
-    operationalScope: 'Vendor Sourcing, PO Creation & ETA Management',
+    operationalScope: 'Tìm nhà cung cấp, lập PO và theo dõi ngày giao (ETA)',
     defaultUser: { fullName: 'Do Quang Huy', initials: 'QH', email: 'purchaser@nguyenkhoa.vn' }
   }
 };
@@ -98,57 +98,57 @@ export const ROLE_CONFIG = {
 export const DEFAULT_ORDER_SPACES = [
   {
     spaceKey: 'SPACE-PO-880504',
-    spaceLabel: 'SPACE-PO-880504 (Dining Sets - Ashley US)',
-    customerName: 'Ashley Furniture Homestore (USA)',
+    spaceLabel: 'SPACE-PO-880504 (Bộ bàn ăn - Ashley Mỹ)',
+    customerName: 'Ashley Furniture Homestore (Mỹ)',
     poNumber: 'ASH-2026-OCT-880504',
     orderDate: '2026-10-12',
     etdDate: '2026-10-28',
     daysRemaining: 8,
     isUrgentEtd: true,
     totalOrderedUnits: 500,
-    lineItemsVolumeSummary: '500 Sets (Chairs + Tables)',
+    lineItemsVolumeSummary: '500 bộ (ghế + bàn)',
     lifecycleStatusBadge: 'IN_PRODUCTION',
     overallProgressPct: 62
   },
   {
     spaceKey: 'SPACE-PO-880506',
-    spaceLabel: 'SPACE-PO-880506 (Coffee Tables - JYSK DK)',
-    customerName: 'JYSK Nordic (Denmark)',
+    spaceLabel: 'SPACE-PO-880506 (Bàn cà phê - JYSK Đan Mạch)',
+    customerName: 'JYSK Nordic (Đan Mạch)',
     poNumber: 'JYSK-DK-880506',
     orderDate: '2026-10-14',
     etdDate: '2026-11-05',
     daysRemaining: 16,
     isUrgentEtd: false,
     totalOrderedUnits: 250,
-    lineItemsVolumeSummary: '250 Pcs Oak Coffee Table',
+    lineItemsVolumeSummary: '250 cái bàn cà phê gỗ sồi',
     lifecycleStatusBadge: 'IN_PRODUCTION',
     overallProgressPct: 45
   },
   {
     spaceKey: 'SPACE-PO-880507',
-    spaceLabel: 'SPACE-PO-880507 (Bed Frames - IKEA AU)',
-    customerName: 'IKEA Supply AG (Australia)',
+    spaceLabel: 'SPACE-PO-880507 (Khung giường - IKEA Úc)',
+    customerName: 'IKEA Supply AG (Úc)',
     poNumber: 'IKEA-AU-880507',
     orderDate: '2026-10-17',
     etdDate: '2026-11-20',
     daysRemaining: 31,
     isUrgentEtd: false,
     totalOrderedUnits: 300,
-    lineItemsVolumeSummary: '300 Pcs Queen Bed Frame',
+    lineItemsVolumeSummary: '300 cái khung giường Queen',
     lifecycleStatusBadge: 'BOM_SETTING',
     overallProgressPct: 0
   },
   {
     spaceKey: 'SPACE-PO-880512',
-    spaceLabel: 'SPACE-PO-880512 (Wood Stools - Nitori JP)',
-    customerName: 'Nitori Holdings (Japan)',
+    spaceLabel: 'SPACE-PO-880512 (Ghế đẩu gỗ - Nitori Nhật)',
+    customerName: 'Nitori Holdings (Nhật Bản)',
     poNumber: 'NIT-JP-880512',
     orderDate: '2026-10-19',
     etdDate: '2026-12-10',
     daysRemaining: 51,
     isUrgentEtd: false,
     totalOrderedUnits: 400,
-    lineItemsVolumeSummary: '400 Pcs Solid Wood Stools',
+    lineItemsVolumeSummary: '400 cái ghế đẩu gỗ nguyên khối',
     lifecycleStatusBadge: 'NEWLY_RECEIVED',
     overallProgressPct: 0
   }
@@ -163,8 +163,8 @@ export const INITIAL_USERS_DIRECTORY = [
     fullName: 'Nguyen Van Khoa',
     email: 'owner@nguyenkhoa.vn',
     primaryRole: 'OWNER',
-    primaryRoleLabel: 'WORKSHOP OWNER',
-    operationalScope: 'BOM Breakdown, Purchasing Approval, Dispatch Release',
+    primaryRoleLabel: 'CHỦ XƯỞNG',
+    operationalScope: 'Bóc tách BOM, duyệt mua hàng, duyệt cấp phát',
     status: 'ACTIVE'
   },
   {
@@ -172,8 +172,8 @@ export const INITIAL_USERS_DIRECTORY = [
     fullName: 'Tran Thi Mai',
     email: 'sales@nguyenkhoa.vn',
     primaryRole: 'SALES',
-    primaryRoleLabel: 'SALES STAFF',
-    operationalScope: 'Excel PO Staging, CRUD Sanitization, Space Init',
+    primaryRoleLabel: 'NHÂN VIÊN KINH DOANH',
+    operationalScope: 'Nhập PO Excel qua Staging, làm sạch dữ liệu, khởi tạo Order Space',
     status: 'ACTIVE'
   },
   {
@@ -181,8 +181,8 @@ export const INITIAL_USERS_DIRECTORY = [
     fullName: 'Pham Van Tien',
     email: 'leader@nguyenkhoa.vn',
     primaryRole: 'LEADER',
-    primaryRoleLabel: 'PRODUCTION LEADER',
-    operationalScope: 'Kanban Floor Dispatch, Overdriver Requests',
+    primaryRoleLabel: 'QUẢN ĐỐC SẢN XUẤT',
+    operationalScope: 'Điều phối Kanban xưởng, yêu cầu vượt chốt (Overdriver)',
     status: 'ACTIVE'
   },
   {
@@ -190,8 +190,8 @@ export const INITIAL_USERS_DIRECTORY = [
     fullName: 'Hoang Thi Lan',
     email: 'qc@nguyenkhoa.vn',
     primaryRole: 'QC',
-    primaryRoleLabel: 'QC STAFF',
-    operationalScope: 'Workstation Quality Gate, Defect Logging',
+    primaryRoleLabel: 'NHÂN VIÊN QC',
+    operationalScope: 'Cổng chất lượng tại trạm, ghi nhận lỗi',
     status: 'ACTIVE'
   },
   {
@@ -199,8 +199,8 @@ export const INITIAL_USERS_DIRECTORY = [
     fullName: 'Vu Duc Thang',
     email: 'warehouse@nguyenkhoa.vn',
     primaryRole: 'WAREHOUSE',
-    primaryRoleLabel: 'WAREHOUSE KEEPER',
-    operationalScope: 'Goods Receipt Commit, Goods Issue Floor Handover',
+    primaryRoleLabel: 'THỦ KHO',
+    operationalScope: 'Xác nhận nhập kho, xuất kho bàn giao xuống xưởng',
     status: 'ACTIVE'
   },
   {
@@ -208,8 +208,8 @@ export const INITIAL_USERS_DIRECTORY = [
     fullName: 'Do Quang Huy',
     email: 'purchaser@nguyenkhoa.vn',
     primaryRole: 'PURCHASING',
-    primaryRoleLabel: 'PURCHASING STAFF',
-    operationalScope: 'Vendor Sourcing, PO Creation & ETA Management',
+    primaryRoleLabel: 'NHÂN VIÊN MUA HÀNG',
+    operationalScope: 'Tìm nhà cung cấp, lập PO và theo dõi ngày giao (ETA)',
     status: 'ACTIVE'
   },
   {
@@ -217,8 +217,8 @@ export const INITIAL_USERS_DIRECTORY = [
     fullName: 'Nguyen Van Tam',
     email: 'tam.ex@nguyenkhoa.vn',
     primaryRole: 'APPRENTICE',
-    primaryRoleLabel: 'APPRENTICE STAFF',
-    operationalScope: 'Temporary Observation',
+    primaryRoleLabel: 'NHÂN VIÊN THỬ VIỆC',
+    operationalScope: 'Quan sát tạm thời',
     status: 'SUSPENDED'
   }
 ];
@@ -228,42 +228,42 @@ export const INITIAL_USERS_DIRECTORY = [
  */
 export const ROLE_PERMISSION_MATRIX_ROWS = [
   {
-    functionalDomain: 'BOM Breakdown',
-    actionScope: 'Configure routing & scrap %',
+    functionalDomain: 'Bóc tách BOM',
+    actionScope: 'Cấu hình quy trình & % hao hụt',
     workshopOwner: { label: 'FULL', type: 'full' },
     productionLeader: { label: 'NO', type: 'no' },
     qcStaff: { label: 'NO', type: 'no' },
     warehouse: { label: 'NO', type: 'no' }
   },
   {
-    functionalDomain: 'PR Approval',
-    actionScope: 'Approve daily consolidated PR',
+    functionalDomain: 'Duyệt PR',
+    actionScope: 'Duyệt PR gộp theo ngày',
     workshopOwner: { label: 'FULL', type: 'full' },
     productionLeader: { label: 'NO', type: 'no' },
     qcStaff: { label: 'NO', type: 'no' },
     warehouse: { label: 'NO', type: 'no' }
   },
   {
-    functionalDomain: 'Kanban Dispatch',
-    actionScope: 'Move lot across stations',
+    functionalDomain: 'Điều phối Kanban',
+    actionScope: 'Chuyển lô giữa các trạm',
     workshopOwner: { label: 'MONITOR', type: 'monitor' },
-    productionLeader: { label: 'FULL (100% RULE)', type: 'full' },
+    productionLeader: { label: 'ĐẦY ĐỦ (QUY TẮC 100%)', type: 'full' },
     qcStaff: { label: 'NO', type: 'no' },
     warehouse: { label: 'NO', type: 'no' }
   },
   {
-    functionalDomain: 'Quality Gate',
-    actionScope: 'Record Pass / Rework / Scrap',
+    functionalDomain: 'Cổng chất lượng',
+    actionScope: 'Ghi nhận Đạt / Làm lại / Phế phẩm',
     workshopOwner: { label: 'NO', type: 'no' },
     productionLeader: { label: 'NO', type: 'no' },
     qcStaff: { label: 'FULL', type: 'full' },
     warehouse: { label: 'NO', type: 'no' }
   },
   {
-    functionalDomain: 'Overdriver',
-    actionScope: 'Authorize Hold Point bypass',
-    workshopOwner: { label: 'EXCLUSIVE APPROVE', type: 'full' },
-    productionLeader: { label: 'REQUEST ONLY', type: 'request' },
+    functionalDomain: 'Vượt chốt (Overdriver)',
+    actionScope: 'Cho phép bỏ qua Hold Point',
+    workshopOwner: { label: 'DUYỆT ĐỘC QUYỀN', type: 'full' },
+    productionLeader: { label: 'CHỈ ĐƯỢC YÊU CẦU', type: 'request' },
     qcStaff: { label: 'NO', type: 'no' },
     warehouse: { label: 'NO', type: 'no' }
   }
@@ -279,9 +279,9 @@ export const INITIAL_AUDIT_LOGS = [
     actorName: 'Nguyen Van Khoa',
     actorRole: 'OWNER',
     actionType: 'AUTHORIZE_OVERDRIVER',
-    targetEntity: 'Batch #LOT-880504-01',
+    targetEntity: 'Lô #LOT-880504-01',
     stateDelta: 'LOCKED_WAITING_MAT → OVERDRIVER_RUNNING',
-    reason: '"Customer urgent ship request (ETD: Oct 28). Missing hinges. Approved rough milling up to Assembly Hold Point."'
+    reason: '"Khách yêu cầu giao gấp (ETD: 28/10). Thiếu bản lề. Cho phép sơ chế đến Hold Point lắp ráp."'
   },
   {
     logId: 102,
@@ -291,7 +291,7 @@ export const INITIAL_AUDIT_LOGS = [
     actionType: 'CONFIRM_PO_STAGING',
     targetEntity: 'Order Space #SPACE-880507',
     stateDelta: 'STAGING_RAW → NEWLY_RECEIVED',
-    reason: '"Cleaned 4 merged cell format errors. Converted inches to mm. Generated Order Space for 300 bed frames."'
+    reason: '"Đã sửa 4 lỗi ô gộp. Đã đổi inch sang mm. Đã tạo Order Space cho 300 khung giường."'
   },
   {
     logId: 103,
@@ -299,9 +299,9 @@ export const INITIAL_AUDIT_LOGS = [
     actorName: 'Nguyen Van Khoa',
     actorRole: 'OWNER',
     actionType: 'APPROVE_SCRAP_REPLACEMENT',
-    targetEntity: 'Order #PO-880506',
+    targetEntity: 'Đơn #PO-880506',
     stateDelta: 'SCRAP_PENDING → SUB_BATCH_ISSUED',
-    reason: '"QC reported 3 broken mortise parts at Assembly. Released replacement job for 3 table legs."'
+    reason: '"QC báo 3 chi tiết mộng bị gãy ở công đoạn lắp ráp. Đã phát lệnh sản xuất bù 3 chân bàn."'
   },
   {
     logId: 104,
@@ -311,7 +311,7 @@ export const INITIAL_AUDIT_LOGS = [
     actionType: 'COMMIT_GOODS_RECEIPT',
     targetEntity: 'PO-MAT-2026-042',
     stateDelta: 'IN_TRANSIT → RECEIVED_COMMITTED',
-    reason: '"Received 500 pcs Oak boards from Supplier Hoang Thong. Auto-allocated 320 pcs to Order 880504 by ETD priority."'
+    reason: '"Nhận 500 tấm gỗ sồi từ NCC Hoàng Thông. Tự động phân bổ 320 tấm cho đơn 880504 theo ưu tiên ETD."'
   },
   {
     logId: 105,
@@ -319,9 +319,9 @@ export const INITIAL_AUDIT_LOGS = [
     actorName: 'Nguyen Van Khoa',
     actorRole: 'OWNER',
     actionType: 'APPROVE_CONSOLIDATED_PR',
-    targetEntity: 'Daily PR-2026-10-19',
+    targetEntity: 'PR gộp ngày 2026-10-19',
     stateDelta: 'DRAFT_PR → APPROVED_FOR_PURCHASING',
-    reason: '"Aggregated material deficits across 3 daily orders. Endorsed 1,200m board and 4,000 screws."'
+    reason: '"Đã gom thiếu hụt vật tư của 3 đơn trong ngày. Đã phê duyệt 1.200 m ván và 4.000 vít."'
   }
 ];
 
@@ -332,9 +332,9 @@ export const INITIAL_STAGING_GRID_ROWS = [
   {
     rowNumber: 1,
     productSku: 'CHAIR-OAK-01',
-    productDescription: 'Nordic Oak Dining Chair',
+    productDescription: 'Ghế ăn gỗ sồi phong cách Bắc Âu',
     dimensionsMm: '450 x 520 x 850',
-    finishColor: 'Natural PU Clear',
+    finishColor: 'PU trong tự nhiên',
     orderQty: 300,
     targetEtd: '2026-11-15',
     fscRequired: true,
@@ -345,9 +345,9 @@ export const INITIAL_STAGING_GRID_ROWS = [
   {
     rowNumber: 2,
     productSku: 'TABLE-OAK-02',
-    productDescription: 'Rectangular Dining Table 1.8m',
+    productDescription: 'Bàn ăn chữ nhật 1,8 m',
     dimensionsMm: '1800 x 900 x 750',
-    finishColor: 'Walnut Stain',
+    finishColor: 'Nhuộm màu óc chó',
     orderQty: 80,
     targetEtd: '2026-11-15',
     fscRequired: true,
@@ -358,9 +358,9 @@ export const INITIAL_STAGING_GRID_ROWS = [
   {
     rowNumber: 3,
     productSku: 'BENCH-OAK-03',
-    productDescription: 'Solid Oak Dining Bench',
+    productDescription: 'Ghế băng ăn gỗ sồi nguyên khối',
     dimensionsMm: '1400 x 380 x 450',
-    finishColor: 'Natural PU Clear',
+    finishColor: 'PU trong tự nhiên',
     orderQty: 100,
     targetEtd: '2026-11-15',
     fscRequired: true,
@@ -371,9 +371,9 @@ export const INITIAL_STAGING_GRID_ROWS = [
   {
     rowNumber: 4,
     productSku: 'STOOL-OAK-04',
-    productDescription: 'Compact Kitchen Stool',
+    productDescription: 'Ghế đẩu bếp nhỏ gọn',
     dimensionsMm: '380 x 380 x 450',
-    finishColor: 'Natural Finish',
+    finishColor: 'Hoàn thiện màu tự nhiên',
     orderQty: 150,
     targetEtd: '2026-11-20',
     fscRequired: true,
