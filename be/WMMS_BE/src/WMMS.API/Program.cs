@@ -15,6 +15,7 @@ using WMMS.Application.Mappers;
 using WMMS.Application.Services.BomRouting;
 using WMMS.Application.Services.InventoryPr;
 using WMMS.Application.Services.KanbanQc;
+using WMMS.Application.Services.ProductionTracking;
 using WMMS.Application.Validators.Auth;
 using WMMS.Application.Validators.BomRouting;
 using WMMS.Infrastructure.Excel;
@@ -93,6 +94,11 @@ builder.Services.AddScoped<IPurchaseOrderService, WMMS.Application.Services.Purc
 builder.Services.AddScoped<IGoodsReceiptService, WMMS.Infrastructure.Services.Warehouse.GoodsReceiptService>();
 // SC-20: Kiểm soát Hold Point & luồng phê duyệt ghi đè Overdriver (KBN02, GBR-05)
 builder.Services.AddScoped<IHoldPointService, WMMS.Infrastructure.Services.KanbanQc.HoldPointService>();
+
+// Phân hệ 9 (Iteration 3): Hoàn tất Lô sản xuất, Nhập kho Thành phẩm, Theo dõi Tiến độ Đơn hàng & Dashboard Chủ xưởng (UC-63, UC-64)
+builder.Services.AddScoped<IFinishedGoodsService, FinishedGoodsService>();
+builder.Services.AddScoped<IOrderProgressService, OrderProgressService>();
+builder.Services.AddScoped<IProductionDashboardService, ProductionDashboardService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();
