@@ -44,8 +44,6 @@ via the MCP tools and the summary will follow.
 Do not re-scan source files when MCP tools can give you the same
 answer in a few hundred tokens instead of thousands. This is not optional.
 <!-- <<< projectmem bridge <<< -->
-<<<<<<< Updated upstream
-=======
 
 <!-- >>> projectmem local isolation bridge >>> -->
 ## .projectmem Local-Only Isolation Rule (MANDATORY)
@@ -77,4 +75,3 @@ answer in a few hundred tokens instead of thousands. This is not optional.
 - Mọi hàm, Class, Interface, DTO, Controller tạo mới hoặc chỉnh sửa phải có XML Comments (`/// <summary>`) đầy đủ, giải thích rõ nghiệp vụ và mã Use Case (`UC-...`), Business Rule (`GBR-...`, `BR-...`).
 - Tất cả các thông báo trả về (Message trong `ApiResponse<T>`, Validation Messages trong FluentValidation) bắt buộc phải là **Tiếng Việt chuẩn**.
 <!-- <<< code documentation and comments bridge <<< -->
->>>>>>> Stashed changes

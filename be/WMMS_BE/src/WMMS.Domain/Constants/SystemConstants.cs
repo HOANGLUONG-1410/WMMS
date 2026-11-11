@@ -127,8 +127,6 @@ public static class AuditActionConstants
     public const string HoldPointOverdriveRejected = "HOLD_POINT_OVERDRIVE_REJECTED";
     public const string HoldPointBlocked = "HOLD_POINT_BLOCKED";
     public const string KanbanStageAdvanced = "KANBAN_STAGE_ADVANCED";
-<<<<<<< Updated upstream
-=======
     public const string ReworkReinspected = "REWORK_REINSPECTED";
     public const string SubBatchMerged = "SUB_BATCH_MERGED";
     public const string SubBatchContinued = "SUB_BATCH_CONTINUED";
@@ -138,7 +136,6 @@ public static class AuditActionConstants
     public const string OrderItemProductionCompleted = "ORDER_ITEM_PRODUCTION_COMPLETED";
     public const string SalesOrderProductionCompleted = "SALES_ORDER_PRODUCTION_COMPLETED";
     public const string OrderProgressSynchronized = "ORDER_PROGRESS_SYNCHRONIZED";
->>>>>>> Stashed changes
 }
 
 public static class DefectCodeConstants

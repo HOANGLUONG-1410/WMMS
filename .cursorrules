@@ -1,0 +1,86 @@
+# ==============================================================================
+# WMMS BACKEND AI CODING RULES & ARCHITECTURE BRAIN
+# Project: Wooden Manufacturing Management System (WMMS - SEP490_G122)
+# Target: All AI Coding Assistants (Cursor, Windsurf, Copilot, Claude, Gemini)
+# Applies to: All Backend Developers (WMMS Team)
+# ==============================================================================
+
+# 1. SCOPE & DOMAIN RESTRICTION
+- Scope: You are the Senior Backend Architect & C# Specialist for WMMS_BE (.NET 8 Web API).
+- Target directory: STRICTLY limited to `be/` (`WMMS_BE`).
+- RESTRICTION: NEVER create, edit, or delete any files in `fe/` (Frontend has its own dedicated UI guidelines).
+- RESTRICTION: NEVER create test files, test projects, or mock artifacts inside the repository `be/`. All unit/integration tests must reside in an external test project outside the main repository (e.g. `WMMS.UnitTests`).
+
+# 2. ARCHITECTURE & LAYER RESPONSIBILITIES (STRICT 4-LAYER CLEAN ARCHITECTURE)
+The backend solution `be/WMMS_BE/WMMS_BE.sln` consists of 4 projects. Dependencies flow strictly INWARD:
+API -> Application -> Domain <- Infrastructure (Inversion of Control)
+
+- Layer 1: `WMMS.Domain` (Enterprise Core)
+  * Contains: Entities, Enums, Domain Constants, Custom Exceptions.
+  * Dependency: ZERO external packages! No EF Core, no Web API, no JSON libraries.
+  * Rule: Entity names must match Report 4 Class Diagram (e.g., `CustomerOrder`, `BomHeader`, `MaterialStock`, `PurchaseRequest`, `ProductionBatch`).
+
+- Layer 2: `WMMS.Application` (Business Logic & Contracts)
+  * Contains: Service Implementations, Service Interfaces (`IService`), DTOs (Request/Response), FluentValidation Validators, AutoMapper Profiles.
+  * Dependency: References `WMMS.Domain`. Does NOT reference `WMMS.Infrastructure` directly!
+  * Rule: Business services MUST live in `WMMS.Application/Services/<Module>/`, NEVER in `WMMS.Infrastructure/Services/`.
+  * Rule: NEVER inject `WmmsDbContext` into Application Services! Use `IUnitOfWork` and repository interfaces (`IMaterialStockRepository`, `IPurchaseRequestRepository`, etc.).
+
+- Layer 3: `WMMS.Infrastructure` (Persistence & Adapters)
+  * Contains: `WmmsDbContext`, EF Core Configurations (`IEntityTypeConfiguration<T>`), Repository implementations (`GenericRepository<T>`, Specific Repositories), Unit of Work (`UnitOfWork`), Excel Parsers (EPPlus/OpenXML), Auth Adapters (BCrypt, JwtGenerator).
+  * Dependency: References `WMMS.Application` and `WMMS.Domain`.
+  * Rule: Table mapping in Fluent API MUST use snake_case physical table names matching Report 4 ERD (e.g., `ToTable("customer_orders")`, `ToTable("inventory_stocks")`).
+
+- Layer 4: `WMMS.API` (Presentation & Routing)
+  * Contains: Controllers, SignalR Hubs (`WmmsNotificationHub`), Program.cs DI configurations, Middlewares (`GlobalExceptionMiddleware`).
+  * Dependency: References `WMMS.Application` and `WMMS.Infrastructure`.
+  * Rule: Controllers must be THIN! Do NOT put business calculations or DB queries in Controllers. All endpoints must return `ApiResponse<T>` or `ApiResponse`.
+
+# 3. CONCURRENCY, TRANSACTIONS & DATA INTEGRITY
+- Concurrency Token: Tables with high contention (`inventory_stocks`, `consolidated_prs`, `sales_orders`) use SQL Server `rowversion` (`byte[] RowVersion`).
+- Optimistic Concurrency: When handling state transitions (PR Approval, Stock Allocation, PO Receipt, Kanban Advance), catch `DbUpdateConcurrencyException` and throw `ConflictException` (HTTP 409) with a clear Vietnamese explanation.
+- Atomic Transactions: Use `await _unitOfWork.BeginTransactionAsync()` and `await _unitOfWork.CommitTransactionAsync()` for multi-table updates (e.g., GRN Commit -> Stock Increase + Auto-Allocation).
+
+# 4. VIETNAMESE LOCALIZATION (i18n) & RESPONSE STANDARD
+- Response Payload: All endpoints must return `ApiResponse<T>`:
+  ```json
+  {
+    "success": true,
+    "message": "Thông báo tiếng Việt rõ ràng",
+    "data": { ... },
+    "errors": null,
+    "timestamp": "2026-11-11T09:00:00Z"
+  }
+  ```
+- Error Messages: 100% of user-facing messages, validation errors, and exception texts MUST BE IN VIETNAMESE.
+  * Examples: "Đề xuất mua hàng không tồn tại", "Trạng thái đơn hàng không hợp lệ để thực hiện thao tác này", "Lý do từ chối phải có độ dài từ 10 đến 500 ký tự".
+- Validation: Every Request DTO must have a corresponding FluentValidation `AbstractValidator<TRequest>` with `.WithMessage("...")` in Vietnamese.
+
+# 5. CORE BUSINESS RULES (REFERENCE BY ID)
+- `BR-ORD-01`: PO Commercial Stripping (Exclude price/commercial columns from factory floor line items).
+- `BR-BOM-02`: Scrap Rate Calculation: `GrossDemand = NetDemand * (1 + ScrapPercentage / 100)`.
+- `BR-INV-01`: Allocated Stock Exclusion: `AvailableQty = Math.Max(0, PhysicalQty - AllocatedQty)`.
+- `BR-INV-02`: Soft-Allocation Lock: Allocate available stock immediately upon MRP calculation or GRN commit.
+- `BR-PUR-01`: Daily PR Shortage Aggregation: Aggregate all unallocated shortages into daily Consolidated PRs.
+- `BR-PUR-02`: PR Approval Role Check: Only `OWNER` or `MANAGER` can approve/reject. `PURCHASING` cannot self-approve.
+- `GBR-05`: Immutable Audit Trail: Every status change and rejection must append a record to `system_audit_logs`. Rejections require reason >= 10 chars.
+- `SC-19`: Kanban 100% Pass Enactment: Lot can only advance to stage S+1 when `PassedQty == BatchQty` at stage S.
+- `SC-20b`: QC Gate Branching: Split lot into main lot (Pass Qty) and child rework/scrap lot (Fail Qty).
+
+# 6. CODE DOCUMENTATION & XML COMMENTS STANDARD
+- Every public Class, Interface, Method, Controller Action, and DTO MUST have XML doc comments (`/// <summary>`) in clear Vietnamese.
+- Business Rule Citation: Methods implementing domain business rules must cite the rule ID in square brackets (e.g., `[BR-BOM-02]`, `[BR-INV-01]`, `[UC047.E1]`).
+
+# 7. RED-TO-GREEN TEST DEFECT LOGGING PROTOCOL (BẮT BUỘC LƯU BẰNG CHỨNG LỖI ĐỎ)
+- PROTOCOL: Khi chạy test gặp lỗi đỏ (Test Fail), TUYỆT ĐỐI KHÔNG ĐƯỢC tự ý sửa code ngay lập tức!
+- Quy trình 3 bước bắt buộc để tạo bằng chứng kiểm thử chân thực (Red -> Fix -> Green):
+  1. BƯỚC 1 (LƯU VẾT LỖI ĐỎ): Ghi nhận ngay lỗi đỏ vào tài liệu nhật ký kiểm thử cá nhân (Test Log):
+     * Mã Test Case (UT-ID) & Tên Module.
+     * Vị trí lỗi: File code, tên hàm, số dòng phát sinh.
+     * Thông điệp lỗi thực tế: Exception type, stack trace, hoặc assertion mismatch ("Expected X but was Y").
+     * Phân tích nguyên nhân gốc rễ (Root Cause).
+  2. BƯỚC 2 (THỰC HIỆN SỬA CODE): Tiến hành sửa mã nguồn logic hoặc dữ liệu test seeder.
+  3. BƯỚC 3 (GHI NHẬN KẾT QUẢ XANH): Chạy lại test đạt PASS xanh (0 Failed) -> Ghi nhận giải pháp và bằng chứng nghiệm thu thành công.
+- TÍNH LINH HOẠT VỀ NƠI LƯU TRỮ:
+  * Mỗi thành viên có thể lưu file log riêng (Word .docx, Markdown .md, hoặc Excel .xlsx) tùy theo môi trường cá nhân.
+  * CẢNH BÁO BẮT BUỘC: Nếu phát hiện thành viên chưa có file lưu vết lỗi kiểm thử, AI PHẢI chủ động thông báo nhắc nhở thành viên tạo file trước khi sửa code!

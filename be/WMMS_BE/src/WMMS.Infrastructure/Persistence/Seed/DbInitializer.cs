@@ -22,14 +22,14 @@ public static class DbInitializer
         {
             var roles = new List<Role>
             {
-                new() { RoleCode = RoleConstants.Admin, RoleName = "System Administrator", PermissionsJson = "{\"all\": true}" },
-                new() { RoleCode = RoleConstants.Owner, RoleName = "Factory Owner / Executive", PermissionsJson = "{\"view_all\": true, \"approve_orders\": true}" },
-                new() { RoleCode = RoleConstants.Sales, RoleName = "Sales Staff", PermissionsJson = "{\"manage_orders\": true, \"view_customers\": true}" },
-                new() { RoleCode = RoleConstants.Planner, RoleName = "Production Planner", PermissionsJson = "{\"manage_boms\": true, \"manage_batches\": true, \"manage_prs\": true}" },
-                new() { RoleCode = RoleConstants.Purchasing, RoleName = "Purchasing Officer", PermissionsJson = "{\"manage_pos\": true, \"manage_suppliers\": true}" },
-                new() { RoleCode = RoleConstants.Warehouse, RoleName = "Warehouse Keeper", PermissionsJson = "{\"manage_inventory\": true, \"manage_grns\": true}" },
-                new() { RoleCode = RoleConstants.Leader, RoleName = "Production Team Leader", PermissionsJson = "{\"manage_routing\": true, \"view_kanban\": true}" },
-                new() { RoleCode = RoleConstants.Qc, RoleName = "Quality Control Inspector", PermissionsJson = "{\"manage_qc\": true, \"log_defects\": true}" }
+                new() { RoleCode = RoleConstants.Admin, RoleName = "Quản trị viên Hệ thống", PermissionsJson = "{\"all\": true}" },
+                new() { RoleCode = RoleConstants.Owner, RoleName = "Chủ xưởng / Ban giám đốc", PermissionsJson = "{\"view_all\": true, \"approve_orders\": true}" },
+                new() { RoleCode = RoleConstants.Sales, RoleName = "Nhân viên Kinh doanh", PermissionsJson = "{\"manage_orders\": true, \"view_customers\": true}" },
+                new() { RoleCode = RoleConstants.Planner, RoleName = "Kỹ sư Kế hoạch / Kỹ thuật BOM", PermissionsJson = "{\"manage_boms\": true, \"manage_batches\": true, \"manage_prs\": true}" },
+                new() { RoleCode = RoleConstants.Purchasing, RoleName = "Chuyên viên Thu mua", PermissionsJson = "{\"manage_pos\": true, \"manage_suppliers\": true}" },
+                new() { RoleCode = RoleConstants.Warehouse, RoleName = "Thủ kho", PermissionsJson = "{\"manage_inventory\": true, \"manage_grns\": true}" },
+                new() { RoleCode = RoleConstants.Leader, RoleName = "Tổ trưởng / Quản đốc Sản xuất", PermissionsJson = "{\"manage_routing\": true, \"view_kanban\": true}" },
+                new() { RoleCode = RoleConstants.Qc, RoleName = "Kiểm tra Chất lượng (KCS/QC)", PermissionsJson = "{\"manage_qc\": true, \"log_defects\": true}" }
             };
 
             await context.Roles.AddRangeAsync(roles);
@@ -46,7 +46,7 @@ public static class DbInitializer
                 Username = "admin",
                 Email = "admin@wmms.local",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
-                FullName = "System Administrator",
+                FullName = "Quản trị viên Hệ thống",
                 Phone = "0901234567",
                 Status = UserStatusEnum.ACTIVE,
                 CreatedAt = now,
@@ -104,9 +104,9 @@ public static class DbInitializer
             if (!await context.AuditLogs.AnyAsync())
             {
                 await context.AuditLogs.AddRangeAsync(
-                    new AuditLog { UserId = seedAdmin.UserId, ActionType = "AUTH_LOGIN_SUCCESS", EntityName = "User", EntityId = seedAdmin.UserId.ToString(), Reason = "Seed data", CreatedAt = now },
-                    new AuditLog { UserId = seedAdmin.UserId, ActionType = "USER_CREATED", EntityName = "User", EntityId = seedOwner.UserId.ToString(), Reason = "Seed data", CreatedAt = now },
-                    new AuditLog { UserId = seedOwner.UserId, ActionType = "AUTH_LOGIN_SUCCESS", EntityName = "User", EntityId = seedOwner.UserId.ToString(), Reason = "Seed data", CreatedAt = now });
+                    new AuditLog { UserId = seedAdmin.UserId, ActionType = "AUTH_LOGIN_SUCCESS", EntityName = "User", EntityId = seedAdmin.UserId.ToString(), Reason = "Khởi tạo dữ liệu hệ thống", CreatedAt = now },
+                    new AuditLog { UserId = seedAdmin.UserId, ActionType = "USER_CREATED", EntityName = "User", EntityId = seedOwner.UserId.ToString(), Reason = "Khởi tạo dữ liệu hệ thống", CreatedAt = now },
+                    new AuditLog { UserId = seedOwner.UserId, ActionType = "AUTH_LOGIN_SUCCESS", EntityName = "User", EntityId = seedOwner.UserId.ToString(), Reason = "Khởi tạo dữ liệu hệ thống", CreatedAt = now });
                 await context.SaveChangesAsync();
             }
         }
@@ -172,7 +172,7 @@ public static class DbInitializer
                     ConfigKey = SystemConfigKeys.DefaultScrapMin,
                     ConfigValue = "3.00",
                     DataType = "DECIMAL",
-                    Description = "Minimum default scrap allowance percentage (3%)",
+                    Description = "Tỷ lệ hao hụt tự nhiên mặc định tối thiểu (3%)",
                     UpdatedAt = now
                 },
                 new()
@@ -180,7 +180,7 @@ public static class DbInitializer
                     ConfigKey = SystemConfigKeys.DefaultScrapMax,
                     ConfigValue = "5.00",
                     DataType = "DECIMAL",
-                    Description = "Maximum default scrap allowance percentage (5%)",
+                    Description = "Tỷ lệ hao hụt tự nhiên mặc định tối đa (5%)",
                     UpdatedAt = now
                 },
                 new()
@@ -188,7 +188,7 @@ public static class DbInitializer
                     ConfigKey = SystemConfigKeys.EtdWarningDays,
                     ConfigValue = "7",
                     DataType = "INT",
-                    Description = "Advance warning threshold in days before Order ETD",
+                    Description = "Ngưỡng cảnh báo trước số ngày so với hạn giao hàng ETD (7 ngày)",
                     UpdatedAt = now
                 }
             };
@@ -251,11 +251,11 @@ public static class DbInitializer
                 {
                     ProductSku = "CHAIR-DINING-OAK-01",
                     ProductName = "Ghế ăn tựa nan gỗ sồi Bắc Mỹ",
-                    CategoryName = "CHAIR",
+                    CategoryName = "Ghế ăn",
                     DimensionsCm = "45 x 52 x 88 cm",
-                    WoodSpecies = "White Oak",
-                    FinishColor = "Natural Walnut",
-                    PackingSpec = "2 pcs / Master Carton",
+                    WoodSpecies = "Gỗ sồi trắng Bắc Mỹ",
+                    FinishColor = "Màu gỗ óc chó tự nhiên",
+                    PackingSpec = "2 chiếc / Thùng Master",
                     CbmPerUnit = 0.1200m,
                     ImageUrl = "/images/products/chair-oak-01.jpg",
                     CadDrawingUrl = "/drawings/cad/chair-oak-01.dwg",
@@ -267,11 +267,11 @@ public static class DbInitializer
                 {
                     ProductSku = "TABLE-DINING-EXT-02",
                     ProductName = "Bàn ăn thông minh kéo dài gỗ sồi",
-                    CategoryName = "TABLE",
+                    CategoryName = "Bàn ăn",
                     DimensionsCm = "160/210 x 90 x 75 cm",
-                    WoodSpecies = "White Oak",
-                    FinishColor = "Smoked Oak",
-                    PackingSpec = "1 pc / 2 Cartons",
+                    WoodSpecies = "Gỗ sồi trắng Bắc Mỹ",
+                    FinishColor = "Màu gỗ sồi khói",
+                    PackingSpec = "1 chiếc / 2 Thùng carton",
                     CbmPerUnit = 0.3500m,
                     ImageUrl = "/images/products/table-ext-02.jpg",
                     CadDrawingUrl = "/drawings/cad/table-ext-02.dwg",
@@ -283,11 +283,11 @@ public static class DbInitializer
                 {
                     ProductSku = "CABINET-SIDEBOARD-03",
                     ProductName = "Tủ sideboard 3 cánh 2 hộc kéo",
-                    CategoryName = "CABINET",
+                    CategoryName = "Tủ trang trí",
                     DimensionsCm = "150 x 42 x 82 cm",
-                    WoodSpecies = "Rubber Wood + Oak Veneer",
-                    FinishColor = "Warm Chestnut",
-                    PackingSpec = "1 pc / Carton kèm xốp",
+                    WoodSpecies = "Gỗ cao su + Veneer sồi",
+                    FinishColor = "Màu hạt dẻ ấm",
+                    PackingSpec = "1 chiếc / Thùng kèm xốp bảo vệ",
                     CbmPerUnit = 0.5800m,
                     ImageUrl = "/images/products/sideboard-03.jpg",
                     CadDrawingUrl = "/drawings/cad/sideboard-03.dwg",
@@ -299,11 +299,11 @@ public static class DbInitializer
                 {
                     ProductSku = "DESK-WORK-MODERN-04",
                     ProductName = "Bàn làm việc tối giản chân tiện gỗ tần bì",
-                    CategoryName = "DESK",
+                    CategoryName = "Bàn làm việc",
                     DimensionsCm = "120 x 60 x 75 cm",
-                    WoodSpecies = "Ash Wood",
-                    FinishColor = "Natural Oak",
-                    PackingSpec = "1 pc / Carton Flat-pack",
+                    WoodSpecies = "Gỗ tần bì nhập khẩu",
+                    FinishColor = "Màu gỗ sồi tự nhiên",
+                    PackingSpec = "1 chiếc / Thùng lắp ráp phẳng (Flat-pack)",
                     CbmPerUnit = 0.2200m,
                     ImageUrl = "/images/products/desk-modern-04.jpg",
                     CadDrawingUrl = "/drawings/cad/desk-modern-04.dwg",
@@ -357,11 +357,11 @@ public static class DbInitializer
                 if (!await context.Customers.AnyAsync())
                 {
                     await context.Customers.AddRangeAsync(
-                        new Customer { CustomerCode = "CUST-ASHLEY-US", CompanyName = "Ashley Furniture HomeStore", Country = "USA", ContactPerson = "Michael Vance (Sourcing Director)", Email = "procurement@ashleyfurniture.com", CreatedAt = now, UpdatedAt = now },
-                        new Customer { CustomerCode = "CUST-IKEA-SE", CompanyName = "IKEA Supply AG (Global Furniture)", Country = "Sweden", ContactPerson = "Johan Lindqvist (Category Manager)", Email = "orders.apac@ikea.com", CreatedAt = now, UpdatedAt = now },
-                        new Customer { CustomerCode = "CUST-NITORI-JP", CompanyName = "Nitori Co., Ltd (Furniture Division)", Country = "Japan", ContactPerson = "Kenji Takahashi (Quality Supervisor)", Email = "import@nitori.co.jp", CreatedAt = now, UpdatedAt = now },
-                        new Customer { CustomerCode = "CUST-WAYFAIR-US", CompanyName = "Wayfair E-Commerce Home Goods", Country = "USA", ContactPerson = "Sarah Jenkins (Supply Chain Lead)", Email = "vendor@wayfair.com", CreatedAt = now, UpdatedAt = now },
-                        new Customer { CustomerCode = "CUST-HOAPHAT-VN", CompanyName = "Tập đoàn Nội Thất Hòa Phát", Country = "Vietnam", ContactPerson = "Nguyễn Văn Tuấn (Trưởng ban Cung ứng)", Email = "cungung@hoaphatfurniture.vn", CreatedAt = now, UpdatedAt = now }
+                        new Customer { CustomerCode = "CUST-ASHLEY-US", CompanyName = "Ashley Furniture HomeStore", Country = "Hoa Kỳ", ContactPerson = "Michael Vance (Giám đốc Thu mua)", Email = "procurement@ashleyfurniture.com", CreatedAt = now, UpdatedAt = now },
+                        new Customer { CustomerCode = "CUST-IKEA-SE", CompanyName = "IKEA Supply AG (Tập đoàn Nội thất Toàn cầu)", Country = "Thụy Điển", ContactPerson = "Johan Lindqvist (Quản lý Ngành hàng)", Email = "orders.apac@ikea.com", CreatedAt = now, UpdatedAt = now },
+                        new Customer { CustomerCode = "CUST-NITORI-JP", CompanyName = "Nitori Co., Ltd (Khối Nội thất)", Country = "Nhật Bản", ContactPerson = "Kenji Takahashi (Giám sát Chất lượng)", Email = "import@nitori.co.jp", CreatedAt = now, UpdatedAt = now },
+                        new Customer { CustomerCode = "CUST-WAYFAIR-US", CompanyName = "Wayfair E-Commerce Home Goods", Country = "Hoa Kỳ", ContactPerson = "Sarah Jenkins (Trưởng nhóm Chuỗi cung ứng)", Email = "vendor@wayfair.com", CreatedAt = now, UpdatedAt = now },
+                        new Customer { CustomerCode = "CUST-HOAPHAT-VN", CompanyName = "Tập đoàn Nội Thất Hòa Phát", Country = "Việt Nam", ContactPerson = "Nguyễn Văn Tuấn (Trưởng ban Cung ứng)", Email = "cungung@hoaphatfurniture.vn", CreatedAt = now, UpdatedAt = now }
                     );
                     await context.SaveChangesAsync();
                 }

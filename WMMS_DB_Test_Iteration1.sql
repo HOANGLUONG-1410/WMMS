@@ -714,14 +714,14 @@ GO
 SET IDENTITY_INSERT [roles] ON;
 INSERT INTO [roles] ([role_id], [role_code], [role_name], [permissions_json], [description])
 VALUES
-(1, N'ADMIN', N'System Administrator', N'{"all": true}', N'Toàn quyền quản trị hệ thống, người dùng, cấu hình và audit log'),
-(2, N'OWNER', N'Factory Owner / Executive', N'{"view_all": true, "approve_orders": true, "view_dashboard": true}', N'Ban giám đốc xưởng mộc, duyệt đơn hàng và theo dõi chỉ số tổng quan'),
-(3, N'SALES', N'Sales Staff', N'{"manage_orders": true, "view_customers": true, "import_orders": true}', N'Nhân viên kinh doanh tiếp nhận đơn hàng, import đơn staging và quản lý khách hàng'),
-(4, N'PLANNER', N'Production Planner', N'{"manage_boms": true, "approve_boms": true, "manage_routing": true, "manage_mrp": true}', N'Kỹ sư lập kế hoạch kỹ thuật, thiết lập định mức BOM, cấu hình routing và chạy MRP'),
-(5, N'PURCHASING', N'Purchasing Officer', N'{"manage_pos": true, "manage_suppliers": true, "manage_prs": true}', N'Cán bộ vật tư thu mua, theo dõi nhà cung cấp và tiến độ đơn mua PO'),
-(6, N'WAREHOUSE', N'Warehouse Keeper', N'{"manage_inventory": true, "stock_ledger": true, "manage_grns": true}', N'Thủ kho, kiểm soát tồn kho 3 cấp, nhập kho GRN và cấp phát vật tư'),
-(7, N'LEADER', N'Production Team Leader', N'{"view_routing": true, "view_kanban": true, "shopfloor_exec": true}', N'Quản đốc tổ trưởng sản xuất, giám sát tiến độ công đoạn gia công mộc'),
-(8, N'QC', N'Quality Control Inspector', N'{"manage_qc": true, "log_defects": true, "inspect_gates": true}', N'Kiểm soát viên chất lượng tại các trạm kiểm tra và nghiệm thu thành phẩm');
+(1, N'ADMIN', N'Quản trị viên Hệ thống', N'{"all": true}', N'Toàn quyền quản trị hệ thống, người dùng, cấu hình và audit log'),
+(2, N'OWNER', N'Chủ xưởng / Ban giám đốc', N'{"view_all": true, "approve_orders": true, "view_dashboard": true}', N'Ban giám đốc xưởng mộc, duyệt đơn hàng và theo dõi chỉ số tổng quan'),
+(3, N'SALES', N'Nhân viên Kinh doanh', N'{"manage_orders": true, "view_customers": true, "import_orders": true}', N'Nhân viên kinh doanh tiếp nhận đơn hàng, import đơn staging và quản lý khách hàng'),
+(4, N'PLANNER', N'Kỹ sư Kế hoạch / Kỹ thuật BOM', N'{"manage_boms": true, "approve_boms": true, "manage_routing": true, "manage_mrp": true}', N'Kỹ sư lập kế hoạch kỹ thuật, thiết lập định mức BOM, cấu hình routing và chạy MRP'),
+(5, N'PURCHASING', N'Chuyên viên Thu mua', N'{"manage_pos": true, "manage_suppliers": true, "manage_prs": true}', N'Cán bộ vật tư thu mua, theo dõi nhà cung cấp và tiến độ đơn mua PO'),
+(6, N'WAREHOUSE', N'Thủ kho', N'{"manage_inventory": true, "stock_ledger": true, "manage_grns": true}', N'Thủ kho, kiểm soát tồn kho 3 cấp, nhập kho GRN và cấp phát vật tư'),
+(7, N'LEADER', N'Tổ trưởng / Quản đốc Sản xuất', N'{"view_routing": true, "view_kanban": true, "shopfloor_exec": true}', N'Quản đốc tổ trưởng sản xuất, giám sát tiến độ công đoạn gia công mộc'),
+(8, N'QC', N'Kiểm tra Chất lượng (KCS/QC)', N'{"manage_qc": true, "log_defects": true, "inspect_gates": true}', N'Kiểm soát viên chất lượng tại các trạm kiểm tra và nghiệm thu thành phẩm');
 SET IDENTITY_INSERT [roles] OFF;
 GO
 
@@ -791,11 +791,11 @@ GO
 SET IDENTITY_INSERT [customers] ON;
 INSERT INTO [customers] ([customer_id], [customer_code], [company_name], [contact_person], [email], [country], [created_at], [updated_at])
 VALUES
-(1, N'CUST-ASHLEY-US', N'Ashley Furniture HomeStore', N'Michael Vance (Sourcing Director)', N'procurement@ashleyfurniture.com', N'USA', GETUTCDATE(), GETUTCDATE()),
-(2, N'CUST-IKEA-SE', N'IKEA Supply AG (Global Furniture)', N'Johan Lindqvist (Category Manager)', N'orders.apac@ikea.com', N'Sweden', GETUTCDATE(), GETUTCDATE()),
-(3, N'CUST-NITORI-JP', N'Nitori Co., Ltd (Furniture Division)', N'Kenji Takahashi (Quality Supervisor)', N'import@nitori.co.jp', N'Japan', GETUTCDATE(), GETUTCDATE()),
-(4, N'CUST-WAYFAIR-US', N'Wayfair E-Commerce Home Goods', N'Sarah Jenkins (Supply Chain Lead)', N'vendor@wayfair.com', N'USA', GETUTCDATE(), GETUTCDATE()),
-(5, N'CUST-HOAPHAT-VN', N'Tập đoàn Nội Thất Hòa Phát', N'Nguyễn Văn Tuấn (Trưởng ban Cung ứng)', N'cungung@hoaphatfurniture.vn', N'Vietnam', GETUTCDATE(), GETUTCDATE());
+(1, N'CUST-ASHLEY-US', N'Ashley Furniture HomeStore', N'Michael Vance (Giám đốc Thu mua)', N'procurement@ashleyfurniture.com', N'Hoa Kỳ', GETUTCDATE(), GETUTCDATE()),
+(2, N'CUST-IKEA-SE', N'IKEA Supply AG (Global Furniture)', N'Johan Lindqvist (Quản lý Ngành hàng)', N'orders.apac@ikea.com', N'Thụy Điển', GETUTCDATE(), GETUTCDATE()),
+(3, N'CUST-NITORI-JP', N'Nitori Co., Ltd (Furniture Division)', N'Kenji Takahashi (Giám sát Chất lượng)', N'import@nitori.co.jp', N'Nhật Bản', GETUTCDATE(), GETUTCDATE()),
+(4, N'CUST-WAYFAIR-US', N'Wayfair E-Commerce Home Goods', N'Sarah Jenkins (Trưởng nhóm Chuỗi cung ứng)', N'vendor@wayfair.com', N'Hoa Kỳ', GETUTCDATE(), GETUTCDATE()),
+(5, N'CUST-HOAPHAT-VN', N'Tập đoàn Nội Thất Hòa Phát', N'Nguyễn Văn Tuấn (Trưởng ban Cung ứng)', N'cungung@hoaphatfurniture.vn', N'Việt Nam', GETUTCDATE(), GETUTCDATE());
 SET IDENTITY_INSERT [customers] OFF;
 GO
 
@@ -841,10 +841,10 @@ GO
 SET IDENTITY_INSERT [products] ON;
 INSERT INTO [products] ([product_id], [product_sku], [product_name], [category_name], [dimensions_cm], [wood_species], [finish_color], [packing_spec], [cbm_per_unit], [image_url], [cad_drawing_url], [status], [created_at], [updated_at])
 VALUES
-(1, N'CHAIR-DINING-OAK-01', N'Ghế ăn tựa nan gỗ sồi Bắc Mỹ', N'CHAIR', N'45 x 52 x 88 cm', N'White Oak', N'Natural Walnut', N'2 pcs / Master Carton', 0.1200, N'/images/products/chair-oak-01.jpg', N'/drawings/cad/chair-oak-01.dwg', N'ACTIVE', GETUTCDATE(), GETUTCDATE()),
-(2, N'TABLE-DINING-EXT-02', N'Bàn ăn thông minh kéo dài gỗ sồi', N'TABLE', N'160/210 x 90 x 75 cm', N'White Oak', N'Smoked Oak', N'1 pc / 2 Cartons', 0.3500, N'/images/products/table-ext-02.jpg', N'/drawings/cad/table-ext-02.dwg', N'ACTIVE', GETUTCDATE(), GETUTCDATE()),
-(3, N'CABINET-SIDEBOARD-03', N'Tủ sideboard 3 cánh 2 hộc kéo', N'CABINET', N'150 x 42 x 82 cm', N'Rubber Wood + Oak Veneer', N'Warm Chestnut', N'1 pc / Carton kèm xốp', 0.5800, N'/images/products/sideboard-03.jpg', N'/drawings/cad/sideboard-03.dwg', N'ACTIVE', GETUTCDATE(), GETUTCDATE()),
-(4, N'DESK-WORK-MODERN-04', N'Bàn làm việc tối giản chân tiện gỗ tần bì', N'DESK', N'120 x 60 x 75 cm', N'Ash Wood', N'Natural Oak', N'1 pc / Carton Flat-pack', 0.2200, N'/images/products/desk-modern-04.jpg', N'/drawings/cad/desk-modern-04.dwg', N'ACTIVE', GETUTCDATE(), GETUTCDATE());
+(1, N'CHAIR-DINING-OAK-01', N'Ghế ăn tựa nan gỗ sồi Bắc Mỹ', N'Ghế ăn', N'45 x 52 x 88 cm', N'Gỗ sồi trắng Bắc Mỹ', N'Màu gỗ óc chó tự nhiên', N'2 chiếc / Thùng Master', 0.1200, N'/images/products/chair-oak-01.jpg', N'/drawings/cad/chair-oak-01.dwg', N'ACTIVE', GETUTCDATE(), GETUTCDATE()),
+(2, N'TABLE-DINING-EXT-02', N'Bàn ăn thông minh kéo dài gỗ sồi', N'Bàn ăn', N'160/210 x 90 x 75 cm', N'Gỗ sồi trắng Bắc Mỹ', N'Màu gỗ sồi khói', N'1 chiếc / 2 Thùng carton', 0.3500, N'/images/products/table-ext-02.jpg', N'/drawings/cad/table-ext-02.dwg', N'ACTIVE', GETUTCDATE(), GETUTCDATE()),
+(3, N'CABINET-SIDEBOARD-03', N'Tủ sideboard 3 cánh 2 hộc kéo', N'Tủ trang trí', N'150 x 42 x 82 cm', N'Gỗ cao su + Veneer sồi', N'Màu hạt dẻ ấm', N'1 chiếc / Thùng kèm xốp bảo vệ', 0.5800, N'/images/products/sideboard-03.jpg', N'/drawings/cad/sideboard-03.dwg', N'ACTIVE', GETUTCDATE(), GETUTCDATE()),
+(4, N'DESK-WORK-MODERN-04', N'Bàn làm việc tối giản chân tiện gỗ tần bì', N'Bàn làm việc', N'120 x 60 x 75 cm', N'Gỗ tần bì nhập khẩu', N'Màu gỗ sồi tự nhiên', N'1 chiếc / Thùng lắp ráp phẳng (Flat-pack)', 0.2200, N'/images/products/desk-modern-04.jpg', N'/drawings/cad/desk-modern-04.dwg', N'ACTIVE', GETUTCDATE(), GETUTCDATE());
 SET IDENTITY_INSERT [products] OFF;
 GO
 
