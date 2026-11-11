@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AutoMapper;
 using WMMS.Application.DTOs.BomRouting;
+using WMMS.Application.DTOs.KanbanQc;
 using WMMS.Application.Interfaces.External;
 using WMMS.Application.Interfaces.Repositories;
 using WMMS.Application.Interfaces.Services;
@@ -822,6 +823,122 @@ public class BomRoutingService : IBomRoutingService
         if (lower.Contains("sơn") || lower.Contains("pu") || lower.Contains("màu")) return "WC-05-PAINT";
         if (lower.Contains("đóng gói") || lower.Contains("tem")) return "WC-06-PACK";
         return $"WC-0{Math.Clamp(seq, 1, 9)}";
+    }
+
+    public List<StandardWorkstationDto> GetStandardWorkstations()
+    {
+        return new List<StandardWorkstationDto>
+        {
+            new()
+            {
+                WorkstationCode = "WC-01-SAW",
+                WorkstationName = "Trạm Pha phôi & Xẻ gỗ thô (Rough Mill)",
+                DefaultStageSequence = 1,
+                StandardCapacityPerHour = 120,
+                Description = "Máy cưa bàn trượt, máy cưa nhiều lưỡi định hình phôi gỗ xẻ thanh và ván công nghiệp MDF/Plywood."
+            },
+            new()
+            {
+                WorkstationCode = "WC-02-SAND",
+                WorkstationName = "Trạm Bào 4 mặt & Chà nhám phẳng mịn (Planing & Sanding)",
+                DefaultStageSequence = 3,
+                StandardCapacityPerHour = 100,
+                Description = "Máy bào 4 mặt cao tốc, máy chà nhám thùng tạo độ phẳng mịn bề mặt đạt độ nhám Ra <= 3.2µm."
+            },
+            new()
+            {
+                WorkstationCode = "WC-03-CNC",
+                WorkstationName = "Trạm Khoan chốt & Phay mộng âm dương CNC (CNC Tenoning & Boring)",
+                DefaultStageSequence = 4,
+                StandardCapacityPerHour = 80,
+                Description = "Gia công liên kết chốt gỗ, khoan lỗ cam chốt, phay mộng âm dương chính xác theo bản vẽ CAD."
+            },
+            new()
+            {
+                WorkstationCode = "WC-04-ASSY",
+                WorkstationName = "Trạm Lắp ráp kết cấu & Vào mộng dán keo ép vam (Assembly & Clamping)",
+                DefaultStageSequence = 5,
+                StandardCapacityPerHour = 60,
+                Description = "Lắp ráp khung bàn ghế, bơm keo dán mộng chuyên dụng và ép vam giữ lực cố định. Điểm dừng kỹ thuật (Hold Point) bắt buộc."
+            },
+            new()
+            {
+                WorkstationCode = "WC-05-PAINT",
+                WorkstationName = "Trạm Phun sơn lót PU & Sơn phủ hoàn thiện (Finishing & Painting)",
+                DefaultStageSequence = 6,
+                StandardCapacityPerHour = 75,
+                Description = "Phun sơn lót PU 2 thành phần, sấy khô và phủ bóng/mờ bảo vệ bề mặt chống trầy xước ẩm mốc."
+            },
+            new()
+            {
+                WorkstationCode = "WC-06-PACK",
+                WorkstationName = "Trạm KCS xuất xưởng & Đóng thùng Carton (KCS & Packing)",
+                DefaultStageSequence = 7,
+                StandardCapacityPerHour = 150,
+                Description = "Kiểm tra chất lượng xuất xưởng 100%, dán nhãn tem kiểm định KCS, bọc xốp màng PE và đóng thùng carton 5 lớp."
+            }
+        };
+    }
+
+    public List<StandardQualityGateDto> GetStandardQualityGates()
+    {
+        return new List<StandardQualityGateDto>
+        {
+            new()
+            {
+                QualityGateCode = "QC-GATE-01",
+                QualityGateName = "Cổng kiểm soát độ ẩm & Kích thước phôi (Rough Mill Gate)",
+                StageSequence = 1,
+                IsHoldPoint = false,
+                InspectionType = "In-Process Self-Check",
+                InspectionCriteria = "Độ ẩm gỗ tự nhiên < 12%, kích thước phôi sai lệch chiều dài/dày không quá ±1.0mm."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-02",
+                QualityGateName = "Cổng kiểm soát độ nhẵn & Độ phẳng bề mặt (Sanding Gate)",
+                StageSequence = 3,
+                IsHoldPoint = false,
+                InspectionType = "In-Process Self-Check",
+                InspectionCriteria = "Bề mặt gỗ phẳng đều, không vết lẹm dao bào, độ nhám Ra <= 3.2µm."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-03",
+                QualityGateName = "Cổng kiểm soát độ khít mộng & Tim lỗ khoan (CNC Joinery Gate)",
+                StageSequence = 4,
+                IsHoldPoint = false,
+                InspectionType = "In-Process Self-Check",
+                InspectionCriteria = "Mộng âm dương khít chặt (khe hở <= 0.2mm), tim lỗ cam chốt chuẩn xác theo bản vẽ CAD."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-04",
+                QualityGateName = "Cổng KCS bắt buộc Kết cấu khung & Mộng dán keo (Hold Point Assembly Gate)",
+                StageSequence = 5,
+                IsHoldPoint = true,
+                InspectionType = "100% Mandatory Gate (Hold Point)",
+                InspectionCriteria = "Độ vuông góc chéo sai lệch <= 1.0mm, keo ghép mộng ngấu 100%, kết cấu chịu lực đạt chuẩn trước khi chuyển sang sơn."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-05",
+                QualityGateName = "Cổng kiểm soát màng sơn & Màu sắc hoàn thiện (Finish Coating Gate)",
+                StageSequence = 6,
+                IsHoldPoint = false,
+                InspectionType = "In-Process Self-Check",
+                InspectionCriteria = "Màng sơn phủ bóng đều màu, không da cam, không bọt khí rộp, độ bám dính đạt cấp 1."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-06",
+                QualityGateName = "Cổng KCS xuất xưởng & Đóng gói hoàn thiện (Final QC Gate)",
+                StageSequence = 7,
+                IsHoldPoint = false,
+                InspectionType = "100% Mandatory Gate",
+                InspectionCriteria = "Kiểm tra ngoại quan 100% không trầy xước, đầy đủ tem mác barcode, phụ kiện ốc vít kèm theo và đóng thùng đạt chuẩn."
+            }
+        };
     }
 
     private static List<RoutingStageDto> GetStandardWoodworkingStages()

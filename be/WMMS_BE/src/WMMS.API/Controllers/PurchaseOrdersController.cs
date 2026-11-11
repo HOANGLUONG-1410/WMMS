@@ -121,4 +121,43 @@ public class PurchaseOrdersController : MasterDataControllerBase
 
         return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Delivery schedule of PO {result.PoCode} updated (UC-53)."));
     }
+
+    /// <summary>SC-16: Cập nhật điều khoản thanh toán &amp; tiến độ giao nhận cho PO.</summary>
+    [HttpPut("{id:long}/terms")]
+    [Authorize(Roles = WriteRoles)]
+    [ProducesResponseType(typeof(ApiResponse<PurchaseOrderDetailDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateTermsAsync(
+        [FromRoute] long id,
+        [FromBody] UpdatePoTermsDto request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Terms))
+        {
+            return BadRequest(ApiResponse<object>.Fail("Điều khoản thanh toán & giao hàng không được để trống."));
+        }
+
+        var result = await _purchaseOrderService.UpdateTermsAsync(
+            id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
+
+        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Cập nhật điều khoản hợp đồng/thanh toán của PO {result.PoCode} thành công (SC-16)."));
+    }
+
+    /// <summary>SC-16: Cập nhật trạng thái vòng đời của PO (ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED).</summary>
+    [HttpPut("{id:long}/status")]
+    [Authorize(Roles = WriteRoles)]
+    [ProducesResponseType(typeof(ApiResponse<PurchaseOrderDetailDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStatusAsync(
+        [FromRoute] long id,
+        [FromBody] UpdatePoStatusDto request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _purchaseOrderService.UpdateStatusAsync(
+            id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
+
+        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Trạng thái của PO {result.PoCode} đã chuyển sang {result.PoStatus} (SC-16)."));
+    }
 }

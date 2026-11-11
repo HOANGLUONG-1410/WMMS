@@ -56,4 +56,16 @@ public interface INotificationHubService
         int allocatedOrderCount,
         IReadOnlyList<string> readyOrderPoNumbers,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Phát thông báo real-time khi Quản đốc / Line Leader phát hành Lệnh sản xuất &amp; Tách lô Kanban (SC-19, UC-62).
+    /// </summary>
+    Task NotifyProductionOrderReleasedAsync(
+        long orderItemId,
+        string poNumber,
+        string productSku,
+        int totalBatches,
+        int totalQty,
+        bool isOverdriver,
+        CancellationToken cancellationToken = default);
 }
