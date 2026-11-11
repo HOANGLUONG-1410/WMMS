@@ -122,6 +122,10 @@ public static class AuditActionConstants
     public const string QcInspectionRecorded = "QC_INSPECTION_RECORDED";
     public const string KanbanSubBatchSpawned = "KANBAN_SUB_BATCH_SPAWNED";
     public const string HoldPointOverdriveApproved = "HOLD_POINT_OVERDRIVE_APPROVED";
+    public const string HoldPointOverdriveRequested = "HOLD_POINT_OVERDRIVE_REQUESTED";
+    public const string HoldPointOverdriveRejected = "HOLD_POINT_OVERDRIVE_REJECTED";
+    public const string HoldPointBlocked = "HOLD_POINT_BLOCKED";
+    public const string KanbanStageAdvanced = "KANBAN_STAGE_ADVANCED";
 }
 
 public static class DefectCodeConstants
