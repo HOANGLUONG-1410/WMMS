@@ -116,6 +116,7 @@ public static class AuditActionConstants
     public const string CommitGrn = "COMMIT_GRN";
 
     // Phân hệ 8: Production Kanban, 97-3 Branching & QC Gate (KBN - QT-05, QT-06, SC-18..SC-20)
+    public const string ProductionOrderReleased = "PRODUCTION_ORDER_RELEASED";
     public const string KanbanBatchGenerated = "KANBAN_BATCH_GENERATED";
     public const string KanbanGoodsIssuedUnlocked = "KANBAN_GOODS_ISSUED_UNLOCKED";
     public const string KanbanStepUpdated = "KANBAN_STEP_UPDATED";

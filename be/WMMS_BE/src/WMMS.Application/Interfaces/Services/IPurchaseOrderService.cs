@@ -37,4 +37,20 @@ public interface IPurchaseOrderService
         long purchasingUserId,
         string? ipAddress,
         CancellationToken cancellationToken = default);
+
+    /// <summary>SC-16: Cập nhật điều khoản thanh toán &amp; tiến độ giao nhận cho PO.</summary>
+    Task<PurchaseOrderDetailDto> UpdateTermsAsync(
+        long poId,
+        UpdatePoTermsDto request,
+        long purchasingUserId,
+        string? ipAddress,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>SC-16: Quản lý chuyển đổi trạng thái vòng đời của PO (ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED).</summary>
+    Task<PurchaseOrderDetailDto> UpdateStatusAsync(
+        long poId,
+        UpdatePoStatusDto request,
+        long purchasingUserId,
+        string? ipAddress,
+        CancellationToken cancellationToken = default);
 }

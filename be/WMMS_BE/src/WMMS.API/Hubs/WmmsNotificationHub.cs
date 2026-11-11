@@ -147,46 +147,27 @@ public class SignalRNotificationHubService : INotificationHubService
         await _hubContext.Clients.All.SendAsync("ReceiveNotification", payload, cancellationToken);
     }
 
-    public async Task NotifyHoldPointOverrideRequestedAsync(
-        string batchCode,
-        int holdPointStageSeq,
-        string requesterName,
-        string justification,
+    public async Task NotifyProductionOrderReleasedAsync(
+        long orderItemId,
+        string poNumber,
+        string productSku,
+        int totalBatches,
+        int totalQty,
+        bool isOverdriver,
         CancellationToken cancellationToken = default)
     {
         var payload = new
         {
-            EventType = "HOLD_POINT_OVERDRIVE_REQUESTED",
-            BatchCode = batchCode,
-            HoldPointStageSeq = holdPointStageSeq,
-            RequesterName = requesterName,
-            Justification = justification,
-            Message = $"[SC-20] Tổ trưởng {requesterName} vừa gửi yêu cầu ghi đè điểm dừng Hold Point cho lô {batchCode} (Công đoạn #{holdPointStageSeq}). Lý do: {justification}.",
-            TimestampUtc = DateTime.UtcNow
-        };
-
-        await _hubContext.Clients.Groups(new[] { "OWNER", "ADMIN", "PLANNER" })
-            .SendAsync("ReceiveNotification", payload, cancellationToken);
-    }
-
-    public async Task NotifyHoldPointOverrideDecidedAsync(
-        string batchCode,
-        int holdPointStageSeq,
-        bool isApproved,
-        string approverName,
-        string justification,
-        CancellationToken cancellationToken = default)
-    {
-        var actionText = isApproved ? "PHÊ DUYỆT" : "TỪ CHỐI";
-        var payload = new
-        {
-            EventType = isApproved ? "HOLD_POINT_OVERDRIVE_APPROVED" : "HOLD_POINT_OVERDRIVE_REJECTED",
-            BatchCode = batchCode,
-            HoldPointStageSeq = holdPointStageSeq,
-            IsApproved = isApproved,
-            ApproverName = approverName,
-            Justification = justification,
-            Message = $"[SC-20] Yêu cầu ghi đè điểm dừng Hold Point lô {batchCode} (Công đoạn #{holdPointStageSeq}) đã được Chủ xưởng {approverName} {actionText}. Ghi chú: {justification}.",
+            EventType = "PRODUCTION_ORDER_RELEASED",
+            OrderItemId = orderItemId,
+            PoNumber = poNumber,
+            ProductSku = productSku,
+            TotalBatches = totalBatches,
+            TotalQty = totalQty,
+            IsOverdriver = isOverdriver,
+            Message = isOverdriver
+                ? $"[SC-19] Lệnh sản xuất PO {poNumber} (SKU: {productSku}) đã được phát hành với {totalBatches} lô ({totalQty} SP) ở chế độ Overdrive. Thẻ lô được phép thực hiện công đoạn sơ chế phôi trước điểm dừng Hold Point."
+                : $"[SC-19] Lệnh sản xuất PO {poNumber} (SKU: {productSku}) đã phát hành {totalBatches} thẻ lô Kanban ({totalQty} SP) thành công lên bảng điều độ phân xưởng.",
             TimestampUtc = DateTime.UtcNow
         };
 
