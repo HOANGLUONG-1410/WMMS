@@ -46,28 +46,35 @@ public class ProductionOrderService : IProductionOrderService
         _notificationHubService = notificationHubService;
     }
 
+    // =========================================================================
+    // [SC-19 CORE]: PHÂN ĐOẠN 1 - THUẬT TOÁN TÁCH LÔ & PHÁT HÀNH LỆNH SẢN XUẤT (UC-62, BR-005)
+    // Tách đơn hàng thành các thẻ Kanban Lots theo công suất trạm máy hoặc số lượng tùy chỉnh.
+    // Kiểm tra chốt chặn 100% vật tư đầu vào (BR-008) hoặc kích hoạt cơ chế chạy trước Overdrive (QT-06, KBN02).
+    // =========================================================================
     public async Task<ProductionOrderSummaryDto> GenerateProductionOrderAndSplitLotsAsync(
         GenerateBatchesRequestDto request,
         long currentUserId,
         CancellationToken cancellationToken = default)
     {
+        // [SC-19 CORE]: Bước 0 - Tải đồ thị dữ liệu dòng đơn hàng kèm thông tin MRP, BOM và vật tư
         var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(request.OrderItemId, cancellationToken);
         if (orderItem == null)
         {
-            throw new NotFoundException($"OrderItem with ID {request.OrderItemId} was not found.");
+            throw new NotFoundException($"Không tìm thấy dòng sản phẩm đơn hàng với ID #{request.OrderItemId}.");
         }
 
         var product = orderItem.Product;
         if (product == null)
         {
-            throw new DomainException($"Product for OrderItem #{request.OrderItemId} is missing.", "PRODUCT_NOT_FOUND");
+            throw new DomainException($"Không tìm thấy thông tin sản phẩm cho dòng đơn hàng #{request.OrderItemId}.", "PRODUCT_NOT_FOUND");
         }
 
         var customerOrder = orderItem.CustomerOrder;
         var poNumber = customerOrder?.PoNumber ?? $"PO-{orderItem.OrderId}";
         var spaceKey = customerOrder?.OrderSpace?.SpaceKey ?? $"SPACE-PO-{orderItem.OrderId}";
 
-        // 1. Kiểm tra điều kiện tiên quyết về BOM (PRE-1, BR-001)
+        // [SC-19 CORE]: Bước 1 - Kiểm tra điều kiện tiên quyết về BOM (PRE-1, BR-001)
+        // Lệnh sản xuất yêu cầu BOM phải được bóc tách và phê duyệt trước (READY_FOR_PRODUCTION / APPROVED)
         var bomHeader = orderItem.BomHeader;
         if (bomHeader == null)
         {
@@ -86,7 +93,8 @@ public class ProductionOrderService : IProductionOrderService
                 "BOM_NOT_APPROVED");
         }
 
-        // 2. Tính toán số lượng chưa phát hành (Remaining Unreleased Quantity)
+        // [SC-19 CORE]: Bước 2 - Tính toán số lượng tồn chưa phát hành (Remaining Unreleased Quantity)
+        // Đảm bảo không phát hành vượt quá tổng số lượng đã đặt của đơn hàng
         var existingBatches = await _batchRepository.GetByOrderItemIdAsync(request.OrderItemId, cancellationToken);
         int alreadyReleasedQty = existingBatches
             .Where(b => b.BatchType == BatchTypeEnum.MAIN_CARD)
@@ -100,7 +108,8 @@ public class ProductionOrderService : IProductionOrderService
                 "ALL_QTY_ALREADY_RELEASED");
         }
 
-        // 3. Thuật toán tách lô sản xuất thông minh (SC-19, BR-005)
+        // [SC-19 CORE]: Bước 3 - Thuật toán tách lô thông minh theo công suất trạm máy (BR-005, UC-62)
+        // Ưu tiên chia theo công suất trạm máy (stationCapacity, mặc định 100 SP/lô); nếu có cấu hình chia tùy chỉnh thì kiểm tra tổng số lượng
         List<int> splits;
         int stationCapacity = request.MaxBatchSize.GetValueOrDefault(100);
         if (stationCapacity <= 0) stationCapacity = 100;
@@ -128,7 +137,7 @@ public class ProductionOrderService : IProductionOrderService
             }
         }
 
-        // 4. Lấy quy trình công nghệ động (Dynamic Routing Stages & Hold Points)
+        // [SC-19 CORE]: Bước 4 - Lấy quy trình công nghệ động & Thiết lập điểm dừng kỹ thuật Hold Point (SC-18, SC-20)
         var routing = await _routingRepository.GetActiveRoutingByProductIdAsync(product.ProductId);
         var routingStages = (routing?.RoutingStages != null && routing.RoutingStages.Any())
             ? routing.RoutingStages.OrderBy(s => s.StageSequence).ToList()
@@ -137,7 +146,10 @@ public class ProductionOrderService : IProductionOrderService
         var holdPointStage = routingStages.FirstOrDefault(s => s.IsHoldPoint);
         int? holdPointSeq = holdPointStage?.StageSequence ?? (routingStages.Count >= 5 ? 5 : null);
 
-        // 5. Đánh giá trạng thái vật tư & cơ chế Overdrive (BR-008, QT-05, QT-06, KBN02)
+        // [BR-008 & QT-06]: Bước 5 - Đánh giá chốt chặn 100% vật tư đã xuất kho & Cơ chế Overdrive giải trình kỹ thuật
+        // - Đủ 100% vật tư đã xuất kho (ISSUED_TO_SHOP / RELEASED): thẻ lô sinh ra ở trạng thái IN_PROGRESS sẵn sàng gia công.
+        // - Chưa đủ vật tư nhưng có giải trình Overdrive: thẻ sinh ra IN_PROGRESS, được phép sơ chế trước điểm dừng Hold Point.
+        // - Chưa đủ vật tư và không Overdrive: thẻ lô bị KHÓA CỨNG (LOCKED - BR-008), chờ Thủ kho xuất vật tư mới mở khóa.
         bool isIssuedToShop = orderItem.MaterialAllocations.Any() &&
                               orderItem.MaterialAllocations.All(a =>
                                   a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP ||
@@ -175,7 +187,7 @@ public class ProductionOrderService : IProductionOrderService
             }
         }
 
-        // 6. Thực thi giao dịch nguyên tử phát hành thẻ lô Kanban
+        // [SC-19 CORE]: Bước 6 - Giao dịch nguyên tử (ACID Transaction) sinh các thẻ Kanban Lot & Danh sách công đoạn Routing Steps
         await _unitOfWork.BeginTransactionAsync();
         try
         {
@@ -467,6 +479,13 @@ public class ProductionOrderService : IProductionOrderService
         };
     }
 
+    // =========================================================================
+    // [SC-19 CORE & QT-05]: PHÂN ĐOẠN 2 - CƯỠNG CHẾ TUẦN TỰ (S -> S+1) & 100% QC PASS TRÊN KANBAN
+    // Cưỡng chế quy tắc:
+    // 1. Công đoạn hiện tại phải đạt 100% sản phẩm Pass (PassedQty >= BatchQty hoặc StepStatus == PASSED).
+    // 2. Chuyển tuần tự State Machine: Target = Current + 1; cấm nhảy cóc và cấm lùi bước.
+    // 3. Chốt chặn Hold Point Barrier: Lô Overdrive tiến tới Hold Point mà phụ kiện chưa xuất kho sẽ bị KHÓA CỨNG (HOLD_POINT_BLOCKED).
+    // =========================================================================
     /// <inheritdoc />
     public async Task<ProductionBatchDto> AdvanceStepAsync(
         long batchId,
@@ -477,7 +496,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.LOCKED)
@@ -565,7 +584,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Stage_{currentSeq}_IN_PROGRESS",
                     AfterState = $"Stage_{targetSeq}_HOLD_POINT_BLOCKED",
-                    Reason = $"Overdrive batch {batch.BatchCode} automatically locked at Critical Hold Point Stage {targetSeq} ({holdStep?.StageName}) awaiting auxiliary hardware issuance (QT-06, KBN02).",
+                    Reason = $"Thẻ lô Overdrive {batch.BatchCode} tự động bị khóa cứng tại chốt chặn Hold Point công đoạn {targetSeq} ({holdStep?.StageName}) do phụ kiện chưa xuất kho (QT-06, KBN02).",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -640,7 +659,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = $"Stage_{currentSeq}",
                 AfterState = targetSeq <= maxSeq ? $"Stage_{targetSeq}" : "DONE",
-                Reason = request.Notes ?? $"Advanced Kanban lot card {batch.BatchCode} from Stage {currentSeq} to {(targetSeq <= maxSeq ? $"Stage {targetSeq}" : "DONE")} with 100% QC Pass (QT-05).",
+                Reason = request.Notes ?? $"Chuyển bước thẻ Kanban {batch.BatchCode} từ công đoạn {currentSeq} sang {(targetSeq <= maxSeq ? $"công đoạn {targetSeq}" : "HOÀN TẤT (DONE)")} sau khi đạt 100% QC Pass (QT-05).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -656,6 +675,15 @@ public class ProductionOrderService : IProductionOrderService
         }
     }
 
+    // =========================================================================
+    // [KBN01 & QT-06]: PHÂN ĐOẠN 3 - KIỂM ĐỊNH QC 100% & THUẬT TOÁN TÁCH NHÁNH 97%-3%
+    // 1. Cưỡng chế quy tắc 100% kiểm định (InspectedQty == BatchQty).
+    // 2. Nếu đạt chuẩn 100% (FailQty == 0): Bước hoàn tất (PASSED).
+    // 3. Nếu phát sinh lỗi (FailQty > 0):
+    //    - Thẻ chính cập nhật BatchQty = PassQty và hoàn tất bước hiện tại.
+    //    - Đồng bộ TargetQty = PassQty cho tất cả các công đoạn sau của thẻ chính.
+    //    - Sinh thẻ nhánh phụ viền cam (REWORK_SUB_CARD) với BatchQty = FailQty để sửa chữa độc lập.
+    // =========================================================================
     /// <inheritdoc />
     public async Task<QcInspectionResultDto> RecordQcInspectionAsync(
         long batchId,
@@ -666,7 +694,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.DONE)
@@ -678,7 +706,7 @@ public class ProductionOrderService : IProductionOrderService
         var step = steps.FirstOrDefault(s => s.BatchStepId == request.BatchStepId);
         if (step == null)
         {
-            throw new NotFoundException($"Batch step with ID {request.BatchStepId} was not found.");
+            throw new NotFoundException($"Không tìm thấy công đoạn thực thi với ID #{request.BatchStepId}.");
         }
 
         // Quy tắc kiểm định 100% (BR-008): Phải kiểm tra đúng bằng số lượng hiện có của thẻ lô
@@ -730,7 +758,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Stage_{step.StageSequence}_IN_PROGRESS",
                     AfterState = $"Stage_{step.StageSequence}_100_PASS",
-                    Reason = $"100% QC Pass ({request.PassQty}/{request.InspectedQty} units) at {step.StageName} for card {batch.BatchCode} (BR-008).",
+                    Reason = $"Kiểm định KCS đạt chuẩn 100% ({request.PassQty}/{request.InspectedQty} SP) tại công đoạn {step.StageName} cho thẻ {batch.BatchCode} (BR-008).",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -826,7 +854,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = subBatch.BatchCode,
                     BeforeState = $"MainCard_{batch.BatchCode}_Qty_{request.InspectedQty}",
                     AfterState = $"MainCard_{request.PassQty}_SubCard_{subBatch.BatchCode}_{request.FailQty}",
-                    Reason = $"97%-3% Kanban branching executed at {step.StageName}. Main card reduced to {request.PassQty} units, spawned rework card {subBatch.BatchCode} for {request.FailQty} units (KBN01, QT-06).",
+                    Reason = $"Thực hiện tách nhánh 97%-3% (KBN01): Thẻ chính {batch.BatchCode} tiếp tục với {request.PassQty} SP, sinh thẻ nhánh phụ {subBatch.BatchCode} ({request.FailQty} SP) để sửa chữa.",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -855,6 +883,9 @@ public class ProductionOrderService : IProductionOrderService
         }
     }
 
+    // =========================================================================
+    // [SC-20 & UC-63]: PHÂN ĐOẠN 4 - LUỒNG NGOẠI LỆ OVERDRIVE: YÊU CẦU, PHÊ DUYỆT & MỞ KHÓA
+    // =========================================================================
     /// <inheritdoc />
     public async Task<OverdriveOperationResultDto> RequestOverdriveAsync(
         long batchId,
@@ -865,7 +896,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Justification))
@@ -898,7 +929,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = $"Status_{batch.BatchStatus}",
                 AfterState = $"Overdrive_Requested_HoldPoint_{holdPointSeq}",
-                Reason = $"Line Leader submitted Overdrive request for {batch.BatchCode}: '{request.Justification.Trim()}' (UC-63).",
+                Reason = $"Tổ trưởng sản xuất gửi yêu cầu kích hoạt Overdrive cho lô {batch.BatchCode}: '{request.Justification.Trim()}' (UC-63).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -932,7 +963,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         if (!request.Approved)
@@ -948,7 +979,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Status_{batch.BatchStatus}",
                     AfterState = "OVERDRIVE_REJECTED",
-                    Reason = request.Notes ?? $"Factory Owner rejected Overdrive request for {batch.BatchCode} (KBN02).",
+                    Reason = request.Notes ?? $"Chủ xưởng từ chối yêu cầu Overdrive của lô {batch.BatchCode} (KBN02).",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -996,7 +1027,7 @@ public class ProductionOrderService : IProductionOrderService
                 BatchId = batch.BatchId,
                 RequestedBy = currentUserId,
                 ApprovedBy = currentUserId,
-                Justification = request.Notes ?? "Approved by Factory Owner with technical Hold Point designation (KBN02).",
+                Justification = request.Notes ?? "Phê duyệt bởi Chủ xưởng kèm thiết lập điểm dừng kỹ thuật Hold Point (KBN02).",
                 HoldPointStageSeq = holdPointSeq,
                 ApprovedAt = DateTime.UtcNow
             };
@@ -1011,7 +1042,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = "LOCKED",
                 AfterState = $"OVERDRIVE_APPROVED_HOLD_POINT_{holdPointSeq}",
-                Reason = request.Notes ?? $"Factory Owner approved Overdrive execution for {batch.BatchCode} up to Hold Point {holdPointSeq} (KBN02, QT-06).",
+                Reason = request.Notes ?? $"Chủ xưởng phê duyệt kích hoạt Overdrive cho lô {batch.BatchCode} tới trạm dừng Hold Point {holdPointSeq} (KBN02, QT-06).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -1044,7 +1075,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         await _unitOfWork.BeginTransactionAsync();
@@ -1073,7 +1104,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = "HOLD_POINT_BLOCKED",
                 AfterState = "IN_PROGRESS",
-                Reason = $"Unlocked Hold Point barrier for lot {batch.BatchCode} following auxiliary hardware goods issue (SC-20).",
+                Reason = $"Mở khóa chốt chặn Hold Point cho thẻ lô {batch.BatchCode} sau khi Thủ kho bấm xuất kho phụ kiện bổ sung (SC-20).",
                 CreatedAt = DateTime.UtcNow
             });
 
