@@ -9,27 +9,27 @@ interface GeneratePoModalProps {
 
 const APPROVED_PR_VENDOR_GROUPS = [
   {
-    supplierName: "Hoang Thong Timber Ltd",
-    materialCategory: "Solid Lumber",
-    defaultItems: "7.40 m³ European White Ash + 20 Sheets Birch Plywood",
+    supplierName: "Công ty gỗ Hoàng Thông",
+    materialCategory: "Gỗ nguyên khối",
+    defaultItems: "7,40 m³ gỗ tần bì trắng châu Âu + 20 tấm ván ép Birch",
     defaultEta: "2026-10-30",
   },
   {
-    supplierName: "Viet Duc Fasteners Co",
-    materialCategory: "Hardware",
-    defaultItems: "300 Sets Heavy-Duty Steel Corner Brackets + 120 Sets Hinges",
+    supplierName: "Công ty phụ kiện Việt Đức",
+    materialCategory: "Phụ kiện",
+    defaultItems: "300 bộ ke góc thép chịu lực + 120 bộ bản lề",
     defaultEta: "2026-10-29",
   },
   {
-    supplierName: "Duy Tien Packaging Co",
-    materialCategory: "Export Boxes",
-    defaultItems: "600 Boxes Master Bed Frame Carton (5-Ply BC Flute)",
+    supplierName: "Công ty bao bì Duy Tiên",
+    materialCategory: "Thùng xuất khẩu",
+    defaultItems: "600 thùng carton khung giường (5 lớp, sóng BC)",
     defaultEta: "2026-10-31",
   },
   {
     supplierName: "Oseven Coatings VN",
-    materialCategory: "Finishing PU",
-    defaultItems: "150 Kg Two-Component PU Clear Matt Coating",
+    materialCategory: "Sơn PU hoàn thiện",
+    defaultItems: "150 kg sơn phủ PU 2 thành phần, trong suốt, mờ",
     defaultEta: "2026-10-28",
   },
 ];
@@ -69,7 +69,7 @@ export default function GeneratePoModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supplierName.trim() || !orderItemsSummary.trim() || !promisedEtaDate) {
-      setErrorMsg("Please fill in supplier, requisition items, and promised ETA date.");
+      setErrorMsg("Vui lòng nhập nhà cung cấp, hàng đặt và ngày giao cam kết (ETA).");
       return;
     }
 
@@ -78,11 +78,11 @@ export default function GeneratePoModal({
       materialCategory: materialCategory.trim(),
       orderItemsSummary: orderItemsSummary.trim(),
       promisedEtaDate,
-      sourcePrCode: "Daily PR-2026-10-20",
+      sourcePrCode: "PR gộp ngày 2026-10-20",
     });
 
     onSuccess(
-      `Supplier Purchase Order ${created.poCode} dispatched to vendor ${created.supplierName} successfully!`,
+      `Đã phát hành đơn đặt hàng ${created.poCode} tới nhà cung cấp ${created.supplierName} thành công!`,
     );
     onClose();
   };
@@ -90,14 +90,14 @@ export default function GeneratePoModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[1px]">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-sm font-extrabold text-slate-900">
-            Generate Supplier Purchase Order from Endorsed PR
+        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-900">
+            Lập đơn đặt hàng NCC từ PR đã duyệt
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-1.5 py-0.5 rounded"
+            className="text-slate-400 hover:text-slate-600 text-lg font-bold leading-none px-2 py-1 rounded-lg hover:bg-slate-200/60 transition"
           >
             ✕
           </button>
@@ -105,19 +105,19 @@ export default function GeneratePoModal({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorMsg && (
-            <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
               {errorMsg}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Approved PR Vendor Group (Daily PR-2026-10-20)
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Nhóm NCC của PR đã duyệt (PR-2026-10-20)
             </label>
             <select
               value={selectedVendorIdx}
               onChange={(e) => handleSelectPresetVendor(Number(e.target.value))}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {APPROVED_PR_VENDOR_GROUPS.map((grp, idx) => (
                 <option key={grp.supplierName} value={idx}>
@@ -127,53 +127,53 @@ export default function GeneratePoModal({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Supplier / Vendor Name
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Tên nhà cung cấp
               </label>
               <input
                 type="text"
                 value={supplierName}
                 onChange={(e) => setSupplierName(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Material Category
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Nhóm vật tư
               </label>
               <input
                 type="text"
                 value={materialCategory}
                 onChange={(e) => setMaterialCategory(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Order Items Summary (Endorsed Quantities)
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Tóm tắt hàng đặt (Số lượng đã duyệt)
             </label>
             <input
               type="text"
               value={orderItemsSummary}
               onChange={(e) => setOrderItemsSummary(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Vendor Promised ETA Date
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Ngày NCC cam kết giao (ETA)
             </label>
             <input
               type="date"
               value={promisedEtaDate}
               onChange={(e) => setPromisedEtaDate(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -181,16 +181,16 @@ export default function GeneratePoModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
               disabled={createPoMutation.isPending}
-              className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition disabled:opacity-60"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition disabled:opacity-60"
             >
-              {createPoMutation.isPending ? "Generating PO..." : "Issue Official Supplier PO"}
+              {createPoMutation.isPending ? "Đang lập PO..." : "Phát hành PO chính thức"}
             </button>
           </div>
         </form>

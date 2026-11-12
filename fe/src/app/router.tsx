@@ -44,8 +44,8 @@ function RootRedirect() {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -59,22 +59,26 @@ function RootRedirect() {
 
 function ForbiddenPage() {
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center select-none">
-      <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-3xl mb-4 shadow-lg">
-        🚫
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col items-center justify-center p-6 text-center select-none">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-md w-full flex flex-col items-center">
+        <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mb-4">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        </div>
+        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 mb-2">
+          Quyền truy cập bị giới hạn
+        </h1>
+        <p className="text-slate-600 text-sm mb-6 leading-relaxed">
+          Vai trò đang kích hoạt của bạn không có quyền truy cập vào màn hình chức năng này.
+        </p>
+        <Link
+          to="/"
+          className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs transition"
+        >
+          Về trang chủ hoạt động
+        </Link>
       </div>
-      <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
-        403 - Quyền Truy Cập Bị Giới Hạn
-      </h1>
-      <p className="text-slate-400 max-w-md text-sm mb-6 leading-relaxed">
-        Vai trò đang kích hoạt của bạn không có thẩm quyền truy cập vào màn hình chức năng này theo quy định đặc tả Report 3.
-      </p>
-      <Link
-        to="/"
-        className="px-5 py-2.5 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition"
-      >
-        Về Trang Chủ Hoạt Động
-      </Link>
     </div>
   );
 }
@@ -145,9 +149,9 @@ export const router = createBrowserRouter([
             path: "/production/routing-config",
             element: (
               <UnderConstructionPage
-                title="Dynamic Routing Config"
+                title="Cấu hình quy trình động"
                 screenCode="SCR-PRD-04"
-                moduleName="Technical & Routing"
+                moduleName="Kỹ thuật & Quy trình"
                 allowedRoles={[ROLES.OWNER, ROLES.ADMIN]}
               />
             ),
@@ -156,9 +160,9 @@ export const router = createBrowserRouter([
             path: "/catalog/visual",
             element: (
               <UnderConstructionPage
-                title="Visual Product Catalog"
+                title="Danh mục sản phẩm trực quan"
                 screenCode="SCR-CAT-02"
-                moduleName="Technical & Routing"
+                moduleName="Kỹ thuật & Quy trình"
                 allowedRoles={[ROLES.OWNER, ROLES.ADMIN]}
               />
             ),
@@ -220,9 +224,9 @@ export const router = createBrowserRouter([
             path: "/inventory/reconciliation",
             element: (
               <UnderConstructionPage
-                title="Inventory Reconciliation & Allocation View"
+                title="Đối chiếu tồn kho & phân bổ vật tư"
                 screenCode="SCR-INV-02"
-                moduleName="Inventory & Stock"
+                moduleName="Tồn kho"
                 allowedRoles={[
                   ROLES.SALES,
                   ROLES.OWNER,
@@ -273,9 +277,9 @@ export const router = createBrowserRouter([
             path: "/purchasing/requisitions",
             element: (
               <UnderConstructionPage
-                title="Consolidated Daily Purchase Requisition"
+                title="Yêu cầu mua hàng gộp theo ngày"
                 screenCode="SCR-PUR-01"
-                moduleName="Purchasing Operations"
+                moduleName="Nghiệp vụ mua hàng"
                 allowedRoles={[
                   ROLES.PURCHASING,
                   ROLES.OWNER,
@@ -298,9 +302,9 @@ export const router = createBrowserRouter([
             path: "/warehouse/receipts",
             element: (
               <UnderConstructionPage
-                title="Goods Receipt & Commit Screen"
+                title="Màn hình nhập kho & xác nhận"
                 screenCode="SCR-WAR-01"
-                moduleName="Warehouse Operations"
+                moduleName="Nghiệp vụ kho"
                 allowedRoles={[ROLES.WAREHOUSE, ROLES.ADMIN]}
               />
             ),
@@ -309,9 +313,9 @@ export const router = createBrowserRouter([
             path: "/warehouse/issues",
             element: (
               <UnderConstructionPage
-                title="Goods Issue & Floor Handover"
+                title="Xuất kho & bàn giao xuống xưởng"
                 screenCode="SCR-WAR-02"
-                moduleName="Warehouse Operations"
+                moduleName="Nghiệp vụ kho"
                 allowedRoles={[ROLES.WAREHOUSE, ROLES.ADMIN]}
               />
             ),
@@ -320,9 +324,9 @@ export const router = createBrowserRouter([
             path: "/warehouse/finished-goods",
             element: (
               <UnderConstructionPage
-                title="Finished Goods Receipt & Close Space"
+                title="Nhập kho thành phẩm & đóng Space"
                 screenCode="SCR-WAR-03"
-                moduleName="Warehouse Operations"
+                moduleName="Nghiệp vụ kho"
                 allowedRoles={[ROLES.WAREHOUSE, ROLES.ADMIN]}
               />
             ),
@@ -342,9 +346,9 @@ export const router = createBrowserRouter([
             path: "/dashboard",
             element: (
               <UnderConstructionPage
-                title="Executive Dashboard & ETD Risk Alerts"
+                title="Bảng điều hành & cảnh báo rủi ro ETD"
                 screenCode="SCR-DSH-01"
-                moduleName="Executive & Production"
+                moduleName="Điều hành & Sản xuất"
                 allowedRoles={[ROLES.OWNER, ROLES.LEADER, ROLES.ADMIN]}
               />
             ),
@@ -353,9 +357,9 @@ export const router = createBrowserRouter([
             path: "/production/overdriver",
             element: (
               <UnderConstructionPage
-                title="Overdriver Request & Approval"
+                title="Yêu cầu & duyệt vượt chốt (Overdriver)"
                 screenCode="SCR-PRD-03"
-                moduleName="Production Floor"
+                moduleName="Xưởng sản xuất"
                 allowedRoles={[ROLES.LEADER, ROLES.OWNER, ROLES.ADMIN]}
               />
             ),
@@ -364,9 +368,9 @@ export const router = createBrowserRouter([
             path: "/analytics/reports",
             element: (
               <UnderConstructionPage
-                title="Production & Quality Analytics Report"
+                title="Báo cáo phân tích sản xuất & chất lượng"
                 screenCode="SCR-RPT-01"
-                moduleName="Analytics & Reports"
+                moduleName="Phân tích & Báo cáo"
                 allowedRoles={[ROLES.OWNER, ROLES.LEADER, ROLES.ADMIN]}
               />
             ),
@@ -390,9 +394,9 @@ export const router = createBrowserRouter([
             path: "/production/kanban",
             element: (
               <UnderConstructionPage
-                title="Production Kanban Board"
+                title="Bảng Kanban sản xuất"
                 screenCode="SCR-PRD-01"
-                moduleName="Production Floor"
+                moduleName="Xưởng sản xuất"
                 allowedRoles={[
                   ROLES.LEADER,
                   ROLES.QC,
@@ -412,9 +416,9 @@ export const router = createBrowserRouter([
             path: "/production/progress",
             element: (
               <UnderConstructionPage
-                title="Workstation Stage Progress"
+                title="Tiến độ công đoạn tại trạm"
                 screenCode="SCR-PRD-02"
-                moduleName="Production Floor"
+                moduleName="Xưởng sản xuất"
                 allowedRoles={[ROLES.LEADER, ROLES.ADMIN]}
               />
             ),
@@ -428,9 +432,9 @@ export const router = createBrowserRouter([
             path: "/production/replacement-approvals",
             element: (
               <UnderConstructionPage
-                title="Replacement Production Approval"
+                title="Duyệt lệnh sản xuất bù"
                 screenCode="SCR-PRD-05"
-                moduleName="Production Floor"
+                moduleName="Xưởng sản xuất"
                 allowedRoles={[ROLES.OWNER, ROLES.ADMIN]}
               />
             ),
@@ -448,9 +452,9 @@ export const router = createBrowserRouter([
             path: "/qc/inspection",
             element: (
               <UnderConstructionPage
-                title="QC Inspection & Defect Logging"
+                title="Kiểm tra QC & ghi nhận lỗi"
                 screenCode="SCR-QC-01"
-                moduleName="Quality Control"
+                moduleName="Kiểm soát chất lượng"
                 allowedRoles={[ROLES.QC, ROLES.ADMIN]}
               />
             ),

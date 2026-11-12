@@ -44,3 +44,10 @@ via the MCP tools and the summary will follow.
 Do not re-scan source files when MCP tools can give you the same
 answer in a few hundred tokens instead of thousands. This is not optional.
 <!-- <<< projectmem bridge <<< -->
+
+<!-- >>> projectmem local isolation bridge >>> -->
+## .projectmem Local-Only Isolation Rule (MANDATORY)
+- Thư mục `.projectmem/` chứa cơ sở dữ liệu và bộ nhớ AI cục bộ, tuyệt đối KHÔNG commit hoặc push lên Git.
+- Thư mục `.projectmem/` đã được đưa vào `.gitignore` để cách ly hoàn toàn.
+- Tuyệt đối không dùng `git add .projectmem` hoặc stage bất kỳ file nào trong thư mục này để tránh xung đột hoặc làm bẩn nhánh khi các thành viên khác (duy, duong, cuong, hunganh) merge nhánh.
+<!-- <<< projectmem local isolation bridge <<< -->

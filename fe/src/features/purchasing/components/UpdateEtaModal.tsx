@@ -38,7 +38,7 @@ export default function UpdateEtaModal({
     });
 
     onSuccess(
-      `Updated delivery schedule and ETA (${promisedEtaDate}) for ${purchaseOrder.poCode}.`,
+      `Đã cập nhật lịch giao hàng và ETA (${promisedEtaDate}) cho ${purchaseOrder.poCode}.`,
     );
     onClose();
   };
@@ -46,59 +46,59 @@ export default function UpdateEtaModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[1px]">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-sm font-extrabold text-slate-900">
-            Track Shipment &amp; Update Vendor ETA
+        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-900">
+            Theo dõi lô hàng &amp; cập nhật ETA của NCC
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-1.5 py-0.5 rounded"
+            className="text-slate-400 hover:text-slate-600 text-lg font-bold leading-none px-2 py-1 rounded-lg hover:bg-slate-200/60 transition"
           >
             ✕
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-1">
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm space-y-1.5">
             <div>
-              <span className="text-slate-400">PO Reference:</span>{" "}
+              <span className="text-slate-500">Mã PO:</span>{" "}
               <strong className="font-mono text-slate-900">{purchaseOrder.poCode}</strong>
             </div>
             <div>
-              <span className="text-slate-400">Supplier:</span>{" "}
+              <span className="text-slate-500">Nhà cung cấp:</span>{" "}
               <strong className="text-slate-900">{purchaseOrder.supplierName}</strong>
             </div>
             <div>
-              <span className="text-slate-400">Items:</span>{" "}
-              <span className="text-slate-700">{purchaseOrder.orderItemsSummary}</span>
+              <span className="text-slate-500">Hàng đặt:</span>{" "}
+              <span className="text-slate-800">{purchaseOrder.orderItemsSummary}</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Promised ETA Date
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Ngày giao cam kết (ETA)
             </label>
             <input
               type="date"
               value={promisedEtaDate}
               onChange={(e) => setPromisedEtaDate(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Fulfillment Status
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Trạng thái thực hiện
             </label>
             <select
               value={fulfillmentStatus}
               onChange={(e) => setFulfillmentStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="SUPPLIER CONFIRMED">SUPPLIER CONFIRMED</option>
-              <option value="PO ISSUED / IN TRANSIT">PO ISSUED / IN TRANSIT</option>
-              <option value="RECEIVED & COMMITTED">RECEIVED &amp; COMMITTED</option>
+              <option value="SUPPLIER CONFIRMED">NCC ĐÃ XÁC NHẬN</option>
+              <option value="PO ISSUED / IN TRANSIT">ĐÃ PHÁT HÀNH PO / ĐANG VẬN CHUYỂN</option>
+              <option value="RECEIVED & COMMITTED">ĐÃ NHẬN &amp; XÁC NHẬN NHẬP KHO</option>
             </select>
           </div>
 
@@ -106,16 +106,16 @@ export default function UpdateEtaModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition"
             >
-              Close
+              Đóng
             </button>
             <button
               type="submit"
               disabled={updateEtaMutation.isPending}
-              className="px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition disabled:opacity-60"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition disabled:opacity-60"
             >
-              {updateEtaMutation.isPending ? "Saving..." : "Save Schedule Update"}
+              {updateEtaMutation.isPending ? "Đang lưu..." : "Lưu cập nhật lịch giao"}
             </button>
           </div>
         </form>

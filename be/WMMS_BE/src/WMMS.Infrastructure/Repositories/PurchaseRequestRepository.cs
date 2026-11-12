@@ -93,8 +93,9 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
             var kw = keyword.Trim().ToLower();
             query = query.Where(pr =>
                 pr.PrCode.ToLower().Contains(kw) ||
-                pr.Items.Any(i => i.Material.MaterialCode.ToLower().Contains(kw) ||
-                                  i.Material.MaterialName.ToLower().Contains(kw)));
+                pr.Items.Any(i => i.Material != null &&
+                                  (i.Material.MaterialCode.ToLower().Contains(kw) ||
+                                   i.Material.MaterialName.ToLower().Contains(kw))));
         }
 
         var total = await query.CountAsync(cancellationToken);
@@ -117,6 +118,25 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
         DateTime reviewedAt,
         CancellationToken cancellationToken = default)
     {
+        if (!_context.Database.IsRelational())
+        {
+            var entity = await _context.PurchaseRequests
+                .FirstOrDefaultAsync(pr => pr.PrId == prId && pr.PrStatus == expectedStatus, cancellationToken);
+
+            if (entity == null)
+            {
+                return false;
+            }
+
+            entity.PrStatus = newStatus;
+            entity.ApprovedBy = reviewerUserId;
+            entity.ReviewedAt = reviewedAt;
+            entity.RejectionReason = rejectionReason;
+            entity.UpdatedAt = reviewedAt;
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
         var affected = await _context.PurchaseRequests
             .Where(pr => pr.PrId == prId && pr.PrStatus == expectedStatus)
             .ExecuteUpdateAsync(setters => setters
@@ -144,6 +164,22 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
 
     public async Task<bool> TryMarkPoIssuedAsync(long prId, DateTime updatedAt, CancellationToken cancellationToken = default)
     {
+        if (!_context.Database.IsRelational())
+        {
+            var entity = await _context.PurchaseRequests
+                .FirstOrDefaultAsync(pr => pr.PrId == prId && pr.PrStatus == PrStatusEnum.APPROVED, cancellationToken);
+
+            if (entity == null)
+            {
+                return false;
+            }
+
+            entity.PrStatus = PrStatusEnum.PO_ISSUED;
+            entity.UpdatedAt = updatedAt;
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
         var affected = await _context.PurchaseRequests
             .Where(pr => pr.PrId == prId && pr.PrStatus == PrStatusEnum.APPROVED)
             .ExecuteUpdateAsync(setters => setters

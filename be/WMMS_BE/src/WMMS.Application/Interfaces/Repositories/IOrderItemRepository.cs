@@ -15,6 +15,8 @@ public interface IOrderItemRepository
     Task<List<OrderItem>> GetAllActiveOrderItemsWithMrpGraphAsync(CancellationToken cancellationToken = default);
     Task<List<OrderItem>> GetWaitingMaterialItemsOrderedByEtdAsync(IEnumerable<long>? filterMaterialIds = null, CancellationToken cancellationToken = default);
     Task<CustomerOrder?> GetOrderByIdAsync(long orderId, CancellationToken cancellationToken = default);
+    Task<CustomerOrder?> GetOrderWithFullProgressGraphAsync(long orderId, CancellationToken cancellationToken = default);
+    Task<List<CustomerOrder>> GetAllOrdersWithProgressGraphAsync(CancellationToken cancellationToken = default);
     Task<OrderSpace?> GetOrderSpaceByIdAsync(long spaceId, CancellationToken cancellationToken = default);
     Task UpdateAsync(OrderItem orderItem);
     Task UpdateOrderAsync(CustomerOrder order);

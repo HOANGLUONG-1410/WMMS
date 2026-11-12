@@ -123,6 +123,16 @@ public static class AuditActionConstants
     public const string QcInspectionRecorded = "QC_INSPECTION_RECORDED";
     public const string KanbanSubBatchSpawned = "KANBAN_SUB_BATCH_SPAWNED";
     public const string HoldPointOverdriveApproved = "HOLD_POINT_OVERDRIVE_APPROVED";
+    public const string HoldPointOverdriveRequested = "HOLD_POINT_OVERDRIVE_REQUESTED";
+    public const string HoldPointOverdriveRejected = "HOLD_POINT_OVERDRIVE_REJECTED";
+    public const string HoldPointBlocked = "HOLD_POINT_BLOCKED";
+    public const string KanbanStageAdvanced = "KANBAN_STAGE_ADVANCED";
+
+    // Phân hệ 9: Finished Goods Receipt, Order Progress Tracking & Production Dashboard (FGR / OPT / DSH - Iteration 3)
+    public const string FinishedGoodsBatchCompleted = "FINISHED_GOODS_BATCH_COMPLETED";
+    public const string OrderItemProductionCompleted = "ORDER_ITEM_PRODUCTION_COMPLETED";
+    public const string SalesOrderProductionCompleted = "SALES_ORDER_PRODUCTION_COMPLETED";
+    public const string OrderProgressSynchronized = "ORDER_PROGRESS_SYNCHRONIZED";
 }
 
 public static class DefectCodeConstants

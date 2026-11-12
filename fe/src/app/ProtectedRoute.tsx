@@ -11,7 +11,7 @@ function FullPageSpinner() {
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center">
       <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
       <p className="mt-4 text-xs font-semibold tracking-widest text-slate-400 uppercase">
-        Verifying Session...
+        Đang xác thực phiên đăng nhập...
       </p>
     </div>
   );

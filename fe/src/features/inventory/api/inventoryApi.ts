@@ -238,7 +238,7 @@ export const inventoryApi = {
         orderId: idx + 1,
         poNumber: p.poNumber || `ASH-2026-OCT-${p.spaceKey.replace("SPACE-", "")}`,
         spaceKey: p.spaceKey,
-        customerName: "Ashley Furniture Industries (USA)",
+        customerName: "Ashley Furniture Industries (Mỹ)",
         orderItemId: idx + 1,
         productSku: "CHAIR-DINING-OAK-01",
         productName: "Sản phẩm xuất khẩu B2B đã chốt BOM",

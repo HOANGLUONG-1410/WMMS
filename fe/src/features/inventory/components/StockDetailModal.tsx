@@ -40,28 +40,28 @@ export default function StockDetailModal({
     const upper = (txType || "").toUpperCase();
     if (upper === "INITIAL_IMPORT") {
       return {
-        label: "INITIAL_IMPORT (Số dư đầu kỳ)",
-        className: "bg-emerald-100 text-emerald-800 border-emerald-300",
+        label: "Số dư đầu kỳ",
+        className: "bg-emerald-50 text-emerald-700 border-emerald-200",
         sign: "+",
       };
     }
     if (upper === "IN_RECEIPT") {
       return {
-        label: "IN_RECEIPT (Nhập kho PO)",
-        className: "bg-blue-100 text-blue-800 border-blue-300",
+        label: "Nhập kho PO",
+        className: "bg-blue-50 text-blue-700 border-blue-200",
         sign: "+",
       };
     }
     if (upper === "OUT_ISSUE") {
       return {
-        label: "OUT_ISSUE (Xuất kho SX)",
-        className: "bg-amber-100 text-amber-800 border-amber-300",
+        label: "Xuất kho sản xuất",
+        className: "bg-amber-50 text-amber-800 border-amber-200",
         sign: "-",
       };
     }
     return {
-      label: `${upper} (Điều chỉnh)`,
-      className: "bg-purple-100 text-purple-800 border-purple-300",
+      label: "Điều chỉnh kiểm kê",
+      className: "bg-purple-50 text-purple-800 border-purple-200",
       sign: "±",
     };
   };
@@ -73,15 +73,15 @@ export default function StockDetailModal({
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-blue-100 text-blue-800 border border-blue-300">
-                SC-12 &amp; SC-13 DETAIL
+              <span className="px-2.5 py-0.5 text-xs font-bold uppercase rounded-md bg-blue-100 text-blue-800 border border-blue-200">
+                Chi tiết tồn kho
               </span>
-              <h2 className="text-sm font-extrabold text-slate-900">
-                Stock Reservation &amp; Material Ledger Inspector
+              <h2 className="text-base font-bold text-slate-900">
+                Tra cứu giữ chỗ tồn kho &amp; sổ kho vật tư
               </h2>
             </div>
-            <p className="text-xs text-slate-600 mt-0.5">
-              Material:{" "}
+            <p className="text-sm text-slate-600 mt-1">
+              Vật tư:{" "}
               <strong className="font-mono text-slate-900">{activeData.materialCode}</strong> —{" "}
               {activeData.materialName}{" "}
               {activeData.dimensionSpec ? `(${activeData.dimensionSpec})` : ""}
@@ -90,7 +90,7 @@ export default function StockDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-2 py-1 rounded"
+            className="text-slate-400 hover:text-slate-600 text-lg font-bold leading-none px-2 py-1 rounded-lg hover:bg-slate-200/60 transition"
           >
             ✕
           </button>
@@ -99,133 +99,127 @@ export default function StockDetailModal({
         {/* Body */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
           {/* 3-Tier Mathematical Balance Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/70">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                1. TOTAL PHYSICAL STOCK (TỒN THỰC TẾ)
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                1. TỒN THỰC TẾ (VẬT LÝ)
               </div>
-              <div className="text-lg font-extrabold text-slate-900 mt-1">
+              <div className="text-xl font-extrabold text-slate-900 mt-1.5">
                 {formatQty(activeData.physicalQty, activeData.unitOfMeasure)}
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5">
-                On-hand stock in warehouse racks
+              <div className="text-xs text-slate-500 mt-1">
+                Hàng đang có trên kệ kho
               </div>
             </div>
 
-            <div className="p-3.5 rounded-lg border border-amber-200 bg-amber-50/60">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-                2. ALLOCATED STOCK (TỒN GIỮ CHỖ)
+            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/60">
+              <div className="text-xs font-bold uppercase tracking-wider text-amber-800">
+                2. TỒN GIỮ CHỖ (PHÂN BỔ)
               </div>
-              <div className="text-lg font-extrabold text-[#d97706] mt-1">
+              <div className="text-xl font-extrabold text-amber-700 mt-1.5">
                 − {formatQty(activeData.allocatedQty, activeData.unitOfMeasure)}
               </div>
-              <div className="text-[11px] text-amber-700 mt-0.5">
-                Locked for approved BOM orders
+              <div className="text-xs text-amber-700 mt-1">
+                Đã khóa cho các đơn có BOM được duyệt
               </div>
             </div>
 
             <div
-              className={`p-3.5 rounded-lg border ${
+              className={`p-4 rounded-xl border ${
                 activeData.availableQty <= 0 || activeData.isBelowSafetyStock
                   ? "border-rose-200 bg-rose-50/60"
                   : "border-emerald-200 bg-emerald-50/60"
               }`}
             >
               <div
-                className={`text-[10px] font-bold uppercase tracking-wider ${
+                className={`text-xs font-bold uppercase tracking-wider ${
                   activeData.availableQty <= 0 || activeData.isBelowSafetyStock
                     ? "text-rose-800"
                     : "text-emerald-800"
                 }`}
               >
-                3. AVAILABLE STOCK (TỒN KHẢ DỤNG)
+                3. TỒN KHẢ DỤNG (TỰ DO)
               </div>
               <div
-                className={`text-lg font-extrabold mt-1 ${
+                className={`text-xl font-extrabold mt-1.5 ${
                   activeData.availableQty <= 0 || activeData.isBelowSafetyStock
                     ? "text-rose-600"
-                    : "text-emerald-600"
+                    : "text-emerald-700"
                 }`}
               >
                 = {formatQty(activeData.availableQty, activeData.unitOfMeasure)}
               </div>
-              <div className="text-[11px] text-slate-600 mt-0.5">
-                Safety Buffer: {formatQty(activeData.safetyStockQty, activeData.unitOfMeasure)}
+              <div className="text-xs text-slate-600 mt-1">
+                Tồn an toàn: {formatQty(activeData.safetyStockQty, activeData.unitOfMeasure)}
               </div>
             </div>
           </div>
 
           {isLoading ? (
-            <div className="py-8 text-center text-xs text-slate-400">
+            <div className="py-8 text-center text-sm text-slate-400">
               Đang tải chi tiết đơn hàng giữ chỗ và sổ kho từ máy chủ...
             </div>
           ) : (
             <>
-              {/* Phần 1: Các đơn hàng đang giữ chỗ (Active Allocations) */}
-              <div className="space-y-2">
+              {/* Phần 1: Các đơn hàng đang giữ chỗ */}
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">
-                    🔒 Danh sách Đơn hàng đang Giữ chỗ (Active Order Space Reservations)
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Danh sách đơn hàng đang giữ chỗ
                   </h3>
-                  <span className="text-[11px] text-slate-500">
-                    Endpoint:{" "}
-                    <code className="font-mono text-slate-700">
-                      GET /api/v1/inventory/stocks/{activeData.materialId}
-                    </code>
-                  </span>
                 </div>
 
-                <div className="border border-slate-200 rounded-lg overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
+                <div className="border border-slate-200 rounded-xl overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-sm">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500">
-                        <th className="py-2.5 px-3">Order Space</th>
-                        <th className="py-2.5 px-3">PO Number</th>
-                        <th className="py-2.5 px-3">Product SKU</th>
-                        <th className="py-2.5 px-3 text-right">Required Qty</th>
-                        <th className="py-2.5 px-3 text-right">Reserved (Allocated)</th>
-                        <th className="py-2.5 px-3">ETD Date</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
+                      <tr className="bg-[#F8FAFC] border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <th className="py-3 px-4">Order Space</th>
+                        <th className="py-3 px-4">Số PO</th>
+                        <th className="py-3 px-4">Mã SKU sản phẩm</th>
+                        <th className="py-3 px-4 text-right">SL cần</th>
+                        <th className="py-3 px-4 text-right">Đã giữ chỗ</th>
+                        <th className="py-3 px-4">Ngày ETD</th>
+                        <th className="py-3 px-4 text-center">Trạng thái</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {activeData.allocations && activeData.allocations.length > 0 ? (
                         activeData.allocations.map((alloc) => (
                           <tr key={alloc.allocationId} className="hover:bg-slate-50">
-                            <td className="py-2.5 px-3">
-                              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono text-[11px] font-bold">
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-mono text-xs font-bold">
                                 {alloc.spaceKey}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 font-mono font-semibold text-slate-800">
+                            <td className="py-3.5 px-4 font-mono font-semibold text-slate-800 whitespace-nowrap">
                               {alloc.poNumber}
                             </td>
-                            <td className="py-2.5 px-3">
-                              <div className="font-semibold text-slate-800">{alloc.productSku}</div>
-                              <div className="text-[11px] text-slate-500">{alloc.productName}</div>
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold text-slate-900">{alloc.productSku}</div>
+                              <div className="text-xs text-slate-500">{alloc.productName}</div>
                             </td>
-                            <td className="py-2.5 px-3 text-right font-medium text-slate-700">
+                            <td className="py-3.5 px-4 text-right font-medium text-slate-700 whitespace-nowrap">
                               {formatQty(alloc.requiredQty, activeData.unitOfMeasure)}
                             </td>
-                            <td className="py-2.5 px-3 text-right font-bold text-[#d97706]">
+                            <td className="py-3.5 px-4 text-right font-bold text-amber-700 whitespace-nowrap">
                               {formatQty(alloc.reservedQty, activeData.unitOfMeasure)}
                             </td>
-                            <td className="py-2.5 px-3 text-slate-600">
+                            <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
                               {alloc.etdDate
                                 ? new Date(alloc.etdDate).toLocaleDateString("en-GB")
                                 : "—"}
                             </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-amber-100 text-amber-800 border border-amber-300">
-                                {alloc.allocationStatus || "RESERVED"}
+                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                              <span className="px-2.5 py-0.5 text-xs font-bold uppercase rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                                {alloc.allocationStatus || "ĐANG GIỮ CHỖ"}
                               </span>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={7} className="py-5 text-center text-slate-400">
-                            Vật tư này hiện không có đơn hàng nào đang khóa giữ chỗ (Allocated = 0).
+                          <td colSpan={7} className="py-6 text-center text-slate-500 text-sm">
+                            Vật tư này hiện không có đơn hàng nào đang khóa giữ chỗ.
                           </td>
                         </tr>
                       )}
@@ -235,10 +229,10 @@ export default function StockDetailModal({
               </div>
 
               {/* Phần 2: Lịch sử giao dịch sổ kho gần nhất của vật tư này */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">
-                    📒 Lịch sử Giao dịch Sổ kho gần nhất của {activeData.materialCode}
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Lịch sử giao dịch sổ kho gần nhất của {activeData.materialCode}
                   </h3>
                   <button
                     type="button"
@@ -249,21 +243,21 @@ export default function StockDetailModal({
                       );
                       onClose();
                     }}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-700 underline"
                   >
-                    Mở trên Tab Sổ kho điện tử (Stock Ledger) →
+                    Mở trên Sổ kho điện tử →
                   </button>
                 </div>
 
-                <div className="border border-slate-200 rounded-lg overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
+                <div className="border border-slate-200 rounded-xl overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-sm">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500">
-                        <th className="py-2.5 px-3">Mã GD</th>
-                        <th className="py-2.5 px-3">Ngày thực hiện</th>
-                        <th className="py-2.5 px-3">Loại giao dịch</th>
-                        <th className="py-2.5 px-3">Mã phiếu tham chiếu</th>
-                        <th className="py-2.5 px-3 text-right">Số lượng biến động</th>
+                      <tr className="bg-[#F8FAFC] border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <th className="py-3 px-4">Mã GD</th>
+                        <th className="py-3 px-4">Ngày thực hiện</th>
+                        <th className="py-3 px-4">Loại giao dịch</th>
+                        <th className="py-3 px-4">Mã phiếu tham chiếu</th>
+                        <th className="py-3 px-4 text-right">Số lượng biến động</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -273,23 +267,23 @@ export default function StockDetailModal({
                           const badge = getTxBadge(tx.txType);
                           return (
                             <tr key={tx.transactionId} className="hover:bg-slate-50">
-                              <td className="py-2.5 px-3 font-mono text-slate-500 font-semibold">
+                              <td className="py-3.5 px-4 font-mono text-slate-600 font-semibold whitespace-nowrap">
                                 #TX-{String(tx.transactionId).padStart(4, "0")}
                               </td>
-                              <td className="py-2.5 px-3 text-slate-600">
+                              <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
                                 {new Date(tx.createdAt).toLocaleString("en-GB")}
                               </td>
-                              <td className="py-2.5 px-3">
+                              <td className="py-3.5 px-4 whitespace-nowrap">
                                 <span
-                                  className={`px-2 py-0.5 text-[10px] font-bold rounded border ${badge.className}`}
+                                  className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${badge.className}`}
                                 >
                                   {badge.label}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 font-mono font-semibold text-slate-800">
+                              <td className="py-3.5 px-4 font-mono font-semibold text-slate-800 whitespace-nowrap">
                                 {tx.referenceCode || "—"}
                               </td>
-                              <td className="py-2.5 px-3 text-right font-bold text-emerald-700">
+                              <td className="py-3.5 px-4 text-right font-bold text-emerald-700 whitespace-nowrap">
                                 {badge.sign}
                                 {formatQty(tx.quantity, tx.unitOfMeasure)}
                               </td>
@@ -298,7 +292,7 @@ export default function StockDetailModal({
                         })
                       ) : (
                         <tr>
-                          <td colSpan={5} className="py-5 text-center text-slate-400">
+                          <td colSpan={5} className="py-6 text-center text-slate-500 text-sm">
                             Chưa có giao dịch sổ kho nào cho vật tư này.
                           </td>
                         </tr>
@@ -312,11 +306,11 @@ export default function StockDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition"
+            className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-2xs transition"
           >
             Đóng
           </button>

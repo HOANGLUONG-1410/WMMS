@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-white">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WMMS - Quản lý tài khoản & Phân quyền</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1E293B;
+    }
+    .table-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="h-full antialiased bg-[#F8FAFC] text-[#1E293B]">
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- Main Application Layout -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- Sidebar: Soft Cool Gray (COLOR-02: 30% Secondary structure #F1F5F9 / Slate-100) -->
+    <aside class="w-64 bg-[#F1F5F9] text-slate-700 flex flex-col justify-between shrink-0 border-r border-slate-200 hidden md:flex">
+      <div>
+        <!-- Sidebar Brand & Active Role -->
+        <div class="h-16 px-5 flex items-center justify-between border-b border-slate-200 bg-[#F1F5F9]">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-base shadow-sm">
+              W
+            </div>
+            <div>
+              <span class="text-slate-900 font-extrabold tracking-tight text-base block leading-none">WMMSWOOD</span>
+              <span class="text-[11px] text-slate-500 font-medium">Sản xuất nội thất</span>
+            </div>
+          </div>
+          <span class="text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200">
+            ADMIN
+          </span>
+        </div>
+
+        <!-- Navigation Sections -->
+        <nav class="p-3 space-y-5 overflow-y-auto max-h-[calc(100vh-8.5rem)]">
+          <div>
+            <div class="px-3 mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+              Quản trị hệ thống
+            </div>
+            <ul class="space-y-1">
+              <li>
+                <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold bg-white text-blue-700 border-l-4 border-blue-600 transition-colors shadow-xs">
+                  <svg class="w-4 h-4 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                  <span>Tài khoản & Phân quyền</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <span>Nhật ký hoạt động</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <div class="px-3 mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+              Báo cáo & Tồn kho
+            </div>
+            <ul class="space-y-1">
+              <li>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                  <span>Báo cáo sản xuất & KCS</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                  <span>Tồn kho vật tư 3 cấp</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="p-4 border-t border-slate-200 text-xs text-slate-500 space-y-0.5 bg-[#F1F5F9]">
+        <div class="font-semibold text-slate-700">Hệ thống WMMS v2.6.4</div>
+        <div class="text-slate-500">Quản lý sản xuất xưởng gỗ</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area: Nền sáng trong trẻo (#F8FAFC), thẻ trắng tinh (#FFFFFF) -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F8FAFC]">
+      <!-- Top Header -->
+      <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 shadow-xs">
+        <div class="flex items-center gap-3">
+          <button class="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="text-sm font-semibold text-slate-700 hidden sm:block">
+            Phân hệ Quản trị & Bảo mật
+          </div>
+        </div>
+
+        <!-- Bên phải Header: Thông tin tài khoản người dùng & Đăng xuất -->
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-3 pl-2">
+            <div class="w-8 h-8 rounded-full bg-purple-700 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+              AD
+            </div>
+            <div class="hidden sm:block text-left leading-tight">
+              <div class="text-xs font-bold text-slate-900">Quản trị viên hệ thống</div>
+              <div class="text-[11px] text-slate-500 font-medium">Administrator</div>
+            </div>
+            <button onclick="showToast('info', 'Đã đăng xuất khỏi hệ thống.')" class="ml-2 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition shadow-xs">
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Scrollable Main Content -->
+      <main class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+        
+        <!-- Page Title & Header Actions -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+          <div>
+            <h1 class="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Tài khoản nhân sự & Phân quyền
+            </h1>
+            <p class="text-sm text-slate-600 mt-1">
+              Quản lý danh sách tài khoản nhân viên, thiết lập vai trò phòng ban và phân quyền truy cập hệ thống.
+            </p>
+          </div>
+
+          <!-- Actions Bar -->
+          <div class="flex items-center gap-3 shrink-0">
+            <!-- Secondary Action -->
+            <button 
+              type="button"
+              onclick="openRoleMatrixModal()"
+              class="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-xs hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 transition"
+            >
+              <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+              <span>Ma trận phân quyền</span>
+            </button>
+
+            <!-- Primary Action -->
+            <button 
+              type="button"
+              onclick="openCreateUserModal()"
+              class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition active:scale-[0.99]"
+            >
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+              <span>Tạo tài khoản mới</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3 KPI Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">TỔNG SỐ TÀI KHOẢN</span>
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+              </div>
+            </div>
+            <div class="text-2xl font-extrabold text-slate-900 mt-2" id="kpi-total">6</div>
+            <div class="text-xs text-slate-500 mt-1">
+              Trên toàn bộ phòng ban xưởng
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">VAI TRÒ HỆ THỐNG</span>
+              <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+              </div>
+            </div>
+            <div class="text-2xl font-extrabold text-slate-900 mt-2">8 vai trò</div>
+            <div class="text-xs text-slate-500 mt-1">
+              Phân quyền theo chức năng chuyên biệt
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">TÀI KHOẢN TẠM KHÓA</span>
+              <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+              </div>
+            </div>
+            <div class="text-2xl font-extrabold text-slate-900 mt-2" id="kpi-suspended">1</div>
+            <div class="text-xs text-slate-500 mt-1">
+              Tài khoản tạm ngưng truy cập
+            </div>
+          </div>
+        </div>
+
+        <!-- User Directory Table Card -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          
+          <!-- Toolbar -->
+          <div class="p-4 sm:px-6 sm:py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
+            <div class="flex items-center gap-3">
+              <h2 class="text-base font-bold text-slate-900">
+                Danh sách tài khoản nhân viên
+              </h2>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap sm:flex-nowrap items-center gap-3">
+              <!-- Lọc theo vai trò -->
+              <div class="relative w-full sm:w-auto">
+                <select 
+                  id="role-filter"
+                  onchange="applyFilters()"
+                  class="w-full sm:w-44 px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+                >
+                  <option value="">Tất cả vai trò</option>
+                  <option value="OWNER">Chủ xưởng (Owner)</option>
+                  <option value="SALES">Kinh doanh (Sales)</option>
+                  <option value="PLANNER">Kế hoạch (Planner)</option>
+                  <option value="LEADER">Tổ trưởng (Leader)</option>
+                  <option value="QC">Kiểm hàng (QC)</option>
+                  <option value="WAREHOUSE">Thủ kho (Warehouse)</option>
+                  <option value="PURCHASING">Thu mua (Purchasing)</option>
+                  <option value="ADMIN">Quản trị (Admin)</option>
+                </select>
+              </div>
+
+              <!-- Lọc theo trạng thái -->
+              <div class="relative w-full sm:w-auto">
+                <select 
+                  id="status-filter"
+                  onchange="applyFilters()"
+                  class="w-full sm:w-40 px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="ACTIVE">Đang hoạt động</option>
+                  <option value="BANNED">Đã tạm khóa</option>
+                </select>
+              </div>
+
+              <!-- Ô tìm kiếm -->
+              <div class="relative flex-1 sm:w-72">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input 
+                  type="text" 
+                  id="search-input"
+                  oninput="handleSearchInput()"
+                  placeholder="Tìm theo tên, username, email..." 
+                  class="w-full pl-9 pr-8 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs placeholder-slate-400"
+                />
+                <button 
+                  id="clear-search-btn"
+                  onclick="clearSearch()"
+                  class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 font-bold"
+                  title="Xóa tìm kiếm"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="overflow-x-auto table-scroll">
+            <table class="w-full text-left border-collapse min-w-[950px]">
+              <thead>
+                <tr class="border-b border-slate-200 bg-[#F8FAFC] text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <th class="py-3.5 px-6 min-w-[240px]">Hồ sơ nhân viên</th>
+                  <th class="py-3.5 px-4 min-w-[150px]">Tên đăng nhập</th>
+                  <th class="py-3.5 px-4 min-w-[220px]">Thông tin liên hệ</th>
+                  <th class="py-3.5 px-4 min-w-[150px]">Vai trò đảm nhiệm</th>
+                  <th class="py-3.5 px-4 min-w-[160px] whitespace-nowrap">Trạng thái</th>
+                  <th class="py-3.5 px-6 text-right min-w-[150px] whitespace-nowrap">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="user-table-body" class="divide-y divide-slate-200 text-sm text-[#1E293B]">
+                <!-- Rows injected dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Empty State -->
+          <div id="empty-state" class="hidden py-16 px-6 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800">Không tìm thấy tài khoản phù hợp</h3>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Không có tài khoản nhân sự nào khớp với từ khóa tìm kiếm hoặc bộ lọc được chọn.
+            </p>
+            <button onclick="clearSearch()" class="mt-4 px-3.5 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+              Đặt lại bộ lọc
+            </button>
+          </div>
+
+          <!-- Table Pagination Footer -->
+          <div class="px-6 py-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm text-slate-600">
+            <div class="flex items-center gap-3">
+              <span id="pagination-info">Hiển thị 1 đến 6 trên tổng số 6 tài khoản</span>
+              <div class="flex items-center gap-2 border-l border-slate-300 pl-3">
+                <span class="text-xs text-slate-500">Số dòng/trang:</span>
+                <select class="px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option>10</option>
+                  <option>20</option>
+                  <option>50</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Page Buttons -->
+            <div class="flex items-center gap-1.5">
+              <button disabled class="px-3 py-1.5 text-xs font-medium text-slate-400 bg-white border border-slate-200 rounded-lg cursor-not-allowed">
+                Trang trước
+              </button>
+              <button class="w-8 h-8 text-xs font-bold rounded-lg bg-blue-600 text-white shadow-xs">
+                1
+              </button>
+              <button disabled class="px-3 py-1.5 text-xs font-medium text-slate-400 bg-white border border-slate-200 rounded-lg cursor-not-allowed">
+                Trang sau
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 1: TẠO TÀI KHOẢN MỚI                               -->
+  <!-- ======================================================== -->
+  <div id="modal-create" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-[2px] hidden items-center justify-center p-4">
+    <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Tạo tài khoản nhân viên mới</h3>
+          <p class="text-xs text-slate-500">Cấp thông tin đăng nhập và gán vai trò phòng ban</p>
+        </div>
+        <button onclick="closeModals()" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1 leading-none rounded-lg hover:bg-slate-100 transition">
+          ✕
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateUser(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Họ và tên nhân viên <span class="text-rose-500">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="new-fullname" 
+            required 
+            placeholder="Ví dụ: Trần Văn Bình" 
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+          />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Tên đăng nhập (Username) <span class="text-rose-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="new-username" 
+              required 
+              placeholder="Ví dụ: binh.tran" 
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Số điện thoại liên hệ
+            </label>
+            <input 
+              type="tel" 
+              id="new-phone" 
+              placeholder="Ví dụ: 0901234567" 
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs font-mono"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Email công vụ nhân sự <span class="text-rose-500">*</span>
+          </label>
+          <input 
+            type="email" 
+            id="new-email" 
+            required 
+            placeholder="binh.tran@nguyenkhoa.vn" 
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Vai trò đảm nhiệm chính <span class="text-rose-500">*</span>
+          </label>
+          <select 
+            id="new-role" 
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs font-medium text-slate-800"
+          >
+            <option value="OWNER">Chủ xưởng (Điều hành & Kế hoạch)</option>
+            <option value="SALES">Nhân viên Kinh doanh (Báo giá & Đơn hàng)</option>
+            <option value="PLANNER">Nhân viên Kế hoạch (BOM & Định mức vật tư)</option>
+            <option value="LEADER">Tổ trưởng sản xuất (Điều phối xưởng & Kanban)</option>
+            <option value="QC">Nhân viên KCS / QC (Kiểm định chất lượng)</option>
+            <option value="WAREHOUSE">Thủ kho (Quản lý nhập, xuất & tồn kho)</option>
+            <option value="PURCHASING">Nhân viên Thu mua (Đặt hàng NCC & Vật tư)</option>
+            <option value="ADMIN">Quản trị viên hệ thống (Admin)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Mật khẩu tạm thời khởi tạo
+          </label>
+          <input 
+            type="text" 
+            id="new-password" 
+            value="Welcome@2026"
+            class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-slate-700"
+          />
+          <p class="text-xs text-slate-500 mt-1">Người dùng sẽ được yêu cầu đổi mật khẩu ở lần đăng nhập đầu tiên.</p>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <button 
+            type="button" 
+            onclick="closeModals()" 
+            class="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition shadow-xs"
+          >
+            Hủy bỏ
+          </button>
+          <button 
+            type="submit" 
+            class="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition"
+          >
+            Tạo tài khoản
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 2: CHỈNH SỬA HỒ SƠ NHÂN VIÊN                       -->
+  <!-- ======================================================== -->
+  <div id="modal-edit" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-[2px] hidden items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Chỉnh sửa hồ sơ nhân viên</h3>
+          <p class="text-xs text-slate-500" id="edit-modal-sub">Mã nhân sự: #</p>
+        </div>
+        <button onclick="closeModals()" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1 leading-none rounded-lg hover:bg-slate-100 transition">
+          ✕
+        </button>
+      </div>
+
+      <form onsubmit="handleSaveEdit(event)" class="p-6 space-y-4">
+        <input type="hidden" id="edit-user-id" />
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Họ và tên nhân viên
+          </label>
+          <input 
+            type="text" 
+            id="edit-fullname" 
+            required 
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Email công vụ nhân sự
+          </label>
+          <input 
+            type="email" 
+            id="edit-email" 
+            required 
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Số điện thoại liên hệ
+          </label>
+          <input 
+            type="tel" 
+            id="edit-phone" 
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs font-mono"
+          />
+        </div>
+
+        <div class="pt-2">
+          <div class="p-3.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div>
+              <div class="text-xs font-bold text-slate-800">Trạng thái quyền truy cập</div>
+              <div class="text-xs text-slate-500 mt-0.5" id="edit-status-hint">Đang hoạt động</div>
+            </div>
+            <button 
+              type="button" 
+              id="edit-toggle-status-btn"
+              onclick="handleToggleCurrentStatus()"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg transition border"
+            >
+              Đổi trạng thái
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <button 
+            type="button" 
+            onclick="closeModals()" 
+            class="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition shadow-xs"
+          >
+            Hủy bỏ
+          </button>
+          <button 
+            type="submit" 
+            class="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
+          >
+            Lưu thay đổi
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 3: MA TRẬN PHÂN QUYỀN HỆ THỐNG                     -->
+  <!-- ======================================================== -->
+  <div id="modal-matrix" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-[2px] hidden items-center justify-center p-4">
+    <div class="w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Ma trận phân quyền hệ thống</h3>
+          <p class="text-xs text-slate-500">Quy định thẩm quyền bảo mật được thiết lập cho các phòng ban nhà máy</p>
+        </div>
+        <button onclick="closeModals()" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1 leading-none rounded-lg hover:bg-slate-100 transition">
+          ✕
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-100/70 text-slate-500 font-bold uppercase tracking-wider">
+              <th class="py-3 px-4">Lĩnh vực chức năng</th>
+              <th class="py-3 px-4">Phạm vi thao tác</th>
+              <th class="py-3 px-3">Chủ xưởng</th>
+              <th class="py-3 px-3">Tổ trưởng</th>
+              <th class="py-3 px-3">QC / KCS</th>
+              <th class="py-3 px-3">Thủ kho</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            <tr>
+              <td class="py-3 px-4 font-bold text-slate-800">Không gian đơn hàng & Tạm tính</td>
+              <td class="py-3 px-4 text-slate-600">Nhập Excel, Lưu tạm PO, Khởi tạo không gian</td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">TOÀN QUYỀN</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">THEO DÕI</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">KHÔNG CÓ QUYỀN</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">THEO DÕI</span></td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-bold text-slate-800">BOM & Định tuyến kỹ thuật</td>
+              <td class="py-3 px-4 text-slate-600">Định nghĩa chi tiết, quy cách cắt, công đoạn</td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">TOÀN QUYỀN</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">THEO DÕI</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">THEO DÕI</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">KHÔNG CÓ QUYỀN</span></td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-bold text-slate-800">Tồn kho & Vật tư 3 cấp</td>
+              <td class="py-3 px-4 text-slate-600">Nhập kho, xuất xưởng sản xuất, bàn giao</td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">THEO DÕI</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-800">YÊU CẦU</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">KHÔNG CÓ QUYỀN</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">TOÀN QUYỀN</span></td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-bold text-slate-800">Sàn sản xuất Kanban xưởng</td>
+              <td class="py-3 px-4 text-slate-600">Chuyển thẻ, ghi nhận lỗi, phê duyệt vượt mức</td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">PHÊ DUYỆT</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">TOÀN QUYỀN</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">KIỂM DUYỆT</span></td>
+              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">THEO DÕI</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+        <button onclick="closeModals()" class="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let users = [
+      {
+        userId: "USR-001",
+        username: "admin.super",
+        email: "admin@nguyenkhoa.vn",
+        fullName: "Nguyễn Văn Hùng",
+        phone: "0908123456",
+        roles: ["ADMIN"],
+        status: "ACTIVE"
+      },
+      {
+        userId: "USR-002",
+        username: "owner.khoa",
+        email: "khoa.nguyen@nguyenkhoa.vn",
+        fullName: "Nguyễn Văn Khoa",
+        phone: "0912345678",
+        roles: ["OWNER"],
+        status: "ACTIVE"
+      },
+      {
+        userId: "USR-003",
+        username: "sales.lan",
+        email: "lan.nguyen@nguyenkhoa.vn",
+        fullName: "Nguyễn Thị Lan",
+        phone: "0933445566",
+        roles: ["SALES"],
+        status: "ACTIVE"
+      },
+      {
+        userId: "USR-004",
+        username: "planner.tuan",
+        email: "tuan.le@nguyenkhoa.vn",
+        fullName: "Lê Anh Tuấn",
+        phone: "0988776655",
+        roles: ["PLANNER"],
+        status: "ACTIVE"
+      },
+      {
+        userId: "USR-005",
+        username: "leader.dung",
+        email: "dung.tran@nguyenkhoa.vn",
+        fullName: "Trần Văn Dũng",
+        phone: "0944556677",
+        roles: ["LEADER"],
+        status: "ACTIVE"
+      },
+      {
+        userId: "USR-006",
+        username: "warehouse.minh",
+        email: "minh.pham@nguyenkhoa.vn",
+        fullName: "Phạm Văn Minh",
+        phone: "0977889900",
+        roles: ["WAREHOUSE"],
+        status: "BANNED"
+      }
+    ];
+
+    function getRoleBadge(role) {
+      const r = (role || "").toUpperCase();
+      let colorClasses = "bg-slate-100 text-slate-700 border-slate-200";
+      if (r.includes("ADMIN")) colorClasses = "bg-purple-100 text-purple-800 border-purple-200";
+      else if (r.includes("OWNER")) colorClasses = "bg-amber-100 text-amber-800 border-amber-200";
+      else if (r.includes("SALES")) colorClasses = "bg-blue-100 text-blue-800 border-blue-200";
+      else if (r.includes("PLANNER")) colorClasses = "bg-indigo-100 text-indigo-800 border-indigo-200";
+      else if (r.includes("LEADER")) colorClasses = "bg-amber-50 text-amber-900 border-amber-200";
+      else if (r.includes("QC")) colorClasses = "bg-rose-100 text-rose-800 border-rose-200";
+      else if (r.includes("WAREHOUSE")) colorClasses = "bg-orange-100 text-orange-800 border-orange-200";
+      else if (r.includes("PURCHASING")) colorClasses = "bg-emerald-100 text-emerald-800 border-emerald-200";
+
+      return `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border uppercase whitespace-nowrap ${colorClasses}">${role}</span>`;
+    }
+
+    function getStatusBadge(status) {
+      if (status === "ACTIVE") {
+        return `
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+            ĐANG HOẠT ĐỘNG
+          </span>
+        `;
+      }
+      return `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+          <span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+          ĐÃ TẠM KHÓA
+        </span>
+      `;
+    }
+
+    function renderTable(list) {
+      const tbody = document.getElementById("user-table-body");
+      const emptyState = document.getElementById("empty-state");
+      const paginationInfo = document.getElementById("pagination-info");
+
+      paginationInfo.textContent = `Hiển thị 1 đến ${list.length} trên tổng số ${users.length} tài khoản`;
+
+      if (list.length === 0) {
+        tbody.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      tbody.innerHTML = list.map(user => {
+        const isActive = user.status === "ACTIVE";
+        const initials = user.fullName.split(' ').map(n => n[0]).slice(-2).join('').toUpperCase();
+
+        return `
+          <tr class="hover:bg-slate-50 transition-colors group">
+            <td class="py-4 px-6 align-middle min-w-[240px]">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-300">
+                  ${initials}
+                </div>
+                <div>
+                  <div class="font-bold text-slate-900 group-hover:text-blue-600 transition-colors whitespace-nowrap">${user.fullName}</div>
+                  <div class="text-xs text-slate-500 font-mono">${user.userId}</div>
+                </div>
+              </div>
+            </td>
+
+            <td class="py-4 px-4 align-middle font-mono font-medium text-slate-700 whitespace-nowrap min-w-[150px]">
+              ${user.username}
+            </td>
+
+            <td class="py-4 px-4 align-middle min-w-[220px]">
+              <div class="text-slate-800 whitespace-nowrap">${user.email}</div>
+              <div class="text-xs text-slate-500 font-mono mt-0.5 whitespace-nowrap">${user.phone || '—'}</div>
+            </td>
+
+            <td class="py-4 px-4 align-middle min-w-[150px]">
+              <div class="flex flex-wrap gap-1">
+                ${user.roles.map(r => getRoleBadge(r)).join(' ')}
+              </div>
+            </td>
+
+            <td class="py-4 px-4 align-middle min-w-[160px] whitespace-nowrap">
+              ${getStatusBadge(user.status)}
+            </td>
+
+            <td class="py-4 px-6 align-middle text-right space-x-2 min-w-[150px] whitespace-nowrap">
+              <button 
+                type="button" 
+                onclick="openEditUserModal('${user.userId}')"
+                class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 transition shadow-xs"
+              >
+                Chỉnh sửa
+              </button>
+              ${isActive ? `
+                <button 
+                  type="button" 
+                  onclick="toggleStatusDirect('${user.userId}')"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50/70 border border-rose-200 rounded-lg hover:bg-rose-100 hover:border-rose-300 transition"
+                >
+                  Khóa
+                </button>
+              ` : `
+                <button 
+                  type="button" 
+                  onclick="toggleStatusDirect('${user.userId}')"
+                  class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50/70 border border-emerald-200 rounded-lg hover:bg-emerald-100 hover:border-emerald-300 transition"
+                >
+                  Mở khóa
+                </button>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      updateKpis();
+    }
+
+    function updateKpis() {
+      document.getElementById("kpi-total").textContent = users.length;
+      document.getElementById("kpi-suspended").textContent = users.filter(u => u.status === "BANNED").length;
+    }
+
+    function applyFilters() {
+      const keyword = (document.getElementById("search-input").value || "").trim().toLowerCase();
+      const role = document.getElementById("role-filter").value;
+      const status = document.getElementById("status-filter").value;
+
+      const filtered = users.filter(user => {
+        const matchesKeyword = !keyword || 
+          user.fullName.toLowerCase().includes(keyword) ||
+          user.username.toLowerCase().includes(keyword) ||
+          user.email.toLowerCase().includes(keyword) ||
+          (user.phone && user.phone.includes(keyword));
+
+        const matchesRole = !role || user.roles.includes(role);
+        const matchesStatus = !status || user.status === status;
+
+        return matchesKeyword && matchesRole && matchesStatus;
+      });
+
+      renderTable(filtered);
+    }
+
+    function handleSearchInput() {
+      const val = document.getElementById("search-input").value;
+      document.getElementById("clear-search-btn").classList.toggle("hidden", !val);
+      applyFilters();
+    }
+
+    function clearSearch() {
+      document.getElementById("search-input").value = "";
+      document.getElementById("role-filter").value = "";
+      document.getElementById("status-filter").value = "";
+      document.getElementById("clear-search-btn").classList.add("hidden");
+      applyFilters();
+    }
+
+    function showToast(type, message) {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = `p-4 rounded-xl shadow-lg border text-sm font-medium flex items-center justify-between gap-3 pointer-events-auto transition transform duration-200 translate-y-2 opacity-0 ${
+        type === 'success' 
+          ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
+          : type === 'error'
+          ? 'bg-rose-50 text-rose-900 border-rose-200'
+          : 'bg-slate-900 text-white border-slate-800'
+      }`;
+
+      toast.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
+          <span>${message}</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-xs opacity-60 hover:opacity-100 font-bold ml-2">✕</button>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => toast.remove(), 200);
+      }, 4000);
+    }
+
+    function closeModals() {
+      document.getElementById("modal-create").classList.add("hidden");
+      document.getElementById("modal-create").classList.remove("flex");
+      document.getElementById("modal-edit").classList.add("hidden");
+      document.getElementById("modal-edit").classList.remove("flex");
+      document.getElementById("modal-matrix").classList.add("hidden");
+      document.getElementById("modal-matrix").classList.remove("flex");
+    }
+
+    function openCreateUserModal() {
+      closeModals();
+      document.getElementById("modal-create").classList.remove("hidden");
+      document.getElementById("modal-create").classList.add("flex");
+    }
+
+    function openRoleMatrixModal() {
+      closeModals();
+      document.getElementById("modal-matrix").classList.remove("hidden");
+      document.getElementById("modal-matrix").classList.add("flex");
+    }
+
+    let activeEditUser = null;
+    function openEditUserModal(userId) {
+      activeEditUser = users.find(u => u.userId === userId);
+      if (!activeEditUser) return;
+
+      document.getElementById("edit-user-id").value = activeEditUser.userId;
+      document.getElementById("edit-fullname").value = activeEditUser.fullName;
+      document.getElementById("edit-email").value = activeEditUser.email;
+      document.getElementById("edit-phone").value = activeEditUser.phone || "";
+      document.getElementById("edit-modal-sub").textContent = `Mã tài khoản: ${activeEditUser.userId} (${activeEditUser.username})`;
+
+      updateEditModalStatusButton();
+
+      closeModals();
+      document.getElementById("modal-edit").classList.remove("hidden");
+      document.getElementById("modal-edit").classList.add("flex");
+    }
+
+    function updateEditModalStatusButton() {
+      const btn = document.getElementById("edit-toggle-status-btn");
+      const hint = document.getElementById("edit-status-hint");
+      if (activeEditUser.status === "ACTIVE") {
+        btn.textContent = "Khóa tài khoản";
+        btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition border text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100";
+        hint.textContent = "Đang hoạt động - Có quyền truy cập các tính năng";
+      } else {
+        btn.textContent = "Mở khóa tài khoản";
+        btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition border text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100";
+        hint.textContent = "Đang tạm khóa - Bị chặn đăng nhập vào hệ thống";
+      }
+    }
+
+    function handleToggleCurrentStatus() {
+      if (!activeEditUser) return;
+      activeEditUser.status = activeEditUser.status === "ACTIVE" ? "BANNED" : "ACTIVE";
+      updateEditModalStatusButton();
+      applyFilters();
+      showToast("success", `Đã chuyển trạng thái tài khoản thành ${activeEditUser.status === "ACTIVE" ? "Đang hoạt động" : "Tạm khóa"}.`);
+    }
+
+    function toggleStatusDirect(userId) {
+      const user = users.find(u => u.userId === userId);
+      if (!user) return;
+      user.status = user.status === "ACTIVE" ? "BANNED" : "ACTIVE";
+      applyFilters();
+      showToast("success", `Tài khoản ${user.username} hiện ${user.status === "ACTIVE" ? "Đang hoạt động" : "Đã tạm khóa"}.`);
+    }
+
+    function handleCreateUser(e) {
+      e.preventDefault();
+      const fullName = document.getElementById("new-fullname").value.trim();
+      const username = document.getElementById("new-username").value.trim();
+      const email = document.getElementById("new-email").value.trim();
+      const phone = document.getElementById("new-phone").value.trim();
+      const role = document.getElementById("new-role").value;
+
+      const newUser = {
+        userId: `USR-00${users.length + 1}`,
+        username,
+        email,
+        fullName,
+        phone,
+        roles: [role],
+        status: "ACTIVE"
+      };
+
+      users.unshift(newUser);
+      closeModals();
+      applyFilters();
+      showToast("success", `Tài khoản "${username}" đã được tạo thành công.`);
+      e.target.reset();
+    }
+
+    function handleSaveEdit(e) {
+      e.preventDefault();
+      if (!activeEditUser) return;
+
+      activeEditUser.fullName = document.getElementById("edit-fullname").value.trim();
+      activeEditUser.email = document.getElementById("edit-email").value.trim();
+      activeEditUser.phone = document.getElementById("edit-phone").value.trim();
+
+      closeModals();
+      applyFilters();
+      showToast("success", `Hồ sơ nhân viên ${activeEditUser.username} đã được cập nhật.`);
+    }
+
+    window.onload = () => {
+      renderTable(users);
+    };
+  </script>
+</body>
+</html>

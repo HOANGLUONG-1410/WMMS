@@ -29,7 +29,7 @@ export default function ResetPasswordModal({
         text:
           apiRes?.message ||
           apiRes?.data?.message ||
-          "Password reset instructions have been sent to your email.",
+          "Hướng dẫn đặt lại mật khẩu đã được gửi tới email của bạn.",
       });
     },
     onError: (err: unknown) => {
@@ -47,7 +47,7 @@ export default function ResetPasswordModal({
     if (!recoveryEmail.trim()) {
       setRecoveryFeedback({
         type: "error",
-        text: "Please enter your registered employee email address.",
+        text: "Vui lòng nhập email nhân viên đã đăng ký.",
       });
       return;
     }
@@ -57,17 +57,17 @@ export default function ResetPasswordModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4">
       <div className="w-full max-w-[490px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-slate-100">
-          <h2 className="text-sm font-bold text-slate-900">
-            Reset Personal Password
+        <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
+          <h2 className="text-base font-bold text-slate-900">
+            Đặt lại mật khẩu cá nhân
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-base font-bold leading-none px-1"
-            aria-label="Close modal"
+            className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none px-1 cursor-pointer"
+            aria-label="Đóng hộp thoại"
           >
             ×
           </button>
@@ -75,35 +75,35 @@ export default function ResetPasswordModal({
 
         <form
           onSubmit={handleSendRecoveryToken}
-          className="px-6 py-4 space-y-4"
+          className="px-6 py-5 space-y-4"
         >
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Enter your registered employee email. System will generate a
-            single-use authentication token sent to your company inbox.
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Nhập email nhân viên đã đăng ký. Hệ thống sẽ tạo một mã
+            xác thực dùng một lần và gửi vào hộp thư công ty của bạn.
           </p>
 
           <div>
             <label
               htmlFor="recovery-email-input"
-              className="block text-xs font-semibold text-slate-700 mb-1.5"
+              className="block text-sm font-medium text-slate-700 mb-1.5"
             >
-              Employee Email Address
+              Địa chỉ email nhân viên
             </label>
             <input
               id="recovery-email-input"
               type="email"
               value={recoveryEmail}
               onChange={(e) => setRecoveryEmail(e.target.value)}
-              placeholder="employee@nguyenkhoa.vn"
-              className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="nhanvien@nguyenkhoa.vn"
+              className="w-full px-3.5 py-2 text-sm text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </div>
 
           {recoveryFeedback && (
             <div
-              className={`px-3 py-2 rounded text-xs ${
+              className={`px-3.5 py-2.5 rounded-lg text-sm ${
                 recoveryFeedback.type === "error"
-                  ? "bg-red-50 text-red-700 border border-red-200"
+                  ? "bg-rose-50 text-rose-700 border border-rose-200"
                   : "bg-emerald-50 text-emerald-700 border border-emerald-200"
               }`}
             >
@@ -111,46 +111,26 @@ export default function ResetPasswordModal({
             </div>
           )}
 
-          <div className="pt-2 flex items-center justify-end gap-2">
+          <div className="pt-2 flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
               disabled={forgotPasswordMutation.isPending}
-              className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition disabled:opacity-60"
+              className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition disabled:opacity-60 cursor-pointer"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
               disabled={forgotPasswordMutation.isPending}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#2563eb] hover:bg-blue-700 rounded-md shadow-sm transition disabled:opacity-60 inline-flex items-center gap-2"
+              className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition disabled:opacity-60 inline-flex items-center gap-2 cursor-pointer"
             >
               {forgotPasswordMutation.isPending && (
-                <svg
-                  className="animate-spin h-3.5 w-3.5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
               {forgotPasswordMutation.isPending
-                ? "Sending..."
-                : "Send Recovery Token"}
+                ? "Đang gửi..."
+                : "Gửi mã khôi phục"}
             </button>
           </div>
         </form>

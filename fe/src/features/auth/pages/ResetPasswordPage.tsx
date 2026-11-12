@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
         type: 'success',
         text:
           res?.message ||
-          'Password has been reset successfully. You can now sign in with your new password.'
+          'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.'
       });
     },
     onError: (err: unknown) => {
@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
     if (!email.trim() || !tokenOrOtp.trim()) {
       setFeedback({
         type: 'error',
-        text: 'Missing recovery email or reset token. Please use the link from your email inbox.'
+        text: 'Thiếu email khôi phục hoặc mã đặt lại. Vui lòng dùng liên kết trong hộp thư của bạn.'
       });
       return;
     }
@@ -57,7 +57,7 @@ export default function ResetPasswordPage() {
     if (!newPassword.trim() || !confirmNewPassword.trim()) {
       setFeedback({
         type: 'error',
-        text: 'Please enter both New Password and Confirm Password.'
+        text: 'Vui lòng nhập Mật khẩu mới và Xác nhận mật khẩu.'
       });
       return;
     }
@@ -65,7 +65,7 @@ export default function ResetPasswordPage() {
     if (newPassword !== confirmNewPassword) {
       setFeedback({
         type: 'error',
-        text: 'New password and confirmation password do not match.'
+        text: 'Mật khẩu mới và mật khẩu xác nhận không khớp.'
       });
       return;
     }
@@ -80,21 +80,24 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#0d1528] flex items-center justify-center p-4 relative select-none">
-      <div className="w-full max-w-[380px] bg-white rounded-xl shadow-2xl px-7 py-8 border border-slate-100">
+    <div className="min-h-screen w-full bg-[#F8FAFC] flex items-center justify-center p-4 relative select-none">
+      <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-lg px-8 py-9 border border-slate-200">
         <div className="text-center mb-6">
-          <h1 className="text-[17px] font-extrabold tracking-tight text-slate-900 uppercase">
-            WMMS PRODUCTION SUITE
+          <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-extrabold text-xl flex items-center justify-center mx-auto mb-3 shadow-xs">
+            W
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
+            Hệ thống Quản lý Sản xuất WMMS
           </h1>
-          <p className="text-xs text-slate-500 mt-1">Nguyen Khoa Ha Nam Wood Factory</p>
-          <p className="text-xs font-semibold text-blue-600 mt-2">Set New Account Password</p>
+          <p className="text-sm text-slate-500 mt-1">Xưởng gỗ Nguyên Khoa Hà Nam</p>
+          <p className="text-sm font-semibold text-blue-600 mt-2">Đặt mật khẩu mới cho tài khoản</p>
         </div>
 
         {feedback && (
           <div
-            className={`mb-4 px-3 py-2 rounded text-xs font-medium whitespace-pre-line ${
+            className={`mb-5 px-4 py-3 rounded-lg text-sm font-medium whitespace-pre-line ${
               feedback.type === 'error'
-                ? 'bg-red-50 text-red-700 border border-red-200'
+                ? 'bg-rose-50 text-rose-700 border border-rose-200'
                 : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
             }`}
           >
@@ -107,9 +110,9 @@ export default function ResetPasswordPage() {
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="w-full py-2.5 px-4 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition-colors"
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
             >
-              Back to Sign In
+              Quay lại đăng nhập
             </button>
           </div>
         ) : (
@@ -117,9 +120,9 @@ export default function ResetPasswordPage() {
             <div>
               <label
                 htmlFor="reset-email-input"
-                className="block text-xs font-semibold text-slate-700 mb-1.5"
+                className="block text-sm font-medium text-slate-700 mb-1.5"
               >
-                Account Email
+                Email tài khoản
               </label>
               <input
                 id="reset-email-input"
@@ -127,8 +130,8 @@ export default function ResetPasswordPage() {
                 value={email}
                 readOnly={Boolean(emailFromUrl)}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="employee@nguyenkhoa.vn"
-                className={`w-full px-3 py-2 text-xs text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                placeholder="nhanvien@nguyenkhoa.vn"
+                className={`w-full px-3.5 py-2.5 text-sm text-slate-800 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 ${
                   emailFromUrl ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'
                 }`}
               />
@@ -138,17 +141,17 @@ export default function ResetPasswordPage() {
               <div>
                 <label
                   htmlFor="reset-token-input"
-                  className="block text-xs font-semibold text-slate-700 mb-1.5"
+                  className="block text-sm font-medium text-slate-700 mb-1.5"
                 >
-                  Recovery Token / 6-Digit OTP
+                  Mã khôi phục / OTP 6 chữ số
                 </label>
                 <input
                   id="reset-token-input"
                   type="text"
                   value={tokenOrOtp}
                   onChange={(e) => setTokenOrOtp(e.target.value)}
-                  placeholder="Enter OTP or recovery token"
-                  className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nhập OTP hoặc mã khôi phục"
+                  className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
             )}
@@ -156,9 +159,9 @@ export default function ResetPasswordPage() {
             <div>
               <label
                 htmlFor="new-password-input"
-                className="block text-xs font-semibold text-slate-700 mb-1.5"
+                className="block text-sm font-medium text-slate-700 mb-1.5"
               >
-                New Password
+                Mật khẩu mới
               </label>
               <input
                 id="new-password-input"
@@ -166,16 +169,16 @@ export default function ResetPasswordPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               />
             </div>
 
             <div>
               <label
                 htmlFor="confirm-password-input"
-                className="block text-xs font-semibold text-slate-700 mb-1.5"
+                className="block text-sm font-medium text-slate-700 mb-1.5"
               >
-                Confirm Password
+                Xác nhận mật khẩu
               </label>
               <input
                 id="confirm-password-input"
@@ -183,40 +186,20 @@ export default function ResetPasswordPage() {
                 value={confirmNewPassword}
                 onChange={(e) => setConfirmNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               />
             </div>
 
-            <div className="pt-1">
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={resetPasswordMutation.isPending}
-                className="w-full py-2.5 px-4 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-sm transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-2 cursor-pointer"
               >
                 {resetPasswordMutation.isPending && (
-                  <svg
-                    className="animate-spin h-3.5 w-3.5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 )}
-                {resetPasswordMutation.isPending ? 'Updating Password...' : 'Confirm New Password'}
+                {resetPasswordMutation.isPending ? 'Đang cập nhật mật khẩu...' : 'Xác nhận mật khẩu mới'}
               </button>
             </div>
 
@@ -224,9 +207,9 @@ export default function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
               >
-                ← Back to Sign In
+                ← Quay lại đăng nhập
               </button>
             </div>
           </form>
