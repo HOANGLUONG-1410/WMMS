@@ -39,6 +39,33 @@ const BOM_STATUS: Record<string, string> = {
   DONE: "Hoàn tất",
 };
 
+const PR_STATUS: Record<string, string> = {
+  PENDING_APPROVAL: "Chờ duyệt",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Đã từ chối",
+  PO_ISSUED: "Đã lập PO",
+};
+
+const PO_STATUS: Record<string, string> = {
+  ISSUED: "Đã phát hành",
+  PARTIALLY_RECEIVED: "Nhận một phần",
+  RECEIVED: "Đã nhận đủ",
+  COMPLETED: "Hoàn tất",
+  CANCELLED: "Đã hủy",
+};
+
+const ALLOCATION_STATUS: Record<string, string> = {
+  FULL: "Đủ vật tư",
+  FULLY_ALLOCATED: "Đủ vật tư",
+  PARTIAL: "Giữ chỗ một phần",
+  PARTIALLY_ALLOCATED: "Giữ chỗ một phần",
+  WAITING: "Chờ vật tư",
+  WAITING_MATERIAL: "Chờ vật tư",
+  PENDING: "Chờ phân bổ",
+  ISSUED: "Đã xuất kho",
+  RELEASED: "Đã giải phóng",
+};
+
 const AUDIT_ACTION: Record<string, string> = {
   AUTH_LOGIN_SUCCESS: "Đăng nhập thành công",
   AUTH_LOGIN_FAILED: "Đăng nhập thất bại",
@@ -79,4 +106,7 @@ const AUDIT_ACTION: Record<string, string> = {
 export const userStatusLabel = (code?: string | null) => pick(USER_STATUS, code, "Tạm khóa");
 export const lifecycleStatusLabel = (code?: string | null) => pick(ORDER_LIFECYCLE, code);
 export const bomStatusLabel = (code?: string | null) => pick(BOM_STATUS, code);
+export const prStatusLabel = (code?: string | null) => pick(PR_STATUS, code);
+export const poStatusLabel = (code?: string | null) => pick(PO_STATUS, code);
+export const allocationStatusLabel = (code?: string | null) => pick(ALLOCATION_STATUS, code);
 export const auditActionLabel = (code?: string | null) => pick(AUDIT_ACTION, code);
