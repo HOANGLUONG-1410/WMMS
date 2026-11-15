@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useWmms } from "../../features/auth/hooks/WmmsContext";
 import { useSession } from "../../features/auth/store/SessionContext";
@@ -27,6 +27,7 @@ interface SidebarItem {
   label: string;
   path: string;
   badge?: string;
+  children?: SidebarItem[];
 }
 
 interface SidebarSection {
@@ -111,7 +112,17 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
+  subItem: (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 4v8a4 4 0 004 4h10m0 0l-4-4m4 4l-4 4" />
+    </svg>
+  ),
 };
+
+const SIDEBAR_STORAGE_KEY = "wmms_sidebar_width";
+const DEFAULT_SIDEBAR_WIDTH = 280;
+const MIN_SIDEBAR_WIDTH = 220;
+const MAX_SIDEBAR_WIDTH = 460;
 
 export default function WmmsSidebar({
   mobileOpen,
@@ -123,12 +134,122 @@ export default function WmmsSidebar({
   const { currentSpaceKey } = useWmms();
   const { currentUser } = useSession();
 
+  // Độ rộng có thể kéo thả của Sidebar trên màn hình Desktop
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH && parsed <= MAX_SIDEBAR_WIDTH) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Fallback nếu localStorage bị chặn
+    }
+    return DEFAULT_SIDEBAR_WIDTH;
+  });
+
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+  const isResizingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const nextWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, e.clientX));
+      setSidebarWidth(nextWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (!isResizingRef.current) return;
+      isResizingRef.current = false;
+      setIsResizing(false);
+      document.body.style.removeProperty("cursor");
+      document.body.style.removeProperty("user-select");
+      setSidebarWidth((latest) => {
+        try {
+          localStorage.setItem(SIDEBAR_STORAGE_KEY, String(latest));
+        } catch {
+          // ignore
+        }
+        return latest;
+      });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.removeProperty("cursor");
+      document.body.style.removeProperty("user-select");
+    };
+  }, []);
+
+  const handleStartResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingRef.current = true;
+    setIsResizing(true);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
+
+  const handleResetWidth = () => {
+    setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
+    try {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(DEFAULT_SIDEBAR_WIDTH));
+    } catch {
+      // ignore
+    }
+  };
+
   const activeRole: RoleCode =
     activeRoleOverride ||
     (currentUser?.activeRole as RoleCode) ||
     ROLES.ADMIN;
 
   const roleMeta = ROLE_CONFIG[activeRole] || ROLE_CONFIG.ADMIN;
+
+  const isInOrderSpace = location.pathname.startsWith("/orders/spaces");
+  const isInBomPage = location.pathname.startsWith("/bom");
+  const isInReconciliation = location.pathname.startsWith("/inventory/reconciliation");
+
+  // Lấy spaceKey từ URL: hoặc /orders/spaces/:spaceKey hoặc /bom?spaceKey=... hoặc /inventory/reconciliation?spaceKey=...
+  const spaceFromPath = location.pathname.startsWith("/orders/spaces/")
+    ? decodeURIComponent(location.pathname.replace("/orders/spaces/", "").split("/")[0] || "")
+    : "";
+  const spaceFromQuery = new URLSearchParams(location.search).get("spaceKey") || "";
+  const activeSpaceFromUrl = spaceFromPath || spaceFromQuery;
+  const displaySpaceKey = activeSpaceFromUrl || currentSpaceKey;
+
+  // Hiển thị cây phân cấp khi đang ở trong Space hoặc đang ở trang BOM / Đối chiếu của Space
+  const isSpaceContextActive =
+    isInOrderSpace || ((isInBomPage || isInReconciliation) && Boolean(displaySpaceKey));
+
+  const spaceSubItems: SidebarItem[] = [];
+  if (isSpaceContextActive && displaySpaceKey) {
+    spaceSubItems.push({
+      icon: Icons.bom,
+      label: "BOM & quy trình sản xuất",
+      path: `/bom?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
+    });
+    spaceSubItems.push({
+      icon: Icons.reconcile,
+      label: "Đối chiếu & phân bổ vật tư",
+      path: `/inventory/reconciliation?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
+    });
+  }
+
+  const orderSpaceChildItem: SidebarItem | undefined = isSpaceContextActive
+    ? {
+        icon: Icons.space,
+        label: displaySpaceKey || "Không gian đơn hàng",
+        path: `/orders/spaces/${displaySpaceKey}`,
+        children: spaceSubItems.length > 0 ? spaceSubItems : undefined,
+      }
+    : undefined;
 
   const getSidebarSections = (): SidebarSection[] => {
     switch (activeRole) {
@@ -146,6 +267,9 @@ export default function WmmsSidebar({
             items: [
               { icon: Icons.reports, label: "Báo cáo sản xuất & KCS", path: "/analytics/reports" },
               { icon: Icons.inventory, label: "Tồn kho vật tư 3 cấp", path: "/inventory/stock" },
+              { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
+              { icon: Icons.orders, label: "Nhập kho vật tư", path: "/warehouse/receipts" },
+              { icon: Icons.space, label: "Xuất kho & bàn giao", path: "/warehouse/issues" },
             ],
           },
         ];
@@ -156,14 +280,17 @@ export default function WmmsSidebar({
             heading: "ĐIỀU HÀNH & ĐƠN HÀNG",
             items: [
               { icon: Icons.dashboard, label: "Bảng điều hành & ETD", path: "/dashboard" },
-              { icon: Icons.orders, label: "Danh sách đơn hàng bán", path: "/orders" },
-              { icon: Icons.space, label: "Không gian đơn hàng đang mở", path: `/orders/spaces/${currentSpaceKey}` },
+              {
+                icon: Icons.orders,
+                label: "Danh sách đơn hàng",
+                path: "/orders",
+                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+              },
             ],
           },
           {
             heading: "KỸ THUẬT & QUY TRÌNH",
             items: [
-              { icon: Icons.bom, label: "Lập BOM & quy trình sản xuất", path: "/bom" },
               { icon: Icons.routing, label: "Cấu hình quy trình động", path: "/production/routing-config" },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
             ],
@@ -171,7 +298,6 @@ export default function WmmsSidebar({
           {
             heading: "TỒN KHO & MUA HÀNG",
             items: [
-              { icon: Icons.reconcile, label: "Đối chiếu tồn kho", path: "/inventory/reconciliation" },
               { icon: Icons.inventory, label: "Tồn kho vật tư 3 cấp", path: "/inventory/stock" },
               { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
               { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
@@ -194,16 +320,13 @@ export default function WmmsSidebar({
           {
             heading: "TIẾP NHẬN & QUẢN LÝ ĐƠN HÀNG",
             items: [
-              { icon: Icons.orders, label: "Danh sách đơn hàng bán", path: "/orders" },
+              {
+                icon: Icons.orders,
+                label: "Danh sách đơn hàng",
+                path: "/orders",
+                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+              },
               { icon: Icons.audit, label: "Lưới Staging PO Excel", path: "/orders/staging" },
-              { icon: Icons.space, label: "Không gian đơn hàng đang mở", path: `/orders/spaces/${currentSpaceKey}` },
-            ],
-          },
-          {
-            heading: "KỸ THUẬT & TỒN KHO",
-            items: [
-              { icon: Icons.bom, label: "Bóc tách BOM & quy trình", path: "/bom" },
-              { icon: Icons.reconcile, label: "Đối chiếu tồn kho", path: "/inventory/reconciliation" },
             ],
           },
         ];
@@ -213,10 +336,15 @@ export default function WmmsSidebar({
           {
             heading: "KẾ HOẠCH VẬT TƯ & BOM",
             items: [
-              { icon: Icons.bom, label: "Lập BOM & quy trình sản xuất", path: "/bom" },
-              { icon: Icons.reconcile, label: "Đối chiếu tồn kho", path: "/inventory/reconciliation" },
+              {
+                icon: Icons.orders,
+                label: "Danh sách đơn hàng",
+                path: "/orders",
+                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+              },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
               { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
+              { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
             ],
           },
         ];
@@ -267,7 +395,9 @@ export default function WmmsSidebar({
               { icon: Icons.dashboard, label: "Bảng điều hành & ETD", path: "/dashboard" },
               { icon: Icons.kanban, label: "Bảng Kanban sản xuất", path: "/production/kanban" },
               { icon: Icons.routing, label: "Tiến độ công đoạn tại trạm", path: "/production/progress" },
-              { icon: Icons.space, label: "Không gian đơn hàng đang mở", path: `/orders/spaces/${currentSpaceKey}` },
+              ...(orderSpaceChildItem
+                ? [{ icon: Icons.space, label: orderSpaceChildItem.label, path: orderSpaceChildItem.path }]
+                : []),
             ],
           },
           {
@@ -294,25 +424,116 @@ export default function WmmsSidebar({
         return [
           {
             heading: "MÀN HÌNH NGHIỆP VỤ",
-            items: [{ icon: Icons.orders, label: "Đơn hàng bán", path: "/orders" }],
+            items: [
+              {
+                icon: Icons.orders,
+                label: "Danh sách đơn hàng",
+                path: "/orders",
+                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+              },
+            ],
           },
         ];
     }
   };
 
   const isItemActive = (path: string): boolean => {
-    // 1. Trang chi tiết Không gian đơn hàng
+    // 1. Trang lập BOM & quy trình
+    if (path.startsWith("/bom")) {
+      return location.pathname.startsWith("/bom");
+    }
+
+    // 2. Trang chi tiết Không gian đơn hàng
     if (path.includes("/orders/spaces/")) {
       return location.pathname.startsWith("/orders/spaces");
     }
 
-    // 2. Trang Danh sách đơn hàng: chỉ kích hoạt khi đúng URL danh sách, không nhận vơ các trang con /spaces hay /staging
+    // 3. Trang Danh sách đơn hàng: chỉ kích hoạt khi đúng URL danh sách, không nhận vơ các trang con /spaces hay /staging
     if (path === "/orders") {
       return location.pathname === "/orders" || location.pathname === "/orders/";
     }
 
-    // 3. Các đường dẫn thông thường khác
+    // 4. Các đường dẫn thông thường khác
     return location.pathname === path || (path !== "/" && location.pathname.startsWith(path + "/"));
+  };
+
+  // Hàm kiểm tra xem một item hoặc bất kỳ con/cháu nào của nó đang active
+  const hasActiveDescendant = (item: SidebarItem): boolean => {
+    if (!item.children || item.children.length === 0) return false;
+    return item.children.some(
+      (child) => isItemActive(child.path) || hasActiveDescendant(child)
+    );
+  };
+
+  // Render một item trên cây Sidebar (hỗ trợ phân cấp nhiều tầng: cấp 0, cấp 1, cấp 2)
+  const renderSidebarItemNode = (item: SidebarItem, level = 0): ReactNode => {
+    const active = isItemActive(item.path);
+    const hasDescendant = hasActiveDescendant(item);
+
+    const isTopLevel = level === 0;
+    const isLevel1 = level === 1;
+
+    return (
+      <li key={item.path} className="space-y-1">
+        <button
+          type="button"
+          title={item.label}
+          onClick={() => {
+            navigate(item.path);
+            onCloseMobile();
+          }}
+          className={`w-full flex items-center transition-colors cursor-pointer ${
+            isTopLevel
+              ? `gap-3 px-3 py-2.5 rounded-lg text-sm ${
+                  active
+                    ? "bg-white text-blue-700 font-semibold border-l-4 border-blue-600 shadow-xs"
+                    : hasDescendant
+                    ? "bg-slate-200/60 text-slate-900 font-semibold"
+                    : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 font-medium"
+                }`
+              : `gap-2 px-2.5 py-2 rounded-lg text-xs ${
+                  active
+                    ? "bg-white text-blue-700 font-bold border border-blue-200 shadow-xs"
+                    : hasDescendant
+                    ? "bg-slate-200/60 text-slate-900 font-semibold"
+                    : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 font-medium"
+                }`
+          }`}
+        >
+          {!isTopLevel && (
+            <span className={active || hasDescendant ? "text-blue-600" : "text-slate-400"}>
+              {Icons.subItem}
+            </span>
+          )}
+          <span
+            className={
+              active
+                ? "text-blue-600"
+                : hasDescendant
+                ? "text-slate-800"
+                : "text-slate-500"
+            }
+          >
+            {item.icon}
+          </span>
+          <span className="truncate">{item.label}</span>
+        </button>
+
+        {item.children && item.children.length > 0 && (
+          <ul
+            className={`mt-1 space-y-1 border-l-2 ${
+              isTopLevel
+                ? "ml-4 pl-2.5 border-blue-300"
+                : isLevel1
+                ? "ml-4 pl-2.5 border-blue-200"
+                : "ml-3 pl-2 border-slate-300"
+            }`}
+          >
+            {item.children.map((child) => renderSidebarItemNode(child, level + 1))}
+          </ul>
+        )}
+      </li>
+    );
   };
 
   const sidebarContent = (
@@ -348,30 +569,7 @@ export default function WmmsSidebar({
                 {section.heading}
               </div>
               <ul className="space-y-1">
-                {section.items.map((item, i) => {
-                  const active = isItemActive(item.path);
-                  return (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigate(item.path);
-                          onCloseMobile();
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors cursor-pointer ${
-                          active
-                            ? "bg-white text-blue-700 font-semibold border-l-4 border-blue-600 shadow-xs"
-                            : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 font-medium"
-                        }`}
-                      >
-                        <span className={active ? "text-blue-600" : "text-slate-500"}>
-                          {item.icon}
-                        </span>
-                        <span className="truncate">{item.label}</span>
-                      </button>
-                    </li>
-                  );
-                })}
+                {section.items.map((item) => renderSidebarItemNode(item, 0))}
               </ul>
             </div>
           ))}
@@ -390,9 +588,34 @@ export default function WmmsSidebar({
 
   return (
     <>
-      {/* Desktop Left Sidebar - Soft Cool Gray (COLOR-02) */}
-      <aside className="hidden lg:flex w-64 bg-[#F1F5F9] text-slate-700 flex-col justify-between shrink-0 select-none border-r border-slate-200">
+      {/* Desktop Left Sidebar - Soft Cool Gray (COLOR-02) with Resizable Right Border */}
+      <aside
+        style={{ width: `${sidebarWidth}px` }}
+        className="relative hidden lg:flex bg-[#F1F5F9] text-slate-700 flex-col justify-between shrink-0 select-none border-r border-slate-200 transition-[width] duration-75 ease-out"
+      >
         {sidebarContent}
+
+        {/* Cạnh phải kéo thả thay đổi độ rộng (Drag Handle) */}
+        <div
+          role="separator"
+          tabIndex={0}
+          aria-label="Kéo cạnh phải để thay đổi độ rộng menu điều hướng"
+          aria-valuenow={sidebarWidth}
+          aria-valuemin={MIN_SIDEBAR_WIDTH}
+          aria-valuemax={MAX_SIDEBAR_WIDTH}
+          onMouseDown={handleStartResize}
+          onDoubleClick={handleResetWidth}
+          title="Nhấn giữ chuột để kéo thay đổi độ rộng (nhấp đúp để đặt lại mặc định 280px)"
+          className={`absolute top-0 -right-1 bottom-0 w-2.5 z-20 cursor-col-resize group transition-colors flex items-center justify-center ${
+            isResizing ? "bg-blue-500/20" : "hover:bg-blue-400/20"
+          }`}
+        >
+          <div
+            className={`w-[3px] h-8 rounded-full transition-colors ${
+              isResizing ? "bg-blue-600" : "bg-transparent group-hover:bg-blue-500"
+            }`}
+          />
+        </div>
       </aside>
 
       {/* Mobile Sidebar Drawer Overlay (A11Y-04) */}

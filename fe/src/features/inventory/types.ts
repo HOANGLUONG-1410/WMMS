@@ -88,3 +88,113 @@ export interface InventoryLedgerFilterDto {
   pageSize?: number;
 }
 
+// =============================================================================
+// DTO phân hệ Tính toán Nhu cầu Nguyên vật liệu (MRP) & Phân bổ Tồn kho Tự động (SC-14)
+// =============================================================================
+
+export interface MrpOrderItemBreakdownDto {
+  orderId: number;
+  poNumber: string;
+  spaceId?: number;
+  spaceKey: string;
+  orderItemId: number;
+  productId: number;
+  productSku: string;
+  productName: string;
+  orderedQty: number;
+  scrapRatePercent: number;
+  netQtyPerUnit: number;
+  grossDemandQty: number;
+  reservedQty: number;
+  issuedQty: number;
+  unfulfilledDemandQty: number;
+  etdDate: string;
+  orderItemStatus: string;
+}
+
+export interface MrpMaterialRequirementLineDto {
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  materialGroup: string;
+  unitOfMeasure: string;
+  dimensionSpec?: string | null;
+  fscCertified: boolean;
+  safetyStockQty: number;
+  totalNetBomQty: number;
+  totalGrossDemandQty: number;
+  physicalStockQty: number;
+  allocatedToOtherOrdersQty: number;
+  alreadyReservedForTargetQty: number;
+  availableStockQty: number;
+  allocatableNowQty: number;
+  netShortageQty: number;
+  suggestedPrOrderQty: number;
+  isShortage: boolean;
+  supplyStatus: "SUFFICIENT" | "PARTIAL_SHORTAGE" | "CRITICAL_SHORTAGE" | string;
+  itemBreakdowns: MrpOrderItemBreakdownDto[];
+}
+
+export interface MrpAnalysisResultDto {
+  scope: "ORDER" | "ORDER_SPACE" | "ORDER_ITEM" | "FACTORY_ALL" | string;
+  orderId?: number;
+  poNumber?: string;
+  spaceId?: number;
+  spaceKey?: string;
+  customerName?: string;
+  etdDate?: string;
+  isEtdAtRisk: boolean;
+  analyzedAt: string;
+  totalOrderItemsCount: number;
+  readyOrderItemsCount: number;
+  waitingMaterialItemsCount: number;
+  totalDistinctMaterialsCount: number;
+  sufficientMaterialsCount: number;
+  shortageMaterialsCount: number;
+  overallReadinessStatus: "READY_TO_PRODUCE" | "WAITING_FOR_MATERIAL" | string;
+  materialRequirements: MrpMaterialRequirementLineDto[];
+}
+
+export interface AutoAllocationRequestDto {
+  autoQueueShortageToDailyPr?: boolean;
+  notes?: string;
+}
+
+export interface AutoAllocationResultDto {
+  orderId?: number;
+  poNumber?: string;
+  spaceId?: number;
+  spaceKey?: string;
+  executedAt: string;
+  overallReadinessStatus: string;
+  totalOrderItemsProcessed: number;
+  fullyAllocatedItemsCount: number;
+  waitingMaterialItemsCount: number;
+  totalMaterialAllocationsUpdated: number;
+  consolidatedPrId?: number;
+  consolidatedPrCode?: string;
+  queuedShortageMaterialsCount: number;
+  allocations: MaterialOrderAllocationDto[];
+  remainingShortages: MrpMaterialRequirementLineDto[];
+}
+
+export interface ReallocateByEtdRequestDto {
+  materialIds?: number[];
+  referenceCode?: string;
+}
+
+export interface ReallocateByEtdResultDto {
+  executedAt: string;
+  referenceCode?: string;
+  materialsReallocatedCount: number;
+  allocationsIncreasedCount: number;
+  orderItemsUnlockedToReadyCount: number;
+  unlockedOrderItemIds: number[];
+  updatedAllocations: MaterialOrderAllocationDto[];
+}
+
+export interface ReleaseOrderAllocationsRequestDto {
+  reason?: string;
+}
+
+
