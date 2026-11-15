@@ -574,11 +574,20 @@ export default function ProductBomModal({
                     </tr>
                   ) : bomItems.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-10 px-6 text-center text-rose-600 font-medium">
-                        Sản phẩm <strong>{lineItem.productSku}</strong> (Dòng hàng{" "}
-                        <strong>#{lineItem.orderItemId}</strong>) chưa có dữ liệu vật tư BOM nào. Hãy nhấn{" "}
-                        <strong>Nhập BOM Excel</strong>, <strong>Kế thừa từ danh mục</strong> hoặc{" "}
-                        <strong>+ Thêm vật tư</strong> để thiết lập.
+                      <td colSpan={9} className="py-12 px-6 text-center">
+                        <div className="max-w-lg mx-auto bg-slate-50 border border-slate-200 rounded-xl p-5 text-slate-600 space-y-2">
+                          <div className="flex items-center justify-center text-slate-400">
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                            </svg>
+                          </div>
+                          <div className="text-sm font-bold text-slate-800">
+                            Sản phẩm {lineItem.productSku} chưa có dữ liệu định mức BOM
+                          </div>
+                          <p className="text-xs text-slate-500 leading-relaxed">
+                            Hãy sử dụng các nút <strong>Nhập BOM Excel</strong>, <strong>Kế thừa từ danh mục</strong> hoặc <strong>+ Thêm vật tư</strong> ở thanh công cụ phía trên để thiết lập danh sách nguyên vật liệu.
+                          </p>
+                        </div>
                       </td>
                     </tr>
                   ) : (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RoutingStageDto } from "../types";
 
 interface DynamicRoutingModalProps {
@@ -18,15 +18,64 @@ export default function DynamicRoutingModal({
   const [newStepName, setNewStepName] = useState("");
   const [showAddInput, setShowAddInput] = useState(false);
 
+  // State hỗ trợ Drag & Drop công đoạn
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  // Refs phục vụ hiệu ứng trượt mượt mà (FLIP Animation)
+  const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const prevPositionsRef = useRef<Map<number, number>>(new Map());
+
   useEffect(() => {
     if (isOpen) {
-      setLocalStages(stages.map((s, idx) => ({ ...s, stageSequence: idx + 1 })));
+      // Đảm bảo mỗi stage có stageId duy nhất và stageSequence chuẩn
+      setLocalStages(
+        stages.map((s, idx) => ({
+          ...s,
+          stageId: s.stageId || Date.now() + idx,
+          stageSequence: idx + 1,
+        })),
+      );
       setShowAddInput(false);
       setNewStepName("");
+      setDraggedIndex(null);
+      prevPositionsRef.current.clear();
     }
   }, [isOpen, stages]);
 
+  // Áp dụng kỹ thuật FLIP (First, Last, Invert, Play) để các công đoạn trượt mượt mà khi nhảy vị trí
+  useLayoutEffect(() => {
+    if (prevPositionsRef.current.size === 0) return;
+
+    localStages.forEach((stg) => {
+      const el = itemRefs.current.get(stg.stageId);
+      const prevTop = prevPositionsRef.current.get(stg.stageId);
+      if (!el || prevTop === undefined) return;
+
+      const currentTop = el.getBoundingClientRect().top;
+      const deltaY = prevTop - currentTop;
+
+      if (deltaY !== 0) {
+        // Invert
+        el.style.transform = `translateY(${deltaY}px)`;
+        el.style.transition = "transform 0s";
+
+        // Play
+        requestAnimationFrame(() => {
+          el.style.transform = "translateY(0)";
+          el.style.transition = "transform 240ms cubic-bezier(0.2, 0, 0, 1)";
+        });
+      }
+    });
+
+    prevPositionsRef.current.clear();
+  }, [localStages]);
+
   if (!isOpen) return null;
+
+  // Làm sạch tiền tố số cũ (ví dụ "1. Pha phôi" hoặc "Step 8: Tốt nghiệp") để tránh trùng "Công đoạn 1: 3. Pha phôi" khi đổi vị trí
+  const cleanStageName = (name: string) => {
+    return (name || "").replace(/^\s*(Step\s*\d+\s*:\s*|\d+\s*[\.\:\-]\s*)/i, "").trim();
+  };
 
   const handleToggleHoldPoint = (index: number) => {
     setLocalStages((prev) =>
@@ -34,14 +83,79 @@ export default function DynamicRoutingModal({
     );
   };
 
+  // Ghi lại vị trí hiện tại của toàn bộ các phần tử trước khi hoán đổi
+  const snapshotPositions = () => {
+    prevPositionsRef.current.clear();
+    localStages.forEach((stg) => {
+      const el = itemRefs.current.get(stg.stageId);
+      if (el) {
+        prevPositionsRef.current.set(stg.stageId, el.getBoundingClientRect().top);
+      }
+    });
+  };
+
   const handleMoveStep = (index: number, direction: -1 | 1) => {
     const targetIdx = index + direction;
     if (targetIdx < 0 || targetIdx >= localStages.length) return;
+
+    snapshotPositions();
     const copy = [...localStages];
     const temp = copy[index];
     copy[index] = copy[targetIdx];
     copy[targetIdx] = temp;
     setLocalStages(copy.map((s, idx) => ({ ...s, stageSequence: idx + 1 })));
+  };
+
+  // Drag & Drop Handlers với cơ chế phát hiện nửa trên/nửa dưới (Midpoint Swap)
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, hoverIndex: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
+    if (draggedIndex === null || draggedIndex === hoverIndex) return;
+
+    // Tính toán vị trí con trỏ chuột so với nửa trên / nửa dưới của thẻ mục tiêu
+    const rect = e.currentTarget.getBoundingClientRect();
+    const hoverMiddleY = (rect.bottom - rect.top) / 2;
+    const hoverClientY = e.clientY - rect.top;
+
+    // 1. Khi kéo từ trên xuống (draggedIndex < hoverIndex):
+    // Chỉ nhảy khi con trỏ đã đi xuống quá nửa dưới của thẻ mục tiêu (hoverClientY > hoverMiddleY)
+    if (draggedIndex < hoverIndex && hoverClientY < hoverMiddleY) {
+      return;
+    }
+
+    // 2. Khi kéo từ dưới lên (draggedIndex > hoverIndex):
+    // Chỉ nhảy khi con trỏ đã đi lên quá nửa trên của thẻ mục tiêu (hoverClientY > hoverMiddleY)
+    if (draggedIndex > hoverIndex && hoverClientY > hoverMiddleY) {
+      return;
+    }
+
+    // Đạt điều kiện ngưỡng 50%: Chụp vị trí hiện tại để kích hoạt FLIP animation
+    snapshotPositions();
+
+    // Dịch chuyển phần tử ngay lập tức trong lúc đang kéo
+    const updated = [...localStages];
+    const [movedItem] = updated.splice(draggedIndex, 1);
+    updated.splice(hoverIndex, 0, movedItem);
+
+    // Cập nhật lại mảng và cập nhật index hiện tại của phần tử đang kéo
+    setLocalStages(updated.map((s, idx) => ({ ...s, stageSequence: idx + 1 })));
+    setDraggedIndex(hoverIndex);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   const handleDeleteStep = (index: number) => {
@@ -101,7 +215,7 @@ export default function DynamicRoutingModal({
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-slate-600">
-              Sắp xếp thứ tự công đoạn, thêm công đoạn đặc thù hoặc đánh dấu Hold Point quan trọng.
+              Nhấn giữ tay nắm <span className="font-mono font-bold text-slate-800">⋮⋮</span> để kéo thả đổi thứ tự, hoặc dùng phím mũi tên.
             </p>
             <button
               type="button"
@@ -132,25 +246,62 @@ export default function DynamicRoutingModal({
           )}
 
           {/* Workstation Sequence Steps */}
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 relative">
             {localStages.map((stg, idx) => {
               const isHold = stg.isHoldPoint;
+              const isBeingDragged = draggedIndex === idx;
+
               return (
                 <div
-                  key={`${stg.stageId}-${idx}`}
-                  className={`px-4 py-3 rounded-lg border flex items-center justify-between gap-3 transition ${
-                    isHold
-                      ? "border-rose-400 bg-rose-50/30 shadow-2xs"
-                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  key={stg.stageId}
+                  ref={(el) => {
+                    if (el) {
+                      itemRefs.current.set(stg.stageId, el);
+                    } else {
+                      itemRefs.current.delete(stg.stageId);
+                    }
+                  }}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
+                  className={`px-4 py-3 rounded-lg border flex items-center justify-between gap-3 transition-colors duration-150 select-none ${
+                    isBeingDragged
+                      ? "opacity-60 border-2 border-dashed border-blue-500 bg-blue-50/70 shadow-inner"
+                      : isHold
+                      ? "border-rose-400 bg-rose-50/30 shadow-2xs hover:bg-rose-50/50"
+                      : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex flex-col gap-0.5 text-xs text-slate-400">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {/* Grip Handle Icon */}
+                    <div
+                      className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-blue-600 p-1 rounded transition"
+                      title="Giữ chuột kéo để đổi thứ tự công đoạn"
+                    >
+                      <svg
+                        className="w-4 h-4 shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8 9h.01M8 15h.01M16 9h.01M16 15h.01M12 9h.01M12 15h.01"
+                        />
+                      </svg>
+                    </div>
+
+                    {/* Up/Down buttons for accessibility */}
+                    <div className="flex flex-col gap-0.5 text-xs text-slate-400 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleMoveStep(idx, -1)}
                         disabled={idx === 0}
-                        className="hover:text-slate-700 disabled:opacity-25 leading-none cursor-pointer"
+                        className="hover:text-slate-700 disabled:opacity-20 leading-none cursor-pointer"
                         title="Chuyển lên"
                       >
                         ▲
@@ -159,17 +310,18 @@ export default function DynamicRoutingModal({
                         type="button"
                         onClick={() => handleMoveStep(idx, 1)}
                         disabled={idx === localStages.length - 1}
-                        className="hover:text-slate-700 disabled:opacity-25 leading-none cursor-pointer"
+                        className="hover:text-slate-700 disabled:opacity-20 leading-none cursor-pointer"
                         title="Chuyển xuống"
                       >
                         ▼
                       </button>
                     </div>
-                    <div className="text-sm text-slate-800 truncate">
+
+                    <div className="text-sm text-slate-800 truncate ml-1">
                       <strong className="font-bold text-slate-900">
                         Công đoạn {idx + 1}:
                       </strong>{" "}
-                      <span>{stg.stageName}</span>
+                      <span>{cleanStageName(stg.stageName)}</span>
                     </div>
                   </div>
 

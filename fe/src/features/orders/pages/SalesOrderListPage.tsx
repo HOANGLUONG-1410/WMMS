@@ -139,7 +139,7 @@ export default function SalesOrderListPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-              Danh mục đơn hàng bán
+              Danh sách đơn hàng
             </h1>
             <p className="text-sm text-slate-600 mt-1">
               Theo dõi tiến độ thực hiện PO của khách hàng, ngày giao dự kiến (ETD) và tiếp nhận PO Excel qua Staging.
@@ -286,7 +286,7 @@ export default function SalesOrderListPage() {
                 {isLoading ? (
                   <tr>
                     <td colSpan={7} className="py-10 px-6 text-center text-slate-500">
-                      Đang tải danh sách đơn hàng bán...
+                      Đang tải danh sách đơn hàng...
                     </td>
                   </tr>
                 ) : filteredOrders.length === 0 ? (

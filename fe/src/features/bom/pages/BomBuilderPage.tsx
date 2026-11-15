@@ -47,7 +47,7 @@ export default function BomBuilderPage() {
       setIsLoadingSpace(false);
       setSpaceLineItems([]);
       setSpaceError(
-        "Không xác định được Không gian đơn hàng (Order Space). Vui lòng truy cập từ Danh sách đơn hàng bán.",
+        "Không xác định được Không gian đơn hàng (Order Space). Vui lòng truy cập từ Danh sách đơn hàng.",
       );
       return;
     }

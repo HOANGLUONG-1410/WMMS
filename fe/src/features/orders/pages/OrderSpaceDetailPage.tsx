@@ -64,7 +64,7 @@ export default function OrderSpaceDetailPage() {
   useEffect(() => {
     if (!activeKey) {
       setIsLoading(false);
-      setLoadError('Không xác định được mã Không gian đơn hàng (Order Space). Vui lòng chọn từ Danh sách đơn hàng bán.');
+      setLoadError('Không xác định được mã Không gian đơn hàng (Order Space). Vui lòng chọn từ Danh sách đơn hàng.');
       return;
     }
 
