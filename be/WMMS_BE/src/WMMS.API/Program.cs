@@ -14,6 +14,8 @@ using WMMS.Application.Interfaces.Services;
 using WMMS.Application.Mappers;
 using WMMS.Application.Services.BomRouting;
 using WMMS.Application.Services.InventoryPr;
+using WMMS.Application.Services.KanbanQc;
+using WMMS.Application.Services.ProductionTracking;
 using WMMS.Application.Validators.Auth;
 using WMMS.Application.Validators.BomRouting;
 using WMMS.Infrastructure.Excel;
@@ -76,6 +78,8 @@ builder.Services.AddScoped<IQcInspectionRepository, QcInspectionRepository>();
 
 builder.Services.AddScoped<IExcelBomParser, ExcelBomParser>();
 builder.Services.AddScoped<IBomRoutingService, BomRoutingService>();
+// SC-18, SC-19: Cấu hình Dynamic Routing, Tách lô thông minh & Phát hành Lệnh sản xuất (UC-36, UC-37, UC-62)
+builder.Services.AddScoped<IProductionOrderService, ProductionOrderService>();
 
 // Master Data & Inventory & MRP Auto-Allocation (SC-04..SC-06, SC-12..SC-14)
 builder.Services.AddScoped<IMaterialService, WMMS.Infrastructure.Services.MasterData.MaterialService>();
@@ -88,6 +92,13 @@ builder.Services.AddScoped<IPurchaseRequestService, PurchaseRequestService>();
 // SC-16: PO gom theo Supplier & theo dõi ETA (UC-49..UC-53, BR-PUR-02, BR-PUR-03)
 builder.Services.AddScoped<IPurchaseOrderService, WMMS.Application.Services.Purchasing.PurchaseOrderService>();
 builder.Services.AddScoped<IGoodsReceiptService, WMMS.Infrastructure.Services.Warehouse.GoodsReceiptService>();
+// SC-20: Kiểm soát Hold Point & luồng phê duyệt ghi đè Overdriver (KBN02, GBR-05)
+builder.Services.AddScoped<IHoldPointService, WMMS.Infrastructure.Services.KanbanQc.HoldPointService>();
+
+// Phân hệ 9 (Iteration 3): Hoàn tất Lô sản xuất, Nhập kho Thành phẩm, Theo dõi Tiến độ Đơn hàng & Dashboard Chủ xưởng (UC-63, UC-64)
+builder.Services.AddScoped<IFinishedGoodsService, FinishedGoodsService>();
+builder.Services.AddScoped<IOrderProgressService, OrderProgressService>();
+builder.Services.AddScoped<IProductionDashboardService, ProductionDashboardService>();
 
 // Background Scheduler JOB-01: Auto-unlock expired locked accounts
 builder.Services.AddHostedService<AccountUnlockBackgroundService>();
@@ -209,6 +220,14 @@ else
 
 Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads", "products"));
 app.UseStaticFiles();
+
+var uploadsRoot = Path.Combine(app.Environment.ContentRootPath, "uploads");
+Directory.CreateDirectory(uploadsRoot);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsRoot),
+    RequestPath = "/uploads"
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

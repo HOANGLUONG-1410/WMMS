@@ -1,9 +1,10 @@
 using WMMS.Application.DTOs.BomRouting;
+using WMMS.Application.DTOs.KanbanQc;
 
 namespace WMMS.Application.Interfaces.Services;
 
 /// <summary>
-/// Giao diện Dịch vụ Bóc tách Định mức Nguyên vật liệu (BOM) &amp; Quy trình Sản xuất Động (Dynamic Routing) (Phân hệ 5 - QT-02, SC-10, SC-11, UC-36..UC-41).
+/// Giao diện Dịch vụ Bóc tách Định mức Nguyên vật liệu (BOM) &amp; Quy trình Sản xuất Động (Dynamic Routing) (Phân hệ 5 - QT-02, SC-10, SC-11, UC-36..UC-41, SC-18).
 /// </summary>
 public interface IBomRoutingService
 {
@@ -14,6 +15,8 @@ public interface IBomRoutingService
     Task<List<RoutingStageDto>> GetDefaultRoutingAsync(long productId);
     Task<RoutingDto?> GetProductRoutingAsync(long productId);
     Task<RoutingDto> SaveDynamicRoutingAsync(long productId, RoutingConfigDto request, long currentUserId);
+    List<StandardWorkstationDto> GetStandardWorkstations();
+    List<StandardQualityGateDto> GetStandardQualityGates();
     Task<CalculateDemandResponseDto> CalculateGrossDemandAsync(CalculateDemandRequestDto request);
     Task<BomDto> CreateBomAsync(CreateBomRequestDto request, long currentUserId);
     Task<BomDto> UpdateBomAsync(long bomId, UpdateBomRequestDto request, long currentUserId);

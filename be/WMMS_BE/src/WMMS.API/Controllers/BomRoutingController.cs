@@ -1,9 +1,12 @@
 using System.Security.Claims;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WMMS.Application.Common.Models;
 using WMMS.Application.DTOs.BomRouting;
+using WMMS.Application.DTOs.KanbanQc;
 using WMMS.Application.Interfaces.Services;
+using WMMS.Domain.Constants;
 
 namespace WMMS.API.Controllers;
 
@@ -12,8 +15,11 @@ namespace WMMS.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/bom")]
+[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Purchasing},{RoleConstants.Warehouse}")]
 public class BomRoutingController : ControllerBase
 {
+    private const string BomWriteRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner}";
+    private const string OwnerAdminRoles = $"{RoleConstants.Admin},{RoleConstants.Owner}";
     private readonly IBomRoutingService _bomRoutingService;
     private readonly IValidator<CreateBomRequestDto> _createBomValidator;
     private readonly IValidator<UpdateBomRequestDto> _updateBomValidator;
@@ -113,6 +119,7 @@ public class BomRoutingController : ControllerBase
     /// UC-37 &amp; BR-007 (Report 4 BOM01, Screen 14): Cấu hình quy trình sản xuất động (Dynamic Routing) &amp; trạm dừng kỹ thuật (Hold Points) cho sản phẩm.
     /// </summary>
     [HttpPut("routing/{productId:long}")]
+    [Authorize(Roles = OwnerAdminRoles)]
     public async Task<ActionResult<ApiResponse<RoutingDto>>> ConfigureDynamicRouting(
         long productId,
         [FromBody] RoutingConfigDto request)
@@ -126,6 +133,26 @@ public class BomRoutingController : ControllerBase
         long currentUserId = GetCurrentUserId();
         var result = await _bomRoutingService.SaveDynamicRoutingAsync(productId, request, currentUserId);
         return Ok(ApiResponse<RoutingDto>.Ok(result, "Cấu hình quy trình sản xuất động thành công (UC-37, BR-007)."));
+    }
+
+    /// <summary>
+    /// SC-18: Lấy danh mục Trạm gia công tiêu chuẩn của xưởng gỗ (Workstation Catalog).
+    /// </summary>
+    [HttpGet("workstations")]
+    public ActionResult<ApiResponse<List<StandardWorkstationDto>>> GetWorkstations()
+    {
+        var workstations = _bomRoutingService.GetStandardWorkstations();
+        return Ok(ApiResponse<List<StandardWorkstationDto>>.Ok(workstations, "Lấy danh mục trạm gia công thành công (SC-18)."));
+    }
+
+    /// <summary>
+    /// SC-18: Lấy danh mục Cổng kiểm tra chất lượng &amp; Trạm dừng kỹ thuật bắt buộc (Quality Gates &amp; Hold Points Catalog).
+    /// </summary>
+    [HttpGet("quality-gates")]
+    public ActionResult<ApiResponse<List<StandardQualityGateDto>>> GetQualityGates()
+    {
+        var gates = _bomRoutingService.GetStandardQualityGates();
+        return Ok(ApiResponse<List<StandardQualityGateDto>>.Ok(gates, "Lấy danh mục cổng kiểm soát chất lượng thành công (SC-18)."));
     }
 
     /// <summary>

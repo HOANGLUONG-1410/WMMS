@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AutoMapper;
 using WMMS.Application.DTOs.BomRouting;
+using WMMS.Application.DTOs.KanbanQc;
 using WMMS.Application.Interfaces.External;
 using WMMS.Application.Interfaces.Repositories;
 using WMMS.Application.Interfaces.Services;
@@ -185,12 +186,12 @@ public class BomRoutingService : IBomRoutingService
         var product = await _productRepository.GetByIdAsync(productId);
         if (product == null)
         {
-            throw new NotFoundException($"Product with ID {productId} was not found.");
+            throw new NotFoundException($"Không tìm thấy sản phẩm với ID {productId}.");
         }
 
         if (request.Stages == null || !request.Stages.Any())
         {
-            throw new DomainException("Workstation routing stages cannot be empty.", "INVALID_ROUTING_SEQUENCE");
+            throw new DomainException("Danh sách công đoạn quy trình sản xuất không được để trống.", "INVALID_ROUTING_SEQUENCE");
         }
 
         // Kiểm tra thứ tự các công đoạn phải liên tục từ 1..N không ngắt quãng (BR-007, UC-37)
@@ -200,13 +201,13 @@ public class BomRoutingService : IBomRoutingService
             if (orderedStages[i].StageSequence != i + 1)
             {
                 throw new DomainException(
-                    $"Workstation stages must form a continuous sequence starting from 1 (expected {i + 1}, but found {orderedStages[i].StageSequence}).",
+                    $"Các công đoạn phải tạo thành chuỗi liên tục bắt đầu từ 1 (kỳ vọng thứ tự {i + 1}, nhưng nhận được {orderedStages[i].StageSequence}).",
                     "INVALID_ROUTING_SEQUENCE");
             }
 
             if (string.IsNullOrWhiteSpace(orderedStages[i].StageName))
             {
-                throw new DomainException($"Stage name at sequence {orderedStages[i].StageSequence} cannot be empty.", "INVALID_STAGE_NAME");
+                throw new DomainException($"Tên công đoạn tại thứ tự {orderedStages[i].StageSequence} không được để trống.", "INVALID_STAGE_NAME");
             }
         }
 
@@ -326,7 +327,7 @@ public class BomRoutingService : IBomRoutingService
         if (exists)
         {
             throw new ActiveBomConflictException(
-                $"BOM for OrderItemId {request.OrderItemId} already exists. Enforcing BR-001: Only one Active BOM is allowed per order item.");
+                $"BOM cho mục đơn hàng {request.OrderItemId} đã tồn tại. Quy tắc BR-001: Mỗi mục đơn hàng chỉ được phép có một định mức BOM hoạt động.");
         }
 
         // 2. Validate BR-002 (Tỷ lệ hao hụt tự nhiên theo SystemConfig DEFAULT_SCRAP_MIN .. DEFAULT_SCRAP_MAX)
@@ -336,13 +337,13 @@ public class BomRoutingService : IBomRoutingService
         var orderItem = await _orderItemRepository.GetByIdAsync(request.OrderItemId);
         if (orderItem == null)
         {
-            throw new NotFoundException($"OrderItem with ID {request.OrderItemId} was not found.");
+            throw new NotFoundException($"Không tìm thấy mục đơn hàng với ID {request.OrderItemId}.");
         }
 
         var product = await _productRepository.GetByIdAsync(request.ProductId);
         if (product == null)
         {
-            throw new NotFoundException($"Product with ID {request.ProductId} was not found.");
+            throw new NotFoundException($"Không tìm thấy sản phẩm với ID {request.ProductId}.");
         }
 
         await _unitOfWork.BeginTransactionAsync();
@@ -435,7 +436,7 @@ public class BomRoutingService : IBomRoutingService
         var bomHeader = await _bomRepository.GetByIdAsync(bomId);
         if (bomHeader == null)
         {
-            throw new NotFoundException($"Bom with ID {bomId} was not found.");
+            throw new NotFoundException($"Không tìm thấy định mức BOM với ID {bomId}.");
         }
 
         // Validate BR-002
@@ -533,12 +534,12 @@ public class BomRoutingService : IBomRoutingService
         var bomHeader = await _bomRepository.GetByIdAsync(bomId);
         if (bomHeader == null)
         {
-            throw new NotFoundException($"Bom with ID {bomId} was not found.");
+            throw new NotFoundException($"Không tìm thấy định mức BOM với ID {bomId}.");
         }
 
         if (!bomHeader.BomDetails.Any())
         {
-            throw new DomainException("Cannot approve an empty BOM without material lines.", "BOM_EMPTY");
+            throw new DomainException("Không thể phê duyệt định mức BOM rỗng không có dòng vật tư nào.", "BOM_EMPTY");
         }
 
         await ValidateScrapRateAsync(bomHeader.ScrapRatePercent);
@@ -674,7 +675,7 @@ public class BomRoutingService : IBomRoutingService
         if (invalidRows.Any())
         {
             throw new StagingValidationException(
-                $"Cannot confirm BOM import. There are {invalidRows.Count} invalid row(s) in staging grid. Please correct all errors before confirming.");
+                $"Không thể xác nhận nhập BOM. Còn {invalidRows.Count} dòng không hợp lệ trong lưới tạm. Vui lòng sửa tất cả lỗi trước khi xác nhận.");
         }
 
         // Convert staging rows to CreateBomRequestDto (Gộp các dòng chi tiết cùng MaterialId hoặc giữ kèm ghi chú cấu kiện)
@@ -687,7 +688,7 @@ public class BomRoutingService : IBomRoutingService
                 var mat = await _materialRepository.GetByCodeAsync(row.MaterialCode.Trim());
                 if (mat == null)
                 {
-                    throw new StagingValidationException($"Material code '{row.MaterialCode}' cannot be resolved.");
+                    throw new StagingValidationException($"Không tìm thấy thông tin cho mã nguyên vật liệu '{row.MaterialCode}'.");
                 }
                 materialId = mat.MaterialId;
             }
@@ -710,7 +711,7 @@ public class BomRoutingService : IBomRoutingService
             if (existingBom.BomStatus != BomStatusEnum.DRAFT)
             {
                 throw new DomainException(
-                    $"Cannot import BOM. Existing BOM #{existingBom.BomId} is already approved ({existingBom.BomStatus}). Only DRAFT BOMs can be updated from Staging.",
+                    $"Không thể nhập BOM. Định mức BOM #{existingBom.BomId} hiện tại đã được phê duyệt ({existingBom.BomStatus}). Chỉ có BOM ở trạng thái DRAFT mới được phép cập nhật từ Staging.",
                     "BOM_ALREADY_APPROVED");
             }
 
@@ -781,7 +782,7 @@ public class BomRoutingService : IBomRoutingService
         if (scrapRate < minScrap || scrapRate > maxScrap)
         {
             throw new InvalidScrapRateException(
-                $"Scrap rate {scrapRate:F2}% violates BR-002: Natural wood scrap rate must be between {minScrap:F2}% and {maxScrap:F2}%.");
+                $"Tỷ lệ hao hụt {scrapRate:F2}% vi phạm quy tắc BR-002: Tỷ lệ hao hụt gỗ tự nhiên phải nằm trong khoảng {minScrap:F2}% đến {maxScrap:F2}%.");
         }
     }
 
@@ -804,8 +805,8 @@ public class BomRoutingService : IBomRoutingService
             if (string.IsNullOrWhiteSpace(stage.QualityGateName))
             {
                 stage.QualityGateName = stage.IsHoldPoint
-                    ? "QC Hold Point Gate (100% Inspection)"
-                    : "In-Process Self-Check";
+                    ? "Cổng kiểm soát chất lượng QC (Kiểm định 100%)"
+                    : "Tự kiểm tra trên chuyền sản xuất";
             }
         }
 
@@ -822,6 +823,122 @@ public class BomRoutingService : IBomRoutingService
         if (lower.Contains("sơn") || lower.Contains("pu") || lower.Contains("màu")) return "WC-05-PAINT";
         if (lower.Contains("đóng gói") || lower.Contains("tem")) return "WC-06-PACK";
         return $"WC-0{Math.Clamp(seq, 1, 9)}";
+    }
+
+    public List<StandardWorkstationDto> GetStandardWorkstations()
+    {
+        return new List<StandardWorkstationDto>
+        {
+            new()
+            {
+                WorkstationCode = "WC-01-SAW",
+                WorkstationName = "Trạm Pha phôi & Xẻ gỗ thô (Rough Mill)",
+                DefaultStageSequence = 1,
+                StandardCapacityPerHour = 120,
+                Description = "Máy cưa bàn trượt, máy cưa nhiều lưỡi định hình phôi gỗ xẻ thanh và ván công nghiệp MDF/Plywood."
+            },
+            new()
+            {
+                WorkstationCode = "WC-02-SAND",
+                WorkstationName = "Trạm Bào 4 mặt & Chà nhám phẳng mịn (Planing & Sanding)",
+                DefaultStageSequence = 3,
+                StandardCapacityPerHour = 100,
+                Description = "Máy bào 4 mặt cao tốc, máy chà nhám thùng tạo độ phẳng mịn bề mặt đạt độ nhám Ra <= 3.2µm."
+            },
+            new()
+            {
+                WorkstationCode = "WC-03-CNC",
+                WorkstationName = "Trạm Khoan chốt & Phay mộng âm dương CNC (CNC Tenoning & Boring)",
+                DefaultStageSequence = 4,
+                StandardCapacityPerHour = 80,
+                Description = "Gia công liên kết chốt gỗ, khoan lỗ cam chốt, phay mộng âm dương chính xác theo bản vẽ CAD."
+            },
+            new()
+            {
+                WorkstationCode = "WC-04-ASSY",
+                WorkstationName = "Trạm Lắp ráp kết cấu & Vào mộng dán keo ép vam (Assembly & Clamping)",
+                DefaultStageSequence = 5,
+                StandardCapacityPerHour = 60,
+                Description = "Lắp ráp khung bàn ghế, bơm keo dán mộng chuyên dụng và ép vam giữ lực cố định. Điểm dừng kỹ thuật (Hold Point) bắt buộc."
+            },
+            new()
+            {
+                WorkstationCode = "WC-05-PAINT",
+                WorkstationName = "Trạm Phun sơn lót PU & Sơn phủ hoàn thiện (Finishing & Painting)",
+                DefaultStageSequence = 6,
+                StandardCapacityPerHour = 75,
+                Description = "Phun sơn lót PU 2 thành phần, sấy khô và phủ bóng/mờ bảo vệ bề mặt chống trầy xước ẩm mốc."
+            },
+            new()
+            {
+                WorkstationCode = "WC-06-PACK",
+                WorkstationName = "Trạm KCS xuất xưởng & Đóng thùng Carton (KCS & Packing)",
+                DefaultStageSequence = 7,
+                StandardCapacityPerHour = 150,
+                Description = "Kiểm tra chất lượng xuất xưởng 100%, dán nhãn tem kiểm định KCS, bọc xốp màng PE và đóng thùng carton 5 lớp."
+            }
+        };
+    }
+
+    public List<StandardQualityGateDto> GetStandardQualityGates()
+    {
+        return new List<StandardQualityGateDto>
+        {
+            new()
+            {
+                QualityGateCode = "QC-GATE-01",
+                QualityGateName = "Cổng kiểm soát độ ẩm & Kích thước phôi (Rough Mill Gate)",
+                StageSequence = 1,
+                IsHoldPoint = false,
+                InspectionType = "In-Process Self-Check",
+                InspectionCriteria = "Độ ẩm gỗ tự nhiên < 12%, kích thước phôi sai lệch chiều dài/dày không quá ±1.0mm."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-02",
+                QualityGateName = "Cổng kiểm soát độ nhẵn & Độ phẳng bề mặt (Sanding Gate)",
+                StageSequence = 3,
+                IsHoldPoint = false,
+                InspectionType = "In-Process Self-Check",
+                InspectionCriteria = "Bề mặt gỗ phẳng đều, không vết lẹm dao bào, độ nhám Ra <= 3.2µm."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-03",
+                QualityGateName = "Cổng kiểm soát độ khít mộng & Tim lỗ khoan (CNC Joinery Gate)",
+                StageSequence = 4,
+                IsHoldPoint = false,
+                InspectionType = "In-Process Self-Check",
+                InspectionCriteria = "Mộng âm dương khít chặt (khe hở <= 0.2mm), tim lỗ cam chốt chuẩn xác theo bản vẽ CAD."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-04",
+                QualityGateName = "Cổng KCS bắt buộc Kết cấu khung & Mộng dán keo (Hold Point Assembly Gate)",
+                StageSequence = 5,
+                IsHoldPoint = true,
+                InspectionType = "100% Mandatory Gate (Hold Point)",
+                InspectionCriteria = "Độ vuông góc chéo sai lệch <= 1.0mm, keo ghép mộng ngấu 100%, kết cấu chịu lực đạt chuẩn trước khi chuyển sang sơn."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-05",
+                QualityGateName = "Cổng kiểm soát màng sơn & Màu sắc hoàn thiện (Finish Coating Gate)",
+                StageSequence = 6,
+                IsHoldPoint = false,
+                InspectionType = "In-Process Self-Check",
+                InspectionCriteria = "Màng sơn phủ bóng đều màu, không da cam, không bọt khí rộp, độ bám dính đạt cấp 1."
+            },
+            new()
+            {
+                QualityGateCode = "QC-GATE-06",
+                QualityGateName = "Cổng KCS xuất xưởng & Đóng gói hoàn thiện (Final QC Gate)",
+                StageSequence = 7,
+                IsHoldPoint = false,
+                InspectionType = "100% Mandatory Gate",
+                InspectionCriteria = "Kiểm tra ngoại quan 100% không trầy xước, đầy đủ tem mác barcode, phụ kiện ốc vít kèm theo và đóng thùng đạt chuẩn."
+            }
+        };
     }
 
     private static List<RoutingStageDto> GetStandardWoodworkingStages()

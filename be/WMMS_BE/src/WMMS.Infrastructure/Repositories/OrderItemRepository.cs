@@ -101,6 +101,21 @@ public class OrderItemRepository : IOrderItemRepository
             .FirstOrDefaultAsync(co => co.OrderId == orderId, cancellationToken);
     }
 
+    public async Task<CustomerOrder?> GetOrderWithFullProgressGraphAsync(long orderId, CancellationToken cancellationToken = default)
+    {
+        return await BuildOrderWithProgressGraphQuery()
+            .FirstOrDefaultAsync(co => co.OrderId == orderId, cancellationToken);
+    }
+
+    public async Task<List<CustomerOrder>> GetAllOrdersWithProgressGraphAsync(CancellationToken cancellationToken = default)
+    {
+        return await BuildOrderWithProgressGraphQuery()
+            .Where(co => co.Status != OrderStatusEnum.CANCELLED)
+            .OrderBy(co => co.EtdDate)
+            .ThenBy(co => co.OrderId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<OrderSpace?> GetOrderSpaceByIdAsync(long spaceId, CancellationToken cancellationToken = default)
     {
         return await _context.OrderSpaces
@@ -143,5 +158,25 @@ public class OrderItemRepository : IOrderItemRepository
                         .ThenInclude(m => m.MaterialStock)
             .Include(oi => oi.MaterialAllocations)
             .Include(oi => oi.ProductionBatches);
+    }
+
+    private IQueryable<CustomerOrder> BuildOrderWithProgressGraphQuery()
+    {
+        return _context.CustomerOrders
+            .Include(co => co.Customer)
+            .Include(co => co.OrderSpace)
+            .Include(co => co.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(co => co.OrderItems)
+                .ThenInclude(oi => oi.BomHeader)
+                    .ThenInclude(bh => bh!.BomDetails)
+                        .ThenInclude(bd => bd.Material)
+            .Include(co => co.OrderItems)
+                .ThenInclude(oi => oi.MaterialAllocations)
+            .Include(co => co.OrderItems)
+                .ThenInclude(oi => oi.ProductionBatches)
+                    .ThenInclude(pb => pb.BatchRoutingSteps)
+                        .ThenInclude(brs => brs.QcInspections)
+                            .ThenInclude(qc => qc.DefectLogs);
     }
 }

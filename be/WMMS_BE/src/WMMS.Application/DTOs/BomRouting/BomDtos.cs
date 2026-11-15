@@ -193,6 +193,8 @@ public class RoutingStageConfigDto
     public int StageSequence { get; set; }
     public string StageName { get; set; } = string.Empty;
     public bool IsHoldPoint { get; set; }
+    public string? WorkstationCode { get; set; }
+    public string? QualityGateName { get; set; }
 }
 
 public class RoutingDto

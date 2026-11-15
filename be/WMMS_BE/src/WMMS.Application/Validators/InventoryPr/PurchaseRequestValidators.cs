@@ -11,9 +11,9 @@ public class RejectPurchaseRequestValidator : AbstractValidator<RejectPurchaseRe
     public RejectPurchaseRequestValidator()
     {
         RuleFor(x => x.Reason)
-            .NotEmpty().WithMessage("Rejection reason is required (UC048.E1).")
+            .NotEmpty().WithMessage("Lý do từ chối là bắt buộc (UC048.E1).")
             .Must(r => string.IsNullOrWhiteSpace(r) || r.Trim().Length <= 500)
-            .WithMessage("Rejection reason must not exceed 500 characters.");
+            .WithMessage("Lý do từ chối không được vượt quá 500 ký tự.");
     }
 }
 
@@ -23,7 +23,7 @@ public class ApprovePurchaseRequestValidator : AbstractValidator<ApprovePurchase
     public ApprovePurchaseRequestValidator()
     {
         RuleFor(x => x.Notes)
-            .MaximumLength(500).WithMessage("Approval notes must not exceed 500 characters.");
+            .MaximumLength(500).WithMessage("Ghi chú phê duyệt không được vượt quá 500 ký tự.");
     }
 }
 
@@ -36,10 +36,10 @@ public class PurchaseRequestFilterValidator : AbstractValidator<PurchaseRequestF
     {
         RuleFor(x => x.Status)
             .Must(s => string.IsNullOrWhiteSpace(s) || AllowedStatuses.Contains(s.Trim().ToUpperInvariant()))
-            .WithMessage("Status must be one of: PENDING_APPROVAL, APPROVED, REJECTED, PO_ISSUED.");
+            .WithMessage("Trạng thái phải là một trong các giá trị: PENDING_APPROVAL, APPROVED, REJECTED, PO_ISSUED.");
 
         RuleFor(x => x)
             .Must(x => !x.FromDate.HasValue || !x.ToDate.HasValue || x.FromDate.Value.Date <= x.ToDate.Value.Date)
-            .WithMessage("FromDate must not be later than ToDate.");
+            .WithMessage("Từ ngày không được lớn hơn Đến ngày.");
     }
 }

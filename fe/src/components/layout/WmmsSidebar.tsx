@@ -146,6 +146,9 @@ export default function WmmsSidebar({
             items: [
               { icon: Icons.reports, label: "Báo cáo sản xuất & KCS", path: "/analytics/reports" },
               { icon: Icons.inventory, label: "Tồn kho vật tư 3 cấp", path: "/inventory/stock" },
+              { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
+              { icon: Icons.orders, label: "Nhập kho vật tư", path: "/warehouse/receipts" },
+              { icon: Icons.space, label: "Xuất kho & bàn giao", path: "/warehouse/issues" },
             ],
           },
         ];
@@ -217,6 +220,7 @@ export default function WmmsSidebar({
               { icon: Icons.reconcile, label: "Đối chiếu tồn kho", path: "/inventory/reconciliation" },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
               { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
+              { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
             ],
           },
         ];

@@ -278,7 +278,8 @@ public class GoodsReceiptService : IGoodsReceiptService
             .Include(bd => bd.BomHeader).ThenInclude(bh => bh.OrderItem)
                 .ThenInclude(oi => oi.CustomerOrder).ThenInclude(co => co.OrderSpace)
             .Where(bd => bd.MaterialId == materialId
-                         && bd.BomHeader.BomStatus == BomStatusEnum.WAITING_FOR_MATERIALS
+                         && (bd.BomHeader.BomStatus == BomStatusEnum.WAITING_FOR_MATERIALS
+                             || bd.BomHeader.OrderItem.Status == OrderItemStatusEnum.WAITING_MAT)
                          && bd.BomHeader.OrderItem.CustomerOrder.Status != OrderStatusEnum.CANCELLED)
             .ToListAsync(ct);
 
@@ -296,6 +297,43 @@ public class GoodsReceiptService : IGoodsReceiptService
             };
             _context.MaterialAllocations.Add(created);
             waiting.Add(created);
+
+            // Đồng bộ khởi tạo MaterialAllocation cho TOÀN BỘ các dòng vật tư khác trong cùng BOM của OrderItem này
+            // để bảo đảm không bị thiếu hụt dữ liệu phân bổ của các vật tư đi kèm
+            var otherBomDetails = await _context.BomDetails
+                .Where(other => other.BomId == bd.BomId && other.MaterialId != materialId)
+                .ToListAsync(ct);
+
+            foreach (var other in otherBomDetails)
+            {
+                var existingOtherAlloc = await _context.MaterialAllocations
+                    .FirstOrDefaultAsync(a => a.OrderItemId == bd.BomHeader.OrderItemId && a.MaterialId == other.MaterialId, ct);
+
+                if (existingOtherAlloc == null)
+                {
+                    var otherStock = await _context.MaterialStocks.FirstOrDefaultAsync(s => s.MaterialId == other.MaterialId, ct);
+                    decimal otherReserved = 0m;
+                    if (otherStock != null && otherStock.AvailableQty > 0m)
+                    {
+                        otherReserved = Math.Min(otherStock.AvailableQty, other.GrossTotalDemand);
+                        otherStock.AllocatedQty += otherReserved;
+                        otherStock.AvailableQty = Math.Max(0m, otherStock.PhysicalQty - otherStock.AllocatedQty);
+                        otherStock.UpdatedAt = now;
+                    }
+
+                    var otherCreated = new MaterialAllocation
+                    {
+                        OrderItemId = bd.BomHeader.OrderItemId,
+                        OrderItem = bd.BomHeader.OrderItem,
+                        MaterialId = other.MaterialId,
+                        RequiredQty = other.GrossTotalDemand,
+                        ReservedQty = otherReserved,
+                        AllocationStatus = AllocationStatusEnum.RESERVED,
+                        AllocatedAt = now
+                    };
+                    _context.MaterialAllocations.Add(otherCreated);
+                }
+            }
         }
 
         var ordered = waiting
@@ -354,7 +392,8 @@ public class GoodsReceiptService : IGoodsReceiptService
         var boms = await _context.BomHeaders
             .Include(b => b.BomDetails)
             .Include(b => b.OrderItem).ThenInclude(oi => oi.CustomerOrder)
-            .Where(b => orderItemIds.Contains(b.OrderItemId) && b.BomStatus == BomStatusEnum.WAITING_FOR_MATERIALS)
+            .Where(b => orderItemIds.Contains(b.OrderItemId) 
+                        && (b.BomStatus == BomStatusEnum.WAITING_FOR_MATERIALS || b.OrderItem.Status == OrderItemStatusEnum.WAITING_MAT))
             .ToListAsync(ct);
 
         foreach (var bom in boms)

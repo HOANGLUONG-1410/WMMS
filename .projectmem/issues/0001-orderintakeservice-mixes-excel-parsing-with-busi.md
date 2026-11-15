@@ -1,5 +1,0 @@
-# #0001 OrderIntakeService mixes Excel parsing with business logic and misparses sampleOrder.xlsx (overwrites SKU col with HS Code col 18, misses footer ETD row 13, and reads footer summary rows as product items).
-
-- 2026-10-30T06:15:45Z `issue`: OrderIntakeService mixes Excel parsing with business logic and misparses sampleOrder.xlsx (overwrites SKU col with HS Code col 18, misses footer ETD row 13, and reads footer summary rows as product items). [be/WMMS_BE/src/WMMS.Infrastructure/Excel/OrderIntakeService.cs:934]
-- 2026-10-30T06:27:07Z `attempt`: Separated Excel PO parsing into IExcelOrderParser and ExcelOrderParser (handling 2-level headers, blank FSC/Finish column headers, HS Code disambiguation, dimension normalization, and footer ETD/summary extraction), and delegated ParseExcelPoToStagingGridAsync in OrderIntakeService to IExcelOrderParser. (worked)
-- 2026-10-30T06:27:08Z `fix`: Extracted IExcelOrderParser and ExcelOrderParser from OrderIntakeService to cleanly separate 4 blocks of Customer PO Excel files (Header PO#, Production Line Items, BR-ORD-01 Stripped Commercial Columns, and Footer Summary/ETD) and registered IExcelOrderParser in DI.

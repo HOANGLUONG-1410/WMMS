@@ -173,3 +173,20 @@ public class UpdatePoEtaDto
     /// <summary>Ghi chú vận chuyển / lý do đổi lịch (lưu vào nhật ký kiểm toán).</summary>
     public string? Notes { get; set; }
 }
+
+/// <summary>Cập nhật điều khoản thanh toán &amp; tiến độ cho PO (SC-16).</summary>
+public class UpdatePoTermsDto
+{
+    /// <summary>Điều khoản thanh toán &amp; giao hàng (tối đa 1000 ký tự).</summary>
+    public string Terms { get; set; } = string.Empty;
+
+    /// <summary>Ghi chú tiến độ thanh toán / nhật ký kiểm toán.</summary>
+    public string? Notes { get; set; }
+}
+
+/// <summary>Cập nhật trạng thái vòng đời của PO (SC-16: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED).</summary>
+public class UpdatePoStatusDto
+{
+    public string Status { get; set; } = "ISSUED";
+    public string? Reason { get; set; }
+}

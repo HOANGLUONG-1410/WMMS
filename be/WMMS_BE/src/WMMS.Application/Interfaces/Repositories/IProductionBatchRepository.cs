@@ -14,6 +14,7 @@ public interface IProductionBatchRepository
     Task<List<ProductionBatch>> GetByOrderItemIdAsync(long orderItemId, CancellationToken cancellationToken = default);
     Task<List<ProductionBatch>> GetByOrderIdAsync(long orderId, CancellationToken cancellationToken = default);
     Task<List<ProductionBatch>> GetBySpaceIdAsync(long spaceId, CancellationToken cancellationToken = default);
+    Task<List<ProductionBatch>> GetBySpaceKeyAsync(string spaceKey, CancellationToken cancellationToken = default);
     Task<List<ProductionBatch>> GetAllActiveBatchesAsync(BatchStatusEnum? status = null, CancellationToken cancellationToken = default);
     Task<BatchRoutingStep?> GetStepByIdAsync(long batchStepId, CancellationToken cancellationToken = default);
     Task AddAsync(ProductionBatch batch, CancellationToken cancellationToken = default);

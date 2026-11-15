@@ -116,12 +116,23 @@ public static class AuditActionConstants
     public const string CommitGrn = "COMMIT_GRN";
 
     // Phân hệ 8: Production Kanban, 97-3 Branching & QC Gate (KBN - QT-05, QT-06, SC-18..SC-20)
+    public const string ProductionOrderReleased = "PRODUCTION_ORDER_RELEASED";
     public const string KanbanBatchGenerated = "KANBAN_BATCH_GENERATED";
     public const string KanbanGoodsIssuedUnlocked = "KANBAN_GOODS_ISSUED_UNLOCKED";
     public const string KanbanStepUpdated = "KANBAN_STEP_UPDATED";
     public const string QcInspectionRecorded = "QC_INSPECTION_RECORDED";
     public const string KanbanSubBatchSpawned = "KANBAN_SUB_BATCH_SPAWNED";
     public const string HoldPointOverdriveApproved = "HOLD_POINT_OVERDRIVE_APPROVED";
+    public const string HoldPointOverdriveRequested = "HOLD_POINT_OVERDRIVE_REQUESTED";
+    public const string HoldPointOverdriveRejected = "HOLD_POINT_OVERDRIVE_REJECTED";
+    public const string HoldPointBlocked = "HOLD_POINT_BLOCKED";
+    public const string KanbanStageAdvanced = "KANBAN_STAGE_ADVANCED";
+
+    // Phân hệ 9: Finished Goods Receipt, Order Progress Tracking & Production Dashboard (FGR / OPT / DSH - Iteration 3)
+    public const string FinishedGoodsBatchCompleted = "FINISHED_GOODS_BATCH_COMPLETED";
+    public const string OrderItemProductionCompleted = "ORDER_ITEM_PRODUCTION_COMPLETED";
+    public const string SalesOrderProductionCompleted = "SALES_ORDER_PRODUCTION_COMPLETED";
+    public const string OrderProgressSynchronized = "ORDER_PROGRESS_SYNCHRONIZED";
 }
 
 public static class DefectCodeConstants
