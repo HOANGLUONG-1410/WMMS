@@ -131,6 +131,14 @@ public class ApproveOverdriveValidator : AbstractValidator<ApproveOverdriveDto>
 {
     public ApproveOverdriveValidator()
     {
+        When(x => !x.Approved, () =>
+        {
+            RuleFor(x => x.Notes)
+                .NotEmpty().WithMessage("Lý do từ chối yêu cầu Overdrive không được để trống (GBR-05).")
+                .MinimumLength(10).WithMessage("Lý do từ chối phải có độ dài từ 10 đến 500 ký tự (GBR-05).")
+                .MaximumLength(500).WithMessage("Lý do từ chối không được vượt quá 500 ký tự.");
+        });
+
         When(x => x.HoldPointStageSeq.HasValue, () =>
         {
             RuleFor(x => x.HoldPointStageSeq!.Value)
@@ -138,7 +146,7 @@ public class ApproveOverdriveValidator : AbstractValidator<ApproveOverdriveDto>
                 .WithMessage("Công đoạn chốt chặn Hold Point phải từ công đoạn 2 trở đi.");
         });
 
-        When(x => !string.IsNullOrWhiteSpace(x.Notes), () =>
+        When(x => x.Approved && !string.IsNullOrWhiteSpace(x.Notes), () =>
         {
             RuleFor(x => x.Notes)
                 .MaximumLength(500)

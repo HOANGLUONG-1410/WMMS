@@ -702,6 +702,20 @@ public class ProductionOrderService : IProductionOrderService
             throw new DomainException("Thẻ lô đã hoàn tất sản xuất, không thể ghi nhận KCS bổ sung.", "BATCH_DONE");
         }
 
+        if (batch.BatchStatus == BatchStatusEnum.LOCKED)
+        {
+            throw new DomainException(
+                "Thẻ lô sản xuất đang ở trạng thái LOCKED (Chốt chặn đầu vào BR-008). Thủ kho cần bấm xác nhận xuất kho cấp phát vật tư trước khi KCS kiểm định.",
+                "BATCH_LOCKED_MATERIAL_REQUIRED");
+        }
+
+        if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
+        {
+            throw new DomainException(
+                $"Thẻ lô đang bị khóa cứng tại chốt chặn Hold Point công đoạn {batch.HoldPointStageSeq} do chưa xuất kho đủ phụ kiện. Cần mở khóa trước khi kiểm định.",
+                "HOLD_POINT_BLOCKED");
+        }
+
         var steps = batch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
         var step = steps.FirstOrDefault(s => s.BatchStepId == request.BatchStepId);
         if (step == null)
