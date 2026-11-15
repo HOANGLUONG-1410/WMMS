@@ -1,4 +1,24 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  defaultAnimateLayoutChanges,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { RoutingStageDto } from "../types";
 
 interface DynamicRoutingModalProps {
@@ -8,6 +28,160 @@ interface DynamicRoutingModalProps {
   onSave: (updatedStages: RoutingStageDto[]) => void;
 }
 
+// Làm sạch tiền tố số cũ (ví dụ "1. Pha phôi" hoặc "Step 8: Tốt nghiệp") để tránh trùng "Công đoạn 1: 3. Pha phôi" khi đổi vị trí
+const cleanStageName = (name: string) => {
+  return (name || "").replace(/^\s*(Step\s*\d+\s*:\s*|\d+\s*[\.\:\-]\s*)/i, "").trim();
+};
+
+interface StageCardContentProps {
+  stage: RoutingStageDto;
+  index: number;
+  totalCount: number;
+  isOverlay?: boolean;
+  onToggleHoldPoint?: (index: number) => void;
+  onDeleteStep?: (index: number) => void;
+}
+
+function StageCardContent({
+  stage,
+  index,
+  totalCount,
+  isOverlay = false,
+  onToggleHoldPoint,
+  onDeleteStep,
+}: StageCardContentProps) {
+  const isHold = stage.isHoldPoint;
+
+  return (
+    <div
+      className={`px-4 py-3 rounded-lg border flex items-center justify-between gap-3 select-none touch-none ${
+        isOverlay
+          ? "bg-white border-blue-500 ring-2 ring-blue-500/20 shadow-xl cursor-grabbing"
+          : isHold
+          ? "border-rose-400 bg-rose-50/30 shadow-2xs hover:bg-rose-50/50 cursor-grab"
+          : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 cursor-grab"
+      }`}
+    >
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        {/* Grip Handle Icon */}
+        <div
+          className={`p-1 rounded transition ${
+            isOverlay ? "text-blue-600" : "text-slate-400"
+          }`}
+          title="Nhấn giữ và kéo để đổi thứ tự công đoạn"
+        >
+          <svg
+            className="w-4 h-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8 9h.01M8 15h.01M16 9h.01M16 15h.01M12 9h.01M12 15h.01"
+            />
+          </svg>
+        </div>
+
+        <div className="text-sm text-slate-800 truncate">
+          <strong className="font-bold text-slate-900">
+            Công đoạn {index + 1}:
+          </strong>{" "}
+          <span>{cleanStageName(stage.stageName)}</span>
+        </div>
+      </div>
+
+      <div
+        className="flex items-center gap-2 shrink-0"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={() => onToggleHoldPoint?.(index)}
+          title="Bấm để chuyển giữa Chuẩn và Hold Point quan trọng"
+          className={`px-2.5 py-1 text-xs font-bold rounded-md transition cursor-pointer ${
+            isHold
+              ? "bg-amber-100 text-amber-800 border border-amber-300"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          {isHold ? "Hold Point (Khóa phụ kiện)" : "Chuẩn"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onDeleteStep?.(index)}
+          disabled={totalCount <= 1}
+          title={totalCount <= 1 ? "Cần ít nhất 1 công đoạn" : "Xóa công đoạn này"}
+          className="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-md transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface SortableStageItemProps {
+  stage: RoutingStageDto;
+  index: number;
+  totalCount: number;
+  onToggleHoldPoint: (index: number) => void;
+  onDeleteStep: (index: number) => void;
+}
+
+function SortableStageItem({
+  stage,
+  index,
+  totalCount,
+  onToggleHoldPoint,
+  onDeleteStep,
+}: SortableStageItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: stage.stageId,
+    transition: {
+      duration: 220,
+      easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+    },
+    animateLayoutChanges: (args) =>
+      defaultAnimateLayoutChanges({ ...args, wasDragging: true }),
+  });
+
+  const style: CSSProperties = {
+    // Khóa trục x để chuyển động mượt mà thẳng hàng tuyệt đối theo phương dọc
+    transform: transform ? CSS.Translate.toString({ ...transform, x: 0 }) : undefined,
+    transition,
+    willChange: "transform",
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={isDragging ? "opacity-0 pointer-events-none" : undefined}
+    >
+      <StageCardContent
+        stage={stage}
+        index={index}
+        totalCount={totalCount}
+        onToggleHoldPoint={onToggleHoldPoint}
+        onDeleteStep={onDeleteStep}
+      />
+    </div>
+  );
+}
+
 export default function DynamicRoutingModal({
   isOpen,
   stages,
@@ -15,15 +189,20 @@ export default function DynamicRoutingModal({
   onSave,
 }: DynamicRoutingModalProps) {
   const [localStages, setLocalStages] = useState<RoutingStageDto[]>(stages);
+  const [activeId, setActiveId] = useState<number | string | null>(null);
   const [newStepName, setNewStepName] = useState("");
   const [showAddInput, setShowAddInput] = useState(false);
 
-  // State hỗ trợ Drag & Drop công đoạn
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
-  // Refs phục vụ hiệu ứng trượt mượt mà (FLIP Animation)
-  const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const prevPositionsRef = useRef<Map<number, number>>(new Map());
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 4,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -37,125 +216,43 @@ export default function DynamicRoutingModal({
       );
       setShowAddInput(false);
       setNewStepName("");
-      setDraggedIndex(null);
-      prevPositionsRef.current.clear();
+      setActiveId(null);
     }
   }, [isOpen, stages]);
 
-  // Áp dụng kỹ thuật FLIP (First, Last, Invert, Play) để các công đoạn trượt mượt mà khi nhảy vị trí
-  useLayoutEffect(() => {
-    if (prevPositionsRef.current.size === 0) return;
-
-    localStages.forEach((stg) => {
-      const el = itemRefs.current.get(stg.stageId);
-      const prevTop = prevPositionsRef.current.get(stg.stageId);
-      if (!el || prevTop === undefined) return;
-
-      const currentTop = el.getBoundingClientRect().top;
-      const deltaY = prevTop - currentTop;
-
-      if (deltaY !== 0) {
-        // Invert
-        el.style.transform = `translateY(${deltaY}px)`;
-        el.style.transition = "transform 0s";
-
-        // Play
-        requestAnimationFrame(() => {
-          el.style.transform = "translateY(0)";
-          el.style.transition = "transform 240ms cubic-bezier(0.2, 0, 0, 1)";
-        });
-      }
-    });
-
-    prevPositionsRef.current.clear();
-  }, [localStages]);
-
   if (!isOpen) return null;
-
-  // Làm sạch tiền tố số cũ (ví dụ "1. Pha phôi" hoặc "Step 8: Tốt nghiệp") để tránh trùng "Công đoạn 1: 3. Pha phôi" khi đổi vị trí
-  const cleanStageName = (name: string) => {
-    return (name || "").replace(/^\s*(Step\s*\d+\s*:\s*|\d+\s*[\.\:\-]\s*)/i, "").trim();
-  };
 
   const handleToggleHoldPoint = (index: number) => {
     setLocalStages((prev) =>
-      prev.map((stg, idx) => (idx === index ? { ...stg, isHoldPoint: !stg.isHoldPoint } : stg)),
+      prev.map((stg, idx) =>
+        idx === index ? { ...stg, isHoldPoint: !stg.isHoldPoint } : stg,
+      ),
     );
   };
 
-  // Ghi lại vị trí hiện tại của toàn bộ các phần tử trước khi hoán đổi
-  const snapshotPositions = () => {
-    prevPositionsRef.current.clear();
-    localStages.forEach((stg) => {
-      const el = itemRefs.current.get(stg.stageId);
-      if (el) {
-        prevPositionsRef.current.set(stg.stageId, el.getBoundingClientRect().top);
-      }
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over || active.id === over.id) return;
+
+    setLocalStages((prev) => {
+      const oldIndex = prev.findIndex((s) => s.stageId === active.id);
+      const newIndex = prev.findIndex((s) => s.stageId === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex).map((s, idx) => ({
+        ...s,
+        stageSequence: idx + 1,
+      }));
     });
   };
 
-  const handleMoveStep = (index: number, direction: -1 | 1) => {
-    const targetIdx = index + direction;
-    if (targetIdx < 0 || targetIdx >= localStages.length) return;
-
-    snapshotPositions();
-    const copy = [...localStages];
-    const temp = copy[index];
-    copy[index] = copy[targetIdx];
-    copy[targetIdx] = temp;
-    setLocalStages(copy.map((s, idx) => ({ ...s, stageSequence: idx + 1 })));
-  };
-
-  // Drag & Drop Handlers với cơ chế phát hiện nửa trên/nửa dưới (Midpoint Swap)
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
-    setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", String(index));
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, hoverIndex: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-
-    if (draggedIndex === null || draggedIndex === hoverIndex) return;
-
-    // Tính toán vị trí con trỏ chuột so với nửa trên / nửa dưới của thẻ mục tiêu
-    const rect = e.currentTarget.getBoundingClientRect();
-    const hoverMiddleY = (rect.bottom - rect.top) / 2;
-    const hoverClientY = e.clientY - rect.top;
-
-    // 1. Khi kéo từ trên xuống (draggedIndex < hoverIndex):
-    // Chỉ nhảy khi con trỏ đã đi xuống quá nửa dưới của thẻ mục tiêu (hoverClientY > hoverMiddleY)
-    if (draggedIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-      return;
-    }
-
-    // 2. Khi kéo từ dưới lên (draggedIndex > hoverIndex):
-    // Chỉ nhảy khi con trỏ đã đi lên quá nửa trên của thẻ mục tiêu (hoverClientY > hoverMiddleY)
-    if (draggedIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-      return;
-    }
-
-    // Đạt điều kiện ngưỡng 50%: Chụp vị trí hiện tại để kích hoạt FLIP animation
-    snapshotPositions();
-
-    // Dịch chuyển phần tử ngay lập tức trong lúc đang kéo
-    const updated = [...localStages];
-    const [movedItem] = updated.splice(draggedIndex, 1);
-    updated.splice(hoverIndex, 0, movedItem);
-
-    // Cập nhật lại mảng và cập nhật index hiện tại của phần tử đang kéo
-    setLocalStages(updated.map((s, idx) => ({ ...s, stageSequence: idx + 1 })));
-    setDraggedIndex(hoverIndex);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDraggedIndex(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
+  const handleDragCancel = () => {
+    setActiveId(null);
   };
 
   const handleDeleteStep = (index: number) => {
@@ -189,6 +286,9 @@ export default function DynamicRoutingModal({
     onClose();
   };
 
+  const activeStage = localStages.find((s) => s.stageId === activeId);
+  const activeIndex = localStages.findIndex((s) => s.stageId === activeId);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-[1px]">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden">
@@ -212,10 +312,10 @@ export default function DynamicRoutingModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto overflow-x-hidden">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-slate-600">
-              Nhấn giữ tay nắm <span className="font-mono font-bold text-slate-800">⋮⋮</span> để kéo thả đổi thứ tự, hoặc dùng phím mũi tên.
+              Kéo thả các thẻ công đoạn để sắp xếp thứ tự thực hiện.
             </p>
             <button
               type="button"
@@ -245,118 +345,49 @@ export default function DynamicRoutingModal({
             </div>
           )}
 
-          {/* Workstation Sequence Steps */}
-          <div className="space-y-2.5 relative">
-            {localStages.map((stg, idx) => {
-              const isHold = stg.isHoldPoint;
-              const isBeingDragged = draggedIndex === idx;
+          {/* Workstation Sequence Steps with @dnd-kit */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <SortableContext
+              items={localStages.map((s) => s.stageId)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2.5">
+                {localStages.map((stg, idx) => (
+                  <SortableStageItem
+                    key={stg.stageId}
+                    stage={stg}
+                    index={idx}
+                    totalCount={localStages.length}
+                    onToggleHoldPoint={handleToggleHoldPoint}
+                    onDeleteStep={handleDeleteStep}
+                  />
+                ))}
+              </div>
+            </SortableContext>
 
-              return (
-                <div
-                  key={stg.stageId}
-                  ref={(el) => {
-                    if (el) {
-                      itemRefs.current.set(stg.stageId, el);
-                    } else {
-                      itemRefs.current.delete(stg.stageId);
-                    }
-                  }}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, idx)}
-                  onDragOver={(e) => handleDragOver(e, idx)}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
-                  className={`px-4 py-3 rounded-lg border flex items-center justify-between gap-3 transition-colors duration-150 select-none ${
-                    isBeingDragged
-                      ? "opacity-60 border-2 border-dashed border-blue-500 bg-blue-50/70 shadow-inner"
-                      : isHold
-                      ? "border-rose-400 bg-rose-50/30 shadow-2xs hover:bg-rose-50/50"
-                      : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    {/* Grip Handle Icon */}
-                    <div
-                      className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-blue-600 p-1 rounded transition"
-                      title="Giữ chuột kéo để đổi thứ tự công đoạn"
-                    >
-                      <svg
-                        className="w-4 h-4 shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M8 9h.01M8 15h.01M16 9h.01M16 15h.01M12 9h.01M12 15h.01"
-                        />
-                      </svg>
-                    </div>
-
-                    {/* Up/Down buttons for accessibility */}
-                    <div className="flex flex-col gap-0.5 text-xs text-slate-400 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleMoveStep(idx, -1)}
-                        disabled={idx === 0}
-                        className="hover:text-slate-700 disabled:opacity-20 leading-none cursor-pointer"
-                        title="Chuyển lên"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMoveStep(idx, 1)}
-                        disabled={idx === localStages.length - 1}
-                        className="hover:text-slate-700 disabled:opacity-20 leading-none cursor-pointer"
-                        title="Chuyển xuống"
-                      >
-                        ▼
-                      </button>
-                    </div>
-
-                    <div className="text-sm text-slate-800 truncate ml-1">
-                      <strong className="font-bold text-slate-900">
-                        Công đoạn {idx + 1}:
-                      </strong>{" "}
-                      <span>{cleanStageName(stg.stageName)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleHoldPoint(idx)}
-                      title="Bấm để chuyển giữa Chuẩn và Hold Point quan trọng"
-                      className={`px-2.5 py-1 text-xs font-bold rounded-md transition cursor-pointer ${
-                        isHold
-                          ? "bg-amber-100 text-amber-800 border border-amber-300"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {isHold ? "Hold Point (Khóa phụ kiện)" : "Chuẩn"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteStep(idx)}
-                      disabled={localStages.length <= 1}
-                      title={
-                        localStages.length <= 1
-                          ? "Cần ít nhất 1 công đoạn"
-                          : "Xóa công đoạn này"
-                      }
-                      className="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-md transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            {/* Floating Layer for 60fps drag preview */}
+            <DragOverlay
+              dropAnimation={{
+                duration: 200,
+                easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)",
+              }}
+            >
+              {activeStage && (
+                <StageCardContent
+                  stage={activeStage}
+                  index={activeIndex}
+                  totalCount={localStages.length}
+                  isOverlay
+                />
+              )}
+            </DragOverlay>
+          </DndContext>
         </div>
 
         {/* Modal Footer */}

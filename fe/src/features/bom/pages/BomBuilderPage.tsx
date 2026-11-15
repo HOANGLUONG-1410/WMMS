@@ -256,11 +256,23 @@ export default function BomBuilderPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
             <div className="px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700">
               Tổng số sản phẩm:{" "}
               <strong className="font-extrabold text-slate-900">{spaceLineItems.length}</strong>
             </div>
+
+            {activeSpaceKey && (
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/inventory/reconciliation?spaceKey=${encodeURIComponent(activeSpaceKey)}`)
+                }
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <span>Đối chiếu tồn kho &amp; Khóa vật tư (Bước 1) →</span>
+              </button>
+            )}
           </div>
         </div>
 

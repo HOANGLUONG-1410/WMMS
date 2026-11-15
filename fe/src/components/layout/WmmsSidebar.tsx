@@ -214,8 +214,9 @@ export default function WmmsSidebar({
 
   const isInOrderSpace = location.pathname.startsWith("/orders/spaces");
   const isInBomPage = location.pathname.startsWith("/bom");
+  const isInReconciliation = location.pathname.startsWith("/inventory/reconciliation");
 
-  // Lấy spaceKey từ URL: hoặc /orders/spaces/:spaceKey hoặc /bom?spaceKey=...
+  // Lấy spaceKey từ URL: hoặc /orders/spaces/:spaceKey hoặc /bom?spaceKey=... hoặc /inventory/reconciliation?spaceKey=...
   const spaceFromPath = location.pathname.startsWith("/orders/spaces/")
     ? decodeURIComponent(location.pathname.replace("/orders/spaces/", "").split("/")[0] || "")
     : "";
@@ -223,23 +224,30 @@ export default function WmmsSidebar({
   const activeSpaceFromUrl = spaceFromPath || spaceFromQuery;
   const displaySpaceKey = activeSpaceFromUrl || currentSpaceKey;
 
-  // Hiển thị cây phân cấp khi đang ở trong Space hoặc đang ở trang BOM của Space
-  const isSpaceContextActive = isInOrderSpace || (isInBomPage && Boolean(displaySpaceKey));
+  // Hiển thị cây phân cấp khi đang ở trong Space hoặc đang ở trang BOM / Đối chiếu của Space
+  const isSpaceContextActive =
+    isInOrderSpace || ((isInBomPage || isInReconciliation) && Boolean(displaySpaceKey));
 
-  const bomChildItem: SidebarItem | undefined = isSpaceContextActive && displaySpaceKey
-    ? {
-        icon: Icons.bom,
-        label: "BOM & quy trình sản xuất",
-        path: `/bom?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
-      }
-    : undefined;
+  const spaceSubItems: SidebarItem[] = [];
+  if (isSpaceContextActive && displaySpaceKey) {
+    spaceSubItems.push({
+      icon: Icons.bom,
+      label: "BOM & quy trình sản xuất",
+      path: `/bom?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
+    });
+    spaceSubItems.push({
+      icon: Icons.reconcile,
+      label: "Đối chiếu & phân bổ vật tư",
+      path: `/inventory/reconciliation?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
+    });
+  }
 
   const orderSpaceChildItem: SidebarItem | undefined = isSpaceContextActive
     ? {
         icon: Icons.space,
         label: displaySpaceKey || "Không gian đơn hàng",
         path: `/orders/spaces/${displaySpaceKey}`,
-        children: bomChildItem ? [bomChildItem] : undefined,
+        children: spaceSubItems.length > 0 ? spaceSubItems : undefined,
       }
     : undefined;
 
@@ -290,7 +298,6 @@ export default function WmmsSidebar({
           {
             heading: "TỒN KHO & MUA HÀNG",
             items: [
-              { icon: Icons.reconcile, label: "Đối chiếu tồn kho", path: "/inventory/reconciliation" },
               { icon: Icons.inventory, label: "Tồn kho vật tư 3 cấp", path: "/inventory/stock" },
               { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
               { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
@@ -322,12 +329,6 @@ export default function WmmsSidebar({
               { icon: Icons.audit, label: "Lưới Staging PO Excel", path: "/orders/staging" },
             ],
           },
-          {
-            heading: "KỸ THUẬT & TỒN KHO",
-            items: [
-              { icon: Icons.reconcile, label: "Đối chiếu tồn kho", path: "/inventory/reconciliation" },
-            ],
-          },
         ];
 
       case ROLES.PLANNER:
@@ -341,7 +342,6 @@ export default function WmmsSidebar({
                 path: "/orders",
                 children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
               },
-              { icon: Icons.reconcile, label: "Đối chiếu tồn kho", path: "/inventory/reconciliation" },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
               { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
               { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },

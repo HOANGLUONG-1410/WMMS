@@ -199,27 +199,38 @@ export default function OrderSpaceDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => navigate('/production/kanban')}
-              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition flex items-center gap-2 shadow-xs cursor-pointer"
+              className="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg transition flex items-center gap-2 shadow-xs cursor-pointer"
             >
               <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
               </svg>
-              <span>Xem trên Kanban</span>
+              <span>Kanban</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate(`/bom?spaceKey=${encodeURIComponent(activeKey)}`)}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
+              className="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-              <span>Quản lý BOM &amp; quy trình →</span>
+              <span>Quản lý BOM &amp; quy trình</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate(`/inventory/reconciliation?spaceKey=${encodeURIComponent(activeKey)}`)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              <span>Đối chiếu tồn kho &amp; Khóa vật tư (Bước 1) →</span>
             </button>
           </div>
         </div>
