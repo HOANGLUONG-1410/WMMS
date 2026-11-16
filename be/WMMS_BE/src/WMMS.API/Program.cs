@@ -96,6 +96,7 @@ builder.Services.AddScoped<IGoodsReceiptService, WMMS.Infrastructure.Services.Wa
 builder.Services.AddScoped<IHoldPointService, WMMS.Infrastructure.Services.KanbanQc.HoldPointService>();
 
 // Phân hệ 9 (Iteration 3): Hoàn tất Lô sản xuất, Nhập kho Thành phẩm, Theo dõi Tiến độ Đơn hàng & Dashboard Chủ xưởng (UC-63, UC-64)
+builder.Services.AddScoped<IProductionReportExcelExporter, ProductionReportExcelExporter>();
 builder.Services.AddScoped<IFinishedGoodsService, FinishedGoodsService>();
 builder.Services.AddScoped<IOrderProgressService, OrderProgressService>();
 builder.Services.AddScoped<IProductionDashboardService, ProductionDashboardService>();

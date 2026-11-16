@@ -46,28 +46,35 @@ public class ProductionOrderService : IProductionOrderService
         _notificationHubService = notificationHubService;
     }
 
+    // =========================================================================
+    // [SC-19 CORE]: PHÂN ĐOẠN 1 - THUẬT TOÁN TÁCH LÔ & PHÁT HÀNH LỆNH SẢN XUẤT (UC-62, BR-005)
+    // Tách đơn hàng thành các thẻ Kanban Lots theo công suất trạm máy hoặc số lượng tùy chỉnh.
+    // Kiểm tra chốt chặn 100% vật tư đầu vào (BR-008) hoặc kích hoạt cơ chế chạy trước Overdrive (QT-06, KBN02).
+    // =========================================================================
     public async Task<ProductionOrderSummaryDto> GenerateProductionOrderAndSplitLotsAsync(
         GenerateBatchesRequestDto request,
         long currentUserId,
         CancellationToken cancellationToken = default)
     {
+        // [SC-19 CORE]: Bước 0 - Tải đồ thị dữ liệu dòng đơn hàng kèm thông tin MRP, BOM và vật tư
         var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(request.OrderItemId, cancellationToken);
         if (orderItem == null)
         {
-            throw new NotFoundException($"OrderItem with ID {request.OrderItemId} was not found.");
+            throw new NotFoundException($"Không tìm thấy dòng sản phẩm đơn hàng với ID #{request.OrderItemId}.");
         }
 
         var product = orderItem.Product;
         if (product == null)
         {
-            throw new DomainException($"Product for OrderItem #{request.OrderItemId} is missing.", "PRODUCT_NOT_FOUND");
+            throw new DomainException($"Không tìm thấy thông tin sản phẩm cho dòng đơn hàng #{request.OrderItemId}.", "PRODUCT_NOT_FOUND");
         }
 
         var customerOrder = orderItem.CustomerOrder;
         var poNumber = customerOrder?.PoNumber ?? $"PO-{orderItem.OrderId}";
         var spaceKey = customerOrder?.OrderSpace?.SpaceKey ?? $"SPACE-PO-{orderItem.OrderId}";
 
-        // 1. Kiểm tra điều kiện tiên quyết về BOM (PRE-1, BR-001)
+        // [SC-19 CORE]: Bước 1 - Kiểm tra điều kiện tiên quyết về BOM (PRE-1, BR-001)
+        // Lệnh sản xuất yêu cầu BOM phải được bóc tách và phê duyệt trước (READY_FOR_PRODUCTION / APPROVED)
         var bomHeader = orderItem.BomHeader;
         if (bomHeader == null)
         {
@@ -86,7 +93,8 @@ public class ProductionOrderService : IProductionOrderService
                 "BOM_NOT_APPROVED");
         }
 
-        // 2. Tính toán số lượng chưa phát hành (Remaining Unreleased Quantity)
+        // [SC-19 CORE]: Bước 2 - Tính toán số lượng tồn chưa phát hành (Remaining Unreleased Quantity)
+        // Đảm bảo không phát hành vượt quá tổng số lượng đã đặt của đơn hàng
         var existingBatches = await _batchRepository.GetByOrderItemIdAsync(request.OrderItemId, cancellationToken);
         int alreadyReleasedQty = existingBatches
             .Where(b => b.BatchType == BatchTypeEnum.MAIN_CARD)
@@ -100,7 +108,8 @@ public class ProductionOrderService : IProductionOrderService
                 "ALL_QTY_ALREADY_RELEASED");
         }
 
-        // 3. Thuật toán tách lô sản xuất thông minh (SC-19, BR-005)
+        // [SC-19 CORE]: Bước 3 - Thuật toán tách lô thông minh theo công suất trạm máy (BR-005, UC-62)
+        // Ưu tiên chia theo công suất trạm máy (stationCapacity, mặc định 100 SP/lô); nếu có cấu hình chia tùy chỉnh thì kiểm tra tổng số lượng
         List<int> splits;
         int stationCapacity = request.MaxBatchSize.GetValueOrDefault(100);
         if (stationCapacity <= 0) stationCapacity = 100;
@@ -128,7 +137,7 @@ public class ProductionOrderService : IProductionOrderService
             }
         }
 
-        // 4. Lấy quy trình công nghệ động (Dynamic Routing Stages & Hold Points)
+        // [SC-19 CORE]: Bước 4 - Lấy quy trình công nghệ động & Thiết lập điểm dừng kỹ thuật Hold Point (SC-18, SC-20)
         var routing = await _routingRepository.GetActiveRoutingByProductIdAsync(product.ProductId);
         var routingStages = (routing?.RoutingStages != null && routing.RoutingStages.Any())
             ? routing.RoutingStages.OrderBy(s => s.StageSequence).ToList()
@@ -137,7 +146,10 @@ public class ProductionOrderService : IProductionOrderService
         var holdPointStage = routingStages.FirstOrDefault(s => s.IsHoldPoint);
         int? holdPointSeq = holdPointStage?.StageSequence ?? (routingStages.Count >= 5 ? 5 : null);
 
-        // 5. Đánh giá trạng thái vật tư & cơ chế Overdrive (BR-008, QT-05, QT-06, KBN02)
+        // [BR-008 & QT-06]: Bước 5 - Đánh giá chốt chặn 100% vật tư đã xuất kho & Cơ chế Overdrive giải trình kỹ thuật
+        // - Đủ 100% vật tư đã xuất kho (ISSUED_TO_SHOP / RELEASED): thẻ lô sinh ra ở trạng thái IN_PROGRESS sẵn sàng gia công.
+        // - Chưa đủ vật tư nhưng có giải trình Overdrive: thẻ sinh ra IN_PROGRESS, được phép sơ chế trước điểm dừng Hold Point.
+        // - Chưa đủ vật tư và không Overdrive: thẻ lô bị KHÓA CỨNG (LOCKED - BR-008), chờ Thủ kho xuất vật tư mới mở khóa.
         bool isIssuedToShop = orderItem.MaterialAllocations.Any() &&
                               orderItem.MaterialAllocations.All(a =>
                                   a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP ||
@@ -175,7 +187,7 @@ public class ProductionOrderService : IProductionOrderService
             }
         }
 
-        // 6. Thực thi giao dịch nguyên tử phát hành thẻ lô Kanban
+        // [SC-19 CORE]: Bước 6 - Giao dịch nguyên tử (ACID Transaction) sinh các thẻ Kanban Lot & Danh sách công đoạn Routing Steps
         await _unitOfWork.BeginTransactionAsync();
         try
         {
@@ -467,6 +479,13 @@ public class ProductionOrderService : IProductionOrderService
         };
     }
 
+    // =========================================================================
+    // [SC-19 CORE & QT-05]: PHÂN ĐOẠN 2 - CƯỠNG CHẾ TUẦN TỰ (S -> S+1) & 100% QC PASS TRÊN KANBAN
+    // Cưỡng chế quy tắc:
+    // 1. Công đoạn hiện tại phải đạt 100% sản phẩm Pass (PassedQty >= BatchQty hoặc StepStatus == PASSED).
+    // 2. Chuyển tuần tự State Machine: Target = Current + 1; cấm nhảy cóc và cấm lùi bước.
+    // 3. Chốt chặn Hold Point Barrier: Lô Overdrive tiến tới Hold Point mà phụ kiện chưa xuất kho sẽ bị KHÓA CỨNG (HOLD_POINT_BLOCKED).
+    // =========================================================================
     /// <inheritdoc />
     public async Task<ProductionBatchDto> AdvanceStepAsync(
         long batchId,
@@ -477,7 +496,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.LOCKED)
@@ -565,7 +584,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Stage_{currentSeq}_IN_PROGRESS",
                     AfterState = $"Stage_{targetSeq}_HOLD_POINT_BLOCKED",
-                    Reason = $"Overdrive batch {batch.BatchCode} automatically locked at Critical Hold Point Stage {targetSeq} ({holdStep?.StageName}) awaiting auxiliary hardware issuance (QT-06, KBN02).",
+                    Reason = $"Thẻ lô Overdrive {batch.BatchCode} tự động bị khóa cứng tại chốt chặn Hold Point công đoạn {targetSeq} ({holdStep?.StageName}) do phụ kiện chưa xuất kho (QT-06, KBN02).",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -640,7 +659,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = $"Stage_{currentSeq}",
                 AfterState = targetSeq <= maxSeq ? $"Stage_{targetSeq}" : "DONE",
-                Reason = request.Notes ?? $"Advanced Kanban lot card {batch.BatchCode} from Stage {currentSeq} to {(targetSeq <= maxSeq ? $"Stage {targetSeq}" : "DONE")} with 100% QC Pass (QT-05).",
+                Reason = request.Notes ?? $"Chuyển bước thẻ Kanban {batch.BatchCode} từ công đoạn {currentSeq} sang {(targetSeq <= maxSeq ? $"công đoạn {targetSeq}" : "HOÀN TẤT (DONE)")} sau khi đạt 100% QC Pass (QT-05).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -656,6 +675,15 @@ public class ProductionOrderService : IProductionOrderService
         }
     }
 
+    // =========================================================================
+    // [KBN01 & QT-06]: PHÂN ĐOẠN 3 - KIỂM ĐỊNH QC 100% & THUẬT TOÁN TÁCH NHÁNH 97%-3%
+    // 1. Cưỡng chế quy tắc 100% kiểm định (InspectedQty == BatchQty).
+    // 2. Nếu đạt chuẩn 100% (FailQty == 0): Bước hoàn tất (PASSED).
+    // 3. Nếu phát sinh lỗi (FailQty > 0):
+    //    - Thẻ chính cập nhật BatchQty = PassQty và hoàn tất bước hiện tại.
+    //    - Đồng bộ TargetQty = PassQty cho tất cả các công đoạn sau của thẻ chính.
+    //    - Sinh thẻ nhánh phụ viền cam (REWORK_SUB_CARD) với BatchQty = FailQty để sửa chữa độc lập.
+    // =========================================================================
     /// <inheritdoc />
     public async Task<QcInspectionResultDto> RecordQcInspectionAsync(
         long batchId,
@@ -666,7 +694,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.DONE)
@@ -674,11 +702,25 @@ public class ProductionOrderService : IProductionOrderService
             throw new DomainException("Thẻ lô đã hoàn tất sản xuất, không thể ghi nhận KCS bổ sung.", "BATCH_DONE");
         }
 
+        if (batch.BatchStatus == BatchStatusEnum.LOCKED)
+        {
+            throw new DomainException(
+                "Thẻ lô sản xuất đang ở trạng thái LOCKED (Chốt chặn đầu vào BR-008). Thủ kho cần bấm xác nhận xuất kho cấp phát vật tư trước khi KCS kiểm định.",
+                "BATCH_LOCKED_MATERIAL_REQUIRED");
+        }
+
+        if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
+        {
+            throw new DomainException(
+                $"Thẻ lô đang bị khóa cứng tại chốt chặn Hold Point công đoạn {batch.HoldPointStageSeq} do chưa xuất kho đủ phụ kiện. Cần mở khóa trước khi kiểm định.",
+                "HOLD_POINT_BLOCKED");
+        }
+
         var steps = batch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
         var step = steps.FirstOrDefault(s => s.BatchStepId == request.BatchStepId);
         if (step == null)
         {
-            throw new NotFoundException($"Batch step with ID {request.BatchStepId} was not found.");
+            throw new NotFoundException($"Không tìm thấy công đoạn thực thi với ID #{request.BatchStepId}.");
         }
 
         // Quy tắc kiểm định 100% (BR-008): Phải kiểm tra đúng bằng số lượng hiện có của thẻ lô
@@ -730,7 +772,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Stage_{step.StageSequence}_IN_PROGRESS",
                     AfterState = $"Stage_{step.StageSequence}_100_PASS",
-                    Reason = $"100% QC Pass ({request.PassQty}/{request.InspectedQty} units) at {step.StageName} for card {batch.BatchCode} (BR-008).",
+                    Reason = $"Kiểm định KCS đạt chuẩn 100% ({request.PassQty}/{request.InspectedQty} SP) tại công đoạn {step.StageName} cho thẻ {batch.BatchCode} (BR-008).",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -826,7 +868,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = subBatch.BatchCode,
                     BeforeState = $"MainCard_{batch.BatchCode}_Qty_{request.InspectedQty}",
                     AfterState = $"MainCard_{request.PassQty}_SubCard_{subBatch.BatchCode}_{request.FailQty}",
-                    Reason = $"97%-3% Kanban branching executed at {step.StageName}. Main card reduced to {request.PassQty} units, spawned rework card {subBatch.BatchCode} for {request.FailQty} units (KBN01, QT-06).",
+                    Reason = $"Thực hiện tách nhánh 97%-3% (KBN01): Thẻ chính {batch.BatchCode} tiếp tục với {request.PassQty} SP, sinh thẻ nhánh phụ {subBatch.BatchCode} ({request.FailQty} SP) để sửa chữa.",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -855,6 +897,9 @@ public class ProductionOrderService : IProductionOrderService
         }
     }
 
+    // =========================================================================
+    // [SC-20 & UC-63]: PHÂN ĐOẠN 4 - LUỒNG NGOẠI LỆ OVERDRIVE: YÊU CẦU, PHÊ DUYỆT & MỞ KHÓA
+    // =========================================================================
     /// <inheritdoc />
     public async Task<OverdriveOperationResultDto> RequestOverdriveAsync(
         long batchId,
@@ -865,7 +910,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Justification))
@@ -898,7 +943,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = $"Status_{batch.BatchStatus}",
                 AfterState = $"Overdrive_Requested_HoldPoint_{holdPointSeq}",
-                Reason = $"Line Leader submitted Overdrive request for {batch.BatchCode}: '{request.Justification.Trim()}' (UC-63).",
+                Reason = $"Tổ trưởng sản xuất gửi yêu cầu kích hoạt Overdrive cho lô {batch.BatchCode}: '{request.Justification.Trim()}' (UC-63).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -932,7 +977,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         if (!request.Approved)
@@ -948,7 +993,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Status_{batch.BatchStatus}",
                     AfterState = "OVERDRIVE_REJECTED",
-                    Reason = request.Notes ?? $"Factory Owner rejected Overdrive request for {batch.BatchCode} (KBN02).",
+                    Reason = request.Notes ?? $"Chủ xưởng từ chối yêu cầu Overdrive của lô {batch.BatchCode} (KBN02).",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -996,7 +1041,7 @@ public class ProductionOrderService : IProductionOrderService
                 BatchId = batch.BatchId,
                 RequestedBy = currentUserId,
                 ApprovedBy = currentUserId,
-                Justification = request.Notes ?? "Approved by Factory Owner with technical Hold Point designation (KBN02).",
+                Justification = request.Notes ?? "Phê duyệt bởi Chủ xưởng kèm thiết lập điểm dừng kỹ thuật Hold Point (KBN02).",
                 HoldPointStageSeq = holdPointSeq,
                 ApprovedAt = DateTime.UtcNow
             };
@@ -1011,7 +1056,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = "LOCKED",
                 AfterState = $"OVERDRIVE_APPROVED_HOLD_POINT_{holdPointSeq}",
-                Reason = request.Notes ?? $"Factory Owner approved Overdrive execution for {batch.BatchCode} up to Hold Point {holdPointSeq} (KBN02, QT-06).",
+                Reason = request.Notes ?? $"Chủ xưởng phê duyệt kích hoạt Overdrive cho lô {batch.BatchCode} tới trạm dừng Hold Point {holdPointSeq} (KBN02, QT-06).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -1044,7 +1089,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Production batch with ID {batchId} was not found.");
+            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
         }
 
         await _unitOfWork.BeginTransactionAsync();
@@ -1073,7 +1118,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = "HOLD_POINT_BLOCKED",
                 AfterState = "IN_PROGRESS",
-                Reason = $"Unlocked Hold Point barrier for lot {batch.BatchCode} following auxiliary hardware goods issue (SC-20).",
+                Reason = $"Mở khóa chốt chặn Hold Point cho thẻ lô {batch.BatchCode} sau khi Thủ kho bấm xuất kho phụ kiện bổ sung (SC-20).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -1177,6 +1222,365 @@ public class ProductionOrderService : IProductionOrderService
             "WC-06-PACK" => "Trạm KCS xuất xưởng & Đóng thùng carton",
             _ => $"Trạm máy công đoạn {seq}"
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<ReinspectSubBatchResultDto> ReinspectSubBatchAsync(
+        long subBatchId,
+        ReinspectSubBatchDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
+        if (subBatch == null)
+        {
+            throw new NotFoundException($"Không tìm thấy thẻ nhánh phụ có ID {subBatchId}.");
+        }
+
+        if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
+        {
+            throw new DomainException("Chỉ áp dụng quy trình nghiệm thu lại cho thẻ nhánh phụ (REWORK_SUB_CARD hoặc REPLENISH_LOT).", "INVALID_SUB_BATCH_TYPE");
+        }
+
+        if (subBatch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất hoặc đã được gộp/chuyển tiếp trước đó.", "SUB_BATCH_ALREADY_DONE");
+        }
+
+        var steps = subBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
+        var step = steps.FirstOrDefault(s => s.BatchStepId == request.BatchStepId);
+        if (step == null)
+        {
+            throw new NotFoundException($"Không tìm thấy công đoạn thẻ phụ có ID {request.BatchStepId}.");
+        }
+
+        if (request.InspectedQty != subBatch.BatchQty)
+        {
+            throw new DomainException(
+                $"Quy tắc kiểm định 100% (BR-008): Số lượng nghiệm thu lại ({request.InspectedQty} SP) phải bằng đúng 100% số lượng của thẻ nhánh ({subBatch.BatchQty} SP).",
+                "QC_100_RULE_VIOLATION");
+        }
+
+        if (request.PassQty + request.FailQty != request.InspectedQty)
+        {
+            throw new DomainException(
+                $"Tổng số lượng đạt ({request.PassQty}) + lỗi ({request.FailQty}) phải bằng đúng tổng số lượng nghiệm thu lại ({request.InspectedQty}).",
+                "QC_SUM_MISMATCH");
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var inspection = new QcInspection
+            {
+                BatchStepId = step.BatchStepId,
+                InspectorId = currentUserId,
+                InspectedQty = request.InspectedQty,
+                PassQty = request.PassQty,
+                FailQty = request.FailQty,
+                ResultStatus = request.FailQty == 0
+                    ? QcResultStatusEnum.FULL_PASS_100
+                    : (request.PassQty > 0 ? QcResultStatusEnum.BRANCHED_PARTIAL : QcResultStatusEnum.FULL_REJECT),
+                InspectedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.QcInspections.AddInspectionAsync(inspection, cancellationToken);
+
+            step.PassedQty = request.PassQty;
+            step.DefectQty = request.FailQty;
+            step.StepStatus = request.PassQty > 0 ? StepStatusEnum.PASSED : StepStatusEnum.BLOCKED;
+            await _batchRepository.UpdateStepAsync(step);
+
+            if (request.FailQty > 0)
+            {
+                // Nếu vẫn có phôi không đạt sau sửa chữa, giảm số lượng thẻ phụ xuống số lượng Pass thực tế
+                subBatch.BatchQty = request.PassQty;
+                foreach (var ds in steps.Where(s => s.StageSequence > step.StageSequence))
+                {
+                    ds.TargetQty = request.PassQty;
+                    await _batchRepository.UpdateStepAsync(ds);
+                }
+            }
+
+            if (subBatch.BatchQty == 0)
+            {
+                subBatch.BatchStatus = BatchStatusEnum.DONE;
+            }
+            await _batchRepository.UpdateAsync(subBatch);
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.ReworkReinspected,
+                EntityName = "ProductionBatch",
+                EntityId = subBatch.BatchCode,
+                BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{step.StageSequence}_REPAIRING",
+                AfterState = $"SubCard_{subBatch.BatchCode}_Pass_{request.PassQty}_Fail_{request.FailQty}",
+                Reason = $"Nghiệm thu lại KCS thẻ nhánh {subBatch.BatchCode} tại {step.StageName}: {request.PassQty}/{request.InspectedQty} SP đạt chuẩn. Ghi chú: {request.Notes ?? "Không có"}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return new ReinspectSubBatchResultDto
+            {
+                QcId = inspection.QcId,
+                SubBatchId = subBatch.BatchId,
+                SubBatchCode = subBatch.BatchCode,
+                InspectedQty = request.InspectedQty,
+                PassQty = request.PassQty,
+                FailQty = request.FailQty,
+                IsFullyPassed = request.FailQty == 0,
+                SubBatchStatus = subBatch.BatchStatus.ToString(),
+                Message = request.PassQty > 0
+                    ? $"Nghiệm thu lại thành công! Thẻ phụ {subBatch.BatchCode} có {request.PassQty} SP đạt chuẩn, sẵn sàng gộp vào thẻ chính (Merge Lot) hoặc chuyển tiếp độc lập."
+                    : $"Nghiệm thu lại không đạt: toàn bộ {request.FailQty} SP không thể sửa chữa và phải hủy bỏ."
+            };
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<MergeSubBatchResultDto> MergeSubBatchAsync(
+        long subBatchId,
+        MergeSubBatchDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
+        if (subBatch == null)
+        {
+            throw new NotFoundException($"Không tìm thấy thẻ nhánh phụ có ID {subBatchId}.");
+        }
+
+        if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
+        {
+            throw new DomainException("Chỉ có thể gộp lô đối với thẻ nhánh phụ (REWORK_SUB_CARD hoặc REPLENISH_LOT).", "INVALID_SUB_BATCH_TYPE");
+        }
+
+        if (subBatch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất hoặc đã được gộp trước đó.", "SUB_BATCH_ALREADY_MERGED");
+        }
+
+        if (subBatch.BatchQty <= 0)
+        {
+            throw new DomainException("Thẻ nhánh phụ không còn số lượng đạt chuẩn (BatchQty <= 0) để gộp lô.", "EMPTY_SUB_BATCH_QTY");
+        }
+
+        if (!subBatch.ParentBatchId.HasValue)
+        {
+            throw new DomainException("Thẻ nhánh phụ không có thông tin thẻ chính (ParentBatchId bị null).", "MISSING_PARENT_BATCH");
+        }
+
+        var mainBatch = await _batchRepository.GetByIdAsync(subBatch.ParentBatchId.Value, cancellationToken);
+        if (mainBatch == null)
+        {
+            throw new NotFoundException($"Không tìm thấy thẻ chính cha có ID {subBatch.ParentBatchId.Value}.");
+        }
+
+        if (mainBatch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException($"Thẻ chính {mainBatch.BatchCode} đã hoàn tất sản xuất (DONE). Vui lòng cho thẻ phụ chuyển tiếp độc lập.", "MAIN_BATCH_ALREADY_DONE");
+        }
+
+        // Quy tắc nghiệp vụ SC-20b: Chỉ cho phép gộp khi cả hai thẻ đang ở CÙNG công đoạn
+        if (mainBatch.CurrentStageSeq != subBatch.CurrentStageSeq)
+        {
+            throw new DomainException(
+                $"Không thể gộp lô vì hai thẻ đang ở hai công đoạn khác nhau! Thẻ chính đang ở công đoạn #{mainBatch.CurrentStageSeq}, thẻ phụ đang ở công đoạn #{subBatch.CurrentStageSeq}. Hãy cho thẻ phụ chuyển tiếp độc lập (Continue Independently).",
+                "STAGE_MISMATCH_FOR_MERGE");
+        }
+
+        // Kiểm tra công đoạn hiện tại của thẻ phụ phải đạt chuẩn KCS (PASSED)
+        var subCurrentStep = subBatch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == subBatch.CurrentStageSeq);
+        if (subCurrentStep == null || subCurrentStep.StepStatus != StepStatusEnum.PASSED)
+        {
+            throw new DomainException("Thẻ nhánh phụ chưa được nghiệm thu đạt chuẩn (PASSED) tại công đoạn hiện tại, không thể gộp lô.", "SUB_BATCH_NOT_PASSED");
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            int mergeQty = subBatch.BatchQty;
+            int oldMainQty = mainBatch.BatchQty;
+            int newMainQty = oldMainQty + mergeQty;
+
+            // 1. Cập nhật thẻ chính
+            mainBatch.BatchQty = newMainQty;
+            var mainSteps = mainBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
+            foreach (var step in mainSteps.Where(s => s.StageSequence >= mainBatch.CurrentStageSeq))
+            {
+                step.TargetQty += mergeQty;
+                if (step.StageSequence == mainBatch.CurrentStageSeq)
+                {
+                    step.PassedQty += mergeQty;
+                }
+                await _batchRepository.UpdateStepAsync(step);
+            }
+            await _batchRepository.UpdateAsync(mainBatch);
+
+            // 2. Đóng thẻ phụ (Chuyển sang trạng thái DONE và ghi nhận đã tái hòa nhập)
+            subBatch.BatchStatus = BatchStatusEnum.DONE;
+            foreach (var step in subBatch.BatchRoutingSteps.Where(s => s.StageSequence > subBatch.CurrentStageSeq))
+            {
+                step.StepStatus = StepStatusEnum.PASSED;
+                await _batchRepository.UpdateStepAsync(step);
+            }
+            await _batchRepository.UpdateAsync(subBatch);
+
+            // 3. Ghi vết Audit Log bất biến (GBR-05)
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.SubBatchMerged,
+                EntityName = "ProductionBatch",
+                EntityId = mainBatch.BatchCode,
+                BeforeState = $"Main_{mainBatch.BatchCode}_Qty_{oldMainQty};Sub_{subBatch.BatchCode}_Qty_{mergeQty}",
+                AfterState = $"Main_{mainBatch.BatchCode}_MergedNewQty_{newMainQty};Sub_{subBatch.BatchCode}_DONE",
+                Reason = $"Tái hòa nhập / Gộp lô (Merge Lot) {mergeQty} SP từ thẻ phụ {subBatch.BatchCode} vào thẻ chính {mainBatch.BatchCode} tại công đoạn #{mainBatch.CurrentStageSeq}. Lý do: {request?.Reason ?? "Hoàn thành sửa chữa KCS"}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return new MergeSubBatchResultDto
+            {
+                SubBatchId = subBatch.BatchId,
+                SubBatchCode = subBatch.BatchCode,
+                MainBatchId = mainBatch.BatchId,
+                MainBatchCode = mainBatch.BatchCode,
+                MergedQty = mergeQty,
+                MainBatchNewQty = newMainQty,
+                CurrentStageSeq = mainBatch.CurrentStageSeq,
+                MainBatchStatus = mainBatch.BatchStatus.ToString(),
+                SubBatchStatus = subBatch.BatchStatus.ToString(),
+                Message = $"Gộp lô (Merge Lot) thành công! Đã hòa nhập {mergeQty} SP từ {subBatch.BatchCode} vào thẻ chính {mainBatch.BatchCode}. Tổng số lượng thẻ chính hiện tại: {newMainQty} SP."
+            };
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ContinueSubBatchResultDto> ContinueSubBatchIndependentlyAsync(
+        long subBatchId,
+        ContinueSubBatchIndependentlyDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
+        if (subBatch == null)
+        {
+            throw new NotFoundException($"Không tìm thấy thẻ nhánh phụ có ID {subBatchId}.");
+        }
+
+        if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
+        {
+            throw new DomainException("Chỉ áp dụng chuyển tiếp độc lập cho thẻ nhánh phụ (REWORK_SUB_CARD hoặc REPLENISH_LOT).", "INVALID_SUB_BATCH_TYPE");
+        }
+
+        if (subBatch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất sản xuất, không thể chuyển tiếp thêm.", "SUB_BATCH_ALREADY_DONE");
+        }
+
+        var steps = subBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
+        var currentStep = steps.FirstOrDefault(s => s.StageSequence == subBatch.CurrentStageSeq);
+        if (currentStep == null)
+        {
+            throw new DomainException($"Không tìm thấy công đoạn #{subBatch.CurrentStageSeq} trong quy trình của thẻ phụ.", "STAGE_NOT_FOUND");
+        }
+
+        if (currentStep.StepStatus != StepStatusEnum.PASSED)
+        {
+            throw new DomainException($"Công đoạn hiện tại ({currentStep.StageName}) chưa được nghiệm thu đạt chuẩn (PASSED). Không được chuyển tiếp độc lập.", "STEP_NOT_PASSED");
+        }
+
+        var nextStep = steps.FirstOrDefault(s => s.StageSequence > subBatch.CurrentStageSeq);
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            if (nextStep == null)
+            {
+                // Đã là công đoạn cuối cùng -> Hoàn tất thẻ phụ
+                subBatch.BatchStatus = BatchStatusEnum.DONE;
+                await _batchRepository.UpdateAsync(subBatch);
+
+                await _bomRepository.AddAuditLogAsync(new AuditLog
+                {
+                    UserId = currentUserId,
+                    ActionType = AuditActionConstants.SubBatchContinued,
+                    EntityName = "ProductionBatch",
+                    EntityId = subBatch.BatchCode,
+                    BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{subBatch.CurrentStageSeq}_IN_PROGRESS",
+                    AfterState = $"SubCard_{subBatch.BatchCode}_DONE",
+                    Reason = $"Thẻ nhánh phụ {subBatch.BatchCode} hoàn tất công đoạn đóng thùng cuối cùng độc lập.",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ContinueSubBatchResultDto
+                {
+                    SubBatchId = subBatch.BatchId,
+                    SubBatchCode = subBatch.BatchCode,
+                    NextStageSeq = subBatch.CurrentStageSeq,
+                    NextStageName = currentStep.StageName,
+                    BatchQty = subBatch.BatchQty,
+                    BatchStatus = subBatch.BatchStatus.ToString(),
+                    Message = $"Thẻ nhánh phụ {subBatch.BatchCode} đã hoàn tất công đoạn cuối cùng thành công (DONE)."
+                };
+            }
+
+            // Chuyển sang công đoạn tiếp theo
+            subBatch.CurrentStageSeq = nextStep.StageSequence;
+            nextStep.StepStatus = StepStatusEnum.IN_PROGRESS;
+            await _batchRepository.UpdateStepAsync(nextStep);
+            await _batchRepository.UpdateAsync(subBatch);
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = AuditActionConstants.SubBatchContinued,
+                EntityName = "ProductionBatch",
+                EntityId = subBatch.BatchCode,
+                BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{currentStep.StageSequence}",
+                AfterState = $"SubCard_{subBatch.BatchCode}_Stage_{nextStep.StageSequence}_IN_PROGRESS",
+                Reason = $"Thẻ nhánh phụ {subBatch.BatchCode} chuyển tiếp độc lập sang {nextStep.StageName}. Ghi chú: {request?.Notes ?? "Điều độ phân xưởng"}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return new ContinueSubBatchResultDto
+            {
+                SubBatchId = subBatch.BatchId,
+                SubBatchCode = subBatch.BatchCode,
+                NextStageSeq = nextStep.StageSequence,
+                NextStageName = nextStep.StageName,
+                BatchQty = subBatch.BatchQty,
+                BatchStatus = subBatch.BatchStatus.ToString(),
+                Message = $"Thẻ nhánh phụ {subBatch.BatchCode} đã chuyển tiếp độc lập sang công đoạn #{nextStep.StageSequence} ({nextStep.StageName}) thành công."
+            };
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
     }
 
     private static string InferQualityGateName(int seq, string stageName, bool isHoldPoint)

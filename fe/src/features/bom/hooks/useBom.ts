@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import { ApiError } from "../../../lib/api/apiError";
 import { bomApi } from "../api/bomApi";
 import type {
   BomDto,
@@ -112,12 +113,18 @@ export function useOrderItemBom(orderItemId: number) {
   return useQuery<BomDto | null>({
     queryKey: ["bom", "order-item", orderItemId],
     enabled: orderItemId > 0,
+    meta: {
+      skipGlobalErrorToast: true,
+    },
     queryFn: async () => {
       try {
         const res = await bomApi.getBomByOrderItemId(orderItemId);
         return res?.data ?? null;
-      } catch (err) {
-        if (isAxiosError(err) && err.response?.status === 404) {
+      } catch (err: unknown) {
+        if (
+          (err instanceof ApiError && err.status === 404) ||
+          (isAxiosError(err) && err.response?.status === 404)
+        ) {
           return null;
         }
         throw err;

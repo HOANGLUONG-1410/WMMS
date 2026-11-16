@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useSession } from "../../auth/store/SessionContext";
 import { ROLES } from "../../../constants/roles";
@@ -18,6 +19,8 @@ const fmtDate = (v?: string | null) => {
 };
 
 export default function PurchaseRequestPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useSession();
   const purchasingOnly = currentUser?.activeRole === ROLES.PURCHASING;
   const statusOptions = purchasingOnly ? PURCHASING_STATUS_OPTIONS : STATUS_OPTIONS;
@@ -31,6 +34,23 @@ export default function PurchaseRequestPage() {
   const [pageSize, setPageSize] = useState(10);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Tự động mở Modal nếu có ?prId= trên URL (khi chuyển từ Bước 1 sang)
+  useEffect(() => {
+    const urlPrId = Number(searchParams.get("prId")) || 0;
+    if (urlPrId > 0) {
+      setSelectedId(urlPrId);
+    }
+  }, [searchParams]);
+
+  const handleCloseModal = () => {
+    setSelectedId(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("prId");
+      return next;
+    });
+  };
 
   const invalidRange = !!fromDate && !!toDate && fromDate > toDate;
 
@@ -69,18 +89,44 @@ export default function PurchaseRequestPage() {
           </div>
         )}
 
-        <div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Yêu cầu mua hàng gộp theo ngày
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Theo dõi các phiếu yêu cầu mua vật tư được gom theo ngày từ phần thiếu hụt tồn kho.
-            {currentUser?.activeRole === ROLES.OWNER
-              ? " Chủ xưởng xem chi tiết để duyệt hoặc từ chối."
-              : purchasingOnly
-              ? " Bộ phận Thu mua chỉ xem được các phiếu đã được Chủ xưởng duyệt."
-              : ""}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 text-xs font-bold uppercase rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-mono">
+                BƯỚC 2: YÊU CẦU MUA HÀNG GỘP NGÀY &amp; PHÊ DUYỆT (SC-15)
+              </span>
+            </div>
+            <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+              Yêu cầu mua hàng gộp theo ngày
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Theo dõi các phiếu yêu cầu mua vật tư được gom theo ngày từ phần thiếu hụt tồn kho.
+              {currentUser?.activeRole === ROLES.OWNER
+                ? " Chủ xưởng xem chi tiết để duyệt hoặc từ chối."
+                : purchasingOnly
+                ? " Bộ phận Thu mua chỉ xem được các phiếu đã được Chủ xưởng duyệt."
+                : ""}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => navigate("/inventory/reconciliation")}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg transition shadow-2xs flex items-center gap-2 cursor-pointer"
+            >
+              <svg
+                className="w-4 h-4 text-slate-500"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Về Đối chiếu tồn kho (Bước 1)</span>
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
@@ -269,7 +315,7 @@ export default function PurchaseRequestPage() {
 
       <PrDetailModal
         prId={selectedId}
-        onClose={() => setSelectedId(null)}
+        onClose={handleCloseModal}
         onSuccess={(msg) => setToast(msg)}
       />
     </WmmsAppShell>

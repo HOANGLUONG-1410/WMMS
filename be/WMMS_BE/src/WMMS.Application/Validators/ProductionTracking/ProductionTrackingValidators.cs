@@ -32,3 +32,37 @@ public class CompleteFinishedBatchValidator : AbstractValidator<CompleteFinished
         });
     }
 }
+
+/// <summary>
+/// Bộ kiểm tra tính hợp lệ cho bộ lọc Báo cáo Phân tích Lỗi Chất lượng &amp; Thống kê Tần suất Phá khóa Overdriver (Iteration 3, SC-20).
+/// </summary>
+public class QualityAnalyticsFilterValidator : AbstractValidator<QualityAnalyticsFilterDto>
+{
+    public QualityAnalyticsFilterValidator()
+    {
+        When(x => x.OrderId.HasValue, () =>
+        {
+            RuleFor(x => x.OrderId!.Value)
+                .GreaterThan(0)
+                .WithMessage("Mã đơn hàng (OrderId) cần lọc phải lớn hơn 0.");
+        });
+
+        When(x => x.StageSequence.HasValue, () =>
+        {
+            RuleFor(x => x.StageSequence!.Value)
+                .InclusiveBetween(1, 20)
+                .WithMessage("Thứ tự trạm công đoạn (StageSequence) phải nằm trong khoảng từ 1 đến 20.");
+        });
+
+        When(x => x.FromDate.HasValue && x.ToDate.HasValue, () =>
+        {
+            RuleFor(x => x)
+                .Must(x => x.FromDate!.Value <= x.ToDate!.Value)
+                .WithMessage("Ngày bắt đầu lọc (FromDate) không được lớn hơn ngày kết thúc (ToDate).");
+        });
+
+        RuleFor(x => x.TopN)
+            .InclusiveBetween(1, 200)
+            .WithMessage("Giới hạn số lượng bản ghi (TopN) phải nằm trong khoảng từ 1 đến 200.");
+    }
+}

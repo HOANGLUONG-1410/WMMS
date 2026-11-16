@@ -78,6 +78,143 @@ public class QcInspectionRepository : IQcInspectionRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<DefectLog>> GetAllDefectLogsWithAnalyticsGraphAsync(
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
+        long? orderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.DefectLogs
+            .AsNoTracking()
+            .Include(dl => dl.DefectCatalog)
+            .Include(dl => dl.SpawnedSubBatch)
+            .Include(dl => dl.QcInspection)
+                .ThenInclude(qi => qi.Inspector)
+            .Include(dl => dl.QcInspection)
+                .ThenInclude(qi => qi.BatchRoutingStep)
+                    .ThenInclude(brs => brs.ProductionBatch)
+                        .ThenInclude(pb => pb.OrderItem)
+                            .ThenInclude(oi => oi.Product)
+            .Include(dl => dl.QcInspection)
+                .ThenInclude(qi => qi.BatchRoutingStep)
+                    .ThenInclude(brs => brs.ProductionBatch)
+                        .ThenInclude(pb => pb.OrderItem)
+                            .ThenInclude(oi => oi.CustomerOrder)
+            .Include(dl => dl.QcInspection)
+                .ThenInclude(qi => qi.BatchRoutingStep)
+                    .ThenInclude(brs => brs.ProductionBatch)
+                        .ThenInclude(pb => pb.OrderItem)
+                            .ThenInclude(oi => oi.BomHeader)
+                                .ThenInclude(bh => bh!.BomDetails)
+                                    .ThenInclude(bd => bd.Material)
+            .AsQueryable();
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(dl => dl.QcInspection.InspectedAt >= fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            query = query.Where(dl => dl.QcInspection.InspectedAt <= toDate.Value);
+        }
+
+        if (orderId.HasValue)
+        {
+            query = query.Where(dl => dl.QcInspection.BatchRoutingStep.ProductionBatch.OrderItem.OrderId == orderId.Value);
+        }
+
+        return await query
+            .OrderByDescending(dl => dl.QcInspection.InspectedAt)
+            .ThenByDescending(dl => dl.DefectLogId)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<OverdriveLog>> GetAllOverdriveLogsWithAnalyticsGraphAsync(
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
+        long? orderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.OverdriveLogs
+            .AsNoTracking()
+            .Include(ol => ol.Requester)
+            .Include(ol => ol.Approver)
+            .Include(ol => ol.ProductionBatch)
+                .ThenInclude(pb => pb.BatchRoutingSteps)
+            .Include(ol => ol.ProductionBatch)
+                .ThenInclude(pb => pb.OrderItem)
+                    .ThenInclude(oi => oi.Product)
+            .Include(ol => ol.ProductionBatch)
+                .ThenInclude(pb => pb.OrderItem)
+                    .ThenInclude(oi => oi.CustomerOrder)
+            .AsQueryable();
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(ol => ol.ApprovedAt >= fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            query = query.Where(ol => ol.ApprovedAt <= toDate.Value);
+        }
+
+        if (orderId.HasValue)
+        {
+            query = query.Where(ol => ol.ProductionBatch.OrderItem.OrderId == orderId.Value);
+        }
+
+        return await query
+            .OrderByDescending(ol => ol.ApprovedAt)
+            .ThenByDescending(ol => ol.OverdriveId)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<QcInspection>> GetAllInspectionsWithFullGraphAsync(
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
+        long? orderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.QcInspections
+            .AsNoTracking()
+            .Include(qi => qi.Inspector)
+            .Include(qi => qi.DefectLogs)
+                .ThenInclude(dl => dl.DefectCatalog)
+            .Include(qi => qi.DefectLogs)
+                .ThenInclude(dl => dl.SpawnedSubBatch)
+            .Include(qi => qi.BatchRoutingStep)
+                .ThenInclude(brs => brs.ProductionBatch)
+                    .ThenInclude(pb => pb.OrderItem)
+                        .ThenInclude(oi => oi.Product)
+            .Include(qi => qi.BatchRoutingStep)
+                .ThenInclude(brs => brs.ProductionBatch)
+                    .ThenInclude(pb => pb.OrderItem)
+                        .ThenInclude(oi => oi.CustomerOrder)
+            .AsQueryable();
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(qi => qi.InspectedAt >= fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            query = query.Where(qi => qi.InspectedAt <= toDate.Value);
+        }
+
+        if (orderId.HasValue)
+        {
+            query = query.Where(qi => qi.BatchRoutingStep.ProductionBatch.OrderItem.OrderId == orderId.Value);
+        }
+
+        return await query
+            .OrderByDescending(qi => qi.InspectedAt)
+            .ThenByDescending(qi => qi.QcId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddInspectionAsync(QcInspection inspection, CancellationToken cancellationToken = default)
     {
         await _context.QcInspections.AddAsync(inspection, cancellationToken);

@@ -51,6 +51,9 @@ public class PurchaseOrderService : IPurchaseOrderService
         _notificationHubService = notificationHubService;
     }
 
+    // =========================================================================
+    // [SC-16 CORE]: PHÂN ĐOẠN 1 - LẤY DANH SÁCH PR ĐÃ DUYỆT CHỜ ĐẶT HÀNG (UC-49, SCR-19)
+    // =========================================================================
     /// <inheritdoc />
     public async Task<List<ApprovedRequisitionDto>> GetApprovedRequisitionsAsync(CancellationToken cancellationToken = default)
     {
@@ -105,6 +108,9 @@ public class PurchaseOrderService : IPurchaseOrderService
         return result;
     }
 
+    // =========================================================================
+    // [SC-16 CORE]: PHÂN ĐOẠN 2 - TRUY VẤN DANH SÁCH PO CÓ PHÂN TRANG & BỘ LỌC ETA (UC-50)
+    // =========================================================================
     /// <inheritdoc />
     public async Task<PagedResult<PurchaseOrderListItemDto>> GetPurchaseOrdersAsync(
         PurchaseOrderFilterDto filter,
@@ -120,7 +126,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (!Enum.TryParse<PoStatusEnum>(filter.Status.Trim(), ignoreCase: true, out var parsed))
             {
                 throw new AppException(
-                    "Invalid PO status. Allowed values: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.",
+                    "Trạng thái PO không hợp lệ. Các giá trị được phép: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -141,7 +147,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         }
         else if (!string.IsNullOrEmpty(etaFilter))
         {
-            throw new AppException("Invalid EtaStatus. Allowed values: OVERDUE, DUE_SOON.", 400, MessageCodes.Msg13ValidationError);
+            throw new AppException("Trạng thái ETA không hợp lệ. Các giá trị được phép: OVERDUE, DUE_SOON.", 400, MessageCodes.Msg13ValidationError);
         }
 
         var (items, total) = await _purchaseOrderRepository.SearchAsync(
@@ -165,6 +171,9 @@ public class PurchaseOrderService : IPurchaseOrderService
         return MapToDetail(po, DateTime.UtcNow.Date);
     }
 
+    // =========================================================================
+    // [SC-16 CORE]: PHÂN ĐOẠN 3 - BÁO CÁO TỔNG HỢP KPI & TIẾN ĐỘ ETA (SCR-19)
+    // =========================================================================
     /// <inheritdoc />
     public async Task<PurchaseOrderSummaryDto> GetSummaryAsync(CancellationToken cancellationToken = default)
     {
@@ -181,6 +190,16 @@ public class PurchaseOrderService : IPurchaseOrderService
         };
     }
 
+    // =========================================================================
+    // [SC-16 CORE & BR-PUR-02, BR-PUR-03]: PHÂN ĐOẠN 4 - THUẬT TOÁN LẬP PO GOM THEO NHÀ CUNG CẤP (UC-52)
+    // 1. Kiểm tra BR-PUR-02: PR bắt buộc phải ở trạng thái APPROVED.
+    // 2. Kiểm tra BR-PUR-03: Mỗi dòng PR phải gán Supplier đang hoạt động (ACTIVE).
+    // 3. Kiểm tra UC052.E1: Ngày hẹn giao hàng của NCC không được ở quá khứ (ExpectedArrivalDate >= Today).
+    // 4. Kiểm tra số lượng: Không được đặt vượt số lượng còn lại có thể đặt của dòng PR.
+    // 5. Gom nhóm theo Supplier: Mỗi NCC sinh một PO riêng biệt, mã PO chuẩn PO-SUP-yyyyMMdd-NNN.
+    // 6. Ghi Audit Log bất biến (GBR-05) và phát SignalR real-time.
+    // 7. Chuyển trạng thái PR sang PO_ISSUED nếu tất cả dòng đã đặt đủ 100%.
+    // =========================================================================
     /// <inheritdoc />
     public async Task<List<PurchaseOrderDetailDto>> CreatePurchaseOrdersAsync(
         CreatePurchaseOrdersRequestDto request,
@@ -189,20 +208,20 @@ public class PurchaseOrderService : IPurchaseOrderService
         CancellationToken cancellationToken = default)
     {
         var pr = await _purchaseRequestRepository.GetByIdAsync(request.PrId, cancellationToken)
-            ?? throw AppException.NotFound($"Purchase Request with ID = {request.PrId} was not found.");
+            ?? throw AppException.NotFound($"Không tìm thấy Phiếu yêu cầu mua hàng (PR) với mã ID = {request.PrId}.");
 
         // BR-PUR-02: Không được phát hành PO trên PR chưa được Chủ xưởng phê duyệt
         if (pr.PrStatus is PrStatusEnum.PENDING_APPROVAL or PrStatusEnum.REJECTED)
         {
             throw AppException.Forbidden(
-                $"PR {pr.PrCode} is {pr.PrStatus}. Purchase Orders can only be issued against an APPROVED PR (BR-PUR-02).",
+                $"Phiếu PR {pr.PrCode} đang ở trạng thái {pr.PrStatus}. Đơn đặt hàng (PO) chỉ được phát hành từ PR đã được Chủ xưởng phê duyệt (APPROVED) (BR-PUR-02).",
                 MessageCodes.Msg11ForbiddenRule);
         }
 
         if (pr.PrStatus == PrStatusEnum.PO_ISSUED)
         {
             throw AppException.Conflict(
-                $"PR {pr.PrCode} has already been fully ordered (PO_ISSUED).",
+                $"Phiếu PR {pr.PrCode} đã được đặt hàng toàn bộ trước đó (PO_ISSUED).",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -212,7 +231,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (!itemsById.ContainsKey(line.PrItemId))
             {
                 throw new AppException(
-                    $"PR line {line.PrItemId} does not belong to PR {pr.PrCode}.",
+                    $"Dòng vật tư PR #{line.PrItemId} không thuộc về Phiếu PR {pr.PrCode}.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -225,13 +244,13 @@ public class PurchaseOrderService : IPurchaseOrderService
         {
             if (!suppliers.TryGetValue(supplierId, out var supplier))
             {
-                throw AppException.NotFound($"Supplier with ID = {supplierId} was not found.");
+                throw AppException.NotFound($"Không tìm thấy Nhà cung cấp với mã ID = {supplierId}.");
             }
 
             if (!string.Equals(supplier.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException(
-                    $"Supplier {supplier.SupplierCode} is {supplier.Status} and cannot receive new Purchase Orders (BR-PUR-03).",
+                    $"Nhà cung cấp {supplier.SupplierCode} đang ở trạng thái {supplier.Status} và không thể tiếp nhận Đơn đặt hàng mới (BR-PUR-03).",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -244,7 +263,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (terms.ExpectedArrivalDate.Date < today)
             {
                 throw new AppException(
-                    "Promised delivery date cannot be in the past (UC052.E1).",
+                    "Ngày hẹn giao hàng của Nhà cung cấp không được ở quá khứ (UC052.E1).",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -263,7 +282,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (requested > remaining + QtyTolerance)
             {
                 throw new AppException(
-                    $"Requested quantity {requested:0.####} exceeds the remaining quantity {Math.Max(0m, remaining):0.####} of PR line {prItemId}.",
+                    $"Số lượng đặt hàng {requested:0.####} vượt quá số lượng còn lại có thể đặt ({Math.Max(0m, remaining):0.####}) của dòng PR #{prItemId}.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -333,7 +352,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                         LinesCount = po.Details.Count,
                         po.Terms
                     }),
-                    Reason = $"Issued supplier PO {po.PoCode} from approved PR {pr.PrCode} to {supplier.SupplierName} (UC-52, BR-PUR-03).",
+                    Reason = $"Phát hành Đơn đặt hàng nhà cung cấp {po.PoCode} từ PR {pr.PrCode} đã duyệt tới {supplier.SupplierName} (UC-52, BR-PUR-03).",
                     IpAddress = ipAddress,
                     CreatedAt = now
                 });
@@ -366,7 +385,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         foreach (var code in createdPoCodes)
         {
             var po = await _purchaseOrderRepository.GetByCodeAsync(code, cancellationToken)
-                ?? throw AppException.NotFound($"Purchase Order {code} was not found after creation.");
+                ?? throw AppException.NotFound($"Không tìm thấy Đơn đặt hàng {code} sau khi khởi tạo.");
             results.Add(MapToDetail(po, today));
             await NotifyAsync(po.PoCode, po.Supplier?.SupplierName ?? string.Empty, po.ExpectedArrivalDate, isNew: true, cancellationToken);
         }
@@ -374,6 +393,9 @@ public class PurchaseOrderService : IPurchaseOrderService
         return results;
     }
 
+    // =========================================================================
+    // [SC-16 CORE & UC-53]: PHÂN ĐOẠN 5 - CẬP NHẬT TIẾN ĐỘ ETA & LỊCH GIAO HÀNG (UC052.E1)
+    // =========================================================================
     /// <inheritdoc />
     public async Task<PurchaseOrderDetailDto> UpdateEtaAsync(
         long poId,
@@ -386,14 +408,14 @@ public class PurchaseOrderService : IPurchaseOrderService
         var newEta = request.ExpectedArrivalDate.Date;
         if (newEta < today)
         {
-            throw new AppException("Promised delivery date cannot be in the past (UC052.E1).", 400, MessageCodes.Msg13ValidationError);
+            throw new AppException("Ngày hẹn giao hàng của Nhà cung cấp không được ở quá khứ (UC052.E1).", 400, MessageCodes.Msg13ValidationError);
         }
 
         var po = await GetOrThrowAsync(poId, cancellationToken);
         if (po.PoStatus is PoStatusEnum.FULFILLED or PoStatusEnum.CANCELLED)
         {
             throw AppException.Conflict(
-                $"PO {po.PoCode} is {po.PoStatus}; its delivery schedule can no longer be changed.",
+                $"Đơn hàng PO {po.PoCode} đang ở trạng thái {po.PoStatus}; không thể thay đổi lịch giao hàng nữa.",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -421,7 +443,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 EntityId = po.PoCode,
                 BeforeState = JsonSerializer.Serialize(new { ExpectedArrivalDate = oldEta.ToString("yyyy-MM-dd") }),
                 AfterState = JsonSerializer.Serialize(new { ExpectedArrivalDate = newEta.ToString("yyyy-MM-dd"), Notes = notes }),
-                Reason = notes ?? $"Updated promised delivery date of PO {po.PoCode} from {oldEta:yyyy-MM-dd} to {newEta:yyyy-MM-dd} (UC-53).",
+                Reason = notes ?? $"Cập nhật ngày hẹn giao hàng của PO {po.PoCode} từ {oldEta:yyyy-MM-dd} sang {newEta:yyyy-MM-dd} (UC-53).",
                 IpAddress = ipAddress,
                 CreatedAt = now
             });
@@ -439,6 +461,9 @@ public class PurchaseOrderService : IPurchaseOrderService
         return MapToDetail(po, today);
     }
 
+    // =========================================================================
+    // [SC-16 CORE]: PHÂN ĐOẠN 6 - CẬP NHẬT ĐIỀU KHOẢN THANH TOÁN & QUẢN LÝ VÒNG ĐỜI PO
+    // =========================================================================
     /// <inheritdoc />
     public async Task<PurchaseOrderDetailDto> UpdateTermsAsync(
         long poId,
@@ -467,7 +492,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 EntityId = po.PoCode,
                 BeforeState = JsonSerializer.Serialize(new { Terms = oldTerms }),
                 AfterState = JsonSerializer.Serialize(new { Terms = newTerms, Notes = request.Notes }),
-                Reason = request.Notes ?? $"Updated payment/delivery terms of PO {po.PoCode} (SC-16).",
+                Reason = request.Notes ?? $"Cập nhật điều khoản thanh toán & giao hàng của PO {po.PoCode} (SC-16).",
                 IpAddress = ipAddress,
                 CreatedAt = DateTime.UtcNow
             });
@@ -495,7 +520,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         var po = await GetOrThrowAsync(poId, cancellationToken);
         if (!Enum.TryParse<PoStatusEnum>(request.Status, true, out var newStatus))
         {
-            throw new AppException($"Invalid PO Status: '{request.Status}'. Valid values are: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.");
+            throw new AppException($"Trạng thái PO không hợp lệ: '{request.Status}'. Các giá trị hợp lệ gồm: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.");
         }
 
         var oldStatus = po.PoStatus;
@@ -515,7 +540,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 EntityId = po.PoCode,
                 BeforeState = JsonSerializer.Serialize(new { Status = oldStatus.ToString() }),
                 AfterState = JsonSerializer.Serialize(new { Status = newStatus.ToString(), Reason = request.Reason }),
-                Reason = request.Reason ?? $"Changed lifecycle status of PO {po.PoCode} from {oldStatus} to {newStatus} (SC-16).",
+                Reason = request.Reason ?? $"Chuyển đổi trạng thái vòng đời PO {po.PoCode} từ {oldStatus} sang {newStatus} (SC-16).",
                 IpAddress = ipAddress,
                 CreatedAt = DateTime.UtcNow
             });
@@ -533,13 +558,13 @@ public class PurchaseOrderService : IPurchaseOrderService
     }
 
     // =========================================================================
-    // PRIVATE
+    // PRIVATE HELPER METHODS
     // =========================================================================
 
     private async Task<PurchaseOrder> GetOrThrowAsync(long poId, CancellationToken cancellationToken)
     {
         return await _purchaseOrderRepository.GetByIdAsync(poId, cancellationToken)
-            ?? throw AppException.NotFound($"Purchase Order with ID = {poId} was not found.");
+            ?? throw AppException.NotFound($"Không tìm thấy Đơn đặt hàng (PO) với mã ID = {poId}.");
     }
 
     private async Task NotifyAsync(string poCode, string supplierName, DateTime eta, bool isNew, CancellationToken cancellationToken)

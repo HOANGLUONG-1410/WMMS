@@ -27,6 +27,7 @@ import PurchaseRequestPage from "../features/purchasing/pages/PurchaseRequestPag
 import GoodsReceiptPage from "../features/warehouse/pages/GoodsReceiptPage";
 import GoodsIssuePage from "../features/warehouse/pages/GoodsIssuePage";
 import InventoryStockPage from "../features/inventory/pages/InventoryStockPage";
+import InventoryReconciliationPage from "../features/inventory/pages/InventoryReconciliationPage";
 
 // Placeholder Page for Screens Under Development
 import UnderConstructionPage from "../components/common/UnderConstructionPage";
@@ -219,25 +220,15 @@ export const router = createBrowserRouter([
               ROLES.OWNER,
               ROLES.PLANNER,
               ROLES.ADMIN,
+              ROLES.PURCHASING,
+              ROLES.WAREHOUSE,
             ]}
           />
         ),
         children: [
           {
             path: "/inventory/reconciliation",
-            element: (
-              <UnderConstructionPage
-                title="Đối chiếu tồn kho & phân bổ vật tư"
-                screenCode="SCR-INV-02"
-                moduleName="Tồn kho"
-                allowedRoles={[
-                  ROLES.SALES,
-                  ROLES.OWNER,
-                  ROLES.PLANNER,
-                  ROLES.ADMIN,
-                ]}
-              />
-            ),
+            element: <InventoryReconciliationPage />,
           },
         ],
       },

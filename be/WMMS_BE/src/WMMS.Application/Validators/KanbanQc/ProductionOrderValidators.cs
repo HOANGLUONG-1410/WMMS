@@ -131,6 +131,14 @@ public class ApproveOverdriveValidator : AbstractValidator<ApproveOverdriveDto>
 {
     public ApproveOverdriveValidator()
     {
+        When(x => !x.Approved, () =>
+        {
+            RuleFor(x => x.Notes)
+                .NotEmpty().WithMessage("Lý do từ chối yêu cầu Overdrive không được để trống (GBR-05).")
+                .MinimumLength(10).WithMessage("Lý do từ chối phải có độ dài từ 10 đến 500 ký tự (GBR-05).")
+                .MaximumLength(500).WithMessage("Lý do từ chối không được vượt quá 500 ký tự.");
+        });
+
         When(x => x.HoldPointStageSeq.HasValue, () =>
         {
             RuleFor(x => x.HoldPointStageSeq!.Value)
@@ -138,11 +146,79 @@ public class ApproveOverdriveValidator : AbstractValidator<ApproveOverdriveDto>
                 .WithMessage("Công đoạn chốt chặn Hold Point phải từ công đoạn 2 trở đi.");
         });
 
-        When(x => !string.IsNullOrWhiteSpace(x.Notes), () =>
+        When(x => x.Approved && !string.IsNullOrWhiteSpace(x.Notes), () =>
         {
             RuleFor(x => x.Notes)
                 .MaximumLength(500)
                 .WithMessage("Ghi chú chỉ đạo của Chủ xưởng không vượt quá 500 ký tự.");
+        });
+    }
+}
+
+/// <summary>
+/// Bộ kiểm tra hợp lệ cho việc nghiệm thu lại thẻ nhánh phụ (SC-20b, BR-008).
+/// </summary>
+public class ReinspectSubBatchValidator : AbstractValidator<ReinspectSubBatchDto>
+{
+    public ReinspectSubBatchValidator()
+    {
+        RuleFor(x => x.BatchStepId)
+            .GreaterThan(0)
+            .WithMessage("Mã công đoạn thực thi của thẻ phụ (BatchStepId) phải lớn hơn 0.");
+
+        RuleFor(x => x.InspectedQty)
+            .GreaterThan(0)
+            .WithMessage("Số lượng mang đi nghiệm thu lại phải lớn hơn 0 (Quy tắc 100% kiểm định - BR-008).");
+
+        RuleFor(x => x.PassQty)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("Số lượng đạt chuẩn không được âm.");
+
+        RuleFor(x => x.FailQty)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("Số lượng lỗi không được âm.");
+
+        RuleFor(x => x)
+            .Must(x => x.PassQty + x.FailQty == x.InspectedQty)
+            .WithMessage("Tổng số lượng Pass và Fail phải bằng đúng tổng số lượng nghiệm thu lại (PassQty + FailQty == InspectedQty).");
+
+        When(x => !string.IsNullOrWhiteSpace(x.Notes), () =>
+        {
+            RuleFor(x => x.Notes)
+                .MaximumLength(500)
+                .WithMessage("Ghi chú nghiệm thu không được vượt quá 500 ký tự.");
+        });
+    }
+}
+
+/// <summary>
+/// Bộ kiểm tra hợp lệ cho thao tác gộp thẻ phụ vào thẻ chính (SC-20b).
+/// </summary>
+public class MergeSubBatchValidator : AbstractValidator<MergeSubBatchDto>
+{
+    public MergeSubBatchValidator()
+    {
+        When(x => !string.IsNullOrWhiteSpace(x.Reason), () =>
+        {
+            RuleFor(x => x.Reason)
+                .MaximumLength(500)
+                .WithMessage("Lý do gộp lô không được vượt quá 500 ký tự.");
+        });
+    }
+}
+
+/// <summary>
+/// Bộ kiểm tra hợp lệ cho thao tác cho thẻ phụ chuyển tiếp độc lập (SC-20b).
+/// </summary>
+public class ContinueSubBatchValidator : AbstractValidator<ContinueSubBatchIndependentlyDto>
+{
+    public ContinueSubBatchValidator()
+    {
+        When(x => !string.IsNullOrWhiteSpace(x.Notes), () =>
+        {
+            RuleFor(x => x.Notes)
+                .MaximumLength(500)
+                .WithMessage("Ghi chú chuyển tiếp độc lập không được vượt quá 500 ký tự.");
         });
     }
 }
