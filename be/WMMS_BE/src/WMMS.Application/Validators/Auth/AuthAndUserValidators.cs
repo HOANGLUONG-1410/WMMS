@@ -116,7 +116,7 @@ public class CreateStaffValidator : AbstractValidator<CreateStaffDto>
             .MaximumLength(255);
 
         RuleFor(x => x.RoleCodes)
-            .NotEmpty().WithMessage("Phải gán ít nhất một vai trò cho tài khoản người dùng (GBR-04).");
+            .NotEmpty().WithMessage("Phải gán ít nhất một vai trò cho tài khoản người dùng.");
     }
 }
 
@@ -150,7 +150,7 @@ public class UpdateUserStatusValidator : AbstractValidator<UpdateUserStatusDto>
             .NotEmpty().WithMessage("Trạng thái cập nhật không được để trống.");
 
         RuleFor(x => x.Reason)
-            .NotEmpty().WithMessage("Bắt buộc phải nhập lý do khi thay đổi trạng thái tài khoản (UC-10, GBR-05).")
+            .NotEmpty().WithMessage("Bắt buộc phải nhập lý do khi thay đổi trạng thái tài khoản.")
             .MinimumLength(5).WithMessage("Lý do phải có ít nhất 5 ký tự.");
     }
 }

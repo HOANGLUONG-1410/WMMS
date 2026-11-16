@@ -65,7 +65,7 @@ public class OrderIntakeService : IOrderIntakeService
             if (ext is not ".xlsx" and not ".xls")
             {
                 throw new AppException(
-                    "Invalid spreadsheet format. File must be .xlsx or .xls and under 20MB (MSG-ORD-02).",
+                    "Định dạng tệp bảng tính không hợp lệ. Vui lòng chọn tệp .xlsx hoặc .xls có dung lượng dưới 20MB.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -93,7 +93,7 @@ public class OrderIntakeService : IOrderIntakeService
             catch (Exception ex)
             {
                 throw new AppException(
-                    $"Could not read Excel PO file: {ex.Message} (MSG-ORD-02).",
+                    $"Không thể đọc tệp Excel đơn hàng: {ex.Message}",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -168,7 +168,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.ProductSku),
-                    ErrorMessage = "Internal Product SKU cannot be empty."
+                    ErrorMessage = "Mã sản phẩm (SKU) không được để trống."
                 });
             }
             else
@@ -182,7 +182,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.ProductDescription),
-                    ErrorMessage = "Product Description is required."
+                    ErrorMessage = "Tên / mô tả sản phẩm không được để trống."
                 });
             }
             else
@@ -196,7 +196,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.DimensionsMm),
-                    ErrorMessage = "Dimensions (L x W x H mm) are required."
+                    ErrorMessage = "Quy cách kích thước (Dài x Rộng x Cao mm) không được để trống."
                 });
             }
             else
@@ -208,7 +208,7 @@ public class OrderIntakeService : IOrderIntakeService
                     row.CellErrors.Add(new StagingCellErrorDto
                     {
                         FieldName = nameof(row.DimensionsMm),
-                        ErrorMessage = "Invalid dimension syntax. Expected format: L x W x H (e.g. 450 x 520 x 850)."
+                        ErrorMessage = "Sai định dạng kích thước. Vui lòng nhập theo mẫu: Dài x Rộng x Cao (ví dụ: 450 x 520 x 850)."
                     });
                 }
                 else
@@ -221,7 +221,7 @@ public class OrderIntakeService : IOrderIntakeService
                         row.CellErrors.Add(new StagingCellErrorDto
                         {
                             FieldName = nameof(row.DimensionsMm),
-                            ErrorMessage = "Dimensions L, W, H must be positive numbers."
+                            ErrorMessage = "Các thông số kích thước Dài, Rộng, Cao phải là số dương lớn hơn 0."
                         });
                     }
                     else
@@ -240,7 +240,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.FinishColor),
-                    ErrorMessage = "Finish / Color specification is required."
+                    ErrorMessage = "Vui lòng nhập màu sơn hoặc quy cách hoàn thiện bề mặt."
                 });
             }
             else
@@ -254,7 +254,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.OrderQty),
-                    ErrorMessage = "Order Qty must be a positive integer greater than 0."
+                    ErrorMessage = "Số lượng đặt hàng phải là số nguyên dương lớn hơn 0."
                 });
             }
 
@@ -264,7 +264,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.TargetEtd),
-                    ErrorMessage = "Invalid ETD date format. Use YYYY-MM-DD (e.g. 2026-11-15)."
+                    ErrorMessage = "Định dạng ngày giao hàng (ETD) không hợp lệ. Vui lòng nhập theo mẫu YYYY-MM-DD (ví dụ: 2026-11-15)."
                 });
             }
             else
@@ -316,8 +316,8 @@ public class OrderIntakeService : IOrderIntakeService
 
         var canConfirm = validatedRows.Count > 0 && totalErrorCells == 0;
         var summaryMsg = totalErrorCells == 0
-            ? $"Parsed {validatedRows.Count} lines. {matchedCatalogCount} matched catalog, {newProductCount} flagged as new, 0 errors. Ready to confirm (MSG-ORD-01)."
-            : $"Found {totalErrorCells} formatted data errors across {invalidRowCount} row(s) (highlighted in red). Please correct directly before confirming (MSG-ORD-03).";
+            ? $"Đã đọc thành công {validatedRows.Count} dòng sản phẩm ({matchedCatalogCount} sản phẩm có sẵn trong danh mục, {newProductCount} sản phẩm mới, 0 lỗi). Sẵn sàng xác nhận đơn hàng."
+            : $"Phát hiện {totalErrorCells} ô dữ liệu sai định dạng trên {invalidRowCount} dòng (được đánh dấu màu đỏ). Vui lòng chỉnh sửa trực tiếp trên bảng trước khi xác nhận.";
 
         return new StagingOrderGridResponseDto
         {
@@ -368,7 +368,7 @@ public class OrderIntakeService : IOrderIntakeService
         if (duplicatePo)
         {
             throw AppException.Conflict(
-                $"Purchase Order number '{normalizedPoNumber}' already exists in the system (UC-33).",
+                $"Mã đơn đặt hàng '{normalizedPoNumber}' đã tồn tại trong hệ thống.",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -465,7 +465,7 @@ public class OrderIntakeService : IOrderIntakeService
                         ProductName = row.ProductDescription,
                         CategoryName = InferCategoryFromSku(row.ProductSku),
                         DimensionsCm = row.DimensionsMm,
-                        WoodSpecies = "American White Oak",
+                        WoodSpecies = "Gỗ sồi trắng Bắc Mỹ",
                         FinishColor = row.FinishColor,
 
 
@@ -561,7 +561,7 @@ public class OrderIntakeService : IOrderIntakeService
                 BeforeState = "STAGING_RAW",
                 AfterState = $"NEWLY_RECEIVED ({afterSnapshot})",
                 Reason = string.IsNullOrWhiteSpace(request.Notes)
-                    ? $"Cleaned staging format errors. Generated Order Space for {totalUnits} units across {validationResult.Rows.Count} line items (UC-33)."
+                    ? $"Đã xác nhận đơn hàng và khởi tạo không gian đơn hàng cho {totalUnits} sản phẩm thuộc {validationResult.Rows.Count} mã hàng."
                     : request.Notes.Trim(),
                 IpAddress = ipAddress,
                 CreatedAt = now
@@ -674,7 +674,7 @@ public class OrderIntakeService : IOrderIntakeService
     {
         if (string.IsNullOrWhiteSpace(idOrKey))
         {
-            throw new AppException("Order Space identifier or key is required.", 400, MessageCodes.Msg01RequiredField);
+            throw new AppException("Vui lòng cung cấp mã định danh hoặc mã không gian đơn hàng.", 400, MessageCodes.Msg01RequiredField);
         }
 
         var trimmed = idOrKey.Trim();
@@ -713,7 +713,7 @@ public class OrderIntakeService : IOrderIntakeService
 
         if (space is null)
         {
-            throw AppException.NotFound($"Order Space '{idOrKey}' was not found (MSG10).");
+            throw AppException.NotFound($"Không tìm thấy không gian đơn hàng '{idOrKey}'.");
         }
 
         var order = space.CustomerOrder;
@@ -748,8 +748,8 @@ public class OrderIntakeService : IOrderIntakeService
                 ProductSku = oi.Product.ProductSku,
                 ProductName = oi.Product.ProductName,
                 DimensionsSpec = dims,
-                WoodSpecies = oi.Product.WoodSpecies ?? "American White Oak",
-                FinishSpec = oi.Product.FinishColor ?? "Natural PU Clear Coat",
+                WoodSpecies = TranslateLegacyWoodOrFinish(oi.Product.WoodSpecies, "Gỗ sồi trắng Bắc Mỹ"),
+                FinishSpec = TranslateLegacyWoodOrFinish(oi.Product.FinishColor, "Sơn PU bóng mờ tự nhiên"),
                 OrderedQty = oi.OrderedQty,
                 FscCertifiedReq = oi.FscCertifiedReq,
                 AttachedCadFileName = cadFile,
@@ -768,31 +768,31 @@ public class OrderIntakeService : IOrderIntakeService
         var avgScrap = lineDtos.Where(l => l.ScrapRatePct.HasValue).Select(l => l.ScrapRatePct!.Value).DefaultIfEmpty(3.5m).Average();
 
         var bomStatusTitle = bomReadyPct == 100
-            ? "100% Ready"
+            ? "100% Sẵn sàng"
             : bomReadyPct > 0
-                ? $"{bomReadyPct}% Ready"
-                : "Pending Setup";
+                ? $"{bomReadyPct}% Sẵn sàng"
+                : "Chờ thiết lập";
         var bomStatusSubtitle = bomReadyPct > 0
-            ? $"Active breakdown with {avgScrap:0.#}% scrap rate"
-            : "Awaiting BOM & Dynamic Routing breakdown";
+            ? $"Đã bóc tách định mức với tỷ lệ hao hụt {avgScrap:0.#}%"
+            : "Đang chờ thiết lập định mức BOM & quy trình sản xuất";
 
         var allAllocations = order.OrderItems.SelectMany(oi => oi.MaterialAllocations).ToList();
         var materialAllocationTitle = allAllocations.Count > 0 && allAllocations.All(a => a.ShortageQty <= 0)
-            ? "Fully Locked"
+            ? "Đã khóa đủ vật tư"
             : allAllocations.Count > 0
-                ? "Partial / Waiting"
-                : bomReadyPct == 100 ? "Fully Locked" : "Unallocated";
-        var materialAllocationSubtitle = materialAllocationTitle == "Fully Locked"
-            ? "Allocated Stock secured by Warehouse"
-            : "Pending stock reconciliation & reservation";
+                ? "Tạm giữ một phần / Chờ mua"
+                : bomReadyPct == 100 ? "Đã khóa đủ vật tư" : "Chưa phân bổ";
+        var materialAllocationSubtitle = materialAllocationTitle == "Đã khóa đủ vật tư"
+            ? "Kho đã giữ chỗ đủ tồn kho vật tư cho đơn hàng"
+            : "Đang chờ đối chiếu tồn kho và phân bổ vật tư";
 
         var lifecycleBadge = DetermineLifecycleBadge(order);
         var floorProgressPct = space.OverallProgressPct;
         var floorSubtitle = floorProgressPct >= 100
-            ? "Stage 6: Final Packaging completed"
+            ? "Công đoạn 6: Hoàn tất đóng gói thành phẩm"
             : floorProgressPct > 0
-                ? "Station 4: Structure Assembly in progress"
-                : "Waiting for shop-floor dispatch";
+                ? "Công đoạn 4: Đang lắp ráp kết cấu tại xưởng"
+                : "Đang chờ phát lệnh sản xuất xuống xưởng";
 
         // Xây dựng dòng thời gian hoạt động Recent Space Activity & Milestones (SCR-ORD-03)
         var milestones = new List<OrderSpaceMilestoneDto>();
@@ -800,9 +800,9 @@ public class OrderIntakeService : IOrderIntakeService
         {
             milestones.Add(new OrderSpaceMilestoneDto
             {
-                Title = "Goods Issue Released to Floor",
-                ActorAndTimestamp = $"{order.OrderDate.AddDays(4):MMM dd, yyyy} 14:20 by Vu Duc Thang (Warehouse)",
-                Description = "Handed over 100% lumber and hardware to Production Leader. Kanban card unlocked.",
+                Title = "Đã xuất kho vật tư xuống xưởng sản xuất",
+                ActorAndTimestamp = $"{order.OrderDate.AddDays(4):dd/MM/yyyy} 14:20 bởi Vũ Đức Thắng (Thủ kho)",
+                Description = "Đã bàn giao 100% gỗ phôi và phụ kiện kim khí cho Quản đốc. Đã mở khóa lô sản xuất.",
                 DotColor = "green",
                 OccurredAt = order.OrderDate.AddDays(4)
             });
@@ -812,20 +812,20 @@ public class OrderIntakeService : IOrderIntakeService
         {
             milestones.Add(new OrderSpaceMilestoneDto
             {
-                Title = "BOM & Routing Approved",
-                ActorAndTimestamp = $"{order.OrderDate.AddDays(1):MMM dd, yyyy} 10:15 by Nguyen Van Khoa (Owner)",
-                Description = $"Configured 6-step dynamic routing and calculated gross raw material demand with {avgScrap:0.#}% loss allowance.",
+                Title = "Đã phê duyệt Định mức BOM & Quy trình công đoạn",
+                ActorAndTimestamp = $"{order.OrderDate.AddDays(1):dd/MM/yyyy} 10:15 bởi Nguyễn Văn Khoa (Chủ xưởng)",
+                Description = $"Đã cấu hình quy trình sản xuất 6 công đoạn và tính tổng nhu cầu vật tư (hao hụt {avgScrap:0.#}%).",
                 DotColor = "blue",
                 OccurredAt = order.OrderDate.AddDays(1)
             });
         }
 
-        var creatorName = order.Creator?.FullName ?? "Tran Thi Mai (Sales)";
+        var creatorName = order.Creator?.FullName ?? "Trần Thị Mai (Kinh doanh)";
         milestones.Add(new OrderSpaceMilestoneDto
         {
-            Title = "Order Space Initialized",
-            ActorAndTimestamp = $"{order.CreatedAt:MMM dd, yyyy HH:mm} by {creatorName}",
-            Description = "PO confirmed via Staging Area. Attached CAD drawings and buyer packaging specs.",
+            Title = "Khởi tạo Không gian Đơn hàng (Order Space)",
+            ActorAndTimestamp = $"{order.CreatedAt:dd/MM/yyyy HH:mm} bởi {creatorName}",
+            Description = "Đã xác nhận đơn hàng từ màn hình kiểm tra tạm, đính kèm bản vẽ kỹ thuật CAD và quy cách đóng gói.",
             DotColor = "slate",
             OccurredAt = order.CreatedAt
         });
@@ -894,7 +894,7 @@ public class OrderIntakeService : IOrderIntakeService
     {
         if (string.IsNullOrWhiteSpace(dto.DrawingUrl))
         {
-            throw new AppException("DrawingUrl is required.", 400, MessageCodes.Msg01RequiredField);
+            throw new AppException("Vui lòng chọn hoặc nhập đường dẫn bản vẽ kỹ thuật.", 400, MessageCodes.Msg01RequiredField);
         }
 
         var detail = await GetOrderSpaceDetailAsync(spaceIdOrKey, false, cancellationToken);
@@ -925,7 +925,7 @@ public class OrderIntakeService : IOrderIntakeService
             EntityId = space.SpaceKey,
             BeforeState = beforeUrl,
             AfterState = space.DrawingFolderUrl,
-            Reason = $"Updated technical CAD drawing attachment for {space.SpaceKey}.",
+            Reason = $"Cập nhật tệp bản vẽ kỹ thuật đính kèm cho không gian đơn hàng {space.SpaceKey}.",
             IpAddress = ipAddress,
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);
@@ -942,17 +942,17 @@ public class OrderIntakeService : IOrderIntakeService
         var lifecycleBadge = DetermineLifecycleBadge(order);
 
         var itemDescriptions = order.OrderItems
-            .Select(oi => oi.Product?.ProductName ?? "Wood Item")
+            .Select(oi => oi.Product?.ProductName ?? "Sản phẩm nội thất gỗ")
             .Distinct()
             .ToList();
 
         var volumeSummary = order.OrderItems.Count > 1
-            ? $"{totalUnits} Sets ({string.Join(" + ", itemDescriptions.Take(2))})"
-            : $"{totalUnits} Pcs {itemDescriptions.FirstOrDefault() ?? "Furniture Unit"}";
+            ? $"{totalUnits} bộ ({string.Join(" + ", itemDescriptions.Take(2))})"
+            : $"{totalUnits} chiếc {itemDescriptions.FirstOrDefault() ?? "sản phẩm gỗ"}";
 
         var customerDisplay = !string.IsNullOrWhiteSpace(order.Customer?.Country)
             ? $"{order.Customer.CompanyName} ({order.Customer.Country})"
-            : order.Customer?.CompanyName ?? "B2B Client";
+            : order.Customer?.CompanyName ?? "Khách hàng doanh nghiệp";
 
         return new SalesOrderListItemDto
         {
@@ -998,9 +998,9 @@ public class OrderIntakeService : IOrderIntakeService
             {
                 RowNumber = 1,
                 ProductSku = "CHAIR-OAK-01",
-                ProductDescription = "Nordic Oak Dining Chair",
+                ProductDescription = "Ghế ăn gỗ sồi Bắc Âu",
                 DimensionsMm = "450 x 520 x 850",
-                FinishColor = "Natural PU Clear",
+                FinishColor = "Sơn PU bóng mờ tự nhiên",
                 OrderQty = 300,
                 TargetEtd = "2026-11-15",
                 FscRequired = true,
@@ -1010,9 +1010,9 @@ public class OrderIntakeService : IOrderIntakeService
             {
                 RowNumber = 2,
                 ProductSku = "TABLE-OAK-02",
-                ProductDescription = "Rectangular Dining Table 1.8m",
+                ProductDescription = "Bàn ăn chữ nhật gỗ sồi 1m8",
                 DimensionsMm = "1800 x 900 x 750",
-                FinishColor = "Walnut Stain",
+                FinishColor = "Màu gỗ óc chó tự nhiên",
                 OrderQty = 80,
                 TargetEtd = "2026-11-15",
                 FscRequired = true,
@@ -1022,9 +1022,9 @@ public class OrderIntakeService : IOrderIntakeService
             {
                 RowNumber = 3,
                 ProductSku = "BENCH-OAK-03",
-                ProductDescription = "Solid Oak Dining Bench",
+                ProductDescription = "Ghế băng dài phòng ăn gỗ sồi",
                 DimensionsMm = "1400 x 380 x 450",
-                FinishColor = "Natural PU Clear",
+                FinishColor = "Sơn PU bóng mờ tự nhiên",
                 OrderQty = 100,
                 TargetEtd = "2026-11-15",
                 FscRequired = true,
@@ -1034,9 +1034,9 @@ public class OrderIntakeService : IOrderIntakeService
             {
                 RowNumber = 4,
                 ProductSku = "STOOL-OAK-04",
-                ProductDescription = "Compact Kitchen Stool",
+                ProductDescription = "Ghế đôn gỗ sồi nhỏ gọn",
                 DimensionsMm = "380 x 380 x 450",
-                FinishColor = "Natural Finish",
+                FinishColor = "Màu gỗ sồi tự nhiên",
                 OrderQty = 150,
                 TargetEtd = "2026-11-20",
                 FscRequired = true,
@@ -1091,17 +1091,37 @@ public class OrderIntakeService : IOrderIntakeService
         var upper = (sku ?? string.Empty).ToUpperInvariant();
         if (upper.Contains("CHAIR") || upper.Contains("BENCH") || upper.Contains("STOOL"))
         {
-            return "CHAIRS & SEATING";
+            return "Ghế ăn";
         }
         if (upper.Contains("TABLE") || upper.Contains("DESK"))
         {
-            return "TABLES & STORAGE";
+            return "Bàn ăn";
         }
         if (upper.Contains("BED") || upper.Contains("WARDROBE") || upper.Contains("CABINET"))
         {
-            return "BEDROOM & CABINETS";
+            return "Tủ trang trí";
         }
-        return "SOLID WOOD FURNITURE";
+        return "Nội thất gỗ tự nhiên";
+    }
+
+    internal static string TranslateLegacyWoodOrFinish(string? raw, string defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return defaultValue;
+        }
+
+        return raw.Trim() switch
+        {
+            "White Oak" or "American White Oak" => "Gỗ sồi trắng Bắc Mỹ",
+            "Ash" or "European Ash" or "Imported Ash" => "Gỗ tần bì nhập khẩu",
+            "Rubberwood" or "Rubber Wood" or "Rubberwood + Oak Veneer" => "Gỗ cao su + Veneer sồi",
+            "Natural Walnut" or "Walnut Stain" => "Màu gỗ óc chó tự nhiên",
+            "Smoked Oak" => "Màu gỗ sồi khói",
+            "Warm Chestnut" => "Màu hạt dẻ ấm",
+            "Natural Oak" or "Natural Finish" or "Natural PU Clear" or "Natural PU Clear Coat" => "Màu gỗ sồi tự nhiên",
+            _ => raw.Trim()
+        };
     }
 
     /// <summary>

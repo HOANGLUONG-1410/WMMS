@@ -13,21 +13,21 @@ public class CreatePurchaseOrdersRequestValidator : AbstractValidator<CreatePurc
     {
         RuleFor(x => x.PrId)
             .GreaterThan(0)
-            .WithMessage("Mã phiếu yêu cầu mua hàng (PrId) là bắt buộc và phải lớn hơn 0.");
+            .WithMessage("Vui lòng chọn phiếu yêu cầu mua hàng cần lập đơn đặt hàng.");
 
         RuleFor(x => x.Lines)
             .NotEmpty()
-            .WithMessage("Bắt buộc phải chọn ít nhất một dòng PR để phát hành Đơn đặt hàng (PO).");
+            .WithMessage("Vui lòng chọn ít nhất một mặt hàng để phát hành đơn đặt hàng.");
 
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
             line.RuleFor(l => l.PrItemId)
                 .GreaterThan(0)
-                .WithMessage("Mã dòng vật tư PR (PrItemId) là bắt buộc và phải lớn hơn 0.");
+                .WithMessage("Vui lòng chọn dòng vật tư hợp lệ từ phiếu yêu cầu mua hàng.");
 
             line.RuleFor(l => l.SupplierId)
                 .GreaterThan(0)
-                .WithMessage("Mỗi dòng đặt hàng bắt buộc phải gán cho một Nhà cung cấp hợp lệ (BR-PUR-03).");
+                .WithMessage("Mỗi mặt hàng đặt mua bắt buộc phải chọn một nhà cung cấp hợp lệ.");
 
             line.RuleFor(l => l.OrderedQty)
                 .GreaterThan(0)
@@ -40,29 +40,29 @@ public class CreatePurchaseOrdersRequestValidator : AbstractValidator<CreatePurc
 
         RuleFor(x => x.Lines)
             .Must(lines => lines.GroupBy(l => (l.PrItemId, l.SupplierId)).All(g => g.Count() == 1))
-            .WithMessage("Không được phép trùng lặp cặp (PrItemId, SupplierId); vui lòng gộp số lượng vào một dòng.");
+            .WithMessage("Không được chọn trùng cùng một mặt hàng và nhà cung cấp trên nhiều dòng; vui lòng cộng gộp số lượng.");
 
         RuleFor(x => x.SupplierTerms)
             .NotEmpty()
-            .WithMessage("Bắt buộc phải có thông tin ngày hẹn giao hàng cho từng Nhà cung cấp.");
+            .WithMessage("Vui lòng nhập ngày hẹn giao hàng cho từng nhà cung cấp.");
 
         RuleFor(x => x.SupplierTerms)
             .Must(t => t.GroupBy(s => s.SupplierId).All(g => g.Count() == 1))
-            .WithMessage("Mỗi Nhà cung cấp chỉ được xuất hiện một lần trong danh sách điều khoản giao hàng.");
+            .WithMessage("Mỗi nhà cung cấp chỉ được khai báo một mục điều khoản giao hàng.");
 
         RuleForEach(x => x.SupplierTerms).ChildRules(terms =>
         {
             terms.RuleFor(t => t.SupplierId)
                 .GreaterThan(0)
-                .WithMessage("Mã Nhà cung cấp trong điều khoản phải lớn hơn 0.");
+                .WithMessage("Vui lòng chọn nhà cung cấp hợp lệ trong mục điều khoản giao hàng.");
 
             terms.RuleFor(t => t.ExpectedArrivalDate)
                 .Must(d => d.Date >= DateTime.UtcNow.Date)
-                .WithMessage("Ngày hẹn giao hàng của Nhà cung cấp không được ở quá khứ (UC052.E1).");
+                .WithMessage("Ngày nhà cung cấp hẹn giao hàng không được nằm trong quá khứ.");
 
             terms.RuleFor(t => t.Terms)
                 .MaximumLength(1000)
-                .WithMessage("Điều khoản thanh toán & giao hàng không được vượt quá 1,000 ký tự.");
+                .WithMessage("Điều khoản thanh toán và giao hàng không được vượt quá 1.000 ký tự.");
         });
 
         RuleFor(x => x)
@@ -72,7 +72,7 @@ public class CreatePurchaseOrdersRequestValidator : AbstractValidator<CreatePurc
                 var termSuppliers = x.SupplierTerms.Select(t => t.SupplierId).ToHashSet();
                 return lineSuppliers.SetEquals(termSuppliers);
             })
-            .WithMessage("Danh sách điều khoản giao hàng phải khớp chính xác với tất cả các Nhà cung cấp có dòng đặt hàng.");
+            .WithMessage("Danh sách điều khoản giao hàng phải khớp với tất cả các nhà cung cấp có mặt hàng đặt mua.");
     }
 }
 
@@ -81,13 +81,13 @@ public class UpdatePoEtaValidator : AbstractValidator<UpdatePoEtaDto>
 {
     public UpdatePoEtaValidator()
     {
-        RuleFor(x => x.ExpectedArrivalDate)
-            .Must(d => d.Date >= DateTime.UtcNow.Date)
-            .WithMessage("Ngày hẹn giao hàng của Nhà cung cấp không được ở quá khứ (UC052.E1).");
+        RuleFor(x => x.EffectiveEtaDate)
+            .Must(d => d != default && d.Date >= DateTime.UtcNow.Date)
+            .WithMessage("Ngày nhà cung cấp hẹn giao hàng không được bỏ trống hoặc nằm trong quá khứ.");
 
         RuleFor(x => x.Notes)
             .MaximumLength(500)
-            .WithMessage("Ghi chú vận chuyển / lý do dời lịch không vượt quá 500 ký tự.");
+            .WithMessage("Ghi chú vận chuyển hoặc lý do dời lịch không được vượt quá 500 ký tự.");
     }
 }
 
@@ -101,14 +101,14 @@ public class PurchaseOrderFilterValidator : AbstractValidator<PurchaseOrderFilte
     {
         RuleFor(x => x.Status)
             .Must(s => string.IsNullOrWhiteSpace(s) || Statuses.Contains(s.Trim().ToUpperInvariant()))
-            .WithMessage("Trạng thái PO phải thuộc một trong các giá trị: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.");
+            .WithMessage("Trạng thái đơn mua hàng cần lọc không hợp lệ (chỉ nhận: Đã phát hành, Nhận một phần, Đã nhận đủ, Đã hủy).");
 
         RuleFor(x => x.EtaStatus)
             .Must(s => string.IsNullOrWhiteSpace(s) || EtaStatuses.Contains(s.Trim().ToUpperInvariant()))
-            .WithMessage("Trạng thái ETA phải thuộc một trong các giá trị: OVERDUE, DUE_SOON.");
+            .WithMessage("Bộ lọc tiến độ giao hàng (ETA) không hợp lệ (chỉ nhận: Quá hạn hoặc Sắp đến hạn).");
 
         RuleFor(x => x)
             .Must(x => !x.FromEta.HasValue || !x.ToEta.HasValue || x.FromEta.Value.Date <= x.ToEta.Value.Date)
-            .WithMessage("Từ ngày ETA không được lớn hơn Đến ngày ETA.");
+            .WithMessage("Ngày bắt đầu lọc lịch giao hàng không được lớn hơn ngày kết thúc.");
     }
 }

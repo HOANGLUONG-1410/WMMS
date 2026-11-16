@@ -172,7 +172,7 @@ public class ProductionOrderService : IProductionOrderService
                 if (string.IsNullOrWhiteSpace(request.Justification))
                 {
                     throw new DomainException(
-                        "Cơ chế chạy trước Overdrive bắt buộc phải cung cấp lý do giải trình kỹ thuật (QT-06, KBN02).",
+                        "Khi kích hoạt chế độ chạy trước (Overdrive), bắt buộc phải cung cấp lý do giải trình kỹ thuật.",
                         "OVERDRIVE_JUSTIFICATION_REQUIRED");
                 }
                 isOverdriver = true;
@@ -239,7 +239,7 @@ public class ProductionOrderService : IProductionOrderService
                         ProductionBatch = batch,
                         RequestedBy = currentUserId,
                         ApprovedBy = currentUserId,
-                        Justification = request.Justification?.Trim() ?? "Overdrive requested due to delivery deadline risk.",
+                        Justification = request.Justification?.Trim() ?? "Yêu cầu chạy trước (Overdrive) do áp lực tiến độ giao hàng.",
                         HoldPointStageSeq = holdPointSeq.Value,
                         ApprovedAt = DateTime.UtcNow
                     });
@@ -287,7 +287,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = orderItem.OrderItemId.ToString(),
                 BeforeState = null,
                 AfterState = auditPayload,
-                Reason = $"Released production order and split {splits.Count} lots ({splits.Sum()} units) for {product.ProductSku} (Overdrive: {isOverdriver}) (SC-19, UC-62).",
+                Reason = $"Phát hành lệnh sản xuất và tách thành {splits.Count} lô ({splits.Sum()} sản phẩm) cho mã hàng {product.ProductSku} (Chế độ chạy trước: {(isOverdriver ? "Có" : "Không")}).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -325,10 +325,10 @@ public class ProductionOrderService : IProductionOrderService
                 HoldPointStageSeq = holdPointSeq,
                 GoodsIssuedUnlocked = goodsIssuedUnlocked,
                 Message = isOverdriver
-                    ? $"Đã phát hành Lệnh sản xuất {poNumber} thành công ({createdBatches.Count} lô, {splits.Sum()} SP) ở chế độ Overdrive. Thẻ lô được phép sơ chế trước điểm dừng Hold Point công đoạn {holdPointSeq}."
+                    ? $"Đã phát hành lệnh sản xuất đơn {poNumber} thành công ({createdBatches.Count} lô, {splits.Sum()} sản phẩm) ở chế độ chạy trước (Overdrive). Lô sản xuất được phép gia công sơ chế trước trạm dừng kỹ thuật ở công đoạn {holdPointSeq}."
                     : (goodsIssuedUnlocked
-                        ? $"Đã phát hành Lệnh sản xuất {poNumber} thành công ({createdBatches.Count} lô, {splits.Sum()} SP). Thẻ lô ở trạng thái IN_PROGRESS sẵn sàng gia công."
-                        : $"Đã tạo {createdBatches.Count} thẻ lô Kanban ({splits.Sum()} SP) ở trạng thái LOCKED (Chốt chặn đầu vào BR-008). Thẻ sẽ tự động mở khóa khi Thủ kho bấm xuất kho cấp phát vật tư."),
+                        ? $"Đã phát hành lệnh sản xuất đơn {poNumber} thành công ({createdBatches.Count} lô, {splits.Sum()} sản phẩm). Các lô đã mở khóa sẵn sàng gia công."
+                        : $"Đã tạo {createdBatches.Count} lô sản xuất ({splits.Sum()} sản phẩm) ở trạng thái tạm khóa chờ xuất kho. Lô sẽ tự động mở khóa khi Thủ kho xác nhận xuất kho cấp phát vật tư."),
                 Batches = batchDtos
             };
         }
@@ -502,20 +502,20 @@ public class ProductionOrderService : IProductionOrderService
         if (batch.BatchStatus == BatchStatusEnum.LOCKED)
         {
             throw new DomainException(
-                "Thẻ lô sản xuất đang ở trạng thái LOCKED (Chốt chặn đầu vào BR-008). Thủ kho cần bấm xác nhận xuất kho cấp phát vật tư để bắt đầu gia công.",
+                "Lô sản xuất đang ở trạng thái tạm khóa chờ vật tư. Thủ kho cần xác nhận xuất kho cấp phát nguyên vật liệu để bắt đầu gia công.",
                 "BATCH_LOCKED_MATERIAL_REQUIRED");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
         {
             throw new DomainException(
-                $"Thẻ lô đang bị khóa cứng tại chốt chặn Hold Point công đoạn {batch.HoldPointStageSeq} do chưa xuất kho đủ phụ kiện ốc vít/sơn. Cần bổ sung vật tư để mở khóa.",
+                $"Lô sản xuất đang bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn {batch.HoldPointStageSeq} do chưa xuất kho đủ phụ kiện/sơn. Cần bổ sung vật tư để mở khóa.",
                 "HOLD_POINT_BLOCKED");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.DONE)
         {
-            throw new DomainException("Thẻ lô đã hoàn tất toàn bộ các công đoạn sản xuất (DONE).", "BATCH_ALREADY_DONE");
+            throw new DomainException("Lô sản xuất đã hoàn tất toàn bộ các công đoạn.", "BATCH_ALREADY_DONE");
         }
 
         var steps = batch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
@@ -523,7 +523,7 @@ public class ProductionOrderService : IProductionOrderService
         var currentStep = steps.FirstOrDefault(s => s.StageSequence == currentSeq);
         if (currentStep == null)
         {
-            throw new DomainException($"Không tìm thấy thông tin công đoạn hiện tại {currentSeq} của thẻ lô.", "STEP_NOT_FOUND");
+            throw new DomainException($"Không tìm thấy thông tin công đoạn hiện tại {currentSeq} của lô sản xuất.", "STEP_NOT_FOUND");
         }
 
         // 1. Kiểm tra điều kiện 100% QC Pass (BR-008, QT-05)
@@ -531,7 +531,7 @@ public class ProductionOrderService : IProductionOrderService
         if (!is100Passed)
         {
             throw new DomainException(
-                $"Quy tắc kiểm định 100% (BR-008, QT-05): Công đoạn {currentSeq} ({currentStep.StageName}) chưa đạt 100% sản phẩm đạt chuẩn ({currentStep.PassedQty}/{batch.BatchQty} SP). Bắt buộc KCS kiểm tra đạt 100% mới được chuyển bước.",
+                $"Công đoạn {currentSeq} ({currentStep.StageName}) chưa đạt 100% sản phẩm đạt chuẩn ({currentStep.PassedQty}/{batch.BatchQty} sản phẩm). Bắt buộc bộ phận KCS kiểm tra đạt 100% mới được chuyển sang công đoạn tiếp theo.",
                 "QC_GATE_INCOMPLETE");
         }
 
@@ -547,7 +547,7 @@ public class ProductionOrderService : IProductionOrderService
         if (targetSeq > currentSeq + 1)
         {
             throw new DomainException(
-                $"Cưỡng chế tuần tự luồng sản xuất (Sequential State Machine - QT-05): Không được phép nhảy cóc từ công đoạn {currentSeq} sang {targetSeq}. Thẻ lô phải di chuyển tuần tự qua từng trạm máy.",
+                $"Không được phép nhảy cóc từ công đoạn {currentSeq} sang {targetSeq}. Lô sản xuất phải di chuyển tuần tự qua từng trạm công đoạn.",
                 "STAGE_JUMP_FORBIDDEN");
         }
 
@@ -584,7 +584,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Stage_{currentSeq}_IN_PROGRESS",
                     AfterState = $"Stage_{targetSeq}_HOLD_POINT_BLOCKED",
-                    Reason = $"Thẻ lô Overdrive {batch.BatchCode} tự động bị khóa cứng tại chốt chặn Hold Point công đoạn {targetSeq} ({holdStep?.StageName}) do phụ kiện chưa xuất kho (QT-06, KBN02).",
+                    Reason = $"Lô chạy trước {batch.BatchCode} tự động bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn {targetSeq} ({holdStep?.StageName}) do phụ kiện chưa được xuất kho.",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -598,7 +598,7 @@ public class ProductionOrderService : IProductionOrderService
             }
 
             throw new DomainException(
-                $"Chốt chặn kỹ thuật Hold Point (QT-06, KBN02): Thẻ lô Overdrive {batch.BatchCode} đã hoàn thành công đoạn {currentSeq} nhưng tự động bị KHÓA CỨNG trước công đoạn {targetSeq} do phụ kiện ốc vít/sơn chưa được xuất kho cấp phát.",
+                $"Lô sản xuất chạy trước {batch.BatchCode} đã hoàn thành công đoạn {currentSeq} nhưng tự động bị khóa tại trạm dừng kỹ thuật trước công đoạn {targetSeq} do phụ kiện ốc vít/sơn chưa được xuất kho cấp phát.",
                 "HOLD_POINT_BARRIER_BLOCKED");
         }
 
@@ -659,7 +659,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = $"Stage_{currentSeq}",
                 AfterState = targetSeq <= maxSeq ? $"Stage_{targetSeq}" : "DONE",
-                Reason = request.Notes ?? $"Chuyển bước thẻ Kanban {batch.BatchCode} từ công đoạn {currentSeq} sang {(targetSeq <= maxSeq ? $"công đoạn {targetSeq}" : "HOÀN TẤT (DONE)")} sau khi đạt 100% QC Pass (QT-05).",
+                Reason = request.Notes ?? $"Chuyển bước lô sản xuất {batch.BatchCode} từ công đoạn {currentSeq} sang {(targetSeq <= maxSeq ? $"công đoạn {targetSeq}" : "Hoàn tất sản xuất")} sau khi đạt 100% kiểm định KCS.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -705,14 +705,14 @@ public class ProductionOrderService : IProductionOrderService
         if (batch.BatchStatus == BatchStatusEnum.LOCKED)
         {
             throw new DomainException(
-                "Thẻ lô sản xuất đang ở trạng thái LOCKED (Chốt chặn đầu vào BR-008). Thủ kho cần bấm xác nhận xuất kho cấp phát vật tư trước khi KCS kiểm định.",
+                "Lô sản xuất đang ở trạng thái tạm khóa chờ xuất kho. Thủ kho cần xác nhận xuất kho cấp phát vật tư trước khi KCS kiểm định.",
                 "BATCH_LOCKED_MATERIAL_REQUIRED");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
         {
             throw new DomainException(
-                $"Thẻ lô đang bị khóa cứng tại chốt chặn Hold Point công đoạn {batch.HoldPointStageSeq} do chưa xuất kho đủ phụ kiện. Cần mở khóa trước khi kiểm định.",
+                $"Lô sản xuất đang bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn {batch.HoldPointStageSeq} do chưa xuất kho đủ phụ kiện. Cần mở khóa trước khi kiểm định.",
                 "HOLD_POINT_BLOCKED");
         }
 
@@ -727,14 +727,14 @@ public class ProductionOrderService : IProductionOrderService
         if (request.InspectedQty != batch.BatchQty)
         {
             throw new DomainException(
-                $"Quy tắc kiểm định 100% (BR-008): Số lượng kiểm định ({request.InspectedQty} SP) phải bằng đúng 100% số lượng của thẻ lô ({batch.BatchQty} SP). Không chấp nhận kiểm định xác suất.",
+                $"Số lượng đưa vào kiểm định ({request.InspectedQty} sản phẩm) phải bằng đúng 100% sản lượng hiện có của lô ({batch.BatchQty} sản phẩm). Không chấp nhận kiểm định xác suất.",
                 "QC_100_RULE_VIOLATION");
         }
 
         if (request.PassQty + request.FailQty != request.InspectedQty)
         {
             throw new DomainException(
-                $"Tổng số lượng đạt Pass ({request.PassQty}) + lỗi Fail ({request.FailQty}) phải bằng đúng tổng số lượng kiểm định ({request.InspectedQty}).",
+                $"Tổng số lượng sản phẩm đạt chuẩn ({request.PassQty}) và sản phẩm lỗi ({request.FailQty}) phải khớp đúng tổng số lượng đưa vào kiểm định ({request.InspectedQty}).",
                 "QC_SUM_MISMATCH");
         }
 
@@ -772,7 +772,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Stage_{step.StageSequence}_IN_PROGRESS",
                     AfterState = $"Stage_{step.StageSequence}_100_PASS",
-                    Reason = $"Kiểm định KCS đạt chuẩn 100% ({request.PassQty}/{request.InspectedQty} SP) tại công đoạn {step.StageName} cho thẻ {batch.BatchCode} (BR-008).",
+                    Reason = $"Kiểm định KCS đạt chuẩn 100% ({request.PassQty}/{request.InspectedQty} sản phẩm) tại công đoạn {step.StageName} cho lô {batch.BatchCode}.",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -868,7 +868,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = subBatch.BatchCode,
                     BeforeState = $"MainCard_{batch.BatchCode}_Qty_{request.InspectedQty}",
                     AfterState = $"MainCard_{request.PassQty}_SubCard_{subBatch.BatchCode}_{request.FailQty}",
-                    Reason = $"Thực hiện tách nhánh 97%-3% (KBN01): Thẻ chính {batch.BatchCode} tiếp tục với {request.PassQty} SP, sinh thẻ nhánh phụ {subBatch.BatchCode} ({request.FailQty} SP) để sửa chữa.",
+                    Reason = $"Thực hiện tách nhánh xử lý lỗi: Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} sản phẩm đạt chuẩn, đồng thời tách lô phụ {subBatch.BatchCode} ({request.FailQty} sản phẩm) để sửa chữa.",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -915,7 +915,7 @@ public class ProductionOrderService : IProductionOrderService
 
         if (string.IsNullOrWhiteSpace(request.Justification))
         {
-            throw new DomainException("Lý do giải trình kỹ thuật và thời hạn ETD là bắt buộc khi gửi yêu cầu Overdrive (UC-63).", "OVERDRIVE_JUSTIFICATION_REQUIRED");
+            throw new DomainException("Vui lòng cung cấp lý do giải trình kỹ thuật và rủi ro tiến độ giao hàng khi gửi yêu cầu chạy trước (Overdrive).", "OVERDRIVE_JUSTIFICATION_REQUIRED");
         }
 
         int holdPointSeq = request.HoldPointStageSeq.GetValueOrDefault(5);
@@ -943,7 +943,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = $"Status_{batch.BatchStatus}",
                 AfterState = $"Overdrive_Requested_HoldPoint_{holdPointSeq}",
-                Reason = $"Tổ trưởng sản xuất gửi yêu cầu kích hoạt Overdrive cho lô {batch.BatchCode}: '{request.Justification.Trim()}' (UC-63).",
+                Reason = $"Quản đốc gửi yêu cầu kích hoạt chạy trước (Overdrive) cho lô {batch.BatchCode}: '{request.Justification.Trim()}'.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -993,7 +993,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Status_{batch.BatchStatus}",
                     AfterState = "OVERDRIVE_REJECTED",
-                    Reason = request.Notes ?? $"Chủ xưởng từ chối yêu cầu Overdrive của lô {batch.BatchCode} (KBN02).",
+                    Reason = request.Notes ?? $"Chủ xưởng từ chối yêu cầu chạy trước (Overdrive) của lô {batch.BatchCode}.",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -1041,7 +1041,7 @@ public class ProductionOrderService : IProductionOrderService
                 BatchId = batch.BatchId,
                 RequestedBy = currentUserId,
                 ApprovedBy = currentUserId,
-                Justification = request.Notes ?? "Phê duyệt bởi Chủ xưởng kèm thiết lập điểm dừng kỹ thuật Hold Point (KBN02).",
+                Justification = request.Notes ?? "Phê duyệt bởi Chủ xưởng kèm thiết lập trạm dừng kỹ thuật (Hold Point).",
                 HoldPointStageSeq = holdPointSeq,
                 ApprovedAt = DateTime.UtcNow
             };
@@ -1056,7 +1056,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = "LOCKED",
                 AfterState = $"OVERDRIVE_APPROVED_HOLD_POINT_{holdPointSeq}",
-                Reason = request.Notes ?? $"Chủ xưởng phê duyệt kích hoạt Overdrive cho lô {batch.BatchCode} tới trạm dừng Hold Point {holdPointSeq} (KBN02, QT-06).",
+                Reason = request.Notes ?? $"Chủ xưởng phê duyệt kích hoạt chạy trước (Overdrive) cho lô {batch.BatchCode} tới trạm dừng kỹ thuật công đoạn {holdPointSeq}.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -1070,7 +1070,7 @@ public class ProductionOrderService : IProductionOrderService
                 IsOverdriver = true,
                 HoldPointStageSeq = holdPointSeq,
                 BatchStatus = batch.BatchStatus.ToString(),
-                Message = $"Chủ xưởng đã PHÊ DUYỆT Overdrive cho lô {batch.BatchCode}. Thẻ lô đã được mở khóa sang IN_PROGRESS và cho phép gia công trước trạm dừng Hold Point công đoạn {holdPointSeq}."
+                Message = $"Chủ xưởng đã phê duyệt yêu cầu chạy trước (Overdrive) cho lô {batch.BatchCode}. Lô sản xuất đã được mở khóa và cho phép gia công sơ chế trước trạm dừng kỹ thuật ở công đoạn {holdPointSeq}."
             };
         }
         catch
@@ -1118,7 +1118,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = "HOLD_POINT_BLOCKED",
                 AfterState = "IN_PROGRESS",
-                Reason = $"Mở khóa chốt chặn Hold Point cho thẻ lô {batch.BatchCode} sau khi Thủ kho bấm xuất kho phụ kiện bổ sung (SC-20).",
+                Reason = $"Mở khóa trạm dừng kỹ thuật (Hold Point) cho lô {batch.BatchCode} sau khi Thủ kho xác nhận xuất kho phụ kiện bổ sung.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -1239,25 +1239,25 @@ public class ProductionOrderService : IProductionOrderService
 
         if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
         {
-            throw new DomainException("Chỉ áp dụng quy trình nghiệm thu lại cho thẻ nhánh phụ (REWORK_SUB_CARD hoặc REPLENISH_LOT).", "INVALID_SUB_BATCH_TYPE");
+            throw new DomainException("Chỉ áp dụng quy trình nghiệm thu lại cho lô phụ sửa chữa hoặc lô bù phế phẩm.", "INVALID_SUB_BATCH_TYPE");
         }
 
         if (subBatch.BatchStatus == BatchStatusEnum.DONE)
         {
-            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất hoặc đã được gộp/chuyển tiếp trước đó.", "SUB_BATCH_ALREADY_DONE");
+            throw new DomainException("Lô phụ này đã hoàn tất hoặc đã được gộp/chuyển tiếp trước đó.", "SUB_BATCH_ALREADY_DONE");
         }
 
         var steps = subBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
         var step = steps.FirstOrDefault(s => s.BatchStepId == request.BatchStepId);
         if (step == null)
         {
-            throw new NotFoundException($"Không tìm thấy công đoạn thẻ phụ có ID {request.BatchStepId}.");
+            throw new NotFoundException($"Không tìm thấy công đoạn lô phụ có ID {request.BatchStepId}.");
         }
 
         if (request.InspectedQty != subBatch.BatchQty)
         {
             throw new DomainException(
-                $"Quy tắc kiểm định 100% (BR-008): Số lượng nghiệm thu lại ({request.InspectedQty} SP) phải bằng đúng 100% số lượng của thẻ nhánh ({subBatch.BatchQty} SP).",
+                $"Số lượng nghiệm thu lại ({request.InspectedQty} sản phẩm) phải bằng đúng 100% sản lượng của lô phụ ({subBatch.BatchQty} sản phẩm).",
                 "QC_100_RULE_VIOLATION");
         }
 

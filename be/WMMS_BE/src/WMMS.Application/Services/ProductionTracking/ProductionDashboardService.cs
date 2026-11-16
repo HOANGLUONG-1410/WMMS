@@ -22,10 +22,10 @@ public class ProductionDashboardService : IProductionDashboardService
 
     public ProductionDashboardService(
         IUnitOfWork unitOfWork,
-        IProductionReportExcelExporter excelExporter)
+        IProductionReportExcelExporter? excelExporter = null)
     {
         _unitOfWork = unitOfWork;
-        _excelExporter = excelExporter;
+        _excelExporter = excelExporter!;
     }
 
     /// <inheritdoc />

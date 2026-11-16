@@ -33,14 +33,14 @@ public class MaterialsController : MasterDataControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<MaterialDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMaterialsAsync([FromQuery] MaterialQueryFilterDto filter, CancellationToken ct)
-        => Ok(ApiResponse<PagedResult<MaterialDto>>.Ok(await _service.GetMaterialsAsync(filter, ct), "Fetched material list (UC-17)."));
+        => Ok(ApiResponse<PagedResult<MaterialDto>>.Ok(await _service.GetMaterialsAsync(filter, ct), "Đã tải danh sách nguyên vật liệu."));
 
     /// <summary>UC-18: Chi tiết vật tư kèm tồn kho. 404 (MSG10) nếu không tồn tại.</summary>
     [HttpGet("{id:long}")]
     [ProducesResponseType(typeof(ApiResponse<MaterialDetailDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMaterialByIdAsync([FromRoute] long id, CancellationToken ct)
-        => Ok(ApiResponse<MaterialDetailDto>.Ok(await _service.GetMaterialByIdAsync(id, ct), "Fetched material details (UC-18)."));
+        => Ok(ApiResponse<MaterialDetailDto>.Ok(await _service.GetMaterialByIdAsync(id, ct), "Đã tải thông tin chi tiết nguyên vật liệu."));
 
     /// <summary>UC-19: Tạo vật tư mới (BR-MDM-01: mã duy nhất, 409 MSG08 nếu trùng).</summary>
     [HttpPost]
@@ -51,7 +51,7 @@ public class MaterialsController : MasterDataControllerBase
     {
         await _createValidator.ValidateAndThrowAsync(dto, ct);
         var created = await _service.CreateMaterialAsync(dto, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return StatusCode(StatusCodes.Status201Created, ApiResponse<MaterialDto>.Ok(created, "Material created (UC-19)."));
+        return StatusCode(StatusCodes.Status201Created, ApiResponse<MaterialDto>.Ok(created, "Đã thêm nguyên vật liệu mới thành công."));
     }
 
     /// <summary>UC-20: Cập nhật vật tư (MaterialCode bất biến).</summary>
@@ -63,7 +63,7 @@ public class MaterialsController : MasterDataControllerBase
     {
         await _updateValidator.ValidateAndThrowAsync(dto, ct);
         var updated = await _service.UpdateMaterialAsync(id, dto, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return Ok(ApiResponse<MaterialDto>.Ok(updated, "Material updated (UC-20)."));
+        return Ok(ApiResponse<MaterialDto>.Ok(updated, "Đã cập nhật thông tin nguyên vật liệu thành công."));
     }
 
     /// <summary>UC-21: Vô hiệu hóa vật tư (soft-delete, giữ tham chiếu BOM).</summary>
@@ -74,6 +74,6 @@ public class MaterialsController : MasterDataControllerBase
     public async Task<IActionResult> DeactivateMaterialAsync([FromRoute] long id, CancellationToken ct)
     {
         await _service.DeactivateMaterialAsync(id, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return Ok(ApiResponse.Ok("Material deactivated (UC-21)."));
+        return Ok(ApiResponse.Ok("Đã ngừng kích hoạt nguyên vật liệu thành công."));
     }
 }
