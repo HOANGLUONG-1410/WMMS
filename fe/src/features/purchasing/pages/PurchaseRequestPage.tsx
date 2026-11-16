@@ -91,12 +91,7 @@ export default function PurchaseRequestPage() {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 text-xs font-bold uppercase rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-mono">
-                BƯỚC 2: YÊU CẦU MUA HÀNG GỘP NGÀY &amp; PHÊ DUYỆT (SC-15)
-              </span>
-            </div>
-            <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight mt-1.5">
+            <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
               Yêu cầu mua hàng gộp theo ngày
             </h1>
             <p className="text-sm text-slate-500 mt-1">
@@ -124,7 +119,7 @@ export default function PurchaseRequestPage() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              <span>Về Đối chiếu tồn kho (Bước 1)</span>
+              <span>Về Đối chiếu tồn kho</span>
             </button>
           </div>
         </div>

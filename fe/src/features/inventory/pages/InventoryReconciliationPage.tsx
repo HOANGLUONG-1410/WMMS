@@ -464,7 +464,7 @@ export default function InventoryReconciliationPage() {
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2 cursor-pointer"
                 >
                   <span>
-                    Chuyển sang Bước 2: Xem &amp; Duyệt Phiếu PR{" "}
+                    Xem &amp; Duyệt Phiếu PR{" "}
                     {allocationResult.consolidatedPrCode} →
                   </span>
                 </button>
@@ -562,7 +562,7 @@ export default function InventoryReconciliationPage() {
               onClick={() => navigate("/purchasing/requisitions")}
               className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition border border-slate-300 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              <span>Yêu cầu mua hàng PR (Bước 2) →</span>
+              <span>Yêu cầu mua hàng PR →</span>
             </button>
           </div>
         </div>
@@ -708,8 +708,7 @@ export default function InventoryReconciliationPage() {
                 className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
               />
               <span className="text-xs md:text-sm font-semibold text-slate-700">
-                Tự động gom phần vật tư thiếu hụt vào Phiếu PR tổng hợp trong ngày (Consolidated
-                Daily PR — BR-PUR-01)
+                Tự động gom phần vật tư thiếu hụt vào Phiếu PR tổng hợp trong ngày
               </span>
             </label>
           </div>
