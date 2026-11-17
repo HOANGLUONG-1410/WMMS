@@ -76,7 +76,7 @@
 ---
 
 ## 4. Xử lý Tranh chấp Đồng thời (Concurrency) & Audit Log
-- **Mã lỗi 409 Conflict (`UC047.E1`):** Khi thao tác thay đổi trạng thái (Duyệt PR, Nhập kho GRN, Chuyển cột Kanban), nếu bản ghi đã bị thay đổi bởi người khác, phải ném ra `ConflictException` (HTTP 409):
+- **Mã lỗi 409 Conflict (`UC047.E1`):** Khi thao tác thay đổi trạng thái (Duyệt PR, Nhập kho GRN, Chuyển công đoạn Lô sản xuất), nếu bản ghi đã bị thay đổi bởi người khác, phải ném ra `ConflictException` (HTTP 409):
   ```csharp
   if (pr.Status != PurchaseRequestStatus.SUBMITTED)
   {
@@ -116,5 +116,5 @@
 | :--- | :--- | :--- |
 | **MRP & Phân bổ tồn kho** | **SC-14** (Tính MRP, Scrap rate `BR-BOM-02`, Soft-allocation `BR-INV-02`) | [`MrpAllocationService.cs`](file:///d:/WMMS/be/WMMS_BE/src/WMMS.Application/Services/InventoryPr/MrpAllocationService.cs) |
 | **Yêu cầu mua sắm PR** | **SC-15** (Duyệt/từ chối PR, phân quyền Owner, 409 Conflict, Audit log) | [`PurchaseRequestService.cs`](file:///d:/WMMS/be/WMMS_BE/src/WMMS.Application/Services/InventoryPr/PurchaseRequestService.cs) |
-| **Đơn mua PO & Kanban** | **SC-16** (PO theo NCC & ETA), **SC-19** (Tách lô & Kanban 100% Pass) | [`ProductionOrderService.cs`](file:///d:/WMMS/be/WMMS_BE/src/WMMS.Application/Services/KanbanQc/ProductionOrderService.cs) |
+| **Đơn mua PO & Điều độ Lệnh SX** | **SC-16** (PO theo NCC & ETA), **SC-19** (Tách lô & Cưỡng chế công đoạn tuần tự 100% Pass — **không dùng bảng kéo thả Kanban Board**) | [`ProductionOrderService.cs`](file:///d:/WMMS/be/WMMS_BE/src/WMMS.Application/Services/KanbanQc/ProductionOrderService.cs) |
 | **Nhập kho & QC Gate** | **SC-17** (Nhập kho GRN & Auto-allocation), **SC-20b** (QC Gate 97%-3%) | Giao dịch nguyên tử `_unitOfWork.BeginTransactionAsync()` |

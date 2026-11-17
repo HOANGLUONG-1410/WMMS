@@ -11,7 +11,7 @@ public class RejectPurchaseRequestValidator : AbstractValidator<RejectPurchaseRe
     public RejectPurchaseRequestValidator()
     {
         RuleFor(x => x.Reason)
-            .NotEmpty().WithMessage("Lý do từ chối là bắt buộc (UC048.E1).")
+            .NotEmpty().WithMessage("Lý do từ chối là bắt buộc.")
             .Must(r => string.IsNullOrWhiteSpace(r) || r.Trim().Length <= 500)
             .WithMessage("Lý do từ chối không được vượt quá 500 ký tự.");
     }
@@ -36,7 +36,7 @@ public class PurchaseRequestFilterValidator : AbstractValidator<PurchaseRequestF
     {
         RuleFor(x => x.Status)
             .Must(s => string.IsNullOrWhiteSpace(s) || AllowedStatuses.Contains(s.Trim().ToUpperInvariant()))
-            .WithMessage("Trạng thái phải là một trong các giá trị: PENDING_APPROVAL, APPROVED, REJECTED, PO_ISSUED.");
+            .WithMessage("Trạng thái phiếu yêu cầu mua hàng không hợp lệ (chỉ chấp nhận: Chờ duyệt, Đã duyệt, Đã từ chối, Đã lập PO).");
 
         RuleFor(x => x)
             .Must(x => !x.FromDate.HasValue || !x.ToDate.HasValue || x.FromDate.Value.Date <= x.ToDate.Value.Date)

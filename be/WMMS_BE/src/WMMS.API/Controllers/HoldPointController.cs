@@ -33,7 +33,7 @@ public class HoldPointController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _holdPointService.GetBatchHoldPointStatusAsync(batchId, cancellationToken);
-        return Ok(ApiResponse<HoldPointStatusDto>.Ok(result, "Lấy thông tin trạng thái Hold Point thành công (SC-20)."));
+        return Ok(ApiResponse<HoldPointStatusDto>.Ok(result, "Lấy thông tin trạng thái trạm dừng kỹ thuật thành công."));
     }
 
     /// <summary>
@@ -112,7 +112,7 @@ public class HoldPointController : MasterDataControllerBase
     }
 
     /// <summary>
-    /// SC-20: Kéo thẻ chuyển công đoạn tiếp theo (Advance Stage / Move Kanban Card).
+    /// SC-20: Xác nhận hoàn thành công đoạn hiện tại và chuyển lô sản xuất sang công đoạn kế tiếp (S -> S + 1).
     /// Kiểm soát chặt chẽ: 100% QC Pass và chặn dừng tự động tại các trạm kiểm soát Hold Point nếu thiếu vật tư.
     /// </summary>
     [HttpPost("batches/{batchId:long}/advance")]

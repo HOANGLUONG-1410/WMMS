@@ -30,6 +30,15 @@ public interface IPurchaseOrderService
         string? ipAddress,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Phát hành đồng loạt các Đơn đặt hàng nhà cung cấp (PO) từ một hoặc nhiều Phiếu yêu cầu mua hàng (PR) đã được Chủ xưởng phê duyệt.
+    /// </summary>
+    Task<List<PurchaseOrderDetailDto>> BatchIssuePurchaseOrdersAsync(
+        BatchIssuePurchaseOrdersRequestDto? request,
+        long purchasingUserId,
+        string? ipAddress,
+        CancellationToken cancellationToken = default);
+
     /// <summary>UC-53: Cập nhật ngày hẹn giao và ghi chú vận chuyển cho PO chưa nhận đủ.</summary>
     Task<PurchaseOrderDetailDto> UpdateEtaAsync(
         long poId,

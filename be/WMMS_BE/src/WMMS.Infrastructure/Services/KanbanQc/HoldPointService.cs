@@ -75,7 +75,7 @@ public class HoldPointService : IHoldPointService
         else if (currentStep != null && !currentStep.Is100PercentPassed())
         {
             canAdvance = false;
-            blockReason = $"Công đoạn hiện tại '{currentStep.StageName}' chưa đạt 100% nghiệm thu QC ({currentStep.PassedQty}/{currentStep.TargetQty} SP). (KBN01)";
+            blockReason = $"Công đoạn hiện tại '{currentStep.StageName}' chưa đạt 100% nghiệm thu chất lượng ({currentStep.PassedQty}/{currentStep.TargetQty} sản phẩm).";
         }
         else if (nextStep != null)
         {
@@ -83,7 +83,7 @@ public class HoldPointService : IHoldPointService
             if (hitsHoldPoint && !batch.GoodsIssuedUnlocked)
             {
                 canAdvance = false;
-                blockReason = $"Công đoạn tiếp theo '{nextStep.StageName}' (Thứ tự {nextStep.StageSequence}) là điểm dừng kiểm tra Hold Point. Chưa hoàn tất xuất kho cấp phát vật tư. (KBN02)";
+                blockReason = $"Công đoạn tiếp theo '{nextStep.StageName}' (Thứ tự {nextStep.StageSequence}) là trạm dừng kỹ thuật (Hold Point) nhưng chưa hoàn tất xuất kho cấp phát vật tư.";
             }
         }
 
@@ -592,7 +592,7 @@ public class HoldPointService : IHoldPointService
         if (!currentStep.Is100PercentPassed())
         {
             throw new InsufficientQcPassException(
-                $"Công đoạn {currentStep.StageSequence} ({currentStep.StageName}) chưa đạt 100% nghiệm thu QC ({currentStep.PassedQty}/{currentStep.TargetQty} SP). Tuyệt đối không được kéo nhảy cóc công đoạn. (KBN01)",
+                $"Công đoạn {currentStep.StageSequence} ({currentStep.StageName}) chưa đạt 100% nghiệm thu chất lượng ({currentStep.PassedQty}/{currentStep.TargetQty} sản phẩm). Không được chuyển nhảy cóc công đoạn.",
                 currentStep.TargetQty,
                 currentStep.PassedQty);
         }
@@ -658,7 +658,7 @@ public class HoldPointService : IHoldPointService
             await _context.SaveChangesAsync(cancellationToken);
 
             throw new HoldPointLockedException(
-                $"Thẻ Lô '{batch.BatchCode}' bị chặn tại trạm kiểm soát Hold Point công đoạn {nextStep.StageSequence} ({nextStep.StageName}) do phụ kiện/vật tư chưa được xuất kho cấp phát (GoodsIssuedUnlocked = false). Cần Chủ xưởng phê duyệt Overdriver để tiếp tục.",
+                $"Lô sản xuất '{batch.BatchCode}' bị chặn tại trạm dừng kỹ thuật (Hold Point) công đoạn {nextStep.StageSequence} ({nextStep.StageName}) do phụ kiện/vật tư chưa được xuất kho cấp phát. Cần Chủ xưởng phê duyệt mở khóa ngoại lệ (Overdrive) để tiếp tục.",
                 nextStep.StageSequence,
                 nextStep.StageName);
         }

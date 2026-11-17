@@ -38,7 +38,7 @@ API -> Application -> Domain <- Infrastructure (Inversion of Control)
 
 # 3. CONCURRENCY, TRANSACTIONS & DATA INTEGRITY
 - Concurrency Token: Tables with high contention (`inventory_stocks`, `consolidated_prs`, `sales_orders`) use SQL Server `rowversion` (`byte[] RowVersion`).
-- Optimistic Concurrency: When handling state transitions (PR Approval, Stock Allocation, PO Receipt, Kanban Advance), catch `DbUpdateConcurrencyException` and throw `ConflictException` (HTTP 409) with a clear Vietnamese explanation.
+- Optimistic Concurrency: When handling state transitions (PR Approval, Stock Allocation, PO Receipt, Production Lot Stage Advance), catch `DbUpdateConcurrencyException` and throw `ConflictException` (HTTP 409) with a clear Vietnamese explanation.
 - Atomic Transactions: Use `await _unitOfWork.BeginTransactionAsync()` and `await _unitOfWork.CommitTransactionAsync()` for multi-table updates (e.g., GRN Commit -> Stock Increase + Auto-Allocation).
 
 # 4. VIETNAMESE LOCALIZATION (i18n) & RESPONSE STANDARD
@@ -64,8 +64,8 @@ API -> Application -> Domain <- Infrastructure (Inversion of Control)
 - `BR-PUR-01`: Daily PR Shortage Aggregation: Aggregate all unallocated shortages into daily Consolidated PRs.
 - `BR-PUR-02`: PR Approval Role Check: Only `OWNER` or `MANAGER` can approve/reject. `PURCHASING` cannot self-approve.
 - `GBR-05`: Immutable Audit Trail: Every status change and rejection must append a record to `system_audit_logs`. Rejections require reason >= 10 chars.
-- `SC-19`: Kanban 100% Pass Enactment: Lot can only advance to stage S+1 when `PassedQty == BatchQty` at stage S.
-- `SC-20b`: QC Gate Branching: Split lot into main lot (Pass Qty) and child rework/scrap lot (Fail Qty).
+- `SC-19`: Sequential Lot Stage-Gate & 100% QC Pass Enactment: Production execution MUST follow a strict sequential Work Order / Lot Routing List & Stage-Gate (`S -> S+1`) where a lot can only advance when `PassedQty == BatchQty` at stage `S`. NEVER design or model this as a freeform Jira-style drag-and-drop Kanban Board.
+- `SC-20b`: QC Gate Branching: Split lot into main lot (Pass Qty) and child rework/scrap sub-lot (Fail Qty).
 
 # 6. CODE DOCUMENTATION & XML COMMENTS STANDARD
 - Every public Class, Interface, Method, Controller Action, and DTO MUST have XML doc comments (`/// <summary>`) in clear Vietnamese.

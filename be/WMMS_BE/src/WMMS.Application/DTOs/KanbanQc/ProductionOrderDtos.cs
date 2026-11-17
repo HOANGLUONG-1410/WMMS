@@ -222,3 +222,89 @@ public class OverdriveOperationResultDto
     public string Message { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// DTO Yêu cầu nghiệm thu lại (Re-inspection) cho thẻ nhánh phụ 3% Rework / Scrap Replenish (SC-20b, KBN01, QT-06).
+/// </summary>
+public class ReinspectSubBatchDto
+{
+    /// <summary>Mã công đoạn thực thi của thẻ phụ cần nghiệm thu lại.</summary>
+    public long BatchStepId { get; set; }
+
+    /// <summary>Số lượng mang đi nghiệm thu lại (phải bằng 100% BatchQty của thẻ phụ - BR-008).</summary>
+    public int InspectedQty { get; set; }
+
+    /// <summary>Số lượng đạt chuẩn sau sửa chữa / bù phôi.</summary>
+    public int PassQty { get; set; }
+
+    /// <summary>Số lượng vẫn lỗi không thể khắc phục (nếu có).</summary>
+    public int FailQty { get; set; }
+
+    /// <summary>Ghi chú kỹ thuật nghiệm thu KCS.</summary>
+    public string? Notes { get; set; }
+}
+
+/// <summary>
+/// DTO Kết quả nghiệm thu lại thẻ nhánh phụ.
+/// </summary>
+public class ReinspectSubBatchResultDto
+{
+    public long QcId { get; set; }
+    public long SubBatchId { get; set; }
+    public string SubBatchCode { get; set; } = string.Empty;
+    public int InspectedQty { get; set; }
+    public int PassQty { get; set; }
+    public int FailQty { get; set; }
+    public bool IsFullyPassed { get; set; }
+    public string SubBatchStatus { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// DTO Yêu cầu tái hòa nhập / Gộp lô (Merge Lot) vào thẻ chính (SC-20b).
+/// </summary>
+public class MergeSubBatchDto
+{
+    /// <summary>Lý do gộp lô và ghi chú chất lượng.</summary>
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// DTO Kết quả gộp thẻ phụ vào thẻ chính.
+/// </summary>
+public class MergeSubBatchResultDto
+{
+    public long SubBatchId { get; set; }
+    public string SubBatchCode { get; set; } = string.Empty;
+    public long MainBatchId { get; set; }
+    public string MainBatchCode { get; set; } = string.Empty;
+    public int MergedQty { get; set; }
+    public int MainBatchNewQty { get; set; }
+    public int CurrentStageSeq { get; set; }
+    public string MainBatchStatus { get; set; } = string.Empty;
+    public string SubBatchStatus { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// DTO Yêu cầu cho thẻ phụ chuyển tiếp độc lập mà không gộp vào lô chính (SC-20b).
+/// </summary>
+public class ContinueSubBatchIndependentlyDto
+{
+    /// <summary>Ghi chú / lý do chuyển tiếp độc lập.</summary>
+    public string? Notes { get; set; }
+}
+
+/// <summary>
+/// DTO Kết quả chuyển tiếp độc lập của thẻ phụ.
+/// </summary>
+public class ContinueSubBatchResultDto
+{
+    public long SubBatchId { get; set; }
+    public string SubBatchCode { get; set; } = string.Empty;
+    public int NextStageSeq { get; set; }
+    public string NextStageName { get; set; } = string.Empty;
+    public int BatchQty { get; set; }
+    public string BatchStatus { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+}
+

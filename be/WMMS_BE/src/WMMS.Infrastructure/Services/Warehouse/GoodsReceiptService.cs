@@ -108,7 +108,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         if (po.PoStatus != PoStatusEnum.ISSUED && po.PoStatus != PoStatusEnum.PARTIALLY_RECEIVED)
         {
             throw AppException.Conflict(
-                $"Đơn PO '{po.PoCode}' đang ở trạng thái {po.PoStatus}, chỉ nhận hàng khi ISSUED hoặc PARTIALLY_RECEIVED (BR-WHS-01).");
+                $"Đơn mua hàng '{po.PoCode}' hiện đã hoàn tất hoặc đã hủy nên không thể tiếp tục nhập kho.");
         }
 
         var lines = request.Lines
@@ -121,14 +121,14 @@ public class GoodsReceiptService : IGoodsReceiptService
         foreach (var (materialId, qty) in lines)
         {
             var detail = po.Details.FirstOrDefault(d => d.MaterialId == materialId)
-                ?? throw new AppException($"Vật tư ID = {materialId} không thuộc đơn PO '{po.PoCode}'.");
+                ?? throw new AppException($"Vật tư ID = {materialId} không thuộc đơn mua hàng '{po.PoCode}'.");
 
             var total = detail.ReceivedQty + qty;
             if (total > detail.OrderedQty * OverDeliveryTolerance)
             {
                 throw new AppException(
-                    $"Delivered quantity exceeds PO threshold. Requires Purchasing confirmation " +
-                    $"(vật tư {detail.Material.MaterialCode}: đặt {detail.OrderedQty}, đã nhận {detail.ReceivedQty}, lần này {qty}).");
+                    $"Số lượng thực nhận vượt quá dung sai cho phép của đơn mua hàng " +
+                    $"(vật tư {detail.Material.MaterialCode}: đặt {detail.OrderedQty}, đã nhận {detail.ReceivedQty}, nhập lần này {qty}). Vui lòng xác nhận lại với bộ phận Thu mua.");
             }
         }
 
@@ -463,19 +463,19 @@ public class GoodsReceiptService : IGoodsReceiptService
     {
         if (request.PoId <= 0)
         {
-            throw new AppException("PoId là bắt buộc (MSG01).", messageCode: MessageCodes.Msg01RequiredField);
+            throw new AppException("Vui lòng chọn đơn mua hàng cần nhập kho.", messageCode: MessageCodes.Msg01RequiredField);
         }
         if (request.Lines == null || request.Lines.Count == 0)
         {
-            throw new AppException("Phiếu nhập kho phải có ít nhất một dòng vật tư (MSG01).", messageCode: MessageCodes.Msg01RequiredField);
+            throw new AppException("Phiếu nhập kho phải có ít nhất một dòng vật tư.", messageCode: MessageCodes.Msg01RequiredField);
         }
         if (request.Lines.Any(l => l.ReceivedQty < 0))
         {
-            throw new AppException("Received quantity cannot be negative or blank. (MSG-WHS-02)");
+            throw new AppException("Số lượng vật tư thực nhận không được âm hoặc để trống.");
         }
         if (request.Lines.All(l => l.ReceivedQty == 0))
         {
-            throw new AppException("Phải có ít nhất một dòng thực nhận lớn hơn 0 (MSG-WHS-02).");
+            throw new AppException("Phải có ít nhất một dòng vật tư có số lượng thực nhận lớn hơn 0.");
         }
     }
 }

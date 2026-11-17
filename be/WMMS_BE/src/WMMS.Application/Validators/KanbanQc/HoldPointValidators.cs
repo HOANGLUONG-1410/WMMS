@@ -12,20 +12,20 @@ public class RequestHoldPointOverrideValidator : AbstractValidator<RequestHoldPo
     {
         RuleFor(x => x.BatchId)
             .GreaterThan(0)
-            .WithMessage("BatchId must be greater than 0.");
+            .WithMessage("Vui lòng chọn lô sản xuất hợp lệ.");
 
         RuleFor(x => x.HoldPointStageSeq)
             .GreaterThan(0)
             .When(x => x.HoldPointStageSeq.HasValue)
-            .WithMessage("HoldPointStageSeq must be greater than 0 if specified.");
+            .WithMessage("Thứ tự công đoạn chốt kiểm soát phải lớn hơn 0.");
 
         RuleFor(x => x.Justification)
             .NotEmpty()
-            .WithMessage("Justification is mandatory when requesting Hold Point Overdriver (KBN02).")
+            .WithMessage("Vui lòng nhập lý do giải trình khi xin phép chạy vượt chốt kiểm soát chờ vật tư.")
             .MinimumLength(5)
-            .WithMessage("Justification must be at least 5 characters long.")
+            .WithMessage("Lý do giải trình phải có ít nhất 5 ký tự.")
             .MaximumLength(500)
-            .WithMessage("Justification cannot exceed 500 characters.");
+            .WithMessage("Lý do giải trình không được vượt quá 500 ký tự.");
     }
 }
 
@@ -38,11 +38,11 @@ public class ApproveHoldPointOverrideValidator : AbstractValidator<ApproveHoldPo
     {
         RuleFor(x => x.Justification)
             .NotEmpty()
-            .WithMessage("Approval justification is mandatory for Owner Overdriver override (GBR-05).")
+            .WithMessage("Vui lòng nhập ý kiến phê duyệt cho phép chạy vượt chốt kiểm soát.")
             .MinimumLength(5)
-            .WithMessage("Approval justification must be at least 5 characters long.")
+            .WithMessage("Ý kiến phê duyệt phải có ít nhất 5 ký tự.")
             .MaximumLength(500)
-            .WithMessage("Approval justification cannot exceed 500 characters.");
+            .WithMessage("Ý kiến phê duyệt không được vượt quá 500 ký tự.");
     }
 }
 
@@ -55,16 +55,16 @@ public class RejectHoldPointOverrideValidator : AbstractValidator<RejectHoldPoin
     {
         RuleFor(x => x.Reason)
             .NotEmpty()
-            .WithMessage("Rejection reason is mandatory when declining Hold Point Overdriver (KBN02).")
+            .WithMessage("Vui lòng nhập lý do từ chối yêu cầu chạy vượt chốt kiểm soát.")
             .MinimumLength(5)
-            .WithMessage("Rejection reason must be at least 5 characters long.")
+            .WithMessage("Lý do từ chối phải có ít nhất 5 ký tự.")
             .MaximumLength(500)
-            .WithMessage("Rejection reason cannot exceed 500 characters.");
+            .WithMessage("Lý do từ chối không được vượt quá 500 ký tự.");
     }
 }
 
 /// <summary>
-/// Validator cho DTO Chuyển công đoạn sản xuất (Advance Stage / Move Kanban Card).
+/// Validator cho DTO Chuyển công đoạn sản xuất tuần tự.
 /// </summary>
 public class AdvanceStageRequestValidator : AbstractValidator<AdvanceStageRequestDto>
 {
@@ -73,6 +73,6 @@ public class AdvanceStageRequestValidator : AbstractValidator<AdvanceStageReques
         RuleFor(x => x.Notes)
             .MaximumLength(500)
             .When(x => !string.IsNullOrEmpty(x.Notes))
-            .WithMessage("Stage advance notes cannot exceed 500 characters.");
+            .WithMessage("Ghi chú chuyển công đoạn không được vượt quá 500 ký tự.");
     }
 }

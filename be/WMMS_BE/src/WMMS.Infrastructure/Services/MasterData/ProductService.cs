@@ -77,7 +77,7 @@ public class ProductService : IProductService
     {
         var sku = dto.ProductSku.Trim();
         if (await _context.Products.AnyAsync(p => p.ProductSku.ToLower() == sku.ToLower(), cancellationToken))
-            throw AppException.Conflict($"SKU '{sku}' đã tồn tại (BR-MDM-01).");
+            throw AppException.Conflict($"Mã sản phẩm (SKU) '{sku}' đã tồn tại trong danh mục.");
 
         var now = DateTime.UtcNow;
         var p = new Product
@@ -149,9 +149,57 @@ public class ProductService : IProductService
 
     private static ProductDto ToDto(Product p) => new()
     {
-        ProductId = p.ProductId, ProductSku = p.ProductSku, ProductName = p.ProductName, CategoryName = p.CategoryName,
-        DimensionsCm = p.DimensionsCm, WoodSpecies = p.WoodSpecies, FinishColor = p.FinishColor, CbmPerUnit = p.CbmPerUnit,
+        ProductId = p.ProductId, ProductSku = p.ProductSku, ProductName = p.ProductName, CategoryName = NormalizeCategoryName(p.CategoryName),
+        DimensionsCm = p.DimensionsCm, WoodSpecies = NormalizeWoodSpecies(p.WoodSpecies), FinishColor = NormalizeFinishColor(p.FinishColor), CbmPerUnit = p.CbmPerUnit,
         ImageUrl = p.ImageUrl, CadDrawingUrl = p.CadDrawingUrl, Status = p.Status
     };
+
+    /// <summary>
+    /// Chuẩn hóa tên loại gỗ sang Tiếng Việt chuẩn nếu dữ liệu trong DB cũ còn lưu Tiếng Anh.
+    /// </summary>
+    public static string? NormalizeWoodSpecies(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return raw;
+        return raw.Trim() switch
+        {
+            "White Oak" or "American White Oak" => "Gỗ sồi trắng Bắc Mỹ",
+            "American Ash" or "Imported Ash" or "Ash" => "Gỗ tần bì nhập khẩu",
+            "Rubberwood + Oak Veneer" or "Rubberwood" => "Gỗ cao su + Veneer sồi",
+            "Walnut" or "American Walnut" => "Gỗ óc chó Bắc Mỹ",
+            _ => raw.Trim()
+        };
+    }
+
+    /// <summary>
+    /// Chuẩn hóa màu sơn hoàn thiện sang Tiếng Việt chuẩn nếu dữ liệu trong DB cũ còn lưu Tiếng Anh.
+    /// </summary>
+    public static string? NormalizeFinishColor(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return raw;
+        return raw.Trim() switch
+        {
+            "Natural Walnut" => "Màu gỗ óc chó tự nhiên",
+            "Smoked Oak" => "Màu gỗ sồi khói",
+            "Warm Chestnut" => "Màu hạt dẻ ấm",
+            "Natural Oak" or "Natural Clear Matte PU" => "Màu gỗ sồi tự nhiên",
+            _ => raw.Trim()
+        };
+    }
+
+    /// <summary>
+    /// Chuẩn hóa tên danh mục sản phẩm sang Tiếng Việt chuẩn nếu dữ liệu trong DB cũ còn lưu Tiếng Anh.
+    /// </summary>
+    public static string NormalizeCategoryName(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        return raw.Trim() switch
+        {
+            "Dining Chair" or "Chair" or "Chairs" => "Ghế ăn",
+            "Dining Table" or "Table" or "Tables" => "Bàn ăn",
+            "Sideboard" or "Cabinet" or "Cabinets" => "Tủ trang trí",
+            "Work Desk" or "Desk" or "Desks" => "Bàn làm việc",
+            _ => raw.Trim()
+        };
+    }
 }
 

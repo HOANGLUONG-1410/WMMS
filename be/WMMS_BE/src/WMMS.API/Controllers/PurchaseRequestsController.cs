@@ -49,7 +49,7 @@ public class PurchaseRequestsController : MasterDataControllerBase
         await _filterValidator.ValidateAndThrowAsync(filter, cancellationToken);
 
         var result = await _purchaseRequestService.GetPurchaseRequestsAsync(filter, IsPurchasingOnly(), cancellationToken);
-        return Ok(ApiResponse<PagedResult<PurchaseRequestListItemDto>>.Ok(result, "Lấy danh sách phiếu yêu cầu mua hàng gộp thành công (UC-45)."));
+        return Ok(ApiResponse<PagedResult<PurchaseRequestListItemDto>>.Ok(result, "Lấy danh sách phiếu yêu cầu mua hàng gộp thành công."));
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public class PurchaseRequestsController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var detail = await _purchaseRequestService.GetPurchaseRequestByIdAsync(id, IsPurchasingOnly(), cancellationToken);
-        return Ok(ApiResponse<PurchaseRequestDetailDto>.Ok(detail, "Lấy chi tiết phiếu yêu cầu mua hàng thành công (UC-46)."));
+        return Ok(ApiResponse<PurchaseRequestDetailDto>.Ok(detail, "Lấy chi tiết phiếu yêu cầu mua hàng thành công."));
     }
 
     /// <summary>
@@ -86,7 +86,7 @@ public class PurchaseRequestsController : MasterDataControllerBase
         var result = await _purchaseRequestService.ApprovePurchaseRequestAsync(
             id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<PurchaseRequestDetailDto>.Ok(result, $"Phiếu PR {result.PrCode} đã được phê duyệt và chuyển sang bộ phận Thu mua (UC-47)."));
+        return Ok(ApiResponse<PurchaseRequestDetailDto>.Ok(result, $"Phiếu yêu cầu mua hàng {result.PrCode} đã được phê duyệt và chuyển sang bộ phận Thu mua."));
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public class PurchaseRequestsController : MasterDataControllerBase
         var result = await _purchaseRequestService.RejectPurchaseRequestAsync(
             id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<PurchaseRequestDetailDto>.Ok(result, $"Phiếu PR {result.PrCode} đã bị từ chối và chuyển trả về Kế hoạch vật tư (UC-48)."));
+        return Ok(ApiResponse<PurchaseRequestDetailDto>.Ok(result, $"Phiếu yêu cầu mua hàng {result.PrCode} đã bị từ chối và chuyển trả về bộ phận Kế hoạch vật tư."));
     }
 
     /// <summary>

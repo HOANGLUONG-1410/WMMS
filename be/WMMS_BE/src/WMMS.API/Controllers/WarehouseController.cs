@@ -35,7 +35,7 @@ public class WarehouseController : MasterDataControllerBase
         var result = await _goodsReceiptService.CommitGoodsReceiptAsync(
             request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
 
-        var message = $"Goods Receipt committed successfully! Stock updated and materials auto-allocated to {result.AllocatedOrderCount} pending orders. (MSG-WHS-01)";
+        var message = $"Đã xác nhận phiếu nhập kho thành công! Tồn kho đã được cập nhật và tự động phân bổ vật tư cho {result.AllocatedOrderCount} đơn hàng đang chờ.";
         return Ok(ApiResponse<GoodsReceiptResultDto>.Ok(result, message));
     }
 
@@ -47,6 +47,6 @@ public class WarehouseController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _goodsReceiptService.GetOpenPurchaseOrdersAsync(search, cancellationToken);
-        return Ok(ApiResponse<IReadOnlyList<OpenPurchaseOrderDto>>.Ok(result, "Fetched open purchase orders awaiting receipt (SC-17)."));
+        return Ok(ApiResponse<IReadOnlyList<OpenPurchaseOrderDto>>.Ok(result, "Đã tải danh sách đơn đặt hàng đang chờ nhập kho."));
     }
 }

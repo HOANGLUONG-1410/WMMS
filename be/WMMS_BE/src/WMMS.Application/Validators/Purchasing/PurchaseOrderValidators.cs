@@ -11,37 +11,58 @@ public class CreatePurchaseOrdersRequestValidator : AbstractValidator<CreatePurc
 {
     public CreatePurchaseOrdersRequestValidator()
     {
-        RuleFor(x => x.PrId).GreaterThan(0).WithMessage("PrId is required.");
+        RuleFor(x => x.PrId)
+            .GreaterThan(0)
+            .WithMessage("Vui lòng chọn phiếu yêu cầu mua hàng cần lập đơn đặt hàng.");
 
         RuleFor(x => x.Lines)
-            .NotEmpty().WithMessage("At least one PR line must be selected to generate a Purchase Order.");
+            .NotEmpty()
+            .WithMessage("Vui lòng chọn ít nhất một mặt hàng để phát hành đơn đặt hàng.");
 
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
-            line.RuleFor(l => l.PrItemId).GreaterThan(0).WithMessage("PrItemId is required.");
-            line.RuleFor(l => l.SupplierId).GreaterThan(0).WithMessage("Each line must be assigned to a supplier (BR-PUR-03).");
-            line.RuleFor(l => l.OrderedQty).GreaterThan(0).WithMessage("OrderedQty must be greater than 0.");
-            line.RuleFor(l => l.UnitPrice).GreaterThan(0).WithMessage("UnitPrice must be greater than 0.");
+            line.RuleFor(l => l.PrItemId)
+                .GreaterThan(0)
+                .WithMessage("Vui lòng chọn dòng vật tư hợp lệ từ phiếu yêu cầu mua hàng.");
+
+            line.RuleFor(l => l.SupplierId)
+                .GreaterThan(0)
+                .WithMessage("Mỗi mặt hàng đặt mua bắt buộc phải chọn một nhà cung cấp hợp lệ.");
+
+            line.RuleFor(l => l.OrderedQty)
+                .GreaterThan(0)
+                .WithMessage("Số lượng đặt hàng phải lớn hơn 0.");
+
+            line.RuleFor(l => l.UnitPrice)
+                .GreaterThan(0)
+                .WithMessage("Đơn giá thỏa thuận phải lớn hơn 0.");
         });
 
         RuleFor(x => x.Lines)
             .Must(lines => lines.GroupBy(l => (l.PrItemId, l.SupplierId)).All(g => g.Count() == 1))
-            .WithMessage("Duplicate (PrItemId, SupplierId) lines are not allowed; merge quantities into one line.");
+            .WithMessage("Không được chọn trùng cùng một mặt hàng và nhà cung cấp trên nhiều dòng; vui lòng cộng gộp số lượng.");
 
         RuleFor(x => x.SupplierTerms)
-            .NotEmpty().WithMessage("Promised delivery date is required for each supplier.");
+            .NotEmpty()
+            .WithMessage("Vui lòng nhập ngày hẹn giao hàng cho từng nhà cung cấp.");
 
         RuleFor(x => x.SupplierTerms)
             .Must(t => t.GroupBy(s => s.SupplierId).All(g => g.Count() == 1))
-            .WithMessage("Each supplier must appear only once in SupplierTerms.");
+            .WithMessage("Mỗi nhà cung cấp chỉ được khai báo một mục điều khoản giao hàng.");
 
         RuleForEach(x => x.SupplierTerms).ChildRules(terms =>
         {
-            terms.RuleFor(t => t.SupplierId).GreaterThan(0);
+            terms.RuleFor(t => t.SupplierId)
+                .GreaterThan(0)
+                .WithMessage("Vui lòng chọn nhà cung cấp hợp lệ trong mục điều khoản giao hàng.");
+
             terms.RuleFor(t => t.ExpectedArrivalDate)
                 .Must(d => d.Date >= DateTime.UtcNow.Date)
-                .WithMessage("Promised delivery date cannot be in the past (UC052.E1).");
-            terms.RuleFor(t => t.Terms).MaximumLength(1000).WithMessage("Terms must not exceed 1000 characters.");
+                .WithMessage("Ngày nhà cung cấp hẹn giao hàng không được nằm trong quá khứ.");
+
+            terms.RuleFor(t => t.Terms)
+                .MaximumLength(1000)
+                .WithMessage("Điều khoản thanh toán và giao hàng không được vượt quá 1.000 ký tự.");
         });
 
         RuleFor(x => x)
@@ -51,7 +72,7 @@ public class CreatePurchaseOrdersRequestValidator : AbstractValidator<CreatePurc
                 var termSuppliers = x.SupplierTerms.Select(t => t.SupplierId).ToHashSet();
                 return lineSuppliers.SetEquals(termSuppliers);
             })
-            .WithMessage("SupplierTerms must contain exactly the suppliers that have order lines.");
+            .WithMessage("Danh sách điều khoản giao hàng phải khớp với tất cả các nhà cung cấp có mặt hàng đặt mua.");
     }
 }
 
@@ -60,10 +81,13 @@ public class UpdatePoEtaValidator : AbstractValidator<UpdatePoEtaDto>
 {
     public UpdatePoEtaValidator()
     {
-        RuleFor(x => x.ExpectedArrivalDate)
-            .Must(d => d.Date >= DateTime.UtcNow.Date)
-            .WithMessage("Promised delivery date cannot be in the past (UC052.E1).");
-        RuleFor(x => x.Notes).MaximumLength(500).WithMessage("Notes must not exceed 500 characters.");
+        RuleFor(x => x.EffectiveEtaDate)
+            .Must(d => d != default && d.Date >= DateTime.UtcNow.Date)
+            .WithMessage("Ngày nhà cung cấp hẹn giao hàng không được bỏ trống hoặc nằm trong quá khứ.");
+
+        RuleFor(x => x.Notes)
+            .MaximumLength(500)
+            .WithMessage("Ghi chú vận chuyển hoặc lý do dời lịch không được vượt quá 500 ký tự.");
     }
 }
 
@@ -77,12 +101,14 @@ public class PurchaseOrderFilterValidator : AbstractValidator<PurchaseOrderFilte
     {
         RuleFor(x => x.Status)
             .Must(s => string.IsNullOrWhiteSpace(s) || Statuses.Contains(s.Trim().ToUpperInvariant()))
-            .WithMessage("Status must be one of: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.");
+            .WithMessage("Trạng thái đơn mua hàng cần lọc không hợp lệ (chỉ nhận: Đã phát hành, Nhận một phần, Đã nhận đủ, Đã hủy).");
+
         RuleFor(x => x.EtaStatus)
             .Must(s => string.IsNullOrWhiteSpace(s) || EtaStatuses.Contains(s.Trim().ToUpperInvariant()))
-            .WithMessage("EtaStatus must be one of: OVERDUE, DUE_SOON.");
+            .WithMessage("Bộ lọc tiến độ giao hàng (ETA) không hợp lệ (chỉ nhận: Quá hạn hoặc Sắp đến hạn).");
+
         RuleFor(x => x)
             .Must(x => !x.FromEta.HasValue || !x.ToEta.HasValue || x.FromEta.Value.Date <= x.ToEta.Value.Date)
-            .WithMessage("FromEta must not be later than ToEta.");
+            .WithMessage("Ngày bắt đầu lọc lịch giao hàng không được lớn hơn ngày kết thúc.");
     }
 }
