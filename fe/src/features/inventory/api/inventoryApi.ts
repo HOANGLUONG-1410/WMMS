@@ -20,41 +20,17 @@ interface ApiResponse<T> {
 }
 
 /**
- * Gắn danh sách preview Order Space giữ chỗ cho từng dòng tồn kho
+ * Gắn danh sách preview Order Space giữ chỗ cho từng dòng tồn kho.
+ * Lưu ý: Với server live, chỉ giữ nguyên preview nếu backend trả về, KHÔNG tự ý chèn dữ liệu mẫu hardcode.
  */
 function enrichAllocationsPreview(item: InventoryStockDto): InventoryStockDto {
   if (item.activeAllocationsPreview && item.activeAllocationsPreview.length > 0) {
     return item;
   }
 
-  const matchedDefault = DEFAULT_INVENTORY_STOCKS.find(
-    (d) =>
-      d.materialCode.toUpperCase() === (item.materialCode || "").toUpperCase() ||
-      d.materialId === item.materialId,
-  );
-
-  if (matchedDefault?.activeAllocationsPreview && item.allocatedQty > 0) {
-    return {
-      ...item,
-      activeAllocationsPreview: matchedDefault.activeAllocationsPreview,
-    };
-  }
-
-  if (item.allocatedQty > 0) {
-    return {
-      ...item,
-      activeAllocationsPreview: [
-        {
-          spaceKey: "SPACE-880504",
-          reservedQty: item.allocatedQty,
-        },
-      ],
-    };
-  }
-
   return {
     ...item,
-    activeAllocationsPreview: [],
+    activeAllocationsPreview: item.activeAllocationsPreview || [],
   };
 }
 
