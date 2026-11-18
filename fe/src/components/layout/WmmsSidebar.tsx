@@ -234,21 +234,49 @@ export default function WmmsSidebar({
     isInOrderSpace ||
     ((isInBomPage || isInReconciliation || isInProductionPage) && Boolean(displaySpaceKey));
 
+  const canAccessBom = ([ROLES.ADMIN, ROLES.OWNER, ROLES.PLANNER, ROLES.SALES] as string[]).includes(
+    activeRole,
+  );
+  const canAccessReconciliation = (
+    [
+      ROLES.ADMIN,
+      ROLES.OWNER,
+      ROLES.PLANNER,
+      ROLES.WAREHOUSE,
+      ROLES.PURCHASING,
+      ROLES.SALES,
+    ] as string[]
+  ).includes(activeRole);
+  const canAccessProductionProgress = (
+    [
+      ROLES.ADMIN,
+      ROLES.OWNER,
+      ROLES.PLANNER,
+      ROLES.LEADER,
+      ROLES.QC,
+      ROLES.WAREHOUSE,
+    ] as string[]
+  ).includes(activeRole);
+
   const spaceSubItems: SidebarItem[] = [];
   if (isSpaceContextActive && displaySpaceKey) {
-    spaceSubItems.push({
-      icon: Icons.bom,
-      label: "BOM & quy trình sản xuất",
-      path: `/bom?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
-    });
-    spaceSubItems.push({
-      icon: Icons.reconcile,
-      label: "Đối chiếu & phân bổ vật tư",
-      path: `/inventory/reconciliation?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
-    });
+    if (canAccessBom) {
+      spaceSubItems.push({
+        icon: Icons.bom,
+        label: "BOM & quy trình sản xuất",
+        path: `/bom?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
+      });
+    }
+    if (canAccessReconciliation) {
+      spaceSubItems.push({
+        icon: Icons.reconcile,
+        label: "Đối chiếu & phân bổ vật tư",
+        path: `/inventory/reconciliation?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
+      });
+    }
 
-    // Tab Sản phẩm và Tab con Tiến trình sản xuất: CHỈ hiện khi người dùng truy cập trang tiến trình sản xuất của sản phẩm
-    if (isInProductionPage && Boolean(orderItemIdFromQuery)) {
+    // Tab Sản phẩm và Tab con Tiến trình sản xuất: CHỈ hiện khi người dùng có quyền và truy cập trang tiến trình sản xuất của sản phẩm
+    if (isInProductionPage && Boolean(orderItemIdFromQuery) && canAccessProductionProgress) {
       const productTitle = skuFromQuery ? `Sản phẩm ${skuFromQuery}` : `Sản phẩm #${orderItemIdFromQuery}`;
       const prodPath = `/production/progress?spaceKey=${encodeURIComponent(displaySpaceKey)}&orderItemId=${encodeURIComponent(orderItemIdFromQuery)}${skuFromQuery ? `&sku=${encodeURIComponent(skuFromQuery)}` : ""}`;
       spaceSubItems.push({
@@ -284,6 +312,18 @@ export default function WmmsSidebar({
             items: [
               { icon: Icons.users, label: "Tài khoản & Phân quyền", path: "/admin/users" },
               { icon: Icons.audit, label: "Nhật ký hoạt động", path: "/admin/audit-logs" },
+            ],
+          },
+          {
+            heading: "ĐƠN HÀNG & SẢN XUẤT",
+            items: [
+              {
+                icon: Icons.orders,
+                label: "Danh sách đơn hàng",
+                path: "/orders",
+                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+              },
+              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/progress" },
             ],
           },
           {
@@ -366,6 +406,7 @@ export default function WmmsSidebar({
                 path: "/orders",
                 children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
               },
+              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/progress" },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
               { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
               { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
@@ -405,6 +446,12 @@ export default function WmmsSidebar({
           {
             heading: "DANH MỤC & XƯỞNG",
             items: [
+              {
+                icon: Icons.orders,
+                label: "Danh sách đơn hàng",
+                path: "/orders",
+                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+              },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
               { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
             ],
@@ -417,11 +464,14 @@ export default function WmmsSidebar({
             heading: "XƯỞNG SẢN XUẤT",
             items: [
               { icon: Icons.dashboard, label: "Bảng điều hành & ETD", path: "/dashboard" },
+              {
+                icon: Icons.orders,
+                label: "Danh sách đơn hàng",
+                path: "/orders",
+                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+              },
               { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
               { icon: Icons.routing, label: "Tiến độ công đoạn tại trạm", path: "/production/progress" },
-              ...(orderSpaceChildItem
-                ? [{ icon: Icons.space, label: orderSpaceChildItem.label, path: orderSpaceChildItem.path }]
-                : []),
             ],
           },
           {
@@ -438,6 +488,12 @@ export default function WmmsSidebar({
           {
             heading: "KIỂM SOÁT CHẤT LƯỢNG",
             items: [
+              {
+                icon: Icons.orders,
+                label: "Danh sách đơn hàng",
+                path: "/orders",
+                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+              },
               { icon: Icons.qc, label: "Kiểm tra QC & nhật ký lỗi", path: "/qc/inspection" },
               { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
             ],

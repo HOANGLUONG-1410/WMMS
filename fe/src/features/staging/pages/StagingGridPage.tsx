@@ -26,8 +26,9 @@ export default function StagingGridPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setOrderSpaces, setCurrentSpaceKey, appendAuditLog } = useWmms();
 
-  // Chế độ nạp dữ liệu: 'EXCEL' (tải file .xlsx) hoặc 'MANUAL' (nhập tay trực tiếp)
-  const [intakeMode, setIntakeMode] = useState<'EXCEL' | 'MANUAL'>('EXCEL');
+  // Kéo thả (Drag & Drop) file từ máy tính
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [isHoveringDropzone, setIsHoveringDropzone] = useState(false);
 
   // Thông tin đơn hàng (PO Header)
   const [poNumber, setPoNumber] = useState('PO-2026-OCT-880515');
@@ -76,6 +77,53 @@ export default function StagingGridPage() {
       setCustomerCountry(customerList[0].country || 'USA');
     }
   }, [customerList, selectedCustomerId]);
+
+  // Lắng nghe sự kiện kéo file trên toàn cửa sổ (Window Drag & Drop)
+  useEffect(() => {
+    const handleWindowDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        setIsDraggingFile(true);
+      }
+    };
+
+    const handleWindowDragLeave = (e: DragEvent) => {
+      if (
+        !e.relatedTarget ||
+        e.clientX <= 0 ||
+        e.clientY <= 0 ||
+        e.clientX >= window.innerWidth ||
+        e.clientY >= window.innerHeight
+      ) {
+        setIsDraggingFile(false);
+        setIsHoveringDropzone(false);
+      }
+    };
+
+    const handleWindowDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+        setIsDraggingFile(true);
+      }
+    };
+
+    const handleWindowDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDraggingFile(false);
+      setIsHoveringDropzone(false);
+    };
+
+    window.addEventListener('dragenter', handleWindowDragEnter);
+    window.addEventListener('dragleave', handleWindowDragLeave);
+    window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('drop', handleWindowDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', handleWindowDragEnter);
+      window.removeEventListener('dragleave', handleWindowDragLeave);
+      window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('drop', handleWindowDrop);
+    };
+  }, []);
 
   const handleCustomerChange = (customerIdVal: string) => {
     const idNum = Number(customerIdVal);
@@ -138,49 +186,16 @@ export default function StagingGridPage() {
     );
   };
 
-  /** Chuyển sang chế độ nhập tay với lưới trống */
-  const handleSwitchToManualMode = () => {
-    setIntakeMode('MANUAL');
-    setUploadedFileName('');
-    setSheetName('');
-    const initialBlankRow = validateStagingRowClient({
-      rowNumber: 1,
-      productSku: '',
-      productDescription: '',
-      dimensionsMm: '',
-      finishColor: '',
-      orderQty: 0,
-      targetEtd: new Date().toISOString().split('T')[0],
-      fscRequired: true,
-      technicalDrawingName: '',
-    });
-    setRows([initialBlankRow]);
-    setBannerAlert({
-      type: 'info',
-      text: 'Đã chuyển sang chế độ Nhập tay (Manual Entry). Hãy nhập thông tin sản phẩm và bấm "+ Thêm dòng".',
-    });
-  };
-
-  /** Nạp dữ liệu mẫu thử nghiệm */
-  const handleLoadSampleData = () => {
-    setUploadedFileName('PO_Target_Home_US_880515.xlsx (Dữ liệu mẫu)');
-    setSheetName('OrderDetails');
-    setPoNumber('ASH-2026-OCT-880515');
-    setCustomerName('Target Home US');
-    setCustomerCountry('USA');
-    setRows(INITIAL_STAGING_GRID_ROWS.map((r) => validateStagingRowClient(r)));
-    setBannerAlert({
-      type: 'success',
-      text: 'Đã nạp 4 dòng dữ liệu mẫu. Các ô lỗi cú pháp được đánh dấu viền đỏ.',
-    });
-  };
-
-  /** Upload file Excel PO lên Backend (/api/v1/orders/staging/upload) */
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  /** Xử lý file Excel được tải lên (từ nút bấm hoặc kéo thả) */
+  const processExcelFile = async (file: File) => {
     if (!file) return;
 
-    setIntakeMode('EXCEL');
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith('.xlsx') && !lowerName.endsWith('.xls')) {
+      toast.error('Chỉ chấp nhận file Excel có định dạng .xlsx hoặc .xls!');
+      return;
+    }
+
     setUploadedFileName(file.name);
     setIsUploading(true);
 
@@ -206,17 +221,33 @@ export default function StagingGridPage() {
         return;
       }
     } catch (err: any) {
-      console.warn('Lỗi phân tích từ máy chủ, chuyển sang kiểm tra cục bộ:', err);
-      // Fallback cục bộ
+      console.warn('Lỗi phân tích từ máy chủ:', err);
+      const isNetworkError = !err?.status || err?.status === 0;
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        (isNetworkError
+          ? 'Không thể kết nối Backend để bóc tách file Excel. Đã nạp dữ liệu vào lưới cục bộ.'
+          : 'Có lỗi xảy ra khi bóc tách file Excel từ máy chủ.');
+
       setBannerAlert({
         type: 'error',
-        text:
-          err?.response?.data?.message ||
-          'Không thể kết nối Backend để bóc tách file Excel. Đã nạp dữ liệu vào lưới cục bộ.',
+        text: isNetworkError
+          ? 'Không thể kết nối Backend để bóc tách file Excel. Đã nạp dữ liệu vào lưới cục bộ.'
+          : errorMsg,
       });
+      toast.error(errorMsg);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  /** Upload file Excel PO qua input file */
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processExcelFile(file);
     }
   };
 
@@ -255,22 +286,35 @@ export default function StagingGridPage() {
         });
         toast.error(`Còn ${errCount} ô lỗi định dạng cần sửa.`);
       }
-    } catch {
-      // Client-side fallback check
-      const remainingErrors = revalidated.reduce(
-        (sum, r) => sum + (r.cellErrors?.length || 0),
-        0
-      );
-      if (remainingErrors === 0) {
-        setBannerAlert({
-          type: 'success',
-          text: `Toàn bộ ${revalidated.length} dòng sản phẩm đã sạch lỗi (Client-side validation).`,
-        });
-      } else {
+    } catch (err: any) {
+      const isNetworkError = !err?.status || err?.status === 0;
+      if (!isNetworkError) {
+        const errorMsg =
+          err?.response?.data?.message ||
+          err?.message ||
+          'Kiểm tra dữ liệu thất bại từ máy chủ.';
         setBannerAlert({
           type: 'error',
-          text: `Còn ${remainingErrors} ô lỗi định dạng cần chỉnh sửa trực tiếp.`,
+          text: errorMsg,
         });
+        toast.error(errorMsg);
+      } else {
+        // Client-side fallback check khi mất kết nối mạng
+        const remainingErrors = revalidated.reduce(
+          (sum, r) => sum + (r.cellErrors?.length || 0),
+          0
+        );
+        if (remainingErrors === 0) {
+          setBannerAlert({
+            type: 'success',
+            text: `Toàn bộ ${revalidated.length} dòng sản phẩm đã sạch lỗi (Client-side validation).`,
+          });
+        } else {
+          setBannerAlert({
+            type: 'error',
+            text: `Còn ${remainingErrors} ô lỗi định dạng cần chỉnh sửa trực tiếp.`,
+          });
+        }
       }
     } finally {
       setIsValidating(false);
@@ -347,6 +391,7 @@ export default function StagingGridPage() {
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
+        err?.message ||
         'Không thể khởi tạo Không gian đơn hàng. Vui lòng kiểm tra lại thông tin đơn.';
       setBannerAlert({ type: 'error', text: msg });
       toast.error(msg);
@@ -484,32 +529,32 @@ export default function StagingGridPage() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Phương thức nhập liệu
+                Nhập file Excel
               </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIntakeMode('EXCEL')}
-                  className={`flex-1 py-2 px-3 text-sm font-semibold rounded-lg border transition cursor-pointer ${
-                    intakeMode === 'EXCEL'
-                      ? 'bg-blue-50 text-blue-700 border-blue-300'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  Tải file Excel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSwitchToManualMode}
-                  className={`flex-1 py-2 px-3 text-sm font-semibold rounded-lg border transition cursor-pointer ${
-                    intakeMode === 'MANUAL'
-                      ? 'bg-blue-50 text-blue-700 border-blue-300'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  Nhập tay
-                </button>
-              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-2 px-4 text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg shadow-xs transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>{isUploading ? 'Đang đọc file...' : 'Tải file Excel'}</span>
+              </button>
+              {uploadedFileName && (
+                <p className="text-xs text-slate-500 mt-1 truncate" title={uploadedFileName}>
+                  Đã tải: <span className="font-semibold text-slate-700">{uploadedFileName}</span>{' '}
+                  {sheetName ? `(${sheetName})` : ''}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -536,50 +581,73 @@ export default function StagingGridPage() {
           </div>
         )}
 
-        {/* Excel Upload Dropzone */}
-        {intakeMode === 'EXCEL' && (
-          <div className="bg-white border-2 border-dashed border-blue-300 rounded-xl p-6 text-center transition">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-            </div>
-            <div className="text-sm font-bold text-slate-900">
-              {uploadedFileName
-                ? `Tệp đã tải lên: ${uploadedFileName} ${sheetName ? `(Trang tính: ${sheetName})` : ''}`
-                : 'Kéo thả hoặc chọn file Excel PO (.xlsx / .xls) từ máy tính'}
-            </div>
-            <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
-              Hệ thống tự động loại bỏ các cột thương mại nhạy cảm{' '}
-              <span className="font-semibold text-slate-700">
-                (Số container, Cảng xuất, Hóa đơn chiếu lệ PI, Đơn giá CBD)
-              </span>{' '}
-              để bảo mật dữ liệu khi chuyển xuống xưởng.
-            </p>
-
-            <div className="mt-4 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                disabled={isUploading}
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs transition cursor-pointer"
+        {/* Excel Upload Dropzone (chỉ hiện khi người dùng kéo file từ máy tính vào) */}
+        {isDraggingFile && (
+          <div
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setIsHoveringDropzone(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!isHoveringDropzone) {
+                setIsHoveringDropzone(true);
+              }
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setIsHoveringDropzone(false);
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingFile(false);
+              setIsHoveringDropzone(false);
+              const file = e.dataTransfer?.files?.[0];
+              if (file) {
+                processExcelFile(file);
+              }
+            }}
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+              isHoveringDropzone
+                ? 'border-emerald-500 bg-emerald-50/90 shadow-md'
+                : 'border-blue-400 bg-blue-50/40 shadow-xs'
+            }`}
+          >
+            <div className="pointer-events-none">
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2.5 transition-colors ${
+                  isHoveringDropzone
+                    ? 'bg-emerald-100 text-emerald-600'
+                    : 'bg-blue-100 text-blue-600'
+                }`}
               >
-                {isUploading ? 'Đang đọc file...' : 'Chọn file Excel từ máy'}
-              </button>
-              <button
-                type="button"
-                onClick={handleLoadSampleData}
-                className="px-4 py-2 text-sm font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg transition cursor-pointer"
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </div>
+              <div
+                className={`text-base font-bold transition-colors ${
+                  isHoveringDropzone ? 'text-emerald-800' : 'text-slate-900'
+                }`}
               >
-                Nạp dữ liệu mẫu
-              </button>
+                {isHoveringDropzone
+                  ? 'Thả file Excel vào đây để tải lên ngay'
+                  : 'Kéo và thả file Excel PO (.xlsx / .xls) vào khung này để nhập'}
+              </div>
+              <p
+                className={`text-xs mt-1 max-w-xl mx-auto transition-colors ${
+                  isHoveringDropzone ? 'text-emerald-600' : 'text-slate-500'
+                }`}
+              >
+                Hệ thống tự động loại bỏ các cột thương mại nhạy cảm{' '}
+                <span className={`font-semibold ${isHoveringDropzone ? 'text-emerald-800' : 'text-slate-700'}`}>
+                  (Số container, Cảng xuất, Hóa đơn chiếu lệ PI, Đơn giá CBD)
+                </span>{' '}
+                để bảo mật dữ liệu khi chuyển xuống xưởng.
+              </p>
             </div>
           </div>
         )}
