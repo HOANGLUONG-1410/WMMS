@@ -2,6 +2,7 @@ import axios from "axios";
 import { env } from "../constants/env";
 import { ApiError, type ApiResponseEnvelope } from "./api/apiError";
 import { HttpStatus } from "./api/httpStatus";
+import { ApiErrorHandler } from "./api/apiErrorHandler";
 import { getAccessToken } from "../features/auth/store/tokenStore";
 
 export const apiClient = axios.create({
@@ -39,12 +40,18 @@ apiClient.interceptors.response.use(
           body.messageCode,
           normalizedErrors,
           response.config?.url,
+          body,
         ),
       );
     }
     return response;
   },
   (error: unknown) => {
-    return Promise.reject(ApiError.fromAxiosError(error));
+    const apiError = ApiError.fromAxiosError(error);
+    // Tự động xử lý hết hạn phiên đăng nhập (401) cho mọi request (kể cả gọi trực tiếp không qua TanStack Query)
+    if (apiError.status === HttpStatus.UNAUTHORIZED) {
+      ApiErrorHandler.handle(apiError);
+    }
+    return Promise.reject(apiError);
   },
 );

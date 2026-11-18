@@ -83,9 +83,11 @@ export default function BomBuilderPage() {
         setSpaceLineItems([]);
         setSpaceError(`Lỗi: Không tìm thấy thông tin Không gian đơn hàng "${spaceKey}".`);
       }
-    } catch {
+    } catch (err: any) {
       setSpaceLineItems([]);
       setSpaceError(
+        err?.response?.data?.message ||
+        err?.message ||
         `Không thể tải danh sách sản phẩm của Không gian đơn hàng "${spaceKey}" từ máy chủ.`,
       );
     } finally {
@@ -137,10 +139,13 @@ export default function BomBuilderPage() {
 
       setRoutingStages(stages);
       setRoutingModalItem(item);
-    } catch {
+    } catch (err: any) {
       setToastBanner({
         type: "error",
-        text: `Không thể tải quy trình sản xuất của sản phẩm ${item.productSku} từ máy chủ.`,
+        text:
+          err?.response?.data?.message ||
+          err?.message ||
+          `Không thể tải quy trình sản xuất của sản phẩm ${item.productSku} từ máy chủ.`,
       });
     } finally {
       setIsLoadingRouting(false);

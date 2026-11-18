@@ -81,8 +81,10 @@ export const catalogApi = {
       if (stockList.length > 0) {
         return stockList.map(normalizeMaterialItem);
       }
-    } catch {
-      // Nếu role không thuộc quyền /inventory/stocks thì tiếp tục gọi /materials
+    } catch (err: any) {
+      // Nếu là lỗi xác thực 401, ném lỗi ra ngoài
+      if (err?.status === 401) throw err;
+      // Nếu role không thuộc quyền /inventory/stocks (403) hoặc 404, tiếp tục gọi /materials
     }
 
     // 2. Gọi /materials (Master Data SC-04) và ánh xạ đầy đủ currentStockQty & dimensionSpec
@@ -101,8 +103,11 @@ export const catalogApi = {
       if (list.length > 0) {
         return list.map(normalizeMaterialItem);
       }
-    } catch {
-      // Fallback sang danh mục vật tư chuẩn đồng bộ DB nếu mất kết nối
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Fallback sang danh mục vật tư chuẩn đồng bộ DB nếu mất kết nối (status 0) hoặc 404
     }
 
     if (!group || group === "ALL") {
