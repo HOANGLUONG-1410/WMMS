@@ -99,7 +99,16 @@ public class OrderIntakeService : IOrderIntakeService
             }
         }
 
-        // Nếu file trống hoặc người dùng bấm nạp dữ liệu mẫu Staging từ SCR-ORD-02 trong Report 3
+        // Nếu người dùng tải lên file Excel nhưng không bóc tách được dòng sản phẩm nào -> báo lỗi 400
+        if (excelStream is not null && excelStream.Length > 0 && extractedRows.Count == 0)
+        {
+            throw new AppException(
+                "Tệp Excel tải lên không chứa dòng sản phẩm hợp lệ nào. Vui lòng kiểm tra lại cấu trúc bảng đơn đặt hàng (PO).",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
+
+        // Nếu không truyền file (người dùng bấm nạp dữ liệu mẫu Staging từ SCR-ORD-02)
         if (extractedRows.Count == 0)
         {
             extractedRows = BuildDefaultSampleStagingRows();

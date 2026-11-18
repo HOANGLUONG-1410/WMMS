@@ -15,6 +15,15 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(WmmsDbContext context)
     {
+        if (context.Database.IsRelational())
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                IF COL_LENGTH('purchase_orders', 'terms') IS NULL
+                BEGIN
+                    ALTER TABLE [purchase_orders] ADD [terms] nvarchar(1000) NULL;
+                END");
+        }
+
         var now = DateTime.UtcNow;
 
         // 1. Seed Roles
