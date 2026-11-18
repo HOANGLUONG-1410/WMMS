@@ -28,6 +28,7 @@ import GoodsReceiptPage from "../features/warehouse/pages/GoodsReceiptPage";
 import GoodsIssuePage from "../features/warehouse/pages/GoodsIssuePage";
 import InventoryStockPage from "../features/inventory/pages/InventoryStockPage";
 import InventoryReconciliationPage from "../features/inventory/pages/InventoryReconciliationPage";
+import ProductionProcessPage from "../features/production/pages/ProductionProcessPage";
 
 // Placeholder Page for Screens Under Development
 import UnderConstructionPage from "../components/common/UnderConstructionPage";
@@ -360,36 +361,26 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "/production/kanban",
-            element: (
-              <UnderConstructionPage
-                title="Bảng Kanban sản xuất"
-                screenCode="SCR-PRD-01"
-                moduleName="Xưởng sản xuất"
-                allowedRoles={[
-                  ROLES.LEADER,
-                  ROLES.QC,
-                  ROLES.OWNER,
-                  ROLES.WAREHOUSE,
-                  ROLES.ADMIN,
-                ]}
-              />
-            ),
+            element: <ProductionProcessPage />,
           },
         ],
       },
       {
-        element: <ProtectedRoute allowedRoles={[ROLES.LEADER, ROLES.ADMIN]} />,
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              ROLES.LEADER,
+              ROLES.QC,
+              ROLES.OWNER,
+              ROLES.WAREHOUSE,
+              ROLES.ADMIN,
+            ]}
+          />
+        ),
         children: [
           {
             path: "/production/progress",
-            element: (
-              <UnderConstructionPage
-                title="Tiến độ công đoạn tại trạm"
-                screenCode="SCR-PRD-02"
-                moduleName="Xưởng sản xuất"
-                allowedRoles={[ROLES.LEADER, ROLES.ADMIN]}
-              />
-            ),
+            element: <ProductionProcessPage />,
           },
         ],
       },

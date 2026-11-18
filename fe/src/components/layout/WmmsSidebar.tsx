@@ -215,18 +215,24 @@ export default function WmmsSidebar({
   const isInOrderSpace = location.pathname.startsWith("/orders/spaces");
   const isInBomPage = location.pathname.startsWith("/bom");
   const isInReconciliation = location.pathname.startsWith("/inventory/reconciliation");
+  const isInProductionPage =
+    location.pathname.startsWith("/production/progress") ||
+    location.pathname.startsWith("/production/kanban");
 
-  // Lấy spaceKey từ URL: hoặc /orders/spaces/:spaceKey hoặc /bom?spaceKey=... hoặc /inventory/reconciliation?spaceKey=...
+  // Lấy spaceKey từ URL: hoặc /orders/spaces/:spaceKey hoặc /bom?spaceKey=... hoặc /inventory/reconciliation?spaceKey=... hoặc /production/progress?spaceKey=...
   const spaceFromPath = location.pathname.startsWith("/orders/spaces/")
     ? decodeURIComponent(location.pathname.replace("/orders/spaces/", "").split("/")[0] || "")
     : "";
   const spaceFromQuery = new URLSearchParams(location.search).get("spaceKey") || "";
+  const orderItemIdFromQuery = new URLSearchParams(location.search).get("orderItemId") || "";
+  const skuFromQuery = new URLSearchParams(location.search).get("sku") || "";
   const activeSpaceFromUrl = spaceFromPath || spaceFromQuery;
   const displaySpaceKey = activeSpaceFromUrl || currentSpaceKey;
 
-  // Hiển thị cây phân cấp khi đang ở trong Space hoặc đang ở trang BOM / Đối chiếu của Space
+  // Hiển thị cây phân cấp khi đang ở trong Space hoặc đang ở trang BOM / Đối chiếu / Tiến trình của Space
   const isSpaceContextActive =
-    isInOrderSpace || ((isInBomPage || isInReconciliation) && Boolean(displaySpaceKey));
+    isInOrderSpace ||
+    ((isInBomPage || isInReconciliation || isInProductionPage) && Boolean(displaySpaceKey));
 
   const spaceSubItems: SidebarItem[] = [];
   if (isSpaceContextActive && displaySpaceKey) {
@@ -240,6 +246,24 @@ export default function WmmsSidebar({
       label: "Đối chiếu & phân bổ vật tư",
       path: `/inventory/reconciliation?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
     });
+
+    // Tab Sản phẩm và Tab con Tiến trình sản xuất: CHỈ hiện khi người dùng truy cập trang tiến trình sản xuất của sản phẩm
+    if (isInProductionPage && Boolean(orderItemIdFromQuery)) {
+      const productTitle = skuFromQuery ? `Sản phẩm ${skuFromQuery}` : `Sản phẩm #${orderItemIdFromQuery}`;
+      const prodPath = `/production/progress?spaceKey=${encodeURIComponent(displaySpaceKey)}&orderItemId=${encodeURIComponent(orderItemIdFromQuery)}${skuFromQuery ? `&sku=${encodeURIComponent(skuFromQuery)}` : ""}`;
+      spaceSubItems.push({
+        icon: Icons.catalog,
+        label: productTitle,
+        path: prodPath,
+        children: [
+          {
+            icon: Icons.routing,
+            label: "Tiến trình sản xuất",
+            path: prodPath,
+          },
+        ],
+      });
+    }
   }
 
   const orderSpaceChildItem: SidebarItem | undefined = isSpaceContextActive
@@ -306,7 +330,7 @@ export default function WmmsSidebar({
           {
             heading: "XƯỞNG & KIỂM TOÁN",
             items: [
-              { icon: Icons.kanban, label: "Bảng Kanban sản xuất", path: "/production/kanban" },
+              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
               { icon: Icons.bolt, label: "Duyệt vượt chốt (Overdriver)", path: "/production/overdriver" },
               { icon: Icons.routing, label: "Duyệt lệnh sản xuất bù", path: "/production/replacement-approvals" },
               { icon: Icons.reports, label: "Báo cáo sản xuất & KCS", path: "/analytics/reports" },
@@ -382,7 +406,7 @@ export default function WmmsSidebar({
             heading: "DANH MỤC & XƯỞNG",
             items: [
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
-              { icon: Icons.kanban, label: "Bảng Kanban sản xuất", path: "/production/kanban" },
+              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
             ],
           },
         ];
@@ -393,7 +417,7 @@ export default function WmmsSidebar({
             heading: "XƯỞNG SẢN XUẤT",
             items: [
               { icon: Icons.dashboard, label: "Bảng điều hành & ETD", path: "/dashboard" },
-              { icon: Icons.kanban, label: "Bảng Kanban sản xuất", path: "/production/kanban" },
+              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
               { icon: Icons.routing, label: "Tiến độ công đoạn tại trạm", path: "/production/progress" },
               ...(orderSpaceChildItem
                 ? [{ icon: Icons.space, label: orderSpaceChildItem.label, path: orderSpaceChildItem.path }]
@@ -415,7 +439,7 @@ export default function WmmsSidebar({
             heading: "KIỂM SOÁT CHẤT LƯỢNG",
             items: [
               { icon: Icons.qc, label: "Kiểm tra QC & nhật ký lỗi", path: "/qc/inspection" },
-              { icon: Icons.kanban, label: "Bảng Kanban sản xuất", path: "/production/kanban" },
+              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
             ],
           },
         ];
@@ -446,6 +470,19 @@ export default function WmmsSidebar({
     // 2. Trang chi tiết Không gian đơn hàng
     if (path.includes("/orders/spaces/")) {
       return location.pathname.startsWith("/orders/spaces");
+    }
+
+    // 2b. Trang Đối chiếu tồn kho
+    if (path.startsWith("/inventory/reconciliation")) {
+      return location.pathname.startsWith("/inventory/reconciliation");
+    }
+
+    // 2c. Trang Tiến trình sản xuất
+    if (path.startsWith("/production/progress")) {
+      return (
+        location.pathname.startsWith("/production/progress") ||
+        location.pathname.startsWith("/production/kanban")
+      );
     }
 
     // 3. Trang Danh sách đơn hàng: chỉ kích hoạt khi đúng URL danh sách, không nhận vơ các trang con /spaces hay /staging
@@ -492,7 +529,7 @@ export default function WmmsSidebar({
                     : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 font-medium"
                 }`
               : `gap-2 px-2.5 py-2 rounded-lg text-xs ${
-                  active
+                  active && !hasDescendant
                     ? "bg-white text-blue-700 font-bold border border-blue-200 shadow-xs"
                     : hasDescendant
                     ? "bg-slate-200/60 text-slate-900 font-semibold"

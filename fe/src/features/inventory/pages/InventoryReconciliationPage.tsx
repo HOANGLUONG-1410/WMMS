@@ -450,6 +450,18 @@ export default function InventoryReconciliationPage() {
               <span>BOM &amp; quy trình sản xuất</span>
             </button>
           )}
+
+          {activeSpaceKey && (
+            <button
+              type="button"
+              onClick={() =>
+                navigate(`/production/progress?spaceKey=${encodeURIComponent(activeSpaceKey)}`)
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
+            >
+              <span>Tiến độ sản xuất</span>
+            </button>
+          )}
         </div>
       }
     >
