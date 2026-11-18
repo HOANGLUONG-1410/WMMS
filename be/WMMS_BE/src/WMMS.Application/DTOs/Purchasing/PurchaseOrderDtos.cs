@@ -82,6 +82,14 @@ public class PurchaseOrderListItemDto
 
     /// <summary>ON_TRACK, DUE_SOON, OVERDUE, RECEIVED hoặc CANCELLED.</summary>
     public string EtaStatus { get; set; } = string.Empty;
+
+    // Các trường hiển thị đồng bộ trực tiếp với giao diện Quản lý PO (FE)
+    public string PromisedEtaDate => ExpectedArrivalDate.ToString("yyyy-MM-dd");
+    public string? EtaDaysLabel { get; set; }
+    public string MaterialCategory { get; set; } = string.Empty;
+    public string OrderItemsSummary { get; set; } = string.Empty;
+    public string FulfillmentStatus { get; set; } = string.Empty;
+    public string? SourcePrCode => PrCode;
 }
 
 /// <summary>Dòng vật tư của PO (UC-51).</summary>
@@ -163,6 +171,35 @@ public class CreatePurchaseOrdersRequestDto
     public long PrId { get; set; }
     public List<CreatePoLineDto> Lines { get; set; } = new();
     public List<CreatePoSupplierTermsDto> SupplierTerms { get; set; } = new();
+
+    // Các trường tương thích ngược với form Tạo nhanh PO trên FE (nếu FE gửi trực tiếp theo tên NCC)
+    public string? SupplierName { get; set; }
+    public string? MaterialCategory { get; set; }
+    public string? OrderItemsSummary { get; set; }
+    public DateTime? PromisedEtaDate { get; set; }
+    public string? SourcePrCode { get; set; }
+}
+
+/// <summary>Một dòng đặt hàng trong yêu cầu phát hành PO hàng loạt từ nhiều PR đã duyệt.</summary>
+public class BatchIssuePoLineDto
+{
+    public long PrId { get; set; }
+    public long PrItemId { get; set; }
+    public long SupplierId { get; set; }
+    public decimal OrderedQty { get; set; }
+    public decimal UnitPrice { get; set; }
+}
+
+/// <summary>
+/// Yêu cầu phát hành đồng loạt các Đơn đặt hàng nhà cung cấp (PO) từ một hoặc nhiều Phiếu yêu cầu mua hàng (PR) đã được Chủ xưởng phê duyệt.
+/// Nếu không truyền danh sách dòng chi tiết (<c>Lines</c>), hệ thống sẽ tự động lấy toàn bộ các dòng vật tư còn chờ đặt của các PR đã duyệt,
+/// ghép nối với Nhà cung cấp đang hoạt động theo nhóm vật tư và phát hành PO đồng loạt.
+/// </summary>
+public class BatchIssuePurchaseOrdersRequestDto
+{
+    public List<long> PrIds { get; set; } = new();
+    public List<BatchIssuePoLineDto> Lines { get; set; } = new();
+    public List<CreatePoSupplierTermsDto> SupplierTerms { get; set; } = new();
 }
 
 /// <summary>Cập nhật lịch giao hàng của NCC (UC-53).</summary>
@@ -170,8 +207,16 @@ public class UpdatePoEtaDto
 {
     public DateTime ExpectedArrivalDate { get; set; }
 
+    /// <summary>Trường tương thích với payload <c>promisedEtaDate</c> từ giao diện FE.</summary>
+    public DateTime? PromisedEtaDate { get; set; }
+
+    /// <summary>Trạng thái giao nhận tùy chọn gửi kèm từ modal cập nhật ETA trên FE.</summary>
+    public string? FulfillmentStatus { get; set; }
+
     /// <summary>Ghi chú vận chuyển / lý do đổi lịch (lưu vào nhật ký kiểm toán).</summary>
     public string? Notes { get; set; }
+
+    public DateTime EffectiveEtaDate => PromisedEtaDate ?? ExpectedArrivalDate;
 }
 
 /// <summary>Cập nhật điều khoản thanh toán &amp; tiến độ cho PO (SC-16).</summary>

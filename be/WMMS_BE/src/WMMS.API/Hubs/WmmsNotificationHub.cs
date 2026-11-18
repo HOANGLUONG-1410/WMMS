@@ -46,7 +46,7 @@ public class SignalRNotificationHubService : INotificationHubService
             CustomerName = customerName,
             TotalUnits = totalUnits,
             LineItemsCount = lineItemsCount,
-            Message = $"[QT-01] Không gian đơn hàng mới {spaceKey} (PO: {poNumber} - {customerName}, {totalUnits} SP) đã được khởi tạo. Bộ phận KHVT vui lòng kiểm tra và bóc tách BOM.",
+            Message = $"Không gian đơn hàng mới {spaceKey} (PO: {poNumber} - {customerName}, {totalUnits} sản phẩm) đã được khởi tạo. Bộ phận Kế hoạch vật tư vui lòng kiểm tra và bóc tách định mức BOM.",
             TimestampUtc = DateTime.UtcNow
         };
 
@@ -66,8 +66,8 @@ public class SignalRNotificationHubService : INotificationHubService
             ProductSku = productSku,
             HasShortage = hasShortage,
             Message = hasShortage
-                ? $"[QT-03] BOM #{bomId} (SKU: {productSku}) đã chốt nhưng phát hiện thiếu tồn kho khả dụng. Đã đưa vào danh sách chờ tổng hợp PR cuối ngày."
-                : $"[QT-02] BOM #{bomId} (SKU: {productSku}) đã đủ vật tư khả dụng và sẵn sàng sản xuất (READY_FOR_PRODUCTION).",
+                ? $"Định mức BOM #{bomId} (Mã SP: {productSku}) đã chốt nhưng phát hiện thiếu tồn kho khả dụng. Đã đưa vào danh sách chờ tổng hợp phiếu yêu cầu mua hàng (PR)."
+                : $"Định mức BOM #{bomId} (Mã SP: {productSku}) đã đủ vật tư khả dụng và sẵn sàng đưa vào sản xuất.",
             TimestampUtc = DateTime.UtcNow
         };
 
@@ -87,8 +87,8 @@ public class SignalRNotificationHubService : INotificationHubService
             Approved = approved,
             Detail = reasonOrNotes,
             Message = approved
-                ? $"[SC-15] PR gộp {prCode} đã được Chủ xưởng phê duyệt. Bộ phận Mua hàng có thể phân nhóm theo NCC và phát hành PO."
-                : $"[SC-15] PR gộp {prCode} đã bị Chủ xưởng từ chối. Lý do: {reasonOrNotes}. KHVT vui lòng điều chỉnh và gom lại.",
+                ? $"Phiếu yêu cầu mua hàng {prCode} đã được Chủ xưởng phê duyệt. Bộ phận Mua hàng có thể phân nhóm theo nhà cung cấp và phát hành đơn mua hàng (PO)."
+                : $"Phiếu yêu cầu mua hàng {prCode} đã bị Chủ xưởng từ chối. Lý do: {reasonOrNotes}. Bộ phận Kế hoạch vật tư vui lòng kiểm tra và điều chỉnh lại.",
             TimestampUtc = DateTime.UtcNow
         };
 
@@ -113,8 +113,8 @@ public class SignalRNotificationHubService : INotificationHubService
             SupplierName = supplierName,
             ExpectedArrivalDate = expectedArrivalDate.ToString("yyyy-MM-dd"),
             Message = isNew
-                ? $"[SC-16] PO {poCode} ({supplierName}) đã phát hành, dự kiến hàng về {expectedArrivalDate:dd/MM/yyyy}. Thủ kho vui lòng chuẩn bị tiếp nhận."
-                : $"[SC-16] PO {poCode} ({supplierName}) đổi lịch giao hàng sang {expectedArrivalDate:dd/MM/yyyy}.",
+                ? $"Đơn mua hàng {poCode} ({supplierName}) đã phát hành, dự kiến giao hàng ngày {expectedArrivalDate:dd/MM/yyyy}. Thủ kho vui lòng chuẩn bị tiếp nhận."
+                : $"Đơn mua hàng {poCode} ({supplierName}) đã cập nhật lịch giao hàng dự kiến sang ngày {expectedArrivalDate:dd/MM/yyyy}.",
             TimestampUtc = DateTime.UtcNow
         };
 
@@ -140,7 +140,7 @@ public class SignalRNotificationHubService : INotificationHubService
             PoCode = poCode,
             AllocatedOrderCount = allocatedOrderCount,
             ReadyOrderPoNumbers = readyOrderPoNumbers,
-            Message = $"[SC-17] Phiếu nhập kho {grnCode} (PO: {poCode}) đã được commit. Vật tư đã được tự động phân bổ vào {allocatedOrderCount} đơn hàng đang chờ.{readyMsg}",
+            Message = $"Phiếu nhập kho {grnCode} (thuộc PO: {poCode}) đã xác nhận hoàn tất. Vật tư mới nhập đã tự động phân bổ vào {allocatedOrderCount} đơn hàng đang chờ.{readyMsg}",
             TimestampUtc = DateTime.UtcNow
         };
 
@@ -166,8 +166,8 @@ public class SignalRNotificationHubService : INotificationHubService
             TotalQty = totalQty,
             IsOverdriver = isOverdriver,
             Message = isOverdriver
-                ? $"[SC-19] Lệnh sản xuất PO {poNumber} (SKU: {productSku}) đã được phát hành với {totalBatches} lô ({totalQty} SP) ở chế độ Overdrive. Thẻ lô được phép thực hiện công đoạn sơ chế phôi trước điểm dừng Hold Point."
-                : $"[SC-19] Lệnh sản xuất PO {poNumber} (SKU: {productSku}) đã phát hành {totalBatches} thẻ lô Kanban ({totalQty} SP) thành công lên bảng điều độ phân xưởng.",
+                ? $"Lệnh sản xuất của đơn {poNumber} (Mã SP: {productSku}) đã phát hành với {totalBatches} lô ({totalQty} sản phẩm) ở chế độ chạy trước (Overdrive). Lô sản xuất được phép gia công sơ chế phôi trước trạm dừng kỹ thuật."
+                : $"Lệnh sản xuất của đơn {poNumber} (Mã SP: {productSku}) đã phát hành {totalBatches} lô sản xuất ({totalQty} sản phẩm) xuống phân xưởng.",
             TimestampUtc = DateTime.UtcNow
         };
 
@@ -188,7 +188,7 @@ public class SignalRNotificationHubService : INotificationHubService
             HoldPointStageSeq = holdPointStageSeq,
             RequesterName = requesterName,
             Justification = justification,
-            Message = $"[SC-20] Tổ trưởng {requesterName} vừa gửi yêu cầu ghi đè điểm dừng Hold Point cho lô {batchCode} (Công đoạn #{holdPointStageSeq}). Lý do: {justification}.",
+            Message = $"Quản đốc {requesterName} vừa gửi yêu cầu mở khóa ngoại lệ trạm dừng kỹ thuật cho lô {batchCode} (Công đoạn #{holdPointStageSeq}). Lý do: {justification}.",
             TimestampUtc = DateTime.UtcNow
         };
 
@@ -213,7 +213,7 @@ public class SignalRNotificationHubService : INotificationHubService
             IsApproved = isApproved,
             ApproverName = approverName,
             Justification = justification,
-            Message = $"[SC-20] Yêu cầu ghi đè điểm dừng Hold Point lô {batchCode} (Công đoạn #{holdPointStageSeq}) đã được Chủ xưởng {approverName} {actionText}. Ghi chú: {justification}.",
+            Message = $"Yêu cầu mở khóa ngoại lệ trạm dừng kỹ thuật cho lô {batchCode} (Công đoạn #{holdPointStageSeq}) đã được Chủ xưởng {approverName} {actionText}. Ghi chú: {justification}.",
             TimestampUtc = DateTime.UtcNow
         };
 

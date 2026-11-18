@@ -74,7 +74,7 @@ public class MaterialService : IMaterialService
     {
         var code = dto.MaterialCode.Trim();
         if (await _context.Materials.AnyAsync(m => m.MaterialCode.ToLower() == code.ToLower(), cancellationToken))
-            throw AppException.Conflict($"Mã vật tư '{code}' đã tồn tại (BR-MDM-01).");
+            throw AppException.Conflict($"Mã vật tư '{code}' đã tồn tại trong danh mục.");
 
         var now = DateTime.UtcNow;
         var material = new Material

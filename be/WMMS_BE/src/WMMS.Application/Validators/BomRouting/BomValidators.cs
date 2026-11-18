@@ -9,29 +9,29 @@ public class CreateBomRequestValidator : AbstractValidator<CreateBomRequestDto>
     {
         RuleFor(x => x.OrderItemId)
             .GreaterThan(0)
-            .WithMessage("OrderItemId must be a positive integer.");
+            .WithMessage("Vui lòng chọn dòng sản phẩm đơn hàng hợp lệ.");
 
         RuleFor(x => x.ProductId)
             .GreaterThan(0)
-            .WithMessage("ProductId must be a positive integer.");
+            .WithMessage("Vui lòng chọn sản phẩm hợp lệ.");
 
         RuleFor(x => x.ScrapRatePercent)
             .InclusiveBetween(3.00m, 15.00m)
-            .WithMessage("Scrap rate percentage (BR-002) must be between 3.00% and 15.00%.");
+            .WithMessage("Tỷ lệ hao hụt tự nhiên phải nằm trong khoảng từ 3% đến 15%.");
 
         RuleFor(x => x.Details)
             .NotEmpty()
-            .WithMessage("BOM must contain at least one material detail line.");
+            .WithMessage("Định mức vật tư (BOM) phải có ít nhất một dòng nguyên vật liệu.");
 
         RuleForEach(x => x.Details).ChildRules(detail =>
         {
             detail.RuleFor(d => d.MaterialId)
                 .GreaterThan(0)
-                .WithMessage("MaterialId must be greater than 0.");
+                .WithMessage("Vui lòng chọn nguyên vật liệu hợp lệ.");
 
             detail.RuleFor(d => d.NetQtyPerUnit)
                 .GreaterThan(0)
-                .WithMessage("NetQtyPerUnit must be greater than 0.");
+                .WithMessage("Định mức tiêu hao trên mỗi đơn vị sản phẩm phải lớn hơn 0.");
         });
     }
 }
@@ -42,21 +42,21 @@ public class UpdateBomRequestValidator : AbstractValidator<UpdateBomRequestDto>
     {
         RuleFor(x => x.ScrapRatePercent)
             .InclusiveBetween(3.00m, 15.00m)
-            .WithMessage("Scrap rate percentage (BR-002) must be between 3.00% and 15.00%.");
+            .WithMessage("Tỷ lệ hao hụt tự nhiên phải nằm trong khoảng từ 3% đến 15%.");
 
         RuleFor(x => x.Details)
             .NotEmpty()
-            .WithMessage("BOM must contain at least one material detail line.");
+            .WithMessage("Định mức vật tư (BOM) phải có ít nhất một dòng nguyên vật liệu.");
 
         RuleForEach(x => x.Details).ChildRules(detail =>
         {
             detail.RuleFor(d => d.MaterialId)
                 .GreaterThan(0)
-                .WithMessage("MaterialId must be greater than 0.");
+                .WithMessage("Vui lòng chọn nguyên vật liệu hợp lệ.");
 
             detail.RuleFor(d => d.NetQtyPerUnit)
                 .GreaterThan(0)
-                .WithMessage("NetQtyPerUnit must be greater than 0.");
+                .WithMessage("Định mức tiêu hao trên mỗi đơn vị sản phẩm phải lớn hơn 0.");
         });
     }
 }
@@ -67,25 +67,25 @@ public class CalculateDemandRequestValidator : AbstractValidator<CalculateDemand
     {
         RuleFor(x => x.OrderedQty)
             .GreaterThan(0)
-            .WithMessage("OrderedQty must be greater than 0.");
+            .WithMessage("Số lượng sản phẩm đặt hàng phải lớn hơn 0.");
 
         RuleFor(x => x.ScrapRatePercent)
             .InclusiveBetween(3.00m, 15.00m)
-            .WithMessage("Scrap rate percentage (BR-002) must be between 3.00% and 15.00%.");
+            .WithMessage("Tỷ lệ hao hụt tự nhiên phải nằm trong khoảng từ 3% đến 15%.");
 
         RuleFor(x => x.Items)
             .NotEmpty()
-            .WithMessage("Items list cannot be empty for demand calculation.");
+            .WithMessage("Danh sách nguyên vật liệu cần tính toán không được để trống.");
 
         RuleForEach(x => x.Items).ChildRules(item =>
         {
             item.RuleFor(i => i.MaterialId)
                 .GreaterThan(0)
-                .WithMessage("MaterialId must be greater than 0.");
+                .WithMessage("Vui lòng chọn nguyên vật liệu hợp lệ.");
 
             item.RuleFor(i => i.NetQtyPerUnit)
                 .GreaterThan(0)
-                .WithMessage("NetQtyPerUnit must be greater than 0.");
+                .WithMessage("Định mức tiêu hao trên mỗi đơn vị sản phẩm phải lớn hơn 0.");
         });
     }
 }
@@ -96,19 +96,19 @@ public class ConfirmBomStagingRequestValidator : AbstractValidator<ConfirmBomSta
     {
         RuleFor(x => x.OrderItemId)
             .GreaterThan(0)
-            .WithMessage("OrderItemId must be a positive integer.");
+            .WithMessage("Vui lòng chọn dòng sản phẩm đơn hàng hợp lệ.");
 
         RuleFor(x => x.ProductId)
             .GreaterThan(0)
-            .WithMessage("ProductId must be a positive integer.");
+            .WithMessage("Vui lòng chọn sản phẩm hợp lệ.");
 
         RuleFor(x => x.ScrapRatePercent)
             .InclusiveBetween(3.00m, 15.00m)
-            .WithMessage("Scrap rate percentage (BR-002) must be between 3.00% and 15.00%.");
+            .WithMessage("Tỷ lệ hao hụt tự nhiên phải nằm trong khoảng từ 3% đến 15%.");
 
         RuleFor(x => x.Rows)
             .NotEmpty()
-            .WithMessage("Staging rows cannot be empty.");
+            .WithMessage("Danh sách dòng dữ liệu xem trước không được để trống.");
     }
 }
 
@@ -121,17 +121,17 @@ public class RoutingConfigValidator : AbstractValidator<RoutingConfigDto>
     {
         RuleFor(x => x.Stages)
             .NotEmpty()
-            .WithMessage("Workstation routing stages cannot be empty.");
+            .WithMessage("Quy trình sản xuất phải có ít nhất một công đoạn gia công.");
 
         RuleForEach(x => x.Stages).ChildRules(stage =>
         {
             stage.RuleFor(s => s.StageSequence)
                 .GreaterThan(0)
-                .WithMessage("StageSequence must be greater than 0.");
+                .WithMessage("Thứ tự công đoạn phải lớn hơn 0.");
 
             stage.RuleFor(s => s.StageName)
                 .NotEmpty()
-                .WithMessage("StageName cannot be empty.");
+                .WithMessage("Tên công đoạn gia công không được để trống.");
         });
 
         RuleFor(x => x.Stages)
@@ -145,6 +145,6 @@ public class RoutingConfigValidator : AbstractValidator<RoutingConfigDto>
                 }
                 return true;
             })
-            .WithMessage("Workstation stages must form a continuous sequence starting from 1 without gaps or duplicates (BR-007, UC-37).");
+            .WithMessage("Thứ tự các công đoạn gia công phải liên tục từ 1 trở đi, không được ngắt quãng hoặc trùng lặp.");
     }
 }

@@ -324,7 +324,7 @@ export default function StockBalanceTable({
                               key={`${alloc.spaceKey}-${idx}`}
                               type="button"
                               onClick={() => onInspectStockLedger(item)}
-                              className="px-2.5 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-mono text-xs font-bold transition whitespace-nowrap"
+                              className="px-2.5 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-mono text-xs font-bold transition whitespace-nowrap cursor-pointer"
                               title={`Bấm để xem chi tiết giữ chỗ của ${alloc.spaceKey}`}
                             >
                               {alloc.spaceKey} (
@@ -336,6 +336,16 @@ export default function StockBalanceTable({
                             </button>
                           ))}
                         </div>
+                      ) : item.allocatedQty > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => onInspectStockLedger(item)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold text-xs transition cursor-pointer"
+                          title="Bấm để tra cứu chi tiết các đơn hàng đang giữ chỗ từ cơ sở dữ liệu"
+                        >
+                          <span>🔒 Đang giữ: {formatQuantityWithUnit(item.allocatedQty, item.unitOfMeasure)}</span>
+                          <span className="text-[11px] text-amber-700 underline font-bold">Chi tiết →</span>
+                        </button>
                       ) : (
                         <span className="text-xs text-slate-400 italic">
                           Không có khóa giữ chỗ (Tự do)

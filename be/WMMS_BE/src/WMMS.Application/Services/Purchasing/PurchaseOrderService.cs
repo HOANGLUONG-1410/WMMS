@@ -126,7 +126,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (!Enum.TryParse<PoStatusEnum>(filter.Status.Trim(), ignoreCase: true, out var parsed))
             {
                 throw new AppException(
-                    "Trạng thái PO không hợp lệ. Các giá trị được phép: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.",
+                    "Trạng thái đơn mua hàng không hợp lệ. Vui lòng chọn một trong các trạng thái: Đã phát hành, Nhận một phần, Đã nhận đủ hoặc Đã hủy.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -147,7 +147,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         }
         else if (!string.IsNullOrEmpty(etaFilter))
         {
-            throw new AppException("Trạng thái ETA không hợp lệ. Các giá trị được phép: OVERDUE, DUE_SOON.", 400, MessageCodes.Msg13ValidationError);
+            throw new AppException("Bộ lọc tiến độ giao hàng (ETA) không hợp lệ. Vui lòng chọn Quá hạn hoặc Sắp đến hạn.", 400, MessageCodes.Msg13ValidationError);
         }
 
         var (items, total) = await _purchaseOrderRepository.SearchAsync(
@@ -214,14 +214,14 @@ public class PurchaseOrderService : IPurchaseOrderService
         if (pr.PrStatus is PrStatusEnum.PENDING_APPROVAL or PrStatusEnum.REJECTED)
         {
             throw AppException.Forbidden(
-                $"Phiếu PR {pr.PrCode} đang ở trạng thái {pr.PrStatus}. Đơn đặt hàng (PO) chỉ được phát hành từ PR đã được Chủ xưởng phê duyệt (APPROVED) (BR-PUR-02).",
+                $"Phiếu yêu cầu mua hàng {pr.PrCode} chưa được phê duyệt. Đơn đặt hàng chỉ được phát hành sau khi Chủ xưởng đã phê duyệt phiếu yêu cầu mua hàng.",
                 MessageCodes.Msg11ForbiddenRule);
         }
 
         if (pr.PrStatus == PrStatusEnum.PO_ISSUED)
         {
             throw AppException.Conflict(
-                $"Phiếu PR {pr.PrCode} đã được đặt hàng toàn bộ trước đó (PO_ISSUED).",
+                $"Phiếu yêu cầu mua hàng {pr.PrCode} đã được đặt hàng đủ toàn bộ số lượng trước đó.",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -231,7 +231,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (!itemsById.ContainsKey(line.PrItemId))
             {
                 throw new AppException(
-                    $"Dòng vật tư PR #{line.PrItemId} không thuộc về Phiếu PR {pr.PrCode}.",
+                    $"Mặt hàng #{line.PrItemId} không thuộc về phiếu yêu cầu mua hàng {pr.PrCode}.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -250,7 +250,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (!string.Equals(supplier.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException(
-                    $"Nhà cung cấp {supplier.SupplierCode} đang ở trạng thái {supplier.Status} và không thể tiếp nhận Đơn đặt hàng mới (BR-PUR-03).",
+                    $"Nhà cung cấp '{supplier.SupplierName}' ({supplier.SupplierCode}) hiện đang ngừng giao dịch nên không thể tiếp nhận đơn đặt hàng mới.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -263,7 +263,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (terms.ExpectedArrivalDate.Date < today)
             {
                 throw new AppException(
-                    "Ngày hẹn giao hàng của Nhà cung cấp không được ở quá khứ (UC052.E1).",
+                    "Ngày nhà cung cấp hẹn giao hàng không được nằm trong quá khứ.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -282,7 +282,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             if (requested > remaining + QtyTolerance)
             {
                 throw new AppException(
-                    $"Số lượng đặt hàng {requested:0.####} vượt quá số lượng còn lại có thể đặt ({Math.Max(0m, remaining):0.####}) của dòng PR #{prItemId}.",
+                    $"Số lượng đặt hàng ({requested:0.####}) vượt quá số lượng còn lại cần mua ({Math.Max(0m, remaining):0.####}) của mặt hàng '{item.Material?.MaterialName ?? $"#{prItemId}"}'.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -352,7 +352,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                         LinesCount = po.Details.Count,
                         po.Terms
                     }),
-                    Reason = $"Phát hành Đơn đặt hàng nhà cung cấp {po.PoCode} từ PR {pr.PrCode} đã duyệt tới {supplier.SupplierName} (UC-52, BR-PUR-03).",
+                    Reason = $"Phát hành đơn đặt hàng nhà cung cấp {po.PoCode} từ phiếu yêu cầu {pr.PrCode} tới {supplier.SupplierName}.",
                     IpAddress = ipAddress,
                     CreatedAt = now
                 });
@@ -385,9 +385,155 @@ public class PurchaseOrderService : IPurchaseOrderService
         foreach (var code in createdPoCodes)
         {
             var po = await _purchaseOrderRepository.GetByCodeAsync(code, cancellationToken)
-                ?? throw AppException.NotFound($"Không tìm thấy Đơn đặt hàng {code} sau khi khởi tạo.");
+                ?? throw AppException.NotFound($"Không tìm thấy đơn đặt hàng {code} sau khi khởi tạo.");
             results.Add(MapToDetail(po, today));
             await NotifyAsync(po.PoCode, po.Supplier?.SupplierName ?? string.Empty, po.ExpectedArrivalDate, isNew: true, cancellationToken);
+        }
+
+        return results;
+    }
+
+    // =========================================================================
+    // [SC-16 MỞ RỘNG]: PHÁT HÀNH ĐỒNG LOẠT ĐƠN ĐẶT HÀNG TỪ NHIỀU PR ĐÃ DUYỆT (BATCH ISSUE POS)
+    // =========================================================================
+    /// <inheritdoc />
+    public async Task<List<PurchaseOrderDetailDto>> BatchIssuePurchaseOrdersAsync(
+        BatchIssuePurchaseOrdersRequestDto? request,
+        long purchasingUserId,
+        string? ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        var today = DateTime.UtcNow.Date;
+        var results = new List<PurchaseOrderDetailDto>();
+
+        // Trường hợp 1: Người dùng gửi danh sách dòng chi tiết từ 1 hoặc nhiều PR
+        if (request?.Lines != null && request.Lines.Count > 0)
+        {
+            foreach (var prGroup in request.Lines.GroupBy(l => l.PrId).OrderBy(g => g.Key))
+            {
+                var supplierIdsInGroup = prGroup.Select(x => x.SupplierId).Distinct().ToHashSet();
+                var termsForGroup = (request.SupplierTerms ?? new List<CreatePoSupplierTermsDto>())
+                    .Where(t => supplierIdsInGroup.Contains(t.SupplierId))
+                    .ToList();
+
+                // Nếu thiếu điều khoản ngày hẹn giao của NCC nào thì tự động lấy LeadTimeDays của NCC đó
+                var missingSupplierIds = supplierIdsInGroup.Except(termsForGroup.Select(t => t.SupplierId)).ToList();
+                if (missingSupplierIds.Count > 0)
+                {
+                    var suppliersMap = await _purchaseOrderRepository.GetSuppliersByIdsAsync(missingSupplierIds, cancellationToken);
+                    foreach (var sid in missingSupplierIds)
+                    {
+                        var leadDays = suppliersMap.TryGetValue(sid, out var sup) ? Math.Max(1, sup.LeadTimeDays) : 7;
+                        termsForGroup.Add(new CreatePoSupplierTermsDto
+                        {
+                            SupplierId = sid,
+                            ExpectedArrivalDate = today.AddDays(leadDays),
+                            Terms = "Thanh toán chuyển khoản trong 30 ngày sau khi nghiệm thu nhập kho."
+                        });
+                    }
+                }
+
+                var singleRequest = new CreatePurchaseOrdersRequestDto
+                {
+                    PrId = prGroup.Key,
+                    Lines = prGroup.Select(l => new CreatePoLineDto
+                    {
+                        PrItemId = l.PrItemId,
+                        SupplierId = l.SupplierId,
+                        OrderedQty = l.OrderedQty,
+                        UnitPrice = l.UnitPrice
+                    }).ToList(),
+                    SupplierTerms = termsForGroup
+                };
+
+                var createdForPr = await CreatePurchaseOrdersAsync(singleRequest, purchasingUserId, ipAddress, cancellationToken);
+                results.AddRange(createdForPr);
+            }
+
+            return results;
+        }
+
+        // Trường hợp 2: Bấm nút "Phát hành PO hàng loạt" trên FE (tự động gom các PR đã được Chủ xưởng duyệt còn chờ đặt hàng)
+        var approvedPrs = await GetApprovedRequisitionsAsync(cancellationToken);
+        if (request?.PrIds != null && request.PrIds.Count > 0)
+        {
+            var filterSet = request.PrIds.ToHashSet();
+            approvedPrs = approvedPrs.Where(p => filterSet.Contains(p.PrId)).ToList();
+        }
+
+        if (approvedPrs.Count == 0)
+        {
+            throw new AppException(
+                "Hiện không có phiếu yêu cầu mua hàng (PR) nào đã duyệt đang chờ phát hành đơn đặt hàng.",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
+
+        var activeSuppliers = await _purchaseOrderRepository.GetActiveSuppliersAsync(cancellationToken);
+        if (activeSuppliers.Count == 0)
+        {
+            throw new AppException(
+                "Hệ thống chưa có nhà cung cấp nào đang hoạt động để tự động phát hành đơn đặt hàng.",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
+
+        var customTermsBySupplier = (request?.SupplierTerms ?? new List<CreatePoSupplierTermsDto>())
+            .GroupBy(t => t.SupplierId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        foreach (var reqPr in approvedPrs)
+        {
+            var linesToCreate = new List<CreatePoLineDto>();
+            foreach (var line in reqPr.Lines.Where(l => l.RemainingQty > QtyTolerance))
+            {
+                var matchedSupplier = activeSuppliers.FirstOrDefault(s =>
+                                          string.Equals(s.SupplyCategory, line.MaterialGroup, StringComparison.OrdinalIgnoreCase))
+                                      ?? activeSuppliers.First();
+
+                linesToCreate.Add(new CreatePoLineDto
+                {
+                    PrItemId = line.PrItemId,
+                    SupplierId = matchedSupplier.SupplierId,
+                    OrderedQty = line.RemainingQty,
+                    UnitPrice = GetDefaultUnitPriceByGroup(line.MaterialGroup)
+                });
+            }
+
+            if (linesToCreate.Count == 0)
+            {
+                continue;
+            }
+
+            var usedSupplierIds = linesToCreate.Select(l => l.SupplierId).Distinct().ToList();
+            var termsList = usedSupplierIds.Select(sid =>
+            {
+                if (customTermsBySupplier.TryGetValue(sid, out var customTerm) && customTerm.ExpectedArrivalDate.Date >= today)
+                {
+                    return customTerm;
+                }
+
+                var sup = activeSuppliers.First(s => s.SupplierId == sid);
+                return new CreatePoSupplierTermsDto
+                {
+                    SupplierId = sid,
+                    ExpectedArrivalDate = today.AddDays(Math.Max(1, sup.LeadTimeDays)),
+                    Terms = "Phát hành đơn mua hàng tự động theo định mức phê duyệt; thanh toán trong 30 ngày sau nghiệm thu."
+                };
+            }).ToList();
+
+            var createdForPr = await CreatePurchaseOrdersAsync(
+                new CreatePurchaseOrdersRequestDto
+                {
+                    PrId = reqPr.PrId,
+                    Lines = linesToCreate,
+                    SupplierTerms = termsList
+                },
+                purchasingUserId,
+                ipAddress,
+                cancellationToken);
+
+            results.AddRange(createdForPr);
         }
 
         return results;
@@ -405,17 +551,17 @@ public class PurchaseOrderService : IPurchaseOrderService
         CancellationToken cancellationToken = default)
     {
         var today = DateTime.UtcNow.Date;
-        var newEta = request.ExpectedArrivalDate.Date;
-        if (newEta < today)
+        var newEta = request.EffectiveEtaDate.Date;
+        if (newEta == default || newEta < today)
         {
-            throw new AppException("Ngày hẹn giao hàng của Nhà cung cấp không được ở quá khứ (UC052.E1).", 400, MessageCodes.Msg13ValidationError);
+            throw new AppException("Ngày nhà cung cấp hẹn giao hàng không được bỏ trống hoặc nằm trong quá khứ.", 400, MessageCodes.Msg13ValidationError);
         }
 
         var po = await GetOrThrowAsync(poId, cancellationToken);
         if (po.PoStatus is PoStatusEnum.FULFILLED or PoStatusEnum.CANCELLED)
         {
             throw AppException.Conflict(
-                $"Đơn hàng PO {po.PoCode} đang ở trạng thái {po.PoStatus}; không thể thay đổi lịch giao hàng nữa.",
+                $"Đơn mua hàng {po.PoCode} đã hoàn tất hoặc đã hủy nên không thể thay đổi lịch giao hàng.",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -443,7 +589,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 EntityId = po.PoCode,
                 BeforeState = JsonSerializer.Serialize(new { ExpectedArrivalDate = oldEta.ToString("yyyy-MM-dd") }),
                 AfterState = JsonSerializer.Serialize(new { ExpectedArrivalDate = newEta.ToString("yyyy-MM-dd"), Notes = notes }),
-                Reason = notes ?? $"Cập nhật ngày hẹn giao hàng của PO {po.PoCode} từ {oldEta:yyyy-MM-dd} sang {newEta:yyyy-MM-dd} (UC-53).",
+                Reason = notes ?? $"Cập nhật ngày hẹn giao hàng của đơn mua hàng {po.PoCode} từ {oldEta:yyyy-MM-dd} sang {newEta:yyyy-MM-dd}.",
                 IpAddress = ipAddress,
                 CreatedAt = now
             });
@@ -492,7 +638,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 EntityId = po.PoCode,
                 BeforeState = JsonSerializer.Serialize(new { Terms = oldTerms }),
                 AfterState = JsonSerializer.Serialize(new { Terms = newTerms, Notes = request.Notes }),
-                Reason = request.Notes ?? $"Cập nhật điều khoản thanh toán & giao hàng của PO {po.PoCode} (SC-16).",
+                Reason = request.Notes ?? $"Cập nhật điều khoản thanh toán và giao hàng của đơn mua hàng {po.PoCode}.",
                 IpAddress = ipAddress,
                 CreatedAt = DateTime.UtcNow
             });
@@ -520,7 +666,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         var po = await GetOrThrowAsync(poId, cancellationToken);
         if (!Enum.TryParse<PoStatusEnum>(request.Status, true, out var newStatus))
         {
-            throw new AppException($"Trạng thái PO không hợp lệ: '{request.Status}'. Các giá trị hợp lệ gồm: ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED.");
+            throw new AppException($"Trạng thái đơn mua hàng '{request.Status}' không hợp lệ. Vui lòng chọn: Đã phát hành, Nhận một phần, Đã nhận đủ hoặc Đã hủy.");
         }
 
         var oldStatus = po.PoStatus;
@@ -540,7 +686,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 EntityId = po.PoCode,
                 BeforeState = JsonSerializer.Serialize(new { Status = oldStatus.ToString() }),
                 AfterState = JsonSerializer.Serialize(new { Status = newStatus.ToString(), Reason = request.Reason }),
-                Reason = request.Reason ?? $"Chuyển đổi trạng thái vòng đời PO {po.PoCode} từ {oldStatus} sang {newStatus} (SC-16).",
+                Reason = request.Reason ?? $"Cập nhật trạng thái đơn mua hàng {po.PoCode} sang {FormatPoStatusLabel(newStatus)}.",
                 IpAddress = ipAddress,
                 CreatedAt = DateTime.UtcNow
             });
@@ -617,7 +763,60 @@ public class PurchaseOrderService : IPurchaseOrderService
         dto.ReceivedPercent = ordered > 0m ? Math.Round(received / ordered * 100m, 2) : 0m;
         dto.EtaDaysRemaining = (po.ExpectedArrivalDate.Date - today.Date).Days;
         dto.EtaStatus = ComputeEtaStatus(po.PoStatus, po.ExpectedArrivalDate, today);
+
+        dto.MaterialCategory = FormatMaterialCategory(po.Supplier?.SupplyCategory);
+        dto.FulfillmentStatus = FormatPoStatusLabel(po.PoStatus);
+        dto.EtaDaysLabel = po.PoStatus is PoStatusEnum.FULFILLED or PoStatusEnum.CANCELLED
+            ? null
+            : (dto.EtaDaysRemaining < 0
+                ? $"Trễ {Math.Abs(dto.EtaDaysRemaining)} ngày"
+                : (dto.EtaDaysRemaining == 0 ? "Giao hôm nay" : $"{dto.EtaDaysRemaining} ngày"));
+
+        var detailList = po.Details.OrderBy(d => d.PoDetailId).ToList();
+        if (detailList.Count == 0)
+        {
+            dto.OrderItemsSummary = "Chưa có chi tiết mặt hàng";
+        }
+        else if (detailList.Count == 1)
+        {
+            var first = detailList[0];
+            dto.OrderItemsSummary = $"{first.OrderedQty:0.##} {first.Material?.UnitOfMeasure ?? "đơn vị"} {first.Material?.MaterialName ?? "vật tư"}";
+        }
+        else
+        {
+            var first = detailList[0];
+            dto.OrderItemsSummary = $"{first.OrderedQty:0.##} {first.Material?.UnitOfMeasure ?? "đơn vị"} {first.Material?.MaterialName ?? "vật tư"} (+{detailList.Count - 1} mặt hàng khác)";
+        }
     }
+
+    private static string FormatMaterialCategory(string? category) =>
+        (category?.Trim().ToUpperInvariant()) switch
+        {
+            "LUMBER" => "Gỗ nguyên khối",
+            "HARDWARE" => "Phụ kiện kim khí",
+            "FINISH_PAINT" => "Sơn & Hóa chất hoàn thiện",
+            "PACKAGING" => "Bao bì đóng gói xuất khẩu",
+            _ => string.IsNullOrWhiteSpace(category) ? "Vật tư sản xuất" : category
+        };
+
+    private static string FormatPoStatusLabel(PoStatusEnum status) =>
+        status switch
+        {
+            PoStatusEnum.ISSUED => "Đã phát hành / Đang giao",
+            PoStatusEnum.PARTIALLY_RECEIVED => "Đã nhận một phần",
+            PoStatusEnum.FULFILLED => "Đã nhận đủ hàng",
+            PoStatusEnum.CANCELLED => "Đã hủy",
+            _ => status.ToString()
+        };
+
+    private static decimal GetDefaultUnitPriceByGroup(string? materialGroup) =>
+        (materialGroup?.Trim().ToUpperInvariant()) switch
+        {
+            "LUMBER" => 12500000m,
+            "FINISH_PAINT" => 185000m,
+            "PACKAGING" => 45000m,
+            _ => 15000m
+        };
 
     private static PurchaseOrderListItemDto MapToListItem(PurchaseOrder po, DateTime today)
     {

@@ -4,7 +4,13 @@ import { ApiErrorHandler } from "./api/apiErrorHandler";
 import { ApiError } from "./api/apiError";
 
 export const queryClient = new QueryClient({
-  queryCache: new QueryCache({ onError: ApiErrorHandler.handle }),
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      // Cho phép query bỏ qua toast lỗi toàn cục nếu đã cấu hình skipGlobalErrorToast hoặc tự xử lý tại màn hình
+      if (query?.meta?.skipGlobalErrorToast) return;
+      ApiErrorHandler.handle(error);
+    },
+  }),
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
       // Cho phép mutation bỏ qua toast lỗi toàn cục nếu đã xử lý inline trên UI (ví dụ màn đăng nhập)

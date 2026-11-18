@@ -43,6 +43,9 @@ public interface IPurchaseOrderRepository
     /// <summary>Lấy Nhà cung cấp theo danh sách ID (SupplierId → Supplier).</summary>
     Task<Dictionary<long, Supplier>> GetSuppliersByIdsAsync(IReadOnlyCollection<long> supplierIds, CancellationToken cancellationToken = default);
 
+    /// <summary>Lấy danh sách toàn bộ Nhà cung cấp đang hoạt động (ACTIVE) để tự động ghép nối khi phát hành PO hàng loạt.</summary>
+    Task<List<Supplier>> GetActiveSuppliersAsync(CancellationToken cancellationToken = default);
+
     Task<PurchaseOrder?> GetByIdAsync(long poId, CancellationToken cancellationToken = default);
     Task<PurchaseOrder?> GetByCodeAsync(string poCode, CancellationToken cancellationToken = default);
     Task<List<PurchaseOrder>> GetByPrIdAsync(long prId, CancellationToken cancellationToken = default);

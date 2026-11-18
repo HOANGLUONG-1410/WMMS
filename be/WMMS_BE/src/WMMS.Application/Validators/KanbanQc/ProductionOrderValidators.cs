@@ -12,7 +12,7 @@ public class GenerateBatchesRequestValidator : AbstractValidator<GenerateBatches
     {
         RuleFor(x => x.OrderItemId)
             .GreaterThan(0)
-            .WithMessage("Mã dòng sản phẩm đơn hàng (OrderItemId) phải lớn hơn 0.");
+            .WithMessage("Mã dòng sản phẩm trong đơn hàng phải lớn hơn 0.");
 
         When(x => x.MaxBatchSize.HasValue, () =>
         {
@@ -34,15 +34,15 @@ public class GenerateBatchesRequestValidator : AbstractValidator<GenerateBatches
         {
             RuleFor(x => x.Justification)
                 .NotEmpty()
-                .WithMessage("Cơ chế chạy trước Overdrive bắt buộc phải cung cấp lý do giải trình kỹ thuật (QT-06, KBN02).")
+                .WithMessage("Khi kích hoạt chế độ chạy trước (Overdrive), bắt buộc phải nhập lý do giải trình kỹ thuật.")
                 .MaximumLength(500)
-                .WithMessage("Lý do giải trình Overdrive không vượt quá 500 ký tự.");
+                .WithMessage("Lý do giải trình chạy trước không vượt quá 500 ký tự.");
         });
     }
 }
 
 /// <summary>
-/// Bộ kiểm tra hợp lệ dữ liệu cho yêu cầu chuyển bước công đoạn tuần tự trên Kanban (SC-19).
+/// Bộ kiểm tra hợp lệ dữ liệu cho yêu cầu chuyển bước công đoạn tuần tự (SC-19).
 /// </summary>
 public class AdvanceStepRequestValidator : AbstractValidator<AdvanceStepRequestDto>
 {
@@ -75,11 +75,11 @@ public class RecordQcInspectionValidator : AbstractValidator<RecordQcInspectionD
     {
         RuleFor(x => x.BatchStepId)
             .GreaterThan(0)
-            .WithMessage("Mã công đoạn thực thi (BatchStepId) phải lớn hơn 0.");
+            .WithMessage("Mã công đoạn thực thi của lô phải lớn hơn 0.");
 
         RuleFor(x => x.InspectedQty)
             .GreaterThan(0)
-            .WithMessage("Số lượng kiểm định thực tế phải lớn hơn 0 (Quy tắc 100% kiểm định - BR-008).");
+            .WithMessage("Số lượng kiểm định thực tế phải lớn hơn 0.");
 
         RuleFor(x => x.PassQty)
             .GreaterThanOrEqualTo(0)
@@ -91,13 +91,13 @@ public class RecordQcInspectionValidator : AbstractValidator<RecordQcInspectionD
 
         RuleFor(x => x)
             .Must(x => x.PassQty + x.FailQty == x.InspectedQty)
-            .WithMessage("Tổng số lượng Pass và Fail phải bằng đúng tổng số lượng kiểm định (PassQty + FailQty == InspectedQty).");
+            .WithMessage("Tổng số lượng sản phẩm đạt chuẩn và sản phẩm lỗi phải khớp đúng tổng số lượng đưa vào kiểm định.");
 
         When(x => x.FailQty > 0, () =>
         {
             RuleFor(x => x.Disposition)
                 .NotEmpty()
-                .WithMessage("Khi có sản phẩm lỗi, bắt buộc phải chọn phương án xử lý (REWORK_SUB_CARD hoặc SCRAP_REPLENISH).");
+                .WithMessage("Khi có sản phẩm lỗi, bắt buộc phải chọn phương án xử lý (Tách lô sửa chữa hoặc Hủy phế phẩm cấp bù).");
         });
     }
 }
@@ -111,15 +111,15 @@ public class RequestOverdriveValidator : AbstractValidator<RequestOverdriveDto>
     {
         RuleFor(x => x.Justification)
             .NotEmpty()
-            .WithMessage("Lý do giải trình kỹ thuật và rủi ro thời hạn ETD là bắt buộc khi gửi yêu cầu Overdrive (UC-63).")
+            .WithMessage("Vui lòng nhập lý do giải trình kỹ thuật và rủi ro tiến độ giao hàng khi gửi yêu cầu chạy trước (Overdrive).")
             .MaximumLength(500)
-            .WithMessage("Lý do giải trình Overdrive không vượt quá 500 ký tự.");
+            .WithMessage("Lý do giải trình không vượt quá 500 ký tự.");
 
         When(x => x.HoldPointStageSeq.HasValue, () =>
         {
             RuleFor(x => x.HoldPointStageSeq!.Value)
                 .GreaterThan(1)
-                .WithMessage("Công đoạn chốt chặn Hold Point phải từ công đoạn 2 trở đi.");
+                .WithMessage("Công đoạn chốt chặn kỹ thuật (Hold Point) phải từ công đoạn thứ 2 trở đi.");
         });
     }
 }
@@ -134,8 +134,8 @@ public class ApproveOverdriveValidator : AbstractValidator<ApproveOverdriveDto>
         When(x => !x.Approved, () =>
         {
             RuleFor(x => x.Notes)
-                .NotEmpty().WithMessage("Lý do từ chối yêu cầu Overdrive không được để trống (GBR-05).")
-                .MinimumLength(10).WithMessage("Lý do từ chối phải có độ dài từ 10 đến 500 ký tự (GBR-05).")
+                .NotEmpty().WithMessage("Vui lòng nhập lý do từ chối yêu cầu chạy trước (Overdrive).")
+                .MinimumLength(10).WithMessage("Lý do từ chối phải có độ dài từ 10 đến 500 ký tự.")
                 .MaximumLength(500).WithMessage("Lý do từ chối không được vượt quá 500 ký tự.");
         });
 
@@ -143,7 +143,7 @@ public class ApproveOverdriveValidator : AbstractValidator<ApproveOverdriveDto>
         {
             RuleFor(x => x.HoldPointStageSeq!.Value)
                 .GreaterThan(1)
-                .WithMessage("Công đoạn chốt chặn Hold Point phải từ công đoạn 2 trở đi.");
+                .WithMessage("Công đoạn chốt chặn kỹ thuật (Hold Point) phải từ công đoạn thứ 2 trở đi.");
         });
 
         When(x => x.Approved && !string.IsNullOrWhiteSpace(x.Notes), () =>
@@ -164,11 +164,11 @@ public class ReinspectSubBatchValidator : AbstractValidator<ReinspectSubBatchDto
     {
         RuleFor(x => x.BatchStepId)
             .GreaterThan(0)
-            .WithMessage("Mã công đoạn thực thi của thẻ phụ (BatchStepId) phải lớn hơn 0.");
+            .WithMessage("Mã công đoạn thực thi của lô phụ phải lớn hơn 0.");
 
         RuleFor(x => x.InspectedQty)
             .GreaterThan(0)
-            .WithMessage("Số lượng mang đi nghiệm thu lại phải lớn hơn 0 (Quy tắc 100% kiểm định - BR-008).");
+            .WithMessage("Số lượng mang đi nghiệm thu lại phải lớn hơn 0.");
 
         RuleFor(x => x.PassQty)
             .GreaterThanOrEqualTo(0)
@@ -180,7 +180,7 @@ public class ReinspectSubBatchValidator : AbstractValidator<ReinspectSubBatchDto
 
         RuleFor(x => x)
             .Must(x => x.PassQty + x.FailQty == x.InspectedQty)
-            .WithMessage("Tổng số lượng Pass và Fail phải bằng đúng tổng số lượng nghiệm thu lại (PassQty + FailQty == InspectedQty).");
+            .WithMessage("Tổng số lượng sản phẩm đạt chuẩn và sản phẩm lỗi phải khớp đúng tổng số lượng nghiệm thu lại.");
 
         When(x => !string.IsNullOrWhiteSpace(x.Notes), () =>
         {

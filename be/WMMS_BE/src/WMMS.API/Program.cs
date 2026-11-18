@@ -253,3 +253,8 @@ app.MapControllers();
 app.MapHub<WmmsNotificationHub>("/hubs/notifications");
 
 app.Run();
+
+/// <summary>
+/// Cho phép WebApplicationFactory&lt;Program&gt; khởi tạo toàn bộ HTTP Pipeline phục vụ Integration Test.
+/// </summary>
+public partial class Program { }

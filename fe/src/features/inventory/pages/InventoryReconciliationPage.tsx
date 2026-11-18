@@ -3,10 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
+import { useSession } from "../../auth/store/SessionContext";
 import { orderIntakeApi } from "../../../services/wmmsApi";
 import { mrpApi } from "../api/mrpApi";
 import type {
   AutoAllocationResultDto,
+  MaterialOrderAllocationDto,
   MrpAnalysisResultDto,
   MrpMaterialRequirementLineDto,
 } from "../types";
@@ -29,6 +31,18 @@ export default function InventoryReconciliationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentSpaceKey, setCurrentSpaceKey } = useWmms();
+  const { currentUser } = useSession();
+
+  const activeRole = currentUser?.activeRole || "OWNER";
+  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER", "SALES"].includes(activeRole);
+  const canAccessProductionPage = [
+    "ADMIN",
+    "OWNER",
+    "PLANNER",
+    "LEADER",
+    "QC",
+    "WAREHOUSE",
+  ].includes(activeRole);
 
   const spaceParam = searchParams.get("spaceKey");
   const activeSpaceKey = spaceParam || currentSpaceKey || "";
@@ -75,6 +89,8 @@ export default function InventoryReconciliationPage() {
 
   // Hủy giữ chỗ (Release Allocation)
   const [isReleasing, setIsReleasing] = useState<boolean>(false);
+  // Danh sách phân bổ giữ chỗ thực tế của Order Space
+  const [spaceAllocations, setSpaceAllocations] = useState<MaterialOrderAllocationDto[]>([]);
 
   useEffect(() => {
     if (spaceParam && spaceParam !== currentSpaceKey) {
@@ -91,6 +107,7 @@ export default function InventoryReconciliationPage() {
       );
       setSpaceInfo(null);
       setMrpData(null);
+      setSpaceAllocations([]);
       return;
     }
 
@@ -113,33 +130,45 @@ export default function InventoryReconciliationPage() {
           lineItemsCount: Array.isArray(detail.lineItems) ? detail.lineItems.length : 0,
         });
 
-        // Phân tích MRP riêng cho Space này
+        // Phân tích MRP & lấy danh sách phân bổ giữ chỗ thực tế cho Space này
         setIsLoadingMrp(true);
         setMrpError(null);
         try {
-          let mrp: MrpAnalysisResultDto;
-          if (spaceId) {
-            mrp = await mrpApi.analyzeOrderSpaceMrp(spaceId);
-          } else if (orderId > 0) {
-            mrp = await mrpApi.analyzeOrderMrp(orderId);
-          } else {
-            mrp = await mrpApi.analyzeFactoryMrp();
-          }
+          const [mrp, allocs] = await Promise.all([
+            spaceId
+              ? mrpApi.analyzeOrderSpaceMrp(spaceId)
+              : orderId > 0
+                ? mrpApi.analyzeOrderMrp(orderId)
+                : mrpApi.analyzeFactoryMrp(),
+            spaceId
+              ? mrpApi
+                  .getOrderSpaceAllocations(spaceId)
+                  .catch(() => [] as MaterialOrderAllocationDto[])
+              : Promise.resolve([] as MaterialOrderAllocationDto[]),
+          ]);
           setMrpData(mrp);
+          setSpaceAllocations(Array.isArray(allocs) ? allocs : []);
         } catch (mrpErr) {
           let msg = `Không thể phân tích nhu cầu vật tư MRP cho Không gian "${spaceKey}".`;
           if (isAxiosError(mrpErr)) {
             msg = mrpErr.response?.data?.message || mrpErr.message || msg;
           }
           setMrpError(msg);
+          setSpaceAllocations([]);
         } finally {
           setIsLoadingMrp(false);
         }
       } else {
         setSpaceError(`Lỗi: Không tìm thấy thông tin Không gian đơn hàng "${spaceKey}".`);
+        setSpaceAllocations([]);
       }
-    } catch {
-      setSpaceError(`Không thể tải thông tin Không gian đơn hàng "${spaceKey}" từ máy chủ.`);
+    } catch (err: any) {
+      setSpaceError(
+        err?.response?.data?.message ||
+        err?.message ||
+        `Không thể tải thông tin Không gian đơn hàng "${spaceKey}" từ máy chủ.`
+      );
+      setSpaceAllocations([]);
     } finally {
       setIsLoadingSpace(false);
     }
@@ -222,7 +251,7 @@ export default function InventoryReconciliationPage() {
   // Trạng thái giữ chỗ và kiểm tra điều kiện chặn hủy của Space
   const spaceAllocationSummary = useMemo(() => {
     const list = mrpData?.materialRequirements || [];
-    const totalReserved = list.reduce(
+    const totalMrpReserved = list.reduce(
       (sum, m) => sum + (Number(m.alreadyReservedForTargetQty) || 0),
       0,
     );
@@ -231,9 +260,20 @@ export default function InventoryReconciliationPage() {
       0,
     );
 
+    // Tính lượng giữ chỗ trực tiếp từ bảng phân bổ (material_allocations) của Space
+    const totalDirectReserved = spaceAllocations.reduce((sum, a) => {
+      if (a.allocationStatus === "RESERVED" || (Number(a.reservedQty) || 0) > 0) {
+        return sum + (Number(a.reservedQty) || 0);
+      }
+      return sum;
+    }, 0);
+
+    const totalReserved = Math.max(totalMrpReserved, totalDirectReserved);
+
     let isBlocked = false;
     let blockReason = "";
 
+    // 1. Kiểm tra điều kiện chặn từ BOM itemBreakdowns
     for (const m of list) {
       for (const bd of m.itemBreakdowns || []) {
         if ((bd.issuedQty || 0) > 0) {
@@ -252,8 +292,27 @@ export default function InventoryReconciliationPage() {
       if (isBlocked) break;
     }
 
-    const hasAnyAllocation = totalReserved > 0;
-    const isFullyReserved = hasAnyAllocation && totalAllocatableNow === 0;
+    // 2. Kiểm tra điều kiện chặn từ spaceAllocations trực tiếp
+    if (!isBlocked && spaceAllocations.length > 0) {
+      for (const a of spaceAllocations) {
+        if ((Number(a.issuedQty) || 0) > 0) {
+          isBlocked = true;
+          blockReason =
+            "Không thể hủy giữ chỗ vì vật tư đã được xuất kho cấp phát thực tế (Issued).";
+          break;
+        }
+        if (a.allocationStatus === "IN_PROD" || a.allocationStatus === "DONE") {
+          isBlocked = true;
+          blockReason =
+            "Không thể hủy giữ chỗ vì sản phẩm trong đơn đã chuyển sang sản xuất (In Production / Done).";
+          break;
+        }
+      }
+    }
+
+    const hasAnyAllocation = totalReserved > 0 || spaceAllocations.length > 0;
+    const isFullyReserved =
+      hasAnyAllocation && (list.length === 0 || totalAllocatableNow === 0);
 
     return {
       totalReserved,
@@ -263,11 +322,12 @@ export default function InventoryReconciliationPage() {
       isBlocked,
       blockReason,
     };
-  }, [mrpData?.materialRequirements]);
+  }, [mrpData?.materialRequirements, spaceAllocations]);
 
   // Hủy giữ chỗ toàn bộ vật tư của Không gian đơn hàng (Release Allocations)
   const handleReleaseAllocations = async () => {
-    const targetOrderId = spaceInfo?.orderId || mrpData?.orderId;
+    const targetOrderId =
+      spaceInfo?.orderId || mrpData?.orderId || spaceAllocations[0]?.orderId;
     if (!targetOrderId) {
       setToastBanner({
         type: "error",
@@ -297,6 +357,7 @@ export default function InventoryReconciliationPage() {
         `Người dùng hủy giữ chỗ vật tư cho không gian ${activeSpaceKey} trên giao diện đối chiếu tồn kho.`,
       );
       setAllocationResult(null);
+      setSpaceAllocations([]);
       setToastBanner({
         type: "info",
         text: `Đã hủy giữ chỗ thành công! Toàn bộ vật tư của "${activeSpaceKey}" đã được hoàn trả về Tồn kho khả dụng của xưởng.`,
@@ -395,7 +456,7 @@ export default function InventoryReconciliationPage() {
             </button>
           )}
 
-          {activeSpaceKey && (
+          {activeSpaceKey && canAccessBomPage && (
             <button
               type="button"
               onClick={() =>
@@ -404,6 +465,18 @@ export default function InventoryReconciliationPage() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
             >
               <span>BOM &amp; quy trình sản xuất</span>
+            </button>
+          )}
+
+          {activeSpaceKey && canAccessProductionPage && (
+            <button
+              type="button"
+              onClick={() =>
+                navigate(`/production/progress?spaceKey=${encodeURIComponent(activeSpaceKey)}`)
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
+            >
+              <span>Tiến độ sản xuất</span>
             </button>
           )}
         </div>
@@ -464,7 +537,7 @@ export default function InventoryReconciliationPage() {
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2 cursor-pointer"
                 >
                   <span>
-                    Chuyển sang Bước 2: Xem &amp; Duyệt Phiếu PR{" "}
+                    Xem &amp; Duyệt Phiếu PR{" "}
                     {allocationResult.consolidatedPrCode} →
                   </span>
                 </button>
@@ -562,7 +635,7 @@ export default function InventoryReconciliationPage() {
               onClick={() => navigate("/purchasing/requisitions")}
               className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition border border-slate-300 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              <span>Yêu cầu mua hàng PR (Bước 2) →</span>
+              <span>Yêu cầu mua hàng PR →</span>
             </button>
           </div>
         </div>
@@ -586,15 +659,27 @@ export default function InventoryReconciliationPage() {
                   </div>
                 </>
               ) : (mrpData.totalDistinctMaterialsCount || 0) === 0 ? (
-                <>
-                  <div className="text-xl font-extrabold mt-1.5 flex items-center gap-2 text-slate-500">
-                    <span className="w-3 h-3 rounded-full bg-slate-400" />
-                    <span>CHƯA THIẾT LẬP BOM</span>
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    Chưa có sản phẩm nào được thiết lập định mức vật tư trong BOM
-                  </div>
-                </>
+                spaceAllocationSummary.hasAnyAllocation ? (
+                  <>
+                    <div className="text-xl font-extrabold mt-1.5 flex items-center gap-2 text-emerald-600">
+                      <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                      <span>ĐÃ KHÓA GIỮ CHỖ</span>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Đang giữ {fmtNum(spaceAllocationSummary.totalReserved)} đơn vị vật tư trong hệ thống
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xl font-extrabold mt-1.5 flex items-center gap-2 text-slate-500">
+                      <span className="w-3 h-3 rounded-full bg-slate-400" />
+                      <span>CHƯA THIẾT LẬP BOM</span>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Chưa có sản phẩm nào được thiết lập định mức vật tư trong BOM
+                    </div>
+                  </>
+                )
               ) : spaceAllocationSummary.hasAnyAllocation &&
                 spaceAllocationSummary.totalAllocatableNow === 0 ? (
                 <>
@@ -708,8 +793,7 @@ export default function InventoryReconciliationPage() {
                 className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
               />
               <span className="text-xs md:text-sm font-semibold text-slate-700">
-                Tự động gom phần vật tư thiếu hụt vào Phiếu PR tổng hợp trong ngày (Consolidated
-                Daily PR — BR-PUR-01)
+                Tự động gom phần vật tư thiếu hụt vào Phiếu PR tổng hợp trong ngày
               </span>
             </label>
           </div>
@@ -895,7 +979,18 @@ export default function InventoryReconciliationPage() {
                 ) : pagedMaterials.length === 0 ? (
                   <tr>
                     <td colSpan={12} className="py-12 px-6 text-center text-slate-500">
-                      Không có dòng vật tư nào khớp với bộ lọc hiện tại.
+                      {spaceAllocations.length > 0 ? (
+                        <div className="max-w-md mx-auto text-center py-2">
+                          <div className="text-amber-700 font-bold mb-1">
+                            Không gian này đang có {spaceAllocations.length} bản ghi giữ chỗ vật tư trực tiếp trong hệ thống ({fmtNum(spaceAllocationSummary.totalReserved)} đơn vị).
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Các sản phẩm chưa được khai báo BOM để đối chiếu nhu cầu định mức. Bạn có thể bấm nút <strong className="text-rose-600">"Hủy giữ chỗ vật tư"</strong> ở trên để hoàn trả vật tư về kho khả dụng.
+                          </div>
+                        </div>
+                      ) : (
+                        "Không có dòng vật tư nào khớp với bộ lọc hiện tại."
+                      )}
                     </td>
                   </tr>
                 ) : (

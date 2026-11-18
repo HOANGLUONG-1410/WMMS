@@ -18,12 +18,12 @@ public class CreateMaterialValidator : AbstractValidator<CreateMaterialDto>
 {
     public CreateMaterialValidator()
     {
-        RuleFor(x => x.MaterialCode).NotEmpty().WithMessage("Mã vật tư không được rỗng (MSG01).").MaximumLength(100);
-        RuleFor(x => x.MaterialName).NotEmpty().WithMessage("Tên vật tư không được rỗng (MSG01).").MaximumLength(255);
-        RuleFor(x => x.MaterialGroup).Must(MasterDataRules.IsMaterialGroup).WithMessage("Nhóm vật tư không hợp lệ (LUMBER, HARDWARE, FINISH_PAINT, PACKAGING).");
-        RuleFor(x => x.UnitOfMeasure).NotEmpty().WithMessage("Đơn vị tính không được rỗng (MSG01).").MaximumLength(20);
+        RuleFor(x => x.MaterialCode).NotEmpty().WithMessage("Mã vật tư không được để trống.").MaximumLength(100);
+        RuleFor(x => x.MaterialName).NotEmpty().WithMessage("Tên vật tư không được để trống.").MaximumLength(255);
+        RuleFor(x => x.MaterialGroup).Must(MasterDataRules.IsMaterialGroup).WithMessage("Nhóm vật tư không hợp lệ (chỉ chấp nhận: Gỗ nguyên liệu, Phụ kiện kim khí, Sơn & Hóa chất, Bao bì đóng gói).");
+        RuleFor(x => x.UnitOfMeasure).NotEmpty().WithMessage("Đơn vị tính không được để trống.").MaximumLength(20);
         RuleFor(x => x.DimensionSpec).MaximumLength(150);
-        RuleFor(x => x.SafetyStockQty).GreaterThanOrEqualTo(0).WithMessage("SafetyStockQty phải >= 0.");
+        RuleFor(x => x.SafetyStockQty).GreaterThanOrEqualTo(0).WithMessage("Mức tồn kho an toàn không được nhỏ hơn 0.");
     }
 }
 
@@ -32,12 +32,12 @@ public class UpdateMaterialValidator : AbstractValidator<UpdateMaterialDto>
 {
     public UpdateMaterialValidator()
     {
-        RuleFor(x => x.MaterialName).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.MaterialName).NotEmpty().WithMessage("Tên vật tư không được để trống.").MaximumLength(255);
         RuleFor(x => x.MaterialGroup).Must(MasterDataRules.IsMaterialGroup).WithMessage("Nhóm vật tư không hợp lệ.");
-        RuleFor(x => x.UnitOfMeasure).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.UnitOfMeasure).NotEmpty().WithMessage("Đơn vị tính không được để trống.").MaximumLength(20);
         RuleFor(x => x.DimensionSpec).MaximumLength(150);
-        RuleFor(x => x.SafetyStockQty).GreaterThanOrEqualTo(0).WithMessage("SafetyStockQty phải >= 0.");
-        RuleFor(x => x.Status).Must(MasterDataRules.IsStatus).WithMessage("Status phải là ACTIVE hoặc INACTIVE.");
+        RuleFor(x => x.SafetyStockQty).GreaterThanOrEqualTo(0).WithMessage("Mức tồn kho an toàn không được nhỏ hơn 0.");
+        RuleFor(x => x.Status).Must(MasterDataRules.IsStatus).WithMessage("Trạng thái vật tư không hợp lệ (chỉ chấp nhận Đang hoạt động hoặc Ngừng sử dụng).");
     }
 }
 
@@ -46,10 +46,10 @@ public class CreateProductValidator : AbstractValidator<CreateProductDto>
 {
     public CreateProductValidator()
     {
-        RuleFor(x => x.ProductSku).NotEmpty().WithMessage("SKU không được rỗng (MSG01).").MaximumLength(100);
-        RuleFor(x => x.ProductName).NotEmpty().MaximumLength(255);
-        RuleFor(x => x.CategoryName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.DimensionsCm).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.ProductSku).NotEmpty().WithMessage("Mã sản phẩm (SKU) không được để trống.").MaximumLength(100);
+        RuleFor(x => x.ProductName).NotEmpty().WithMessage("Tên sản phẩm không được để trống.").MaximumLength(255);
+        RuleFor(x => x.CategoryName).NotEmpty().WithMessage("Danh mục sản phẩm không được để trống.").MaximumLength(100);
+        RuleFor(x => x.DimensionsCm).NotEmpty().WithMessage("Quy cách kích thước không được để trống.").MaximumLength(100);
         RuleFor(x => x.CbmPerUnit).GreaterThanOrEqualTo(0).When(x => x.CbmPerUnit.HasValue);
         RuleFor(x => x.ImageUrl).MaximumLength(500);
     }
@@ -60,11 +60,11 @@ public class UpdateProductValidator : AbstractValidator<UpdateProductDto>
 {
     public UpdateProductValidator()
     {
-        RuleFor(x => x.ProductName).NotEmpty().MaximumLength(255);
-        RuleFor(x => x.CategoryName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.DimensionsCm).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.ProductName).NotEmpty().WithMessage("Tên sản phẩm không được để trống.").MaximumLength(255);
+        RuleFor(x => x.CategoryName).NotEmpty().WithMessage("Danh mục sản phẩm không được để trống.").MaximumLength(100);
+        RuleFor(x => x.DimensionsCm).NotEmpty().WithMessage("Quy cách kích thước không được để trống.").MaximumLength(100);
         RuleFor(x => x.CbmPerUnit).GreaterThanOrEqualTo(0).When(x => x.CbmPerUnit.HasValue);
-        RuleFor(x => x.Status).Must(MasterDataRules.IsStatus).WithMessage("Status phải là ACTIVE hoặc INACTIVE.");
+        RuleFor(x => x.Status).Must(MasterDataRules.IsStatus).WithMessage("Trạng thái sản phẩm không hợp lệ (chỉ chấp nhận Đang hoạt động hoặc Ngừng kinh doanh).");
     }
 }
 
@@ -73,12 +73,12 @@ public class CreateSupplierValidator : AbstractValidator<CreateSupplierDto>
 {
     public CreateSupplierValidator()
     {
-        RuleFor(x => x.SupplierCode).NotEmpty().WithMessage("Mã NCC không được rỗng (MSG01).").MaximumLength(50);
-        RuleFor(x => x.SupplierName).NotEmpty().MaximumLength(255);
-        RuleFor(x => x.SupplyCategory).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.SupplierCode).NotEmpty().WithMessage("Mã nhà cung cấp không được để trống.").MaximumLength(50);
+        RuleFor(x => x.SupplierName).NotEmpty().WithMessage("Tên nhà cung cấp không được để trống.").MaximumLength(255);
+        RuleFor(x => x.SupplyCategory).NotEmpty().WithMessage("Nhóm ngành hàng cung ứng không được để trống.").MaximumLength(100);
         RuleFor(x => x.ContactEmail).EmailAddress().MaximumLength(100).When(x => !string.IsNullOrWhiteSpace(x.ContactEmail));
         RuleFor(x => x.Phone).MaximumLength(20);
-        RuleFor(x => x.LeadTimeDays).InclusiveBetween(0, 365).WithMessage("LeadTimeDays phải từ 0 đến 365.");
+        RuleFor(x => x.LeadTimeDays).InclusiveBetween(0, 365).WithMessage("Thời gian giao hàng dự kiến (Lead Time) phải từ 0 đến 365 ngày.");
     }
 }
 
@@ -87,12 +87,12 @@ public class UpdateSupplierValidator : AbstractValidator<UpdateSupplierDto>
 {
     public UpdateSupplierValidator()
     {
-        RuleFor(x => x.SupplierName).NotEmpty().MaximumLength(255);
-        RuleFor(x => x.SupplyCategory).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.SupplierName).NotEmpty().WithMessage("Tên nhà cung cấp không được để trống.").MaximumLength(255);
+        RuleFor(x => x.SupplyCategory).NotEmpty().WithMessage("Nhóm ngành hàng cung ứng không được để trống.").MaximumLength(100);
         RuleFor(x => x.ContactEmail).EmailAddress().MaximumLength(100).When(x => !string.IsNullOrWhiteSpace(x.ContactEmail));
         RuleFor(x => x.Phone).MaximumLength(20);
-        RuleFor(x => x.LeadTimeDays).InclusiveBetween(0, 365);
-        RuleFor(x => x.Status).Must(MasterDataRules.IsStatus).WithMessage("Status phải là ACTIVE hoặc INACTIVE.");
+        RuleFor(x => x.LeadTimeDays).InclusiveBetween(0, 365).WithMessage("Thời gian giao hàng dự kiến (Lead Time) phải từ 0 đến 365 ngày.");
+        RuleFor(x => x.Status).Must(MasterDataRules.IsStatus).WithMessage("Trạng thái nhà cung cấp không hợp lệ (chỉ chấp nhận Đang hợp tác hoặc Ngừng hợp tác).");
     }
 }
 
@@ -101,8 +101,8 @@ public class CreateCustomerValidator : AbstractValidator<CreateCustomerDto>
 {
     public CreateCustomerValidator()
     {
-        RuleFor(x => x.CustomerCode).NotEmpty().WithMessage("Mã khách hàng không được rỗng (MSG01).").MaximumLength(50);
-        RuleFor(x => x.CompanyName).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.CustomerCode).NotEmpty().WithMessage("Mã khách hàng không được để trống.").MaximumLength(50);
+        RuleFor(x => x.CompanyName).NotEmpty().WithMessage("Tên công ty khách hàng không được để trống.").MaximumLength(255);
         RuleFor(x => x.ContactPerson).MaximumLength(255);
         RuleFor(x => x.Email).EmailAddress().MaximumLength(255).When(x => !string.IsNullOrWhiteSpace(x.Email));
     }
