@@ -2,12 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WmmsAppShell from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
+import { useSession } from '../../auth/store/SessionContext';
+import { ROLES } from '../../../constants/roles';
 import { orderIntakeApi } from '../../../services/wmmsApi';
 import { lifecycleStatusLabel } from '../../../lib/statusLabels';
 
 export default function SalesOrderListPage() {
   const navigate = useNavigate();
   const { orderSpaces, setOrderSpaces, setCurrentSpaceKey } = useWmms();
+  const { currentUser } = useSession();
+
+  const activeRole = currentUser?.activeRole || ROLES.OWNER;
+  const canAccessStaging = ([ROLES.SALES, ROLES.OWNER, ROLES.ADMIN] as string[]).includes(activeRole);
 
   // State cho bộ lọc trạng thái và tìm kiếm (Fields #2 & #3)
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -66,6 +72,7 @@ export default function SalesOrderListPage() {
         if (!isMounted) return;
         setLoadError(
           err?.response?.data?.message ||
+            err?.message ||
             'Không thể tải danh sách Không gian đơn hàng từ máy chủ.'
         );
       })
@@ -133,7 +140,7 @@ export default function SalesOrderListPage() {
   };
 
   return (
-    <WmmsAppShell mode="sales">
+    <WmmsAppShell>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Page Heading + Primary CTA */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -146,17 +153,11 @@ export default function SalesOrderListPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate('/orders/staging')}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition self-start sm:self-auto flex items-center gap-2 cursor-pointer"
-          >
-            <svg
-              className="w-4 h-4 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              viewBox="0 0 24 24"
+          {canAccessStaging && (
+            <button
+              type="button"
+              onClick={() => navigate('/orders/staging')}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition self-start sm:self-auto flex items-center gap-2 cursor-pointer"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>

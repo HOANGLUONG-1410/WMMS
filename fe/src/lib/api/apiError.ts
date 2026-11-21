@@ -13,11 +13,16 @@ export interface ApiResponseEnvelope<T = unknown> {
   timestamp?: string;
 }
 
-export class ApiError extends Error {
+export class ApiError<T = unknown> extends Error {
+  readonly isAxiosError: boolean = true;
   status: number;          // HTTP status, 0 = network / no response
   messageCode?: string;    // e.g. MSG01..MSG13
   errors: string[];
   url?: string;
+  response?: {
+    status: number;
+    data?: ApiResponseEnvelope<T>;
+  };
 
   constructor(
     message: string,
@@ -25,6 +30,7 @@ export class ApiError extends Error {
     messageCode?: string,
     errors: string[] = [],
     url?: string,
+    responsePayload?: ApiResponseEnvelope<T>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -32,6 +38,19 @@ export class ApiError extends Error {
     this.messageCode = messageCode;
     this.errors = errors;
     this.url = url;
+
+    // Giữ tương thích hoàn toàn với AxiosError để các catch block đọc được err.response
+    if (status > 0) {
+      this.response = {
+        status,
+        data: responsePayload || {
+          success: false,
+          message,
+          messageCode,
+          errors,
+        },
+      };
+    }
   }
 
   /**
@@ -81,6 +100,7 @@ export class ApiError extends Error {
         payload?.messageCode,
         normalizedErrors,
         url,
+        payload,
       );
     }
 

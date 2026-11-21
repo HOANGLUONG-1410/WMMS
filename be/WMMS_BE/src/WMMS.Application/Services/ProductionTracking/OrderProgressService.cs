@@ -34,7 +34,7 @@ public class OrderProgressService : IOrderProgressService
         if (order == null)
         {
             throw AppException.NotFound(
-                $"Không tìm thấy đơn hàng với mã định danh ID = {orderId}.");
+                "Không tìm thấy đơn hàng được yêu cầu.");
         }
 
         var warningDays = await GetEtdWarningDaysAsync();
@@ -53,7 +53,7 @@ public class OrderProgressService : IOrderProgressService
             if (!Enum.TryParse<OrderStatusEnum>(statusFilter.Trim(), ignoreCase: true, out var parsedStatus))
             {
                 throw new AppException(
-                    $"Bộ lọc trạng thái đơn hàng '{statusFilter}' không hợp lệ. Các giá trị hợp lệ: CONFIRMED, IN_PLANNING, IN_PRODUCTION, COMPLETED, CANCELLED, DRAFT.",
+                    $"Bộ lọc trạng thái đơn hàng '{statusFilter}' không hợp lệ. Vui lòng chọn một trong các trạng thái: Đã xác nhận, Đang lập kế hoạch, Đang sản xuất, Đã hoàn thành, Đã hủy hoặc Bản nháp.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -79,13 +79,13 @@ public class OrderProgressService : IOrderProgressService
         if (order == null)
         {
             throw AppException.NotFound(
-                $"Không tìm thấy đơn hàng với mã định danh ID = {orderId}.");
+                "Không tìm thấy đơn hàng được yêu cầu.");
         }
 
         if (order.Status == OrderStatusEnum.CANCELLED)
         {
             throw new AppException(
-                $"Đơn hàng '{order.PoNumber}' đã bị hủy (CANCELLED) nên không thể đồng bộ tiến độ sản xuất.",
+                $"Đơn hàng '{order.PoNumber}' đã bị hủy nên không thể đồng bộ tiến độ sản xuất.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -215,7 +215,7 @@ public class OrderProgressService : IOrderProgressService
                     BatchStatus = b.BatchStatus.ToString(),
                     InitialQty = initialQty,
                     CurrentQty = b.BatchQty,
-                    CurrentStageCode = currentStep?.StageName ?? $"STAGE_{b.CurrentStageSeq}",
+                    CurrentStageCode = currentStep?.StageName ?? $"Công đoạn #{b.CurrentStageSeq}",
                     PassedStepsCount = passedSteps,
                     TotalStepsCount = totalSteps,
                     StageProgressPercent = stagePercent

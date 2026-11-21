@@ -8,8 +8,14 @@ using WMMS.Domain.Constants;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// Controller Quản lý Tồn kho 3 cấp, Sổ kho điện tử &amp; Phân bổ Tồn kho Tự động MRP (SC-12, SC-13, SC-14).
-/// Cho phép truy cập bởi: ADMIN, OWNER, PLANNER, PURCHASING, WAREHOUSE.
+/// [Demo-Iter 1 &amp; Dev-Iter 2] Controller Quản lý Tồn kho 3 cấp, Sổ kho điện tử &amp; Phân bổ Tồn kho Tự động MRP (SC-12, SC-13, SC-14).
+/// <para>
+/// - Chức năng phần SC-12 &amp; SC-13 (Hoàng Đại Cương):
+///   + <c>GET /api/v1/inventory/stocks</c>: Xem bảng cân đối tồn kho 3 cấp (<c>PhysicalQty</c>, <c>AllocatedQty</c>, <c>AvailableQty</c>) lọc theo nhóm vật tư và cảnh báo dưới ngưỡng an toàn (<c>SafetyStockQty</c>).
+///   + <c>GET /api/v1/inventory/stocks/{materialId}</c>: Xem chi tiết tồn kho 1 vật tư kèm danh sách các đơn hàng/BOM đang giữ chỗ (<c>material_allocations</c>).
+///   + <c>GET /api/v1/inventory/ledger</c>: Tra cứu Sổ cái tồn kho điện tử (<c>inventory_transactions</c>) phân trang, lọc theo ngày và loại giao dịch.
+/// - Móc nối: Gọi <see cref="IInventoryService"/> (<c>InventoryService</c>) đọc dữ liệu từ bảng <c>materials</c>, <c>inventory_stocks</c>, <c>material_allocations</c> và <c>inventory_transactions</c> (được seed ban đầu tại <c>DbInitializer</c> và cập nhật tự động khi chạy MRP SC-14 hoặc Nhập kho PO SC-17).
+/// </para>
 /// </summary>
 [Route("api/v1/inventory")]
 [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Purchasing},{RoleConstants.Warehouse}")]

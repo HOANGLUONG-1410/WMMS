@@ -9,8 +9,14 @@ using WMMS.Domain.Constants;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// Controller Danh mục Đối tác (SC-06 / SCR-SUP-01, UC-26..UC-29): Nhà cung cấp và Khách hàng.
-/// NCC đọc: ADMIN, OWNER, PURCHASING, PLANNER, WAREHOUSE; ghi: ADMIN, PURCHASING. Khách hàng đọc: ADMIN, OWNER, SALES; tạo: ADMIN, SALES.
+/// [Dev-Iter 1] Controller Quản lý Danh mục Đối tác: Nhà cung cấp &amp; Khách hàng B2B (SC-06 / SCR-SUP-01, UC-26..UC-29, BR-MDM-01).
+/// <para>
+/// - Chức năng: Cung cấp REST API quản lý Nhà cung cấp vật tư (<c>/api/v1/suppliers</c>) và Khách hàng đặt hàng (<c>/api/v1/customers</c>).
+/// - Phân quyền RBAC: NCC đọc (ADMIN, OWNER, PURCHASING, PLANNER, WAREHOUSE), ghi (ADMIN, PURCHASING); Khách hàng đọc (ADMIN, OWNER, SALES), tạo (ADMIN, SALES).
+/// - Móc nối: Kết nối <see cref="ISupplierService"/> (<c>SupplierService</c>) -&gt; Lưu bảng <c>suppliers</c> và <c>customers</c>;
+///   bảng <c>suppliers</c> móc nối trực tiếp sang phân hệ Gom PR lập đơn PO theo Nhà cung cấp (SC-16) và Nhập kho PO (SC-17);
+///   bảng <c>customers</c> móc nối sang phân hệ Tiếp nhận Đơn hàng Sales Order &amp; Order Space (SC-08, SC-09).
+/// </para>
 /// </summary>
 [Route("api/v1/suppliers")]
 [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Purchasing},{RoleConstants.Planner},{RoleConstants.Warehouse}")]

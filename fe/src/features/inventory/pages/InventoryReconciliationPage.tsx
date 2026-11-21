@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
+import { useSession } from "../../auth/store/SessionContext";
 import { orderIntakeApi } from "../../../services/wmmsApi";
 import { mrpApi } from "../api/mrpApi";
 import type {
@@ -30,6 +31,18 @@ export default function InventoryReconciliationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentSpaceKey, setCurrentSpaceKey } = useWmms();
+  const { currentUser } = useSession();
+
+  const activeRole = currentUser?.activeRole || "OWNER";
+  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER", "SALES"].includes(activeRole);
+  const canAccessProductionPage = [
+    "ADMIN",
+    "OWNER",
+    "PLANNER",
+    "LEADER",
+    "QC",
+    "WAREHOUSE",
+  ].includes(activeRole);
 
   const spaceParam = searchParams.get("spaceKey");
   const activeSpaceKey = spaceParam || currentSpaceKey || "";
@@ -149,8 +162,12 @@ export default function InventoryReconciliationPage() {
         setSpaceError(`Lỗi: Không tìm thấy thông tin Không gian đơn hàng "${spaceKey}".`);
         setSpaceAllocations([]);
       }
-    } catch {
-      setSpaceError(`Không thể tải thông tin Không gian đơn hàng "${spaceKey}" từ máy chủ.`);
+    } catch (err: any) {
+      setSpaceError(
+        err?.response?.data?.message ||
+        err?.message ||
+        `Không thể tải thông tin Không gian đơn hàng "${spaceKey}" từ máy chủ.`
+      );
       setSpaceAllocations([]);
     } finally {
       setIsLoadingSpace(false);
@@ -439,7 +456,7 @@ export default function InventoryReconciliationPage() {
             </button>
           )}
 
-          {activeSpaceKey && (
+          {activeSpaceKey && canAccessBomPage && (
             <button
               type="button"
               onClick={() =>
@@ -451,7 +468,7 @@ export default function InventoryReconciliationPage() {
             </button>
           )}
 
-          {activeSpaceKey && (
+          {activeSpaceKey && canAccessProductionPage && (
             <button
               type="button"
               onClick={() =>

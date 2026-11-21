@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import WmmsAppShell from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
 import { orderIntakeApi } from '../../../services/wmmsApi';
@@ -21,13 +22,58 @@ interface CustomerOption {
   country?: string;
 }
 
+/** Nhận diện URL ảnh hợp lệ (Base64 data URI, URL tĩnh hoặc đuôi ảnh chuẩn) */
+const getRowImageUrl = (row: any): string | null => {
+  const url = row?.productImageUrl || row?.technicalDrawingUrl;
+  if (typeof url === 'string' && url.trim().length > 0) {
+    const trimmed = url.trim();
+    if (
+      trimmed.startsWith('data:image/') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('/uploads/') ||
+      trimmed.startsWith('blob:') ||
+      /\.(png|jpe?g|webp|gif|svg)$/i.test(trimmed)
+    ) {
+      return trimmed;
+    }
+  }
+  return null;
+};
+
 export default function StagingGridPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setOrderSpaces, setCurrentSpaceKey, appendAuditLog } = useWmms();
 
-  // Chế độ nạp dữ liệu: 'EXCEL' (tải file .xlsx) hoặc 'MANUAL' (nhập tay trực tiếp)
-  const [intakeMode, setIntakeMode] = useState<'EXCEL' | 'MANUAL'>('EXCEL');
+  // Quản lý ảnh bản vẽ từng dòng
+  const rowImageInputRef = useRef<HTMLInputElement>(null);
+  const activeImageRowIdxRef = useRef<number | null>(null);
+
+  const [hoverPreview, setHoverPreview] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    placement: 'top' | 'bottom';
+    imageUrl: string;
+    title: string;
+  } | null>(null);
+
+  const [modalPreview, setModalPreview] = useState<{
+    isOpen: boolean;
+    rowIndex: number;
+    imageUrl: string;
+    title: string;
+    sku: string;
+    desc: string;
+  } | null>(null);
+
+  // Mức độ thu phóng ảnh bản vẽ hiện tại (1 = 100%)
+  const [zoomScale, setZoomScale] = useState<number>(1);
+
+  // Kéo thả (Drag & Drop) file từ máy tính
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [isHoveringDropzone, setIsHoveringDropzone] = useState(false);
 
   // Thông tin đơn hàng (PO Header)
   const [poNumber, setPoNumber] = useState('PO-2026-OCT-880515');
@@ -77,6 +123,53 @@ export default function StagingGridPage() {
     }
   }, [customerList, selectedCustomerId]);
 
+  // Lắng nghe sự kiện kéo file trên toàn cửa sổ (Window Drag & Drop)
+  useEffect(() => {
+    const handleWindowDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        setIsDraggingFile(true);
+      }
+    };
+
+    const handleWindowDragLeave = (e: DragEvent) => {
+      if (
+        !e.relatedTarget ||
+        e.clientX <= 0 ||
+        e.clientY <= 0 ||
+        e.clientX >= window.innerWidth ||
+        e.clientY >= window.innerHeight
+      ) {
+        setIsDraggingFile(false);
+        setIsHoveringDropzone(false);
+      }
+    };
+
+    const handleWindowDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+        setIsDraggingFile(true);
+      }
+    };
+
+    const handleWindowDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDraggingFile(false);
+      setIsHoveringDropzone(false);
+    };
+
+    window.addEventListener('dragenter', handleWindowDragEnter);
+    window.addEventListener('dragleave', handleWindowDragLeave);
+    window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('drop', handleWindowDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', handleWindowDragEnter);
+      window.removeEventListener('dragleave', handleWindowDragLeave);
+      window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('drop', handleWindowDrop);
+    };
+  }, []);
+
   const handleCustomerChange = (customerIdVal: string) => {
     const idNum = Number(customerIdVal);
     setSelectedCustomerId(idNum);
@@ -117,7 +210,9 @@ export default function StagingGridPage() {
       orderQty: 100,
       targetEtd: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
       fscRequired: true,
-      technicalDrawingName: `CAD_Chair_0${nextNum}.pdf`,
+      technicalDrawingName: '',
+      productImageUrl: null,
+      technicalDrawingUrl: null,
     });
     setRows((prev) => [...prev, newRow]);
   };
@@ -138,49 +233,72 @@ export default function StagingGridPage() {
     );
   };
 
-  /** Chuyển sang chế độ nhập tay với lưới trống */
-  const handleSwitchToManualMode = () => {
-    setIntakeMode('MANUAL');
-    setUploadedFileName('');
-    setSheetName('');
-    const initialBlankRow = validateStagingRowClient({
-      rowNumber: 1,
-      productSku: '',
-      productDescription: '',
-      dimensionsMm: '',
-      finishColor: '',
-      orderQty: 0,
-      targetEtd: new Date().toISOString().split('T')[0],
-      fscRequired: true,
-      technicalDrawingName: '',
-    });
-    setRows([initialBlankRow]);
-    setBannerAlert({
-      type: 'info',
-      text: 'Đã chuyển sang chế độ Nhập tay (Manual Entry). Hãy nhập thông tin sản phẩm và bấm "+ Thêm dòng".',
-    });
+  /** Kích hoạt chọn file ảnh bản vẽ cho một dòng cụ thể */
+  const handleTriggerAddRowImage = (idx: number) => {
+    activeImageRowIdxRef.current = idx;
+    if (rowImageInputRef.current) {
+      rowImageInputRef.current.value = '';
+      rowImageInputRef.current.click();
+    }
   };
 
-  /** Nạp dữ liệu mẫu thử nghiệm */
-  const handleLoadSampleData = () => {
-    setUploadedFileName('PO_Target_Home_US_880515.xlsx (Dữ liệu mẫu)');
-    setSheetName('OrderDetails');
-    setPoNumber('ASH-2026-OCT-880515');
-    setCustomerName('Target Home US');
-    setCustomerCountry('USA');
-    setRows(INITIAL_STAGING_GRID_ROWS.map((r) => validateStagingRowClient(r)));
-    setBannerAlert({
-      type: 'success',
-      text: 'Đã nạp 4 dòng dữ liệu mẫu. Các ô lỗi cú pháp được đánh dấu viền đỏ.',
-    });
-  };
-
-  /** Upload file Excel PO lên Backend (/api/v1/orders/staging/upload) */
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  /** Xử lý khi người dùng chọn xong file ảnh cho một dòng */
+  const handleRowImageSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    const targetIdx = activeImageRowIdxRef.current;
+    if (!file || targetIdx === null || targetIdx < 0) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn tệp hình ảnh (PNG, JPG, WEBP, GIF)!');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setRows((prev) =>
+        prev.map((row, i) => {
+          if (i !== targetIdx) return row;
+          return {
+            ...row,
+            productImageUrl: dataUrl,
+            technicalDrawingUrl: dataUrl,
+            technicalDrawingName: file.name,
+          };
+        })
+      );
+      toast.success(`Đã thêm ảnh bản vẽ cho dòng #${targetIdx + 1}!`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /** Xóa ảnh bản vẽ của một dòng cụ thể */
+  const handleRemoveRowImage = (idx: number) => {
+    setHoverPreview(null);
+    setRows((prev) =>
+      prev.map((row, i) => {
+        if (i !== idx) return row;
+        return {
+          ...row,
+          productImageUrl: null,
+          technicalDrawingUrl: null,
+          technicalDrawingName: '',
+        };
+      })
+    );
+    toast.info(`Đã gỡ ảnh bản vẽ dòng #${idx + 1}.`);
+  };
+
+  /** Xử lý file Excel được tải lên (từ nút bấm hoặc kéo thả) */
+  const processExcelFile = async (file: File) => {
     if (!file) return;
 
-    setIntakeMode('EXCEL');
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith('.xlsx') && !lowerName.endsWith('.xls')) {
+      toast.error('Chỉ chấp nhận file Excel có định dạng .xlsx hoặc .xls!');
+      return;
+    }
+
     setUploadedFileName(file.name);
     setIsUploading(true);
 
@@ -206,17 +324,33 @@ export default function StagingGridPage() {
         return;
       }
     } catch (err: any) {
-      console.warn('Lỗi phân tích từ máy chủ, chuyển sang kiểm tra cục bộ:', err);
-      // Fallback cục bộ
+      console.warn('Lỗi phân tích từ máy chủ:', err);
+      const isNetworkError = !err?.status || err?.status === 0;
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        (isNetworkError
+          ? 'Không thể kết nối Backend để bóc tách file Excel. Đã nạp dữ liệu vào lưới cục bộ.'
+          : 'Có lỗi xảy ra khi bóc tách file Excel từ máy chủ.');
+
       setBannerAlert({
         type: 'error',
-        text:
-          err?.response?.data?.message ||
-          'Không thể kết nối Backend để bóc tách file Excel. Đã nạp dữ liệu vào lưới cục bộ.',
+        text: isNetworkError
+          ? 'Không thể kết nối Backend để bóc tách file Excel. Đã nạp dữ liệu vào lưới cục bộ.'
+          : errorMsg,
       });
+      toast.error(errorMsg);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  /** Upload file Excel PO qua input file */
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processExcelFile(file);
     }
   };
 
@@ -238,7 +372,17 @@ export default function StagingGridPage() {
       });
 
       if (apiRes?.data?.rows) {
-        setRows(apiRes.data.rows.map((r: any) => validateStagingRowClient(r)));
+        setRows(
+          apiRes.data.rows.map((r: any, i: number) => {
+            const prev = revalidated[i];
+            return validateStagingRowClient({
+              ...r,
+              productImageUrl: prev?.productImageUrl ?? r.productImageUrl,
+              technicalDrawingUrl: prev?.technicalDrawingUrl ?? r.technicalDrawingUrl,
+              technicalDrawingName: prev?.technicalDrawingName ?? r.technicalDrawingName,
+            });
+          })
+        );
       }
 
       const errCount = apiRes?.data?.errorCellCount ?? 0;
@@ -255,22 +399,35 @@ export default function StagingGridPage() {
         });
         toast.error(`Còn ${errCount} ô lỗi định dạng cần sửa.`);
       }
-    } catch {
-      // Client-side fallback check
-      const remainingErrors = revalidated.reduce(
-        (sum, r) => sum + (r.cellErrors?.length || 0),
-        0
-      );
-      if (remainingErrors === 0) {
-        setBannerAlert({
-          type: 'success',
-          text: `Toàn bộ ${revalidated.length} dòng sản phẩm đã sạch lỗi (Client-side validation).`,
-        });
-      } else {
+    } catch (err: any) {
+      const isNetworkError = !err?.status || err?.status === 0;
+      if (!isNetworkError) {
+        const errorMsg =
+          err?.response?.data?.message ||
+          err?.message ||
+          'Kiểm tra dữ liệu thất bại từ máy chủ.';
         setBannerAlert({
           type: 'error',
-          text: `Còn ${remainingErrors} ô lỗi định dạng cần chỉnh sửa trực tiếp.`,
+          text: errorMsg,
         });
+        toast.error(errorMsg);
+      } else {
+        // Client-side fallback check khi mất kết nối mạng
+        const remainingErrors = revalidated.reduce(
+          (sum, r) => sum + (r.cellErrors?.length || 0),
+          0
+        );
+        if (remainingErrors === 0) {
+          setBannerAlert({
+            type: 'success',
+            text: `Toàn bộ ${revalidated.length} dòng sản phẩm đã sạch lỗi (Client-side validation).`,
+          });
+        } else {
+          setBannerAlert({
+            type: 'error',
+            text: `Còn ${remainingErrors} ô lỗi định dạng cần chỉnh sửa trực tiếp.`,
+          });
+        }
       }
     } finally {
       setIsValidating(false);
@@ -347,6 +504,7 @@ export default function StagingGridPage() {
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
+        err?.message ||
         'Không thể khởi tạo Không gian đơn hàng. Vui lòng kiểm tra lại thông tin đơn.';
       setBannerAlert({ type: 'error', text: msg });
       toast.error(msg);
@@ -484,32 +642,32 @@ export default function StagingGridPage() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Phương thức nhập liệu
+                Nhập file Excel
               </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIntakeMode('EXCEL')}
-                  className={`flex-1 py-2 px-3 text-sm font-semibold rounded-lg border transition cursor-pointer ${
-                    intakeMode === 'EXCEL'
-                      ? 'bg-blue-50 text-blue-700 border-blue-300'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  Tải file Excel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSwitchToManualMode}
-                  className={`flex-1 py-2 px-3 text-sm font-semibold rounded-lg border transition cursor-pointer ${
-                    intakeMode === 'MANUAL'
-                      ? 'bg-blue-50 text-blue-700 border-blue-300'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  Nhập tay
-                </button>
-              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-2 px-4 text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg shadow-xs transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>{isUploading ? 'Đang đọc file...' : 'Tải file Excel'}</span>
+              </button>
+              {uploadedFileName && (
+                <p className="text-xs text-slate-500 mt-1 truncate" title={uploadedFileName}>
+                  Đã tải: <span className="font-semibold text-slate-700">{uploadedFileName}</span>{' '}
+                  {sheetName ? `(${sheetName})` : ''}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -536,50 +694,73 @@ export default function StagingGridPage() {
           </div>
         )}
 
-        {/* Excel Upload Dropzone */}
-        {intakeMode === 'EXCEL' && (
-          <div className="bg-white border-2 border-dashed border-blue-300 rounded-xl p-6 text-center transition">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-            </div>
-            <div className="text-sm font-bold text-slate-900">
-              {uploadedFileName
-                ? `Tệp đã tải lên: ${uploadedFileName} ${sheetName ? `(Trang tính: ${sheetName})` : ''}`
-                : 'Kéo thả hoặc chọn file Excel PO (.xlsx / .xls) từ máy tính'}
-            </div>
-            <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
-              Hệ thống tự động loại bỏ các cột thương mại nhạy cảm{' '}
-              <span className="font-semibold text-slate-700">
-                (Số container, Cảng xuất, Hóa đơn chiếu lệ PI, Đơn giá CBD)
-              </span>{' '}
-              để bảo mật dữ liệu khi chuyển xuống xưởng.
-            </p>
-
-            <div className="mt-4 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                disabled={isUploading}
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs transition cursor-pointer"
+        {/* Excel Upload Dropzone (chỉ hiện khi người dùng kéo file từ máy tính vào) */}
+        {isDraggingFile && (
+          <div
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setIsHoveringDropzone(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!isHoveringDropzone) {
+                setIsHoveringDropzone(true);
+              }
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setIsHoveringDropzone(false);
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingFile(false);
+              setIsHoveringDropzone(false);
+              const file = e.dataTransfer?.files?.[0];
+              if (file) {
+                processExcelFile(file);
+              }
+            }}
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+              isHoveringDropzone
+                ? 'border-emerald-500 bg-emerald-50/90 shadow-md'
+                : 'border-blue-400 bg-blue-50/40 shadow-xs'
+            }`}
+          >
+            <div className="pointer-events-none">
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2.5 transition-colors ${
+                  isHoveringDropzone
+                    ? 'bg-emerald-100 text-emerald-600'
+                    : 'bg-blue-100 text-blue-600'
+                }`}
               >
-                {isUploading ? 'Đang đọc file...' : 'Chọn file Excel từ máy'}
-              </button>
-              <button
-                type="button"
-                onClick={handleLoadSampleData}
-                className="px-4 py-2 text-sm font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg transition cursor-pointer"
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </div>
+              <div
+                className={`text-base font-bold transition-colors ${
+                  isHoveringDropzone ? 'text-emerald-800' : 'text-slate-900'
+                }`}
               >
-                Nạp dữ liệu mẫu
-              </button>
+                {isHoveringDropzone
+                  ? 'Thả file Excel vào đây để tải lên ngay'
+                  : 'Kéo và thả file Excel PO (.xlsx / .xls) vào khung này để nhập'}
+              </div>
+              <p
+                className={`text-xs mt-1 max-w-xl mx-auto transition-colors ${
+                  isHoveringDropzone ? 'text-emerald-600' : 'text-slate-500'
+                }`}
+              >
+                Hệ thống tự động loại bỏ các cột thương mại nhạy cảm{' '}
+                <span className={`font-semibold ${isHoveringDropzone ? 'text-emerald-800' : 'text-slate-700'}`}>
+                  (Số container, Cảng xuất, Hóa đơn chiếu lệ PI, Đơn giá CBD)
+                </span>{' '}
+                để bảo mật dữ liệu khi chuyển xuống xưởng.
+              </p>
             </div>
           </div>
         )}
@@ -804,16 +985,80 @@ export default function StagingGridPage() {
                     )}
 
                     {visibleColumns.technicalDrawing && (
-                      <td className="py-2.5 px-4">
-                        <input
-                          type="text"
-                          value={row.technicalDrawingName || ''}
-                          placeholder="CAD_Drawing.pdf"
-                          onChange={(e) =>
-                            handleCellChange(idx, 'technicalDrawingName', e.target.value)
+                      <td className="py-2.5 px-3 min-w-[200px]">
+                        {(() => {
+                          const imgUrl = getRowImageUrl(row);
+                          const drawingTitle = row.technicalDrawingName || 'Ảnh bản vẽ';
+                          if (imgUrl) {
+                            return (
+                              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 hover:border-blue-400 rounded-lg p-1 transition group">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setZoomScale(1);
+                                    setModalPreview({
+                                      isOpen: true,
+                                      rowIndex: idx,
+                                      imageUrl: imgUrl,
+                                      title: drawingTitle,
+                                      sku: row.productSku || `Dòng ${idx + 1}`,
+                                      desc: row.productDescription || '',
+                                    });
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const isTop = rect.top > 240;
+                                    setHoverPreview({
+                                      visible: true,
+                                      x: Math.max(10, Math.min(rect.left, window.innerWidth - 240)),
+                                      y: isTop ? rect.top - 8 : rect.bottom + 8,
+                                      placement: isTop ? 'top' : 'bottom',
+                                      imageUrl: imgUrl,
+                                      title: drawingTitle,
+                                    });
+                                  }}
+                                  onMouseLeave={() => setHoverPreview(null)}
+                                  className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer"
+                                  title="Nhấn để phóng to ảnh bản vẽ"
+                                >
+                                  <img
+                                    src={imgUrl}
+                                    alt={drawingTitle}
+                                    className="w-7 h-7 rounded object-cover border border-slate-200 shrink-0 bg-white"
+                                  />
+                                  <span className="text-xs font-mono font-medium text-slate-700 truncate block max-w-[110px]">
+                                    {drawingTitle}
+                                  </span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveRowImage(idx);
+                                  }}
+                                  className="w-5 h-5 rounded hover:bg-rose-100 hover:text-rose-600 text-slate-400 flex items-center justify-center text-xs transition cursor-pointer shrink-0"
+                                  title="Xóa ảnh bản vẽ này"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            );
                           }
-                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        />
+
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => handleTriggerAddRowImage(idx)}
+                              className="w-full py-1.5 px-2.5 rounded-lg border border-dashed border-blue-300 hover:border-blue-500 bg-blue-50/50 hover:bg-blue-50 text-blue-600 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                            >
+                              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                              </svg>
+                              <span>Thêm ảnh</span>
+                            </button>
+                          );
+                        })()}
                       </td>
                     )}
 
@@ -836,6 +1081,174 @@ export default function StagingGridPage() {
           </div>
         </div>
       </div>
+
+      {/* Hidden file input để chọn ảnh bản vẽ cho từng dòng */}
+      <input
+        ref={rowImageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleRowImageSelected}
+        className="hidden"
+      />
+
+      {/* Hover preview tooltip */}
+      {hoverPreview?.visible && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${hoverPreview.x}px`,
+            top: hoverPreview.placement === 'bottom' ? `${hoverPreview.y}px` : undefined,
+            bottom: hoverPreview.placement === 'top' ? `${window.innerHeight - hoverPreview.y}px` : undefined,
+          }}
+          className="z-50 pointer-events-none w-56 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 text-center"
+        >
+          <div className="w-full h-44 rounded-lg overflow-hidden bg-slate-100 border border-slate-100 flex items-center justify-center">
+            <img
+              src={hoverPreview.imageUrl}
+              alt={hoverPreview.title}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+          <div className="mt-1.5 px-1 flex items-center justify-between text-[11px] text-slate-500">
+            <span className="truncate max-w-[130px] font-mono text-slate-700 font-semibold">{hoverPreview.title}</span>
+            <span className="text-blue-600 font-medium">Click xem lớn</span>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xem lớn ảnh bản vẽ kỹ thuật có hỗ trợ thu phóng và xoay/kéo */}
+      {modalPreview?.isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-[2px]"
+          onClick={() => setModalPreview(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-[96vw] max-w-6xl h-[88vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <TransformWrapper
+              initialScale={1}
+              minScale={0.5}
+              maxScale={4}
+              centerOnInit={true}
+              wheel={{ step: 0.001 }}
+              doubleClick={{ step: 0.25 }}
+              onTransform={(_ref, state) => setZoomScale(state.scale)}
+            >
+              {({ zoomIn, zoomOut, resetTransform }) => (
+                <>
+                  <div className="px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <span>Bản vẽ kỹ thuật:</span>
+                        <span className="font-mono text-blue-600 font-semibold">{modalPreview.title}</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Mã SKU: <span className="font-semibold text-slate-700">{modalPreview.sku}</span>
+                        {modalPreview.desc ? ` — ${modalPreview.desc}` : ''}
+                      </p>
+                    </div>
+
+                    {/* Bộ công cụ thu phóng ảnh tối giản */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center bg-white border border-slate-300 rounded-lg shadow-xs overflow-hidden text-xs">
+                        <button
+                          type="button"
+                          onClick={() => zoomOut(0.15)}
+                          title="Thu nhỏ"
+                          className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer select-none text-base"
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetTransform();
+                            setZoomScale(1);
+                          }}
+                          title="Bấm để đặt lại 100%"
+                          className="px-2.5 h-8 flex items-center justify-center font-mono font-semibold text-slate-700 hover:bg-slate-100 border-x border-slate-200 transition cursor-pointer select-none"
+                        >
+                          {Math.round(zoomScale * 100)}%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => zoomIn(0.15)}
+                          title="Phóng to"
+                          className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer select-none text-base"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="h-6 w-px bg-slate-300 mx-1" />
+
+                      <button
+                        type="button"
+                        onClick={() => setModalPreview(null)}
+                        className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition cursor-pointer text-sm font-semibold"
+                        title="Đóng"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Vùng xem ảnh có hỗ trợ pan/zoom */}
+                  <div className="relative flex-1 bg-zinc-200 overflow-hidden flex items-center justify-center select-none">
+                    <TransformComponent
+                      wrapperClass="!w-full !h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
+                      contentClass="!w-full !h-full flex items-center justify-center"
+                    >
+                      <img
+                        src={modalPreview.imageUrl}
+                        alt={modalPreview.title}
+                        className="max-w-[85vw] max-h-[70vh] object-contain rounded shadow-lg bg-white"
+                        draggable={false}
+                      />
+                    </TransformComponent>
+                  </div>
+                </>
+              )}
+            </TransformWrapper>
+
+            <div className="px-6 py-3.5 border-t border-slate-200 flex items-center justify-between bg-white shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  const rowIdx = modalPreview.rowIndex;
+                  setModalPreview(null);
+                  handleRemoveRowImage(rowIdx);
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg transition cursor-pointer"
+              >
+                Xóa ảnh này
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rowIdx = modalPreview.rowIndex;
+                    setModalPreview(null);
+                    handleTriggerAddRowImage(rowIdx);
+                  }}
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition cursor-pointer"
+                >
+                  Đổi ảnh khác
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalPreview(null)}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </WmmsAppShell>
   );
 }

@@ -177,8 +177,11 @@ export const inventoryApi = {
           isLiveServer: true,
         };
       }
-    } catch {
-      // Fallback sang dữ liệu chuẩn 14 vật tư trong WMMS_DB_Test_Iteration1.sql
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Fallback sang dữ liệu chuẩn 14 vật tư trong WMMS_DB_Test_Iteration1.sql khi offline hoặc 404
     }
 
     return {
@@ -199,8 +202,11 @@ export const inventoryApi = {
       if (res.data?.data) {
         return res.data.data;
       }
-    } catch {
-      // Fallback sang chi tiết chuẩn của vật tư
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Fallback sang chi tiết chuẩn của vật tư khi offline hoặc 404
     }
 
     const baseStock =
@@ -278,8 +284,11 @@ export const inventoryApi = {
           isLiveServer: true,
         };
       }
-    } catch {
-      // Fallback sang 14 giao dịch sổ kho đầu kỳ chuẩn từ WMMS_DB_Test_Iteration1.sql
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Fallback sang 14 giao dịch sổ kho đầu kỳ chuẩn từ WMMS_DB_Test_Iteration1.sql khi offline hoặc 404
     }
 
     return {

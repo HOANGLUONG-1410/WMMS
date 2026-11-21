@@ -10,8 +10,13 @@ using WMMS.Domain.Exceptions;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// Controller Danh mục Sản phẩm (SC-05 / SCR-PRD-01, UC-22..UC-25).
-/// Đọc: ADMIN, OWNER, SALES, PLANNER, LEADER, QC. Ghi: ADMIN, PLANNER.
+/// [Dev-Iter 1] Controller Quản lý Danh mục Sản phẩm SKU &amp; Tải lên Bản vẽ Kỹ thuật CAD/Spec (SC-05 / SCR-PRD-01, UC-22..UC-25, BR-MDM-01).
+/// <para>
+/// - Chức năng: Cung cấp REST API tra cứu Visual Product Catalog, xem chi tiết sản phẩm kèm chuỗi công đoạn định tuyến mặc định, tạo/cập nhật SKU và upload bản vẽ kỹ thuật (.dwg, .dxf, .pdf, .png, .jpg tối đa 20MB).
+/// - Phân quyền RBAC: Đọc (ADMIN, OWNER, SALES, PLANNER, LEADER, QC); Ghi (ADMIN, PLANNER).
+/// - Móc nối: Kết nối <see cref="IProductService"/> (<c>ProductService</c>) -&gt; Lưu bảng <c>products</c> và thư mục <c>uploads/cad/</c>;
+///   cung cấp dữ liệu gốc cho phân hệ Tiếp nhận Đơn hàng Excel PO (SC-08/SC-09 đối chiếu SKU), Định mức BOM (SC-10/SC-11) và Quy trình công nghệ Dynamic Routing (SC-18).
+/// </para>
 /// </summary>
 [Route("api/v1/products")]
 [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Sales},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Qc}")]
@@ -78,7 +83,7 @@ public class ProductsController : MasterDataControllerBase
     {
         if (file == null || file.Length == 0)
         {
-            throw new AppException("Vui lòng chọn tệp bản vẽ kỹ thuật cần tải lên.");
+            throw new AppException("Vui lòng chọn tệp bản vẽ kỹ thuật cần tải lên.", 400, MessageCodes.Msg13ValidationError);
         }
 
         await using var stream = file.OpenReadStream();

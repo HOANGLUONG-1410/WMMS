@@ -110,6 +110,7 @@ export default function UserManagementPage() {
   };
 
   const toggleBanMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: async (user: UserDto) => {
       const isCurrentlyActive = user.status === "ACTIVE";
       const apiStatus = isCurrentlyActive ? "BANNED" : "ACTIVE";

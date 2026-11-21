@@ -9,8 +9,13 @@ using WMMS.Domain.Constants;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// Controller Danh mục Vật tư (SC-04 / SCR-MAT-01, UC-17..UC-21).
-/// Đọc: ADMIN, OWNER, PLANNER, PURCHASING, WAREHOUSE. Ghi: ADMIN, PLANNER, WAREHOUSE.
+/// [Dev-Iter 1] Controller Quản lý Danh mục Vật tư (SC-04 / SCR-MAT-01, UC-17..UC-21, BR-MDM-01).
+/// <para>
+/// - Chức năng: Cung cấp REST API tra cứu phân trang, xem chi tiết kèm tồn kho 3 cấp, thêm mới, cập nhật và ngừng kích hoạt (soft-delete) nguyên vật liệu xưởng gỗ.
+/// - Phân quyền RBAC: Đọc (ADMIN, OWNER, PLANNER, PURCHASING, WAREHOUSE); Ghi (ADMIN, PLANNER, WAREHOUSE).
+/// - Móc nối: Nhận DTO từ FE -&gt; Validate qua <c>MasterDataValidators</c> -&gt; Gọi <see cref="IMaterialService"/> (<c>MaterialService</c>)
+///   -&gt; Lưu bảng <c>materials</c>, tự động khởi tạo dòng tồn kho 0 tại bảng <c>inventory_stocks</c> (móc nối sang SC-12/SC-14) và ghi vết <c>audit_logs</c>.
+/// </para>
 /// </summary>
 [Route("api/v1/materials")]
 [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Purchasing},{RoleConstants.Warehouse}")]

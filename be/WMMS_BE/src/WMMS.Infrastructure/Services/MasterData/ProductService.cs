@@ -8,13 +8,23 @@ using WMMS.Domain.Entities.Identity;
 using WMMS.Domain.Entities.InventoryPr;
 using WMMS.Domain.Entities.Orders;
 using WMMS.Domain.Entities.WarehousePo;
+using WMMS.Domain.Constants;
 using WMMS.Domain.Enums;
 using WMMS.Domain.Exceptions;
 using WMMS.Infrastructure.Persistence;
 
 namespace WMMS.Infrastructure.Services.MasterData;
 
-/// <summary>Dịch vụ danh mục Sản phẩm (SC-05, UC-22..UC-25).</summary>
+/// <summary>
+/// [Dev-Iter 1] Dịch vụ xử lý nghiệp vụ Danh mục Sản phẩm SKU &amp; Upload Bản vẽ Kỹ thuật (SC-05, UC-22..UC-25, BR-MDM-01, GBR-05).
+/// <para>
+/// - Chức năng: Quản lý danh mục sản phẩm đồ gỗ B2B (kích thước, loại gỗ <c>WoodSpecies</c>, màu sơn hoàn thiện, quy cách đóng gói, số khối CBM) và lưu trữ tệp bản vẽ CAD/Spec đặt tên theo GUID chống trùng/path-traversal.
+/// - Móc nối dữ liệu:
+///   + Truy vấn liên kết <c>Products.Include(x =&gt; x.RoutingTemplates).ThenInclude(rt =&gt; rt.RoutingStages)</c> để trả về công đoạn gia công mẫu cho phân hệ Dynamic Routing (SC-18).
+///   + Trường <c>WoodSpecies</c> của <see cref="Product"/> được móc nối sang Báo cáo Phân tích Lỗi Chất lượng theo Loại gỗ &amp; Tần suất Overdriver (Iteration 3 - <c>ProductionDashboardService</c>).
+///   + Móc nối <see cref="MasterDataAudit"/> ghi nhật ký kiểm toán bất biến vào bảng <c>audit_logs</c>.
+/// </para>
+/// </summary>
 public class ProductService : IProductService
 {
     private static readonly string[] AllowedCadExtensions = { ".dwg", ".dxf", ".pdf", ".png", ".jpg", ".jpeg" };
@@ -57,7 +67,7 @@ public class ProductService : IProductService
         var p = await _context.Products.AsNoTracking()
             .Include(x => x.RoutingTemplates).ThenInclude(rt => rt.RoutingStages)
             .FirstOrDefaultAsync(x => x.ProductId == productId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy sản phẩm ID = {productId}.");
+            ?? throw AppException.NotFound("Không tìm thấy sản phẩm được yêu cầu trong danh mục.");
 
         var template = p.RoutingTemplates.Where(rt => rt.IsActive).OrderByDescending(rt => rt.RoutingId).FirstOrDefault();
         var b = ToDto(p);
@@ -99,7 +109,7 @@ public class ProductService : IProductService
     public async Task<ProductDto> UpdateProductAsync(long productId, UpdateProductDto dto, long userId, string? ipAddress, CancellationToken cancellationToken = default)
     {
         var p = await _context.Products.FirstOrDefaultAsync(x => x.ProductId == productId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy sản phẩm ID = {productId}.");
+            ?? throw AppException.NotFound("Không tìm thấy sản phẩm được yêu cầu trong danh mục.");
 
         var before = ToDto(p);
         p.ProductName = dto.ProductName.Trim();
@@ -122,13 +132,13 @@ public class ProductService : IProductService
     public async Task<ProductDto> UploadCadDrawingAsync(long productId, string fileName, Stream content, long length, long userId, string? ipAddress, CancellationToken cancellationToken = default)
     {
         var p = await _context.Products.FirstOrDefaultAsync(x => x.ProductId == productId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy sản phẩm ID = {productId}.");
+            ?? throw AppException.NotFound("Không tìm thấy sản phẩm được yêu cầu trong danh mục.");
 
         var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
         if (!AllowedCadExtensions.Contains(ext))
-            throw new AppException($"Định dạng '{ext}' không được hỗ trợ (cho phép: {string.Join(", ", AllowedCadExtensions)}).");
-        if (length <= 0) throw new AppException("File bản vẽ rỗng.");
-        if (length > MaxCadBytes) throw new AppException("File bản vẽ vượt quá 20MB.");
+            throw new AppException($"Định dạng tệp '{ext}' không được hỗ trợ (chỉ chấp nhận: {string.Join(", ", AllowedCadExtensions)}).", 400, MessageCodes.Msg13ValidationError);
+        if (length <= 0) throw new AppException("Tệp bản vẽ kỹ thuật đang trống, vui lòng chọn tệp hợp lệ.", 400, MessageCodes.Msg13ValidationError);
+        if (length > MaxCadBytes) throw new AppException("Dung lượng tệp bản vẽ vượt quá giới hạn 20MB cho phép.", 400, MessageCodes.Msg13ValidationError);
 
         // Tên file lưu là GUID để chống path traversal / trùng tên.
         var folder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "cad");

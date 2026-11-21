@@ -17,8 +17,8 @@ const handlers: Partial<Record<number, ErrorAction>> = {
     }),
 
   [HttpStatus.UNAUTHORIZED]: (e) => {
-    // Không bắn toast pop-up cho API đăng nhập (lỗi được hiển thị trực tiếp trên form)
-    if (e.url?.includes("/auth/login")) {
+    // Không bắn toast pop-up cho API đăng nhập hoặc refresh token khi khởi tạo ứng dụng
+    if (e.url?.includes("/auth/login") || e.url?.includes("/auth/refresh")) {
       return;
     }
 

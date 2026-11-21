@@ -219,7 +219,11 @@ else
     app.UseHttpsRedirection();
 }
 
-Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads", "products"));
+var webRootPath = string.IsNullOrWhiteSpace(app.Environment.WebRootPath)
+    ? Path.Combine(app.Environment.ContentRootPath, "wwwroot")
+    : app.Environment.WebRootPath;
+WMMS.Infrastructure.Excel.OrderIntakeService.ConfiguredWebRootPath = webRootPath;
+Directory.CreateDirectory(Path.Combine(webRootPath, "uploads", "products"));
 app.UseStaticFiles();
 
 var uploadsRoot = Path.Combine(app.Environment.ContentRootPath, "uploads");
@@ -253,3 +257,8 @@ app.MapControllers();
 app.MapHub<WmmsNotificationHub>("/hubs/notifications");
 
 app.Run();
+
+/// <summary>
+/// Cho phép WebApplicationFactory&lt;Program&gt; khởi tạo toàn bộ HTTP Pipeline phục vụ Integration Test.
+/// </summary>
+public partial class Program { }

@@ -38,7 +38,7 @@ export interface OrderSpaceDetailData {
   milestones?: OrderSpaceMilestoneDto[];
 }
 
-export function useOrderSpaceDetail(spaceKey: string) {
+export function useOrderSpaceDetail(spaceKey: string, canQueryBatches = true) {
   const spaceQuery = useQuery({
     queryKey: ["order-space", spaceKey],
     queryFn: async (): Promise<OrderSpaceDetailData | null> => {
@@ -62,7 +62,7 @@ export function useOrderSpaceDetail(spaceKey: string) {
         return [];
       }
     },
-    enabled: Boolean(spaceKey),
+    enabled: Boolean(spaceKey) && canQueryBatches,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 5,
   });
@@ -70,8 +70,8 @@ export function useOrderSpaceDetail(spaceKey: string) {
   return {
     spaceDetail: spaceQuery.data ?? null,
     batches: batchesQuery.data ?? [],
-    isLoading: spaceQuery.isLoading || batchesQuery.isLoading,
-    isFetching: spaceQuery.isFetching || batchesQuery.isFetching,
+    isLoading: spaceQuery.isLoading || (canQueryBatches && batchesQuery.isLoading),
+    isFetching: spaceQuery.isFetching || (canQueryBatches && batchesQuery.isFetching),
     isError: spaceQuery.isError,
     error: spaceQuery.error,
   };

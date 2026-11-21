@@ -4,15 +4,22 @@ using WMMS.Application.Interfaces.Repositories;
 using WMMS.Application.Interfaces.Services;
 using WMMS.Domain.Constants;
 using WMMS.Domain.Entities.KanbanQc;
+using WMMS.Domain.Entities.Orders;
 using WMMS.Domain.Enums;
 using WMMS.Domain.Exceptions;
 
 namespace WMMS.Application.Services.ProductionTracking;
 
 /// <summary>
-/// Dịch vụ Dashboard Tổng quan Sản xuất cho Chủ xưởng &amp; Báo cáo Đối chiếu Hao hụt Gỗ Thực tế so với Định mức BOM (Iteration 3).
-/// Cung cấp số liệu thời gian thực về WIP theo từng trạm công đoạn, cảnh báo đơn hàng trễ hạn ETD, tỷ lệ thu hồi thành phẩm (Yield Rate)
-/// và phân tích chênh lệch giữa tỷ lệ hao hụt thực tế tại xưởng so với định mức hao hụt tự nhiên đã duyệt trong BOM (`ScrapRatePercent`).
+/// [BE-Iter 3] Dịch vụ Dashboard Điều hành Sản xuất, Báo cáo Phân tích Lỗi Chất lượng (Defect Analytics by Station / Wood Type),
+/// Thống kê Tần suất Phá khóa Ngoại lệ Overdriver &amp; Điều phối Xuất Báo cáo Excel (SC-26, QT-06, KBN01, KBN02, BR-002).
+/// <para>
+/// - Chức năng &amp; Móc nối dữ liệu liên phân hệ:
+///   + <see cref="GetDefectAnalyticsReportAsync"/>: Truy vấn đồ thị <c>defect_logs -&gt; qc_inspections -&gt; batch_routing_steps -&gt; production_batches -&gt; order_items -&gt; products / boms</c> qua <c>IQcInspectionRepository</c>;
+///     nhóm lỗi theo Trạm gia công (<c>DefectsByStation</c>), Loại gỗ (<c>DefectsByWoodType</c> có cơ chế fallback từ <c>Product.WoodSpecies</c> sang vật tư <c>LUMBER</c> trong BOM) và Danh mục lỗi (<c>DefectsByCode</c>).
+///   + <see cref="GetOverdriveAnalyticsReportAsync"/>: Truy vấn bảng <c>overdrive_logs</c> (được ghi từ <c>HoldPointService.ApproveOverrideAsync</c> / <c>ProductionOrderService.ApproveOverdriveAsync</c> ở SC-20) kết hợp tổng số lô từ <c>IProductionBatchRepository</c> để tính tỷ lệ lô phải phá khóa Overdriver, thống kê theo Người duyệt (<c>ByApprover</c>), Người yêu cầu (<c>ByRequester</c>) và Trạm dừng (<c>ByHoldPointStage</c>).
+///   + Cụm 4 hàm <c>Export*ExcelAsync</c>: Chuẩn hóa bộ lọc (<c>QualityAnalyticsFilterValidator</c>, chuẩn hóa <c>ToDate</c> tới cuối ngày <c>23:59:59.9999999</c>) rồi truyền dữ liệu đã tổng hợp sang <see cref="IProductionReportExcelExporter"/> (<c>ProductionReportExcelExporter</c>) để sinh tệp <c>.xlsx</c>.
+/// </para>
 /// </summary>
 public class ProductionDashboardService : IProductionDashboardService
 {
@@ -128,7 +135,7 @@ public class ProductionDashboardService : IProductionDashboardService
             if (singleOrder == null)
             {
                 throw AppException.NotFound(
-                    $"Không tìm thấy đơn hàng với mã định danh ID = {orderId.Value} để phân tích hao hụt.");
+                    "Không tìm thấy đơn hàng được chọn để phân tích hao hụt vật tư.");
             }
 
             orders = new List<Domain.Entities.Orders.CustomerOrder> { singleOrder };
@@ -296,15 +303,24 @@ public class ProductionDashboardService : IProductionDashboardService
                     : (!string.IsNullOrWhiteSpace(dl.DefectCatalog?.StandardStage)
                         ? dl.DefectCatalog!.StandardStage!.Trim()
                         : $"Trạm công đoạn #{seq}");
-                return new { StageSequence = seq, StationName = name };
+                return new
+                {
+                    StageSequence = seq,
+                    GroupKey = seq > 0 ? seq.ToString() : name.ToUpperInvariant(),
+                    StationName = name
+                };
             })
+            .GroupBy(x => new { x.Key.StageSequence, x.Key.GroupKey })
             .Select(g =>
             {
-                var stationDefectQty = g.Sum(x => x.DefectQty);
-                var stationReworkQty = g.Where(x => x.Disposition == DefectDispositionEnum.REWORK_SUB_CARD).Sum(x => x.DefectQty);
-                var stationScrapQty = g.Where(x => x.Disposition == DefectDispositionEnum.SCRAP_REPLENISH).Sum(x => x.DefectQty);
+                var logsInStation = g.SelectMany(x => x).ToList();
+                var stationName = g.Select(x => x.Key.StationName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n))
+                                  ?? $"Trạm công đoạn #{g.Key.StageSequence}";
+                var stationDefectQty = logsInStation.Sum(x => x.DefectQty);
+                var stationReworkQty = logsInStation.Where(x => x.Disposition == DefectDispositionEnum.REWORK_SUB_CARD).Sum(x => x.DefectQty);
+                var stationScrapQty = logsInStation.Where(x => x.Disposition == DefectDispositionEnum.SCRAP_REPLENISH).Sum(x => x.DefectQty);
 
-                var breakdown = g
+                var breakdown = logsInStation
                     .GroupBy(x => x.DefectCode)
                     .Select(cg =>
                     {
@@ -330,13 +346,13 @@ public class ProductionDashboardService : IProductionDashboardService
                     .ToList();
 
                 var topCode = breakdown.FirstOrDefault();
-                var topCatalog = g.FirstOrDefault(x => x.DefectCode == topCode?.DefectCode)?.DefectCatalog;
+                var topCatalog = logsInStation.FirstOrDefault(x => x.DefectCode == topCode?.DefectCode)?.DefectCatalog;
 
                 return new StationDefectAnalyticsDto
                 {
                     StageSequence = g.Key.StageSequence,
-                    StationName = g.Key.StationName,
-                    TotalDefectEventsCount = g.Count(),
+                    StationName = stationName,
+                    TotalDefectEventsCount = logsInStation.Count,
                     TotalDefectQty = stationDefectQty,
                     ReworkQty = stationReworkQty,
                     ScrapReplenishQty = stationScrapQty,
@@ -365,14 +381,15 @@ public class ProductionDashboardService : IProductionDashboardService
                 var woodScrapQty = g.Where(x => x.Disposition == DefectDispositionEnum.SCRAP_REPLENISH).Sum(x => x.DefectQty);
 
                 var topDefect = g
-                    .GroupBy(x => new
-                    {
-                        x.DefectCode,
-                        Name = !string.IsNullOrWhiteSpace(x.DefectName) ? x.DefectName : (x.DefectCatalog?.DefectName ?? x.DefectCode)
-                    })
+                    .GroupBy(x => x.DefectCode)
                     .OrderByDescending(cg => cg.Sum(x => x.DefectQty))
                     .ThenByDescending(cg => cg.Count())
                     .FirstOrDefault();
+
+                var topDefectItem = topDefect?.FirstOrDefault();
+                var topDefectName = topDefectItem != null && !string.IsNullOrWhiteSpace(topDefectItem.DefectName)
+                    ? topDefectItem.DefectName
+                    : (topDefectItem?.DefectCatalog?.DefectName ?? topDefect?.Key ?? string.Empty);
 
                 var topStation = g
                     .GroupBy(x => x.QcInspection?.BatchRoutingStep?.StageName ?? x.DefectCatalog?.StandardStage ?? "Trạm gia công")
@@ -396,8 +413,8 @@ public class ProductionDashboardService : IProductionDashboardService
                         ? Math.Round((decimal)woodDefectQty * 100m / totalDefectUnits, 2)
                         : 0m,
                     AffectedProductsCount = distinctProducts,
-                    MostCommonDefectCode = topDefect?.Key.DefectCode ?? string.Empty,
-                    MostCommonDefectName = topDefect?.Key.Name ?? string.Empty,
+                    MostCommonDefectCode = topDefect?.Key ?? string.Empty,
+                    MostCommonDefectName = topDefectName,
                     MostProblematicStationName = topStation?.Key ?? string.Empty
                 };
             })
@@ -471,7 +488,14 @@ public class ProductionDashboardService : IProductionDashboardService
         CancellationToken cancellationToken = default)
     {
         var activeFilter = await ValidateAndNormalizeFilterAsync(filter, cancellationToken);
+        return await BuildOverdriveAnalyticsAsync(activeFilter, applyTopNLimit: true, cancellationToken);
+    }
 
+    private async Task<OverdriveAnalyticsReportDto> BuildOverdriveAnalyticsAsync(
+        QualityAnalyticsFilterDto activeFilter,
+        bool applyTopNLimit,
+        CancellationToken cancellationToken)
+    {
         var overdriveLogs = await _unitOfWork.QcInspections.GetAllOverdriveLogsWithAnalyticsGraphAsync(
             activeFilter.FromDate,
             activeFilter.ToDate,
@@ -489,7 +513,7 @@ public class ProductionDashboardService : IProductionDashboardService
         {
             var woodKeyword = activeFilter.WoodType.Trim();
             overdriveLogs = overdriveLogs
-                .Where(ol => (ol.ProductionBatch?.OrderItem?.Product?.WoodSpecies ?? string.Empty)
+                .Where(ol => ResolveOrderItemWoodType(ol.ProductionBatch?.OrderItem)
                     .Contains(woodKeyword, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
@@ -498,20 +522,25 @@ public class ProductionDashboardService : IProductionDashboardService
             ? await _unitOfWork.ProductionBatches.GetByOrderIdAsync(activeFilter.OrderId.Value, cancellationToken)
             : await _unitOfWork.ProductionBatches.GetAllActiveBatchesAsync(null, cancellationToken);
 
-        var totalSystemBatchesCount = allBatches.Count;
-        var distinctOverdrivenBatchIds = overdriveLogs
-            .Select(ol => ol.BatchId)
-            .Union(allBatches.Where(b => b.IsOverdriver).Select(b => b.BatchId))
-            .Distinct()
-            .ToList();
+        if (!string.IsNullOrWhiteSpace(activeFilter.WoodType))
+        {
+            var woodKeyword = activeFilter.WoodType.Trim();
+            allBatches = allBatches
+                .Where(b => ResolveOrderItemWoodType(b.OrderItem)
+                    .Contains(woodKeyword, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
 
-        var totalOverdrivenBatchesCount = activeFilter.StageSequence.HasValue || !string.IsNullOrWhiteSpace(activeFilter.WoodType) || activeFilter.FromDate.HasValue || activeFilter.ToDate.HasValue
-            ? overdriveLogs.Select(ol => ol.BatchId).Distinct().Count()
-            : distinctOverdrivenBatchIds.Count;
+        var totalSystemBatchesCount = allBatches.Count;
+        // Chỉ đếm các lô thực sự có bản ghi phê duyệt phá khóa trong overdrive_logs (không đếm nhầm lô bị từ chối / chưa duyệt)
+        var totalOverdrivenBatchesCount = overdriveLogs
+            .Select(ol => ol.BatchId)
+            .Distinct()
+            .Count();
 
         var totalApprovals = overdriveLogs.Count;
         decimal overdrivenBatchRate = totalSystemBatchesCount > 0
-            ? Math.Round((decimal)totalOverdrivenBatchesCount * 100m / totalSystemBatchesCount, 2)
+            ? Math.Min(100m, Math.Round((decimal)totalOverdrivenBatchesCount * 100m / totalSystemBatchesCount, 2))
             : 0m;
 
         var affectedOrdersCount = overdriveLogs
@@ -530,10 +559,10 @@ public class ProductionDashboardService : IProductionDashboardService
                 return new OverdriveByApproverDto
                 {
                     ApproverUserId = g.Key,
-                    ApproverUsername = approver?.Username ?? $"user_{g.Key}",
+                    ApproverUsername = approver?.Username ?? $"nguoi_dung_{g.Key}",
                     ApproverFullName = !string.IsNullOrWhiteSpace(approver?.FullName)
                         ? approver!.FullName
-                        : (approver?.Username ?? $"User #{g.Key}"),
+                        : (approver?.Username ?? $"Người dùng #{g.Key}"),
                     TotalApprovalsCount = count,
                     DistinctBatchesCount = g.Select(x => x.BatchId).Distinct().Count(),
                     SharePercent = totalApprovals > 0
@@ -556,10 +585,10 @@ public class ProductionDashboardService : IProductionDashboardService
                 return new OverdriveByRequesterDto
                 {
                     RequesterUserId = g.Key,
-                    RequesterUsername = requester?.Username ?? $"user_{g.Key}",
+                    RequesterUsername = requester?.Username ?? $"nguoi_dung_{g.Key}",
                     RequesterFullName = !string.IsNullOrWhiteSpace(requester?.FullName)
                         ? requester!.FullName
-                        : (requester?.Username ?? $"User #{g.Key}"),
+                        : (requester?.Username ?? $"Người dùng #{g.Key}"),
                     TotalRequestsApprovedCount = count,
                     DistinctBatchesCount = g.Select(x => x.BatchId).Distinct().Count(),
                     SharePercent = totalApprovals > 0
@@ -607,9 +636,9 @@ public class ProductionDashboardService : IProductionDashboardService
         var topStage = byHoldPointStage.FirstOrDefault();
         var topApprover = byApprover.FirstOrDefault();
 
-        // 4. Danh sách chi tiết các lần phá khóa gần nhất
-        var recentLogs = overdriveLogs
-            .Take(activeFilter.TopN)
+        // 4. Danh sách chi tiết các lần phá khóa (API JSON giới hạn theo TopN, xuất Excel xuất đầy đủ toàn bộ lịch sử)
+        var logsSource = applyTopNLimit ? overdriveLogs.Take(activeFilter.TopN) : overdriveLogs;
+        var recentLogs = logsSource
             .Select(ol => new OverdriveEventItemDto
             {
                 OverdriveId = ol.OverdriveId,
@@ -622,9 +651,9 @@ public class ProductionDashboardService : IProductionDashboardService
                 HoldPointStageSeq = ol.HoldPointStageSeq,
                 StageName = ResolveHoldPointStageName(ol.ProductionBatch, ol.HoldPointStageSeq),
                 RequestedBy = ol.RequestedBy,
-                RequesterName = ol.Requester?.FullName ?? ol.Requester?.Username ?? $"User #{ol.RequestedBy}",
+                RequesterName = ol.Requester?.FullName ?? ol.Requester?.Username ?? $"Người dùng #{ol.RequestedBy}",
                 ApprovedBy = ol.ApprovedBy,
-                ApproverName = ol.Approver?.FullName ?? ol.Approver?.Username ?? $"User #{ol.ApprovedBy}",
+                ApproverName = ol.Approver?.FullName ?? ol.Approver?.Username ?? $"Người dùng #{ol.ApprovedBy}",
                 Justification = ol.Justification,
                 ApprovedAt = ol.ApprovedAt
             })
@@ -679,7 +708,7 @@ public class ProductionDashboardService : IProductionDashboardService
         var activeFilter = await ValidateAndNormalizeFilterAsync(filter, cancellationToken);
         var overview = await GetProductionOverviewDashboardAsync(cancellationToken);
         var scrapReport = await GetScrapVarianceReportAsync(activeFilter.OrderId, cancellationToken);
-        var orderProgressList = await BuildOrderProgressListForExportAsync(activeFilter.OrderId, cancellationToken);
+        var orderProgressList = await BuildOrderProgressListForExportAsync(activeFilter, cancellationToken);
 
         return _excelExporter.ExportProductionStatisticsExcel(overview, orderProgressList, scrapReport);
     }
@@ -703,7 +732,7 @@ public class ProductionDashboardService : IProductionDashboardService
         CancellationToken cancellationToken = default)
     {
         var activeFilter = await ValidateAndNormalizeFilterAsync(filter, cancellationToken);
-        var overdriveAnalytics = await GetOverdriveAnalyticsReportAsync(activeFilter, cancellationToken);
+        var overdriveAnalytics = await BuildOverdriveAnalyticsAsync(activeFilter, applyTopNLimit: false, cancellationToken);
         var dispatchRows = await BuildWorkshopDispatchExportRowsAsync(activeFilter, cancellationToken);
 
         return _excelExporter.ExportWorkshopDispatchHistoryExcel(dispatchRows, overdriveAnalytics);
@@ -716,13 +745,13 @@ public class ProductionDashboardService : IProductionDashboardService
     {
         var activeFilter = await ValidateAndNormalizeFilterAsync(filter, cancellationToken);
         var overview = await GetProductionOverviewDashboardAsync(cancellationToken);
-        var orderProgressList = await BuildOrderProgressListForExportAsync(activeFilter.OrderId, cancellationToken);
+        var orderProgressList = await BuildOrderProgressListForExportAsync(activeFilter, cancellationToken);
         var scrapReport = await GetScrapVarianceReportAsync(activeFilter.OrderId, cancellationToken);
         var defectAnalytics = await GetDefectAnalyticsReportAsync(activeFilter, cancellationToken);
         var inspectionRows = await BuildQcInspectionExportRowsAsync(activeFilter, cancellationToken);
         var defectRows = await BuildDefectLogExportRowsAsync(activeFilter, cancellationToken);
         var dispatchRows = await BuildWorkshopDispatchExportRowsAsync(activeFilter, cancellationToken);
-        var overdriveAnalytics = await GetOverdriveAnalyticsReportAsync(activeFilter, cancellationToken);
+        var overdriveAnalytics = await BuildOverdriveAnalyticsAsync(activeFilter, applyTopNLimit: false, cancellationToken);
 
         return _excelExporter.ExportComprehensiveWorkshopWorkbookExcel(
             overview,
@@ -736,13 +765,32 @@ public class ProductionDashboardService : IProductionDashboardService
     }
 
     private async Task<List<OrderProductionProgressDto>> BuildOrderProgressListForExportAsync(
-        long? orderId,
+        QualityAnalyticsFilterDto activeFilter,
         CancellationToken cancellationToken)
     {
         var orders = await _unitOfWork.OrderItems.GetAllOrdersWithProgressGraphAsync(cancellationToken);
-        if (orderId.HasValue)
+        if (activeFilter.OrderId.HasValue)
         {
-            orders = orders.Where(o => o.OrderId == orderId.Value).ToList();
+            orders = orders.Where(o => o.OrderId == activeFilter.OrderId.Value).ToList();
+        }
+
+        if (activeFilter.FromDate.HasValue)
+        {
+            orders = orders.Where(o => o.OrderDate >= activeFilter.FromDate.Value.Date).ToList();
+        }
+
+        if (activeFilter.ToDate.HasValue)
+        {
+            orders = orders.Where(o => o.OrderDate <= activeFilter.ToDate.Value).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(activeFilter.WoodType))
+        {
+            var woodKeyword = activeFilter.WoodType.Trim();
+            orders = orders
+                .Where(o => o.OrderItems.Any(oi => ResolveOrderItemWoodType(oi)
+                    .Contains(woodKeyword, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
         }
 
         var warningDays = await GetEtdWarningDaysAsync();
@@ -774,7 +822,7 @@ public class ProductionDashboardService : IProductionDashboardService
         {
             var woodKeyword = activeFilter.WoodType.Trim();
             inspections = inspections
-                .Where(qi => (qi.BatchRoutingStep?.ProductionBatch?.OrderItem?.Product?.WoodSpecies ?? "Gỗ tự nhiên tiêu chuẩn")
+                .Where(qi => ResolveOrderItemWoodType(qi.BatchRoutingStep?.ProductionBatch?.OrderItem)
                     .Contains(woodKeyword, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
@@ -786,7 +834,13 @@ public class ProductionDashboardService : IProductionDashboardService
             var orderItem = batch?.OrderItem;
             var product = orderItem?.Product;
             var defectSummary = qi.DefectLogs.Count > 0
-                ? string.Join("; ", qi.DefectLogs.Select(dl => $"{dl.DefectCode}: {dl.DefectName} ({dl.DefectQty} SP - {dl.Disposition})"))
+                ? string.Join("; ", qi.DefectLogs.Select(dl =>
+                {
+                    var dispVi = dl.Disposition == DefectDispositionEnum.REWORK_SUB_CARD
+                        ? "Sửa chữa (Rework)"
+                        : "Hủy & Bù phôi";
+                    return $"{dl.DefectCode}: {dl.DefectName} ({dl.DefectQty} SP - {dispVi})";
+                }))
                 : "Đạt chuẩn 100%";
 
             return new QcInspectionStageExportRowDto
@@ -797,7 +851,7 @@ public class ProductionDashboardService : IProductionDashboardService
                 PoNumber = orderItem?.CustomerOrder?.PoNumber ?? string.Empty,
                 ProductCode = product?.ProductSku ?? string.Empty,
                 ProductName = product?.ProductName ?? string.Empty,
-                WoodType = !string.IsNullOrWhiteSpace(product?.WoodSpecies) ? product!.WoodSpecies! : "Gỗ tự nhiên tiêu chuẩn",
+                WoodType = ResolveOrderItemWoodType(orderItem),
                 StageSequence = step?.StageSequence ?? 0,
                 StageName = step?.StageName ?? string.Empty,
                 IsHoldPoint = step?.IsHoldPoint ?? false,
@@ -860,7 +914,7 @@ public class ProductionDashboardService : IProductionDashboardService
                 Disposition = dl.Disposition.ToString(),
                 SpawnedSubBatchCode = dl.SpawnedSubBatch?.BatchCode ?? string.Empty,
                 InspectorName = qi?.Inspector?.FullName ?? qi?.Inspector?.Username ?? string.Empty,
-                InspectedAt = qi?.InspectedAt ?? DateTime.UtcNow
+                InspectedAt = qi?.InspectedAt ?? DateTime.MinValue
             };
         }).ToList();
     }
@@ -873,6 +927,16 @@ public class ProductionDashboardService : IProductionDashboardService
             ? await _unitOfWork.ProductionBatches.GetByOrderIdAsync(activeFilter.OrderId.Value, cancellationToken)
             : await _unitOfWork.ProductionBatches.GetAllActiveBatchesAsync(null, cancellationToken);
 
+        if (activeFilter.FromDate.HasValue)
+        {
+            batches = batches.Where(b => b.CreatedAt >= activeFilter.FromDate.Value).ToList();
+        }
+
+        if (activeFilter.ToDate.HasValue)
+        {
+            batches = batches.Where(b => b.CreatedAt <= activeFilter.ToDate.Value).ToList();
+        }
+
         if (activeFilter.StageSequence.HasValue)
         {
             batches = batches.Where(b => b.CurrentStageSeq == activeFilter.StageSequence.Value).ToList();
@@ -882,7 +946,7 @@ public class ProductionDashboardService : IProductionDashboardService
         {
             var woodKeyword = activeFilter.WoodType.Trim();
             batches = batches
-                .Where(b => (b.OrderItem?.Product?.WoodSpecies ?? string.Empty)
+                .Where(b => ResolveOrderItemWoodType(b.OrderItem)
                     .Contains(woodKeyword, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
@@ -894,7 +958,7 @@ public class ProductionDashboardService : IProductionDashboardService
             {
                 var steps = b.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
                 var timeline = steps.Count > 0
-                    ? string.Join(" -> ", steps.Select(s => $"[{s.StageSequence}.{s.StageName}: {s.StepStatus} ({s.PassedQty}/{s.TargetQty})]"))
+                    ? string.Join(" -> ", steps.Select(s => $"[{s.StageSequence}.{s.StageName}: {FormatStepStatusVi(s.StepStatus)} ({s.PassedQty}/{s.TargetQty})]"))
                     : "Chưa khởi tạo bước công đoạn";
 
                 return new WorkshopDispatchExportRowDto
@@ -930,10 +994,6 @@ public class ProductionDashboardService : IProductionDashboardService
         CancellationToken cancellationToken)
     {
         var activeFilter = filter ?? new QualityAnalyticsFilterDto();
-        if (activeFilter.TopN <= 0)
-        {
-            activeFilter.TopN = 20;
-        }
 
         var validator = new Validators.ProductionTracking.QualityAnalyticsFilterValidator();
         var validationResult = await validator.ValidateAsync(activeFilter, cancellationToken);
@@ -948,16 +1008,30 @@ public class ProductionDashboardService : IProductionDashboardService
             if (existingOrder == null)
             {
                 throw AppException.NotFound(
-                    $"Không tìm thấy đơn hàng với mã định danh ID = {activeFilter.OrderId.Value} để thống kê chất lượng & Overdriver.");
+                    "Không tìm thấy đơn hàng được chọn để thống kê chất lượng sản xuất.");
             }
         }
 
-        return activeFilter;
+        var normalizedToDate = activeFilter.ToDate.HasValue && activeFilter.ToDate.Value.TimeOfDay == TimeSpan.Zero
+            ? activeFilter.ToDate.Value.Date.AddDays(1).AddTicks(-1)
+            : activeFilter.ToDate;
+
+        return new QualityAnalyticsFilterDto
+        {
+            OrderId = activeFilter.OrderId,
+            FromDate = activeFilter.FromDate,
+            ToDate = normalizedToDate,
+            WoodType = activeFilter.WoodType,
+            StageSequence = activeFilter.StageSequence,
+            TopN = activeFilter.TopN
+        };
     }
 
     private static string ResolveWoodType(DefectLog dl)
+        => ResolveOrderItemWoodType(dl.QcInspection?.BatchRoutingStep?.ProductionBatch?.OrderItem);
+
+    private static string ResolveOrderItemWoodType(OrderItem? orderItem)
     {
-        var orderItem = dl.QcInspection?.BatchRoutingStep?.ProductionBatch?.OrderItem;
         var woodSpecies = orderItem?.Product?.WoodSpecies;
         if (!string.IsNullOrWhiteSpace(woodSpecies))
         {
@@ -975,6 +1049,15 @@ public class ProductionDashboardService : IProductionDashboardService
 
         return "Gỗ tự nhiên tiêu chuẩn";
     }
+
+    private static string FormatStepStatusVi(StepStatusEnum status) => status switch
+    {
+        StepStatusEnum.PASSED => "Đạt",
+        StepStatusEnum.IN_PROGRESS => "Đang làm",
+        StepStatusEnum.BLOCKED => "Bị chặn",
+        StepStatusEnum.WAITING => "Chờ",
+        _ => status.ToString()
+    };
 
     private static string ResolveHoldPointStageName(ProductionBatch? batch, int holdPointSeq)
     {
@@ -1009,7 +1092,7 @@ public class ProductionDashboardService : IProductionDashboardService
             return currentStep.StageName;
         }
 
-        return $"STAGE_{batch.CurrentStageSeq}";
+        return $"Công đoạn #{batch.CurrentStageSeq}";
     }
 
     private async Task<int> GetEtdWarningDaysAsync()

@@ -230,8 +230,11 @@ export const purchasingApi = {
           ).slice(0, 10),
         }));
       }
-    } catch {
-      // Fallback sang dữ liệu chuẩn trong bộ nhớ khi Backend chưa mở endpoint riêng
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Fallback sang dữ liệu chuẩn trong bộ nhớ khi Backend offline hoặc chưa có endpoint
     }
 
     const kw = (params.searchKeyword || "").trim().toLowerCase();
@@ -492,8 +495,11 @@ export const purchasingApi = {
       if (res.data?.data) {
         return res.data.data;
       }
-    } catch {
-      // Xử lý local state nếu chạy độc lập
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Xử lý local state nếu chạy offline hoặc endpoint chưa cấu hình
     }
 
     const nextNum = 45 + inMemoryPurchaseOrders.length - 4;
@@ -533,8 +539,11 @@ export const purchasingApi = {
       if (res.data?.data) {
         return res.data.data;
       }
-    } catch {
-      // Xử lý local state
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Xử lý local state khi offline
     }
 
     inMemoryPurchaseOrders = inMemoryPurchaseOrders.map((po) =>
@@ -555,8 +564,11 @@ export const purchasingApi = {
       if (res.data?.data) {
         return res.data.data;
       }
-    } catch {
-      // Xử lý local state
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Xử lý local state khi offline
     }
 
     let updatedRecord: SupplierPurchaseOrderDto | null = null;

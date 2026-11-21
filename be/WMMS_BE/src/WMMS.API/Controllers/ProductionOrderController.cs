@@ -51,12 +51,25 @@ public class ProductionOrderController : ControllerBase
 
     /// <summary>
     /// SC-19 &amp; UC-62: Thuật toán tách lô sản xuất thông minh &amp; Phát hành Lệnh sản xuất (Production Order Release).
-    /// Tách đơn hàng thành các thẻ Kanban Lots theo công suất trạm hoặc phân bổ tùy chỉnh, kiểm tra chốt chặn vật tư (BR-008) hoặc kích hoạt Overdrive (QT-06, KBN02).
     /// </summary>
+    /// <remarks>
+    /// API cho phép Quản đốc hoặc Tổ trưởng phát hành Lệnh sản xuất từ dòng sản phẩm đơn hàng (<c>OrderItemId</c>):
+    /// <list type="bullet">
+    ///   <item><b>Tách lô tự động:</b> Chia đều theo công suất định mức của trạm máy (<c>MaxBatchSize</c>, mặc định 100 SP/lô).</item>
+    ///   <item><b>Tách lô tùy chỉnh:</b> Phân bổ theo mảng số lượng tùy biến (<c>CustomBatchSplits</c>, ví dụ: [100, 100, 50]).</item>
+    ///   <item><b>Chốt chặn vật tư (BR-008):</b> Nếu kho đã bấm xuất đủ 100% NVL (<c>ISSUED_TO_SHOP</c>), các thẻ sinh ra ở trạng thái <c>IN_PROGRESS</c>. Nếu chưa xuất đủ NVL, thẻ sinh ra ở trạng thái khóa cứng <c>LOCKED</c>.</item>
+    ///   <item><b>Cơ chế Overdrive (QT-06, KBN02):</b> Cho phép chạy trước các công đoạn sơ chế gỗ thô khi thiếu phụ kiện kèm lý do giải trình (<c>Justification</c>).</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="request">DTO chứa OrderItemId, MaxBatchSize, CustomBatchSplits, AllowOverdrive, Justification.</param>
+    /// <response code="200">Phát hành lệnh sản xuất thành công, trả về danh sách các thẻ lô Kanban.</response>
+    /// <response code="400">Dữ liệu yêu cầu không hợp lệ hoặc vi phạm quy tắc chia lô / BOM chưa duyệt.</response>
+    /// <response code="404">Không tìm thấy dòng sản phẩm đơn hàng.</response>
     [HttpPost("generate-batches")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Leader}")]
     public async Task<ActionResult<ApiResponse<ProductionOrderSummaryDto>>> GenerateBatches([FromBody] GenerateBatchesRequestDto request)
     {
+        // 1. Kiểm tra tính hợp lệ dữ liệu đầu vào thông qua FluentValidation
         var validation = await _generateBatchesValidator.ValidateAsync(request);
         if (!validation.IsValid)
         {
@@ -65,7 +78,10 @@ public class ProductionOrderController : ControllerBase
                 validation.Errors.Select(e => e.ErrorMessage).ToList()));
         }
 
+        // 2. Lấy thông tin người dùng hiện tại từ Claims Principal
         long currentUserId = GetCurrentUserId();
+
+        // 3. Thực thi nghiệp vụ tách lô và phát hành lệnh sản xuất
         var result = await _productionOrderService.GenerateProductionOrderAndSplitLotsAsync(request, currentUserId);
         return Ok(ApiResponse<ProductionOrderSummaryDto>.Ok(result, result.Message));
     }
@@ -176,7 +192,10 @@ public class ProductionOrderController : ControllerBase
     }
 
     /// <summary>
-    /// SC-20b: Nghiệm thu lại (Re-inspection) cho thẻ nhánh phụ 3% Rework / Scrap Replenish sau khi thợ mộc xử lý xong lỗi phôi hoặc bù phôi.
+    /// [BE-Iter 3] SC-20b: Nghiệm thu lại (Re-inspection) cho thẻ nhánh phụ 3% Rework / Scrap Replenish sau khi thợ mộc xử lý xong lỗi phôi hoặc bù phôi.
+    /// <para>
+    /// - Móc nối: Gọi <see cref="IProductionOrderService.ReinspectSubBatchAsync"/> -&gt; Tạo bản ghi <c>QcInspection</c> mới cho bước công đoạn của thẻ phụ (<c>REWORK_SUB_CARD</c> / <c>REPLENISH_LOT</c>), cập nhật <c>PassedQty</c>/<c>StepStatus</c> và ghi <c>audit_logs</c> để mở điều kiện Gộp lô (<c>merge</c>) hoặc Chuyển tiếp độc lập (<c>continue-independent</c>).
+    /// </para>
     /// </summary>
     [HttpPost("batches/{subBatchId:long}/reinspect")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Qc}")]
@@ -198,7 +217,10 @@ public class ProductionOrderController : ControllerBase
     }
 
     /// <summary>
-    /// SC-20b: Tái hòa nhập / Gộp lô (Merge Lot) thẻ nhánh phụ đã sửa chữa đạt chuẩn vào thẻ chính khi cùng công đoạn.
+    /// [BE-Iter 3] SC-20b: Tái hòa nhập / Gộp lô (Merge Lot) thẻ nhánh phụ đã sửa chữa đạt chuẩn vào thẻ chính (<c>ParentBatchId</c>) khi cùng công đoạn.
+    /// <para>
+    /// - Móc nối: Gọi <see cref="IProductionOrderService.MergeSubBatchAsync"/> -&gt; Cộng sản lượng đạt chuẩn của thẻ phụ vào <c>BatchQty</c> và <c>TargetQty</c>/<c>PassedQty</c> của thẻ chính (<c>MAIN_CARD</c>), đóng thẻ phụ sang <c>DONE</c> và ghi vết <c>SUB_BATCH_MERGED</c> vào <c>audit_logs</c>.
+    /// </para>
     /// </summary>
     [HttpPost("batches/{subBatchId:long}/merge")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Leader}")]
@@ -220,7 +242,10 @@ public class ProductionOrderController : ControllerBase
     }
 
     /// <summary>
-    /// SC-20b: Cho phép thẻ nhánh phụ chuyển tiếp độc lập sang công đoạn tiếp theo mà không gộp vào lô chính.
+    /// [BE-Iter 3] SC-20b: Cho phép thẻ nhánh phụ chuyển tiếp độc lập sang công đoạn tiếp theo mà không gộp vào lô chính (khi lô chính đã chạy vượt lên công đoạn sau).
+    /// <para>
+    /// - Móc nối: Gọi <see cref="IProductionOrderService.ContinueSubBatchIndependentlyAsync"/> -&gt; Tăng <c>CurrentStageSeq</c> của thẻ phụ sang bước kế tiếp (hoặc chuyển <c>DONE</c> nếu ở bước cuối) và ghi vết <c>SUB_BATCH_CONTINUED</c> vào <c>audit_logs</c>.
+    /// </para>
     /// </summary>
     [HttpPost("batches/{subBatchId:long}/continue-independent")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Leader}")]

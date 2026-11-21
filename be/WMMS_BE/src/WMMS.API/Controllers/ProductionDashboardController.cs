@@ -8,7 +8,16 @@ using WMMS.Domain.Constants;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// API Controller cung cấp Dashboard Tổng quan Điều hành Sản xuất cho Chủ xưởng &amp; Báo cáo Đối chiếu Hao hụt Gỗ Thực tế so với Định mức BOM (Iteration 3).
+/// [BE-Iter 3] API Controller cung cấp Dashboard Điều hành Sản xuất, Báo cáo Phân tích Lỗi Chất lượng (Defect Analytics by Station / Wood Type),
+/// Thống kê Tần suất Phá khóa Ngoại lệ Overdriver và Xuất Báo cáo Excel (.xlsx) toàn xưởng (SC-26, QT-06, KBN01, KBN02).
+/// <para>
+/// - Chức năng chính (Hoàng Đại Cương - Iteration 3):
+///   1. <c>GET /api/v1/production-dashboard/defect-analytics</c>: Thống kê lỗi KCS theo Trạm máy/Công đoạn, theo Loại gỗ (<c>WoodType</c>) và theo Mã lỗi (<c>DefectCatalog</c>).
+///   2. <c>GET /api/v1/production-dashboard/overdrive-analytics</c>: Thống kê tần suất phá khóa Hold Point (<c>overdrive_logs</c>) theo Chủ xưởng phê duyệt, Tổ trưởng yêu cầu và Trạm dừng.
+///   3. <c>GET /api/v1/production-dashboard/quality-and-overdrive-summary</c>: Hợp nhất 2 báo cáo Chất lượng &amp; Overdriver trên 1 payload điều hành.
+///   4. Cụm 4 API <c>GET /api/v1/production-dashboard/export/*-excel</c>: Xuất tệp <c>.xlsx</c> bằng EPPlus cho Thống kê Sản xuất, Phiếu Kiểm định KCS, Lịch sử Điều độ Kanban/Overdriver và Sổ tay Nghiệm thu Tổng hợp 6 sheets.
+/// - Móc nối: Gọi <see cref="IProductionDashboardService"/> (<c>ProductionDashboardService</c>) -&gt; Tổng hợp dữ liệu từ <c>IQcInspectionRepository</c>, <c>IProductionBatchRepository</c>, <c>IOrderItemRepository</c> và kết xuất file qua <see cref="WMMS.Application.Interfaces.External.IProductionReportExcelExporter"/> (<c>ProductionReportExcelExporter</c>).
+/// </para>
 /// </summary>
 [ApiController]
 [Route("api/v1/production-dashboard")]

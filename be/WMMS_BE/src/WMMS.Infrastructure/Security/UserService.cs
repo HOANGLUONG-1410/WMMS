@@ -98,7 +98,7 @@ public class UserService : IUserService
 
         if (user is null)
         {
-            throw AppException.NotFound($"Không tìm thấy tài khoản người dùng với mã ID = {userId}.");
+            throw AppException.NotFound("Không tìm thấy tài khoản người dùng được yêu cầu.");
         }
 
         return MapToUserDto(user);
@@ -242,7 +242,7 @@ public class UserService : IUserService
 
         if (user is null)
         {
-            throw AppException.NotFound($"Không tìm thấy tài khoản người dùng với mã ID = {targetUserId}.");
+            throw AppException.NotFound("Không tìm thấy tài khoản người dùng được yêu cầu.");
         }
 
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
@@ -317,7 +317,7 @@ public class UserService : IUserService
 
         if (user is null)
         {
-            throw AppException.NotFound($"Không tìm thấy tài khoản người dùng với mã ID = {targetUserId}.");
+            throw AppException.NotFound("Không tìm thấy tài khoản người dùng được yêu cầu.");
         }
 
         var beforeRoles = user.UserRoles.Select(ur => ur.Role.RoleCode).ToList();
@@ -361,7 +361,7 @@ public class UserService : IUserService
         if (!Enum.TryParse<UserStatusEnum>(dto.Status.Trim(), ignoreCase: true, out var newStatus))
         {
             throw new AppException(
-                "Trạng thái tài khoản không hợp lệ. Chỉ chấp nhận: Đang hoạt động (ACTIVE), Ngừng kích hoạt (INACTIVE), Khóa vĩnh viễn (BANNED) hoặc Tạm khóa (LOCKED).",
+                "Trạng thái tài khoản không hợp lệ. Vui lòng chọn một trong các trạng thái: Đang hoạt động, Ngừng kích hoạt, Khóa vĩnh viễn hoặc Tạm khóa.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -374,7 +374,7 @@ public class UserService : IUserService
 
         if (user is null)
         {
-            throw AppException.NotFound($"Không tìm thấy tài khoản người dùng với mã ID = {targetUserId}.");
+            throw AppException.NotFound("Không tìm thấy tài khoản người dùng được yêu cầu.");
         }
 
         // BR-ADM-01: Quản trị viên không được tự khóa hoặc vô hiệu hóa tài khoản của chính mình

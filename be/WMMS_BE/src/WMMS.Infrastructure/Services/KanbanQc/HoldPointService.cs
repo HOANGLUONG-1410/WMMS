@@ -15,7 +15,16 @@ using WMMS.Infrastructure.Persistence;
 namespace WMMS.Infrastructure.Services.KanbanQc;
 
 /// <summary>
-/// Thực thi dịch vụ kiểm soát điểm dừng Hold Point và luồng gửi yêu cầu &amp; phê duyệt ghi đè Overdriver (SC-20, KBN02, GBR-05).
+/// [Dev-Iter 2] Thực thi dịch vụ kiểm soát Điểm dừng Kiểm tra Hold Point &amp; Luồng Gửi yêu cầu / Phê duyệt Ghi đè Overdriver (SC-20, KBN01, KBN02, GBR-05).
+/// <para>
+/// - Chức năng cốt lõi:
+///   1. Cưỡng chế quy tắc 100% QC Pass (<see cref="InsufficientQcPassException"/>) trước khi cho phép thẻ lô tiến sang công đoạn kế tiếp (<c>S -&gt; S + 1</c>).
+///   2. Tự động khóa cứng thẻ lô (<c>BatchStatus = HOLD_POINT_BLOCKED</c>, ném <see cref="HoldPointLockedException"/>) ngay khi chạm trạm <c>IsHoldPoint</c> (hoặc <c>HoldPointStageSeq</c>) mà chưa được Thủ kho xác nhận xuất kho cấp phát (<c>GoodsIssuedUnlocked == false</c>).
+///   3. Xử lý quy trình xin ghi đè (<c>RequestOverrideAsync</c>) và Chủ xưởng phê duyệt/từ chối (<c>ApproveOverrideAsync</c> / <c>RejectOverrideAsync</c>): chỉ khi được <c>Approve</c> mới sinh bản ghi <see cref="OverdriveLog"/> trong bảng <c>overdrive_logs</c> và mở khóa thẻ.
+/// - Móc nối dữ liệu:
+///   + Lưu vết kiểm toán bất biến (<c>BeforeState</c> / <c>AfterState</c> JSON) vào bảng <c>audit_logs</c> và phát thông báo realtime qua <see cref="INotificationHubService"/>.
+///   + Bảng <c>overdrive_logs</c> được móc nối sang <c>ProductionDashboardService.GetOverdriveAnalyticsReportAsync</c> và <c>ProductionReportExcelExporter</c> (Iteration 3).
+/// </para>
 /// </summary>
 public class HoldPointService : IHoldPointService
 {
@@ -49,7 +58,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {batchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         var sortedSteps = batch.BatchRoutingSteps
@@ -125,9 +134,9 @@ public class HoldPointService : IHoldPointService
                     BatchId = ol.BatchId,
                     BatchCode = batch.BatchCode,
                     RequestedBy = ol.RequestedBy,
-                    RequesterName = ol.Requester?.FullName ?? ol.Requester?.Username ?? $"User #{ol.RequestedBy}",
+                    RequesterName = ol.Requester?.FullName ?? ol.Requester?.Username ?? $"Người dùng #{ol.RequestedBy}",
                     ApprovedBy = ol.ApprovedBy,
-                    ApproverName = ol.Approver?.FullName ?? ol.Approver?.Username ?? $"User #{ol.ApprovedBy}",
+                    ApproverName = ol.Approver?.FullName ?? ol.Approver?.Username ?? $"Người dùng #{ol.ApprovedBy}",
                     Justification = ol.Justification,
                     HoldPointStageSeq = ol.HoldPointStageSeq,
                     ApprovedAt = ol.ApprovedAt
@@ -155,7 +164,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {request.BatchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         var requester = await _context.Users
@@ -238,7 +247,7 @@ public class HoldPointService : IHoldPointService
                 await _notificationHubService.NotifyHoldPointOverrideRequestedAsync(
                     batch.BatchCode,
                     targetHoldPointSeq,
-                    requester?.FullName ?? requester?.Username ?? $"User #{requesterUserId}",
+                    requester?.FullName ?? requester?.Username ?? $"Người dùng #{requesterUserId}",
                     request.Justification,
                     cancellationToken);
             }
@@ -259,7 +268,7 @@ public class HoldPointService : IHoldPointService
             BatchStatus = batch.BatchStatus.ToString(),
             GoodsIssuedUnlocked = batch.GoodsIssuedUnlocked,
             RequestedBy = requesterUserId,
-            RequesterName = requester?.FullName ?? requester?.Username ?? $"User #{requesterUserId}",
+            RequesterName = requester?.FullName ?? requester?.Username ?? $"Người dùng #{requesterUserId}",
             ApprovedBy = null,
             ApproverName = null,
             Justification = request.Justification,
@@ -289,7 +298,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {batchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         var approver = await _context.Users
@@ -385,7 +394,7 @@ public class HoldPointService : IHoldPointService
                     batch.BatchCode,
                     holdPointSeq,
                     true,
-                    approver?.FullName ?? approver?.Username ?? $"User #{approverUserId}",
+                    approver?.FullName ?? approver?.Username ?? $"Người dùng #{approverUserId}",
                     request.Justification,
                     cancellationToken);
             }
@@ -406,9 +415,9 @@ public class HoldPointService : IHoldPointService
             BatchStatus = batch.BatchStatus.ToString(),
             GoodsIssuedUnlocked = batch.GoodsIssuedUnlocked,
             RequestedBy = requesterUserId,
-            RequesterName = requester?.FullName ?? requester?.Username ?? $"User #{requesterUserId}",
+            RequesterName = requester?.FullName ?? requester?.Username ?? $"Người dùng #{requesterUserId}",
             ApprovedBy = approverUserId,
-            ApproverName = approver?.FullName ?? approver?.Username ?? $"User #{approverUserId}",
+            ApproverName = approver?.FullName ?? approver?.Username ?? $"Người dùng #{approverUserId}",
             Justification = request.Justification,
             ApprovedAt = now,
             ActionTaken = "APPROVED"
@@ -436,7 +445,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {batchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         var rejecter = await _context.Users
@@ -509,7 +518,7 @@ public class HoldPointService : IHoldPointService
                     batch.BatchCode,
                     holdPointSeq,
                     false,
-                    rejecter?.FullName ?? rejecter?.Username ?? $"User #{rejecterUserId}",
+                    rejecter?.FullName ?? rejecter?.Username ?? $"Người dùng #{rejecterUserId}",
                     request.Reason,
                     cancellationToken);
             }
@@ -530,9 +539,9 @@ public class HoldPointService : IHoldPointService
             BatchStatus = batch.BatchStatus.ToString(),
             GoodsIssuedUnlocked = batch.GoodsIssuedUnlocked,
             RequestedBy = requesterUserId,
-            RequesterName = requester?.FullName ?? requester?.Username ?? $"User #{requesterUserId}",
+            RequesterName = requester?.FullName ?? requester?.Username ?? $"Người dùng #{requesterUserId}",
             ApprovedBy = rejecterUserId,
-            ApproverName = rejecter?.FullName ?? rejecter?.Username ?? $"User #{rejecterUserId}",
+            ApproverName = rejecter?.FullName ?? rejecter?.Username ?? $"Người dùng #{rejecterUserId}",
             Justification = request.Reason,
             ApprovedAt = DateTime.UtcNow,
             ActionTaken = "REJECTED"
@@ -563,7 +572,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {batchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.DONE)

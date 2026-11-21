@@ -8,8 +8,14 @@ using WMMS.Domain.Constants;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// Controller Nhập kho theo đơn PO (GRN) &amp; Phân bổ tự động vật tư vào Staging (SC-17, UC-56, UC-57).
-/// Chỉ Thủ kho (WAREHOUSE) và Admin được thao tác.
+/// [Dev-Iter 2] Controller Nhập kho theo đơn PO (GRN) &amp; Phân bổ tự động vật tư vào Staging kho (SC-17, UC-56, UC-57, BR-005, BR-WHS-01).
+/// <para>
+/// - Chức năng:
+///   + <c>GET /api/v1/warehouse/purchase-orders/open</c>: Lấy danh sách đơn PO đang chờ nhận hàng (<c>ISSUED</c> / <c>PARTIALLY_RECEIVED</c>).
+///   + <c>POST /api/v1/warehouse/goods-receipts</c>: Thủ kho xác nhận Commit phiếu nhập kho (GRN), đối chiếu lượng thực nhận với PO, cộng tồn kho &amp; sổ kho, đồng thời kích hoạt Auto-Allocation theo độ ưu tiên <c>ETD ASC</c>.
+/// - Phân quyền RBAC: Chỉ cho phép <c>ADMIN</c> và <c>WAREHOUSE</c>.
+/// - Móc nối: Gọi <see cref="IGoodsReceiptService"/> (<c>GoodsReceiptService</c>) -&gt; Cập nhật <c>purchase_orders</c>, <c>goods_receipt_notes</c>, <c>inventory_stocks</c>, <c>inventory_transactions</c>, <c>material_allocations</c>, <c>boms</c>, <c>audit_logs</c> và đẩy sự kiện qua <c>WmmsNotificationHub</c> (SignalR).
+/// </para>
 /// </summary>
 [Route("api/v1/warehouse")]
 [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Warehouse}")]

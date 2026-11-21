@@ -203,6 +203,15 @@ export default function ProductionProcessPage() {
     activeRole,
   );
   const canQueryMrp = ["ADMIN", "OWNER", "PLANNER", "PURCHASING", "WAREHOUSE"].includes(activeRole);
+  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER", "SALES"].includes(activeRole);
+  const canAccessReconciliationPage = [
+    "ADMIN",
+    "OWNER",
+    "PLANNER",
+    "WAREHOUSE",
+    "PURCHASING",
+    "SALES",
+  ].includes(activeRole);
 
   // Thông tin Không gian đơn hàng
   const [spaceInfo, setSpaceInfo] = useState<{
@@ -420,8 +429,12 @@ export default function ProductionProcessPage() {
       } else {
         setSpaceError(`Lỗi: Không tìm thấy dữ liệu cho Không gian "${spaceKey}".`);
       }
-    } catch {
-      setSpaceError(`Không thể tải dữ liệu Không gian đơn hàng "${spaceKey}" từ máy chủ.`);
+    } catch (err: any) {
+      setSpaceError(
+        err?.response?.data?.message ||
+        err?.message ||
+        `Không thể tải dữ liệu Không gian đơn hàng "${spaceKey}" từ máy chủ.`
+      );
     } finally {
       setIsLoadingSpace(false);
     }
@@ -1169,7 +1182,7 @@ export default function ProductionProcessPage() {
             </button>
           )}
 
-          {activeSpaceKey && (
+          {activeSpaceKey && canAccessBomPage && (
             <button
               type="button"
               onClick={() => navigate(`/bom?spaceKey=${encodeURIComponent(activeSpaceKey)}`)}
@@ -1179,7 +1192,7 @@ export default function ProductionProcessPage() {
             </button>
           )}
 
-          {activeSpaceKey && (
+          {activeSpaceKey && canAccessReconciliationPage && (
             <button
               type="button"
               onClick={() =>

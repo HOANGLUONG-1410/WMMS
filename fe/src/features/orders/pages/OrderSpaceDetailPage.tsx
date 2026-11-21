@@ -29,10 +29,30 @@ export default function OrderSpaceDetailPage() {
 
   // Quyền người dùng
   const activeRole = currentUser?.activeRole || 'OWNER';
-  const isLeaderAuthorized = activeRole === 'OWNER' || activeRole === 'ADMIN' || activeRole === 'LEADER';
+  const canReleaseBatches = ['OWNER', 'ADMIN', 'LEADER'].includes(activeRole);
+  const canAccessBom = ['OWNER', 'PLANNER', 'SALES', 'ADMIN'].includes(activeRole);
+  const canAccessReconciliation = [
+    'SALES',
+    'OWNER',
+    'PLANNER',
+    'PURCHASING',
+    'WAREHOUSE',
+    'ADMIN',
+  ].includes(activeRole);
+  const canAccessProductionProgress = [
+    'ADMIN',
+    'OWNER',
+    'PLANNER',
+    'LEADER',
+    'QC',
+    'WAREHOUSE',
+  ].includes(activeRole);
 
   // Dữ liệu Không gian đơn hàng & Thẻ lô từ TanStack Query (caching 5 phút)
-  const { spaceDetail, batches, isLoading, isFetching, isError } = useOrderSpaceDetail(activeKey);
+  const { spaceDetail, batches, isLoading, isFetching, isError } = useOrderSpaceDetail(
+    activeKey,
+    canAccessProductionProgress,
+  );
 
   // Phân trang danh sách sản phẩm (Pagination state giống UserManagementPage)
   const [pageNumber, setPageNumber] = useState<number>(1);
@@ -255,7 +275,6 @@ export default function OrderSpaceDetailPage() {
 
   return (
     <WmmsAppShell
-      mode="owner"
       customTopLeft={
         <button
           type="button"
@@ -331,7 +350,7 @@ export default function OrderSpaceDetailPage() {
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {/* Nút Phát hành Lệnh sản xuất Hàng loạt */}
-            {isLeaderAuthorized && (
+            {canReleaseBatches && (
               <button
                 type="button"
                 onClick={handleOpenBulkModal}
@@ -346,27 +365,31 @@ export default function OrderSpaceDetailPage() {
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={() => navigate(`/bom?spaceKey=${encodeURIComponent(activeKey)}`)}
-              className="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <span>Quản lý BOM &amp; quy trình</span>
-            </button>
+            {canAccessBom && (
+              <button
+                type="button"
+                onClick={() => navigate(`/bom?spaceKey=${encodeURIComponent(activeKey)}`)}
+                className="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>Quản lý BOM &amp; quy trình</span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => navigate(`/inventory/reconciliation?spaceKey=${encodeURIComponent(activeKey)}`)}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-              <span>Đối chiếu tồn kho &amp; Khóa vật tư →</span>
-            </button>
+            {canAccessReconciliation && (
+              <button
+                type="button"
+                onClick={() => navigate(`/inventory/reconciliation?spaceKey=${encodeURIComponent(activeKey)}`)}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <span>Đối chiếu tồn kho &amp; Khóa vật tư →</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -531,29 +554,37 @@ export default function OrderSpaceDetailPage() {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/bom?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}`
-                              )
-                            }
-                            className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer"
-                          >
-                            Xem BOM →
-                          </button>
+                          {canAccessBom && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(
+                                  `/bom?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}`
+                                )
+                              }
+                              className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer"
+                            >
+                              Xem BOM →
+                            </button>
+                          )}
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/production/progress?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}&sku=${encodeURIComponent(item.productSku)}`
-                              )
-                            }
-                            className="px-2.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition cursor-pointer shadow-2xs"
-                          >
-                            Tiến trình SX →
-                          </button>
+                          {canAccessProductionProgress && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(
+                                  `/production/progress?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}&sku=${encodeURIComponent(item.productSku)}`
+                                )
+                              }
+                              className="px-2.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition cursor-pointer shadow-2xs"
+                            >
+                              Tiến trình SX →
+                            </button>
+                          )}
+
+                          {!canAccessBom && !canAccessProductionProgress && (
+                            <span className="text-xs text-slate-400 italic">Chỉ xem</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -674,7 +705,7 @@ export default function OrderSpaceDetailPage() {
       </div>
 
       {/* MODAL PHÁT HÀNH LỆNH SẢN XUẤT HÀNG LOẠT (BULK RELEASE) */}
-      {isBulkModalOpen && (
+      {canReleaseBatches && isBulkModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">

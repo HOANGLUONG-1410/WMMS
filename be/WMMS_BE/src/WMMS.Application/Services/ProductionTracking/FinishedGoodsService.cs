@@ -75,7 +75,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                 InitialQty = initialQty,
                 CurrentQty = batch.BatchQty,
                 OrderedQty = batch.OrderItem?.OrderedQty ?? 0,
-                CurrentStageCode = currentStep?.StageName ?? $"STAGE_{batch.CurrentStageSeq}",
+                CurrentStageCode = currentStep?.StageName ?? $"Công đoạn #{batch.CurrentStageSeq}",
                 IsAllRoutingStepsPassed = isAllStepsPassed,
                 IsReadyForFinishedGoodsReceipt = isReadyForReceipt,
                 EtdDate = customerOrder?.EtdDate ?? DateTime.MinValue,
@@ -100,7 +100,7 @@ public class FinishedGoodsService : IFinishedGoodsService
         if (batch == null)
         {
             throw AppException.NotFound(
-                $"Không tìm thấy lô sản xuất với mã định danh ID = {batchId}.");
+                "Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.DONE)
@@ -278,7 +278,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                             OrderedQty = orderedQty,
                             TotalCompletedQty = totalCompletedForOrderItem
                         }),
-                        Reason = $"Dòng sản phẩm #{targetOrderItem.OrderItemId} đã hoàn thành đủ sản lượng đặt hàng ({totalCompletedForOrderItem}/{orderedQty}).",
+                        Reason = $"Hạng mục sản phẩm '{targetOrderItem.Product?.ProductName ?? "trong đơn hàng"}' đã hoàn thành đủ sản lượng đặt hàng ({totalCompletedForOrderItem}/{orderedQty}).",
                         CreatedAt = now
                     });
                 }

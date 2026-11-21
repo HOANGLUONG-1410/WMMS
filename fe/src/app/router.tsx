@@ -117,10 +117,22 @@ export const router = createBrowserRouter([
       },
 
       // ==========================================
-      // 2. Phân hệ Đơn hàng & Staging (SALES, OWNER, ADMIN)
+      // 2. Phân hệ Đơn hàng & Staging (Mọi vai trò sản xuất/kế hoạch/kinh doanh đều xem được đơn hàng & Space, trừ Purchasing)
       // ==========================================
       {
-        element: <ProtectedRoute allowedRoles={[ROLES.SALES, ROLES.OWNER, ROLES.ADMIN]} />,
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              ROLES.ADMIN,
+              ROLES.OWNER,
+              ROLES.SALES,
+              ROLES.PLANNER,
+              ROLES.LEADER,
+              ROLES.QC,
+              ROLES.WAREHOUSE,
+            ]}
+          />
+        ),
         children: [
           { path: "/orders", element: <SalesOrderListPage /> },
         ],
@@ -132,7 +144,19 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        element: <ProtectedRoute allowedRoles={[ROLES.SALES, ROLES.OWNER, ROLES.LEADER, ROLES.ADMIN]} />,
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              ROLES.ADMIN,
+              ROLES.OWNER,
+              ROLES.SALES,
+              ROLES.PLANNER,
+              ROLES.LEADER,
+              ROLES.QC,
+              ROLES.WAREHOUSE,
+            ]}
+          />
+        ),
         children: [
           { path: "/orders/spaces/:spaceKey", element: <OrderSpaceDetailPage /> },
         ],
@@ -354,6 +378,7 @@ export const router = createBrowserRouter([
               ROLES.QC,
               ROLES.OWNER,
               ROLES.WAREHOUSE,
+              ROLES.PLANNER,
               ROLES.ADMIN,
             ]}
           />
@@ -373,6 +398,7 @@ export const router = createBrowserRouter([
               ROLES.QC,
               ROLES.OWNER,
               ROLES.WAREHOUSE,
+              ROLES.PLANNER,
               ROLES.ADMIN,
             ]}
           />

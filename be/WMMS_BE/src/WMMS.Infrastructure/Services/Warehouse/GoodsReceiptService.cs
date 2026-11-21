@@ -14,8 +14,15 @@ using WMMS.Infrastructure.Services.MasterData;
 namespace WMMS.Infrastructure.Services.Warehouse;
 
 /// <summary>
-/// Nhập kho theo đơn mua hàng PO (GRN) & Phân bổ tự động vật tư mới về vào Staging (SC-17, UC-56, UC-57, BR-005, BR-WHS-01).
-/// Toàn bộ nghiệp vụ chạy trong MỘT giao dịch nguyên tử; xung đột RowVersion kho được thử lại tối đa 3 lần (UC057.E1).
+/// [Dev-Iter 2] Dịch vụ Nhập kho theo đơn mua hàng PO (GRN) &amp; Phân bổ tự động vật tư mới về vào Staging kho (SC-17, UC-56, UC-57, BR-005, BR-WHS-01, GBR-05).
+/// <para>
+/// - Chức năng &amp; Luồng xử lý nguyên tử (Atomic Transaction + Optimistic Concurrency Retry 3 lần trên <c>RowVersion</c>):
+///   1. Đối chiếu đơn <see cref="PurchaseOrder"/> (chỉ nhận khi <c>ISSUED</c> hoặc <c>PARTIALLY_RECEIVED</c>) và kiểm tra ngưỡng giao vượt tối đa 110% (<c>OverDeliveryTolerance</c> - UC056.E1).
+///   2. Khởi tạo phiếu <see cref="GoodsReceipt"/> (<c>goods_receipt_notes</c>) trạng thái <c>COMMITTED</c>.
+///   3. Cộng tồn vật lý <c>PhysicalQty</c> trong <c>inventory_stocks</c>, ghi bút toán <c>IN_RECEIPT</c> vào sổ kho <c>inventory_transactions</c> (móc nối SC-12, SC-13) và cập nhật trạng thái PO (<c>PARTIALLY_RECEIVED</c> / <c>FULFILLED</c>).
+///   4. Kích hoạt thuật toán Auto-Allocation: Truy vấn các dòng <see cref="MaterialAllocation"/> đang thiếu vật tư (<c>ShortageQty &gt; 0</c> / BOM <c>WAITING_FOR_MATERIALS</c>), sắp xếp ưu tiên theo hạn giao hàng <c>CustomerOrder.EtdDate ASC</c> (FIFO by ETD), tự động bù vào <c>ReservedQty</c> và tăng <c>AllocatedQty</c>.
+///   5. Nếu toàn bộ vật tư trong BOM của đơn hàng đã đủ 100%, tự động chuyển BOM sang <c>READY_FOR_PRODUCTION</c>, mở khóa điều kiện phát hành Lệnh sản xuất (SC-19), ghi <c>audit_logs</c> và bắn thông báo SignalR qua <see cref="INotificationHubService"/>.
+/// </para>
 /// </summary>
 public class GoodsReceiptService : IGoodsReceiptService
 {
@@ -103,7 +110,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         var po = await _context.PurchaseOrders
             .Include(p => p.Details).ThenInclude(d => d.Material)
             .FirstOrDefaultAsync(p => p.PoId == request.PoId, ct)
-            ?? throw AppException.NotFound($"Không tìm thấy đơn mua hàng PO ID = {request.PoId}.");
+            ?? throw AppException.NotFound("Không tìm thấy đơn mua hàng đã chọn.");
 
         if (po.PoStatus != PoStatusEnum.ISSUED && po.PoStatus != PoStatusEnum.PARTIALLY_RECEIVED)
         {
@@ -121,14 +128,16 @@ public class GoodsReceiptService : IGoodsReceiptService
         foreach (var (materialId, qty) in lines)
         {
             var detail = po.Details.FirstOrDefault(d => d.MaterialId == materialId)
-                ?? throw new AppException($"Vật tư ID = {materialId} không thuộc đơn mua hàng '{po.PoCode}'.");
+                ?? throw new AppException($"Nguyên vật tư được chọn không thuộc đơn mua hàng '{po.PoCode}'.", 400, MessageCodes.Msg13ValidationError);
 
             var total = detail.ReceivedQty + qty;
             if (total > detail.OrderedQty * OverDeliveryTolerance)
             {
                 throw new AppException(
                     $"Số lượng thực nhận vượt quá dung sai cho phép của đơn mua hàng " +
-                    $"(vật tư {detail.Material.MaterialCode}: đặt {detail.OrderedQty}, đã nhận {detail.ReceivedQty}, nhập lần này {qty}). Vui lòng xác nhận lại với bộ phận Thu mua.");
+                    $"(vật tư {detail.Material.MaterialCode}: đặt {detail.OrderedQty}, đã nhận {detail.ReceivedQty}, nhập lần này {qty}). Vui lòng xác nhận lại với bộ phận Thu mua.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
             }
         }
 
@@ -471,11 +480,11 @@ public class GoodsReceiptService : IGoodsReceiptService
         }
         if (request.Lines.Any(l => l.ReceivedQty < 0))
         {
-            throw new AppException("Số lượng vật tư thực nhận không được âm hoặc để trống.");
+            throw new AppException("Số lượng vật tư thực nhận không được là số âm.", 400, MessageCodes.Msg13ValidationError);
         }
         if (request.Lines.All(l => l.ReceivedQty == 0))
         {
-            throw new AppException("Phải có ít nhất một dòng vật tư có số lượng thực nhận lớn hơn 0.");
+            throw new AppException("Phải có ít nhất một dòng vật tư có số lượng thực nhận lớn hơn 0.", 400, MessageCodes.Msg13ValidationError);
         }
     }
 }

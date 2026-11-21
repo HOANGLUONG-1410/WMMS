@@ -91,6 +91,7 @@ export default function EditUserModal({
   }, [user]);
 
   const updateMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: async () => {
       if (!user) return;
 

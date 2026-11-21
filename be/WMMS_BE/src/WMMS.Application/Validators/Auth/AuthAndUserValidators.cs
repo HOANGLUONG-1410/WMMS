@@ -101,7 +101,7 @@ public class CreateStaffValidator : AbstractValidator<CreateStaffDto>
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email không được để trống.")
             .EmailAddress().WithMessage("Định dạng email không hợp lệ.")
-            .MaximumLength(255);
+            .MaximumLength(255).WithMessage("Email không được vượt quá 255 ký tự.");
 
         RuleFor(x => x.InitialPassword)
             .NotEmpty().WithMessage("Mật khẩu khởi tạo không được để trống.")
@@ -113,7 +113,7 @@ public class CreateStaffValidator : AbstractValidator<CreateStaffDto>
 
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("Họ và tên không được để trống.")
-            .MaximumLength(255);
+            .MaximumLength(255).WithMessage("Họ và tên không được vượt quá 255 ký tự.");
 
         RuleFor(x => x.RoleCodes)
             .NotEmpty().WithMessage("Phải gán ít nhất một vai trò cho tài khoản người dùng.");
@@ -130,11 +130,11 @@ public class UpdateUserValidator : AbstractValidator<UpdateUserDto>
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email không được để trống.")
             .EmailAddress().WithMessage("Định dạng email không hợp lệ.")
-            .MaximumLength(255);
+            .MaximumLength(255).WithMessage("Email không được vượt quá 255 ký tự.");
 
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("Họ và tên không được để trống.")
-            .MaximumLength(255);
+            .MaximumLength(255).WithMessage("Họ và tên không được vượt quá 255 ký tự.");
     }
 }
 
