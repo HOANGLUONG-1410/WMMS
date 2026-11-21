@@ -76,7 +76,7 @@ public class AuthService : IAuthService
         if (user is null)
         {
             throw AppException.Unauthorized(
-                "Invalid username/email or password.",
+                "Tên đăng nhập, email hoặc mật khẩu không chính xác.",
                 MessageCodes.Msg02InvalidCredentials);
         }
 
@@ -84,7 +84,7 @@ public class AuthService : IAuthService
         if (user.Status == UserStatusEnum.BANNED || user.Status == UserStatusEnum.INACTIVE)
         {
             throw AppException.Forbidden(
-                $"Your account is currently {user.Status}. Please contact the System Administrator.",
+                $"Tài khoản của bạn hiện đang ở trạng thái {user.Status}. Vui lòng liên hệ Quản trị viên Hệ thống.",
                 MessageCodes.Msg04AccountBannedOrInactive);
         }
 
@@ -93,7 +93,7 @@ public class AuthService : IAuthService
         {
             var remainingMinutes = Math.Max(1, (int)Math.Ceiling((user.LockedUntil!.Value - DateTime.UtcNow).TotalMinutes));
             throw AppException.Locked(
-                $"Account is temporarily locked due to 5 consecutive failed login attempts. Please try again in {remainingMinutes} minute(s).",
+                $"Tài khoản đang tạm khóa do đăng nhập sai 5 lần liên tiếp. Vui lòng thử lại sau {remainingMinutes} phút.",
                 MessageCodes.Msg03AccountLocked);
         }
 
@@ -118,8 +118,8 @@ public class AuthService : IAuthService
                 beforeState: null,
                 afterState: JsonSerializer.Serialize(new { user.FailedLoginCount, Status = user.Status.ToString(), user.LockedUntil }),
                 reason: isNowLocked
-                    ? "Account automatically locked for 30 minutes after 5 consecutive failed login attempts (BR-SEC-02)."
-                    : $"Failed login attempt #{user.FailedLoginCount}.",
+                    ? "Tài khoản tự động bị khóa 30 phút sau 5 lần đăng nhập sai liên tiếp (BR-SEC-02)."
+                    : $"Đăng nhập thất bại lần thứ #{user.FailedLoginCount}.",
                 ipAddress: ipAddress,
                 cancellationToken: cancellationToken);
 
@@ -128,12 +128,12 @@ public class AuthService : IAuthService
             if (isNowLocked)
             {
                 throw AppException.Locked(
-                    "Account has been temporarily locked for 30 minutes due to 5 consecutive failed login attempts.",
+                    "Tài khoản đã bị tạm khóa trong 30 phút do nhập sai mật khẩu 5 lần liên tiếp.",
                     MessageCodes.Msg03AccountLocked);
             }
 
             throw AppException.Unauthorized(
-                "Invalid username/email or password.",
+                "Tên đăng nhập, email hoặc mật khẩu không chính xác.",
                 MessageCodes.Msg02InvalidCredentials);
         }
 
@@ -199,7 +199,7 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(rawRefreshToken))
         {
-            throw AppException.Unauthorized("Refresh token is required.", MessageCodes.Msg12InvalidToken);
+            throw AppException.Unauthorized("Thiếu mã làm mới phiên đăng nhập (Refresh Token).", MessageCodes.Msg12InvalidToken);
         }
 
         var tokenHash = _jwtTokenGenerator.ComputeSha256Hash(rawRefreshToken);
@@ -212,7 +212,7 @@ public class AuthService : IAuthService
 
         if (existingToken is null || !existingToken.IsActive)
         {
-            throw AppException.Unauthorized("Refresh token is invalid, expired, or has been revoked.", MessageCodes.Msg12InvalidToken);
+            throw AppException.Unauthorized("Mã làm mới phiên đăng nhập không hợp lệ, đã hết hạn hoặc đã bị thu hồi.", MessageCodes.Msg12InvalidToken);
         }
 
         var user = existingToken.User;
@@ -220,7 +220,7 @@ public class AuthService : IAuthService
         {
             existingToken.Revoke();
             await _context.SaveChangesAsync(cancellationToken);
-            throw AppException.Forbidden("User account is not active.", MessageCodes.Msg04AccountBannedOrInactive);
+            throw AppException.Forbidden("Tài khoản người dùng hiện không còn hoạt động.", MessageCodes.Msg04AccountBannedOrInactive);
         }
 
         var roleCodes = user.UserRoles
@@ -307,7 +307,7 @@ public class AuthService : IAuthService
                 resolvedUserId.Value.ToString(),
                 beforeState: null,
                 afterState: null,
-                reason: "User logged out and revoked active session token (UC-02).",
+                reason: "Người dùng đã đăng xuất và thu hồi mã phiên hoạt động (UC-02).",
                 ipAddress: ipAddress,
                 cancellationToken: cancellationToken);
         }
@@ -330,7 +330,7 @@ public class AuthService : IAuthService
 
         if (user is null)
         {
-            throw AppException.NotFound("Authenticated user profile not found.");
+            throw AppException.NotFound("Không tìm thấy hồ sơ người dùng đang đăng nhập.");
         }
 
         return MapToCurrentUserProfile(user);
@@ -353,12 +353,12 @@ public class AuthService : IAuthService
 
         if (user is null)
         {
-            throw AppException.NotFound("User account not found.");
+            throw AppException.NotFound("Không tìm thấy tài khoản người dùng.");
         }
 
         if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
         {
-            throw AppException.Unauthorized("Current password is incorrect.", MessageCodes.Msg02InvalidCredentials);
+            throw AppException.Unauthorized("Mật khẩu hiện tại không chính xác.", MessageCodes.Msg02InvalidCredentials);
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
@@ -377,7 +377,7 @@ public class AuthService : IAuthService
             user.UserId.ToString(),
             beforeState: null,
             afterState: JsonSerializer.Serialize(new { PasswordChangedAt = DateTime.UtcNow }),
-            reason: "User changed personal password and revoked active sessions (UC-03).",
+            reason: "Người dùng đã đổi mật khẩu cá nhân và thu hồi các phiên đăng nhập đang hoạt động (UC-03).",
             ipAddress: ipAddress,
             cancellationToken: cancellationToken);
 
@@ -396,7 +396,7 @@ public class AuthService : IAuthService
         string? ipAddress,
         CancellationToken cancellationToken = default)
     {
-        var genericMessage = "If an account with that email exists, a password reset link and 6-digit OTP have been dispatched (MSG05).";
+        var genericMessage = "Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu và mã OTP 6 chữ số đã được gửi đi (MSG05).";
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
         var user = await _context.Users
@@ -420,7 +420,7 @@ public class AuthService : IAuthService
         if (recentRequestsCount >= MaxResetRequestsPerWindow)
         {
             throw AppException.TooManyRequests(
-                "Too many password reset requests. Maximum 3 requests allowed within 10 minutes. Please try again later.",
+                "Quá nhiều yêu cầu đặt lại mật khẩu. Tối đa 3 yêu cầu trong vòng 10 phút. Vui lòng thử lại sau.",
                 MessageCodes.Msg09RateLimitExceeded);
         }
 
@@ -460,7 +460,7 @@ public class AuthService : IAuthService
             user.UserId.ToString(),
             beforeState: null,
             afterState: JsonSerializer.Serialize(new { ExpiresAt = expiresAt, RequestedByIp = ipAddress }),
-            reason: "Password reset OTP & token generated (15-min TTL, UC-04).",
+            reason: "Đã tạo mã OTP và liên kết đặt lại mật khẩu (hiệu lực 15 phút, UC-04).",
             ipAddress: ipAddress,
             cancellationToken: cancellationToken);
 
@@ -509,7 +509,7 @@ public class AuthService : IAuthService
         if (user is null)
         {
             throw new AppException(
-                "Invalid or expired password reset token / OTP code.",
+                "Mã đặt lại mật khẩu / mã OTP không hợp lệ hoặc đã hết hạn.",
                 400,
                 MessageCodes.Msg06ResetTokenInvalidOrExpired);
         }
@@ -524,7 +524,7 @@ public class AuthService : IAuthService
         if (matchingResetToken is null)
         {
             throw new AppException(
-                "Invalid or expired password reset token / OTP code (MSG06).",
+                "Mã đặt lại mật khẩu / mã OTP không hợp lệ hoặc đã hết hạn (MSG06).",
                 400,
                 MessageCodes.Msg06ResetTokenInvalidOrExpired);
         }
@@ -550,7 +550,7 @@ public class AuthService : IAuthService
             user.UserId.ToString(),
             beforeState: null,
             afterState: JsonSerializer.Serialize(new { ResetTokenId = matchingResetToken.ResetTokenId, ResetCompletedAt = DateTime.UtcNow }),
-            reason: "Password successfully reset via token/OTP and all prior sessions revoked (UC-05).",
+            reason: "Đã đặt lại mật khẩu thành công qua token/OTP và thu hồi toàn bộ phiên đăng nhập trước đó (UC-05).",
             ipAddress: ipAddress,
             cancellationToken: cancellationToken);
 
@@ -584,7 +584,7 @@ public class AuthService : IAuthService
                 user.UserId.ToString(),
                 beforeState: JsonSerializer.Serialize(new { Status = UserStatusEnum.LOCKED.ToString() }),
                 afterState: JsonSerializer.Serialize(new { Status = UserStatusEnum.ACTIVE.ToString(), FailedLoginCount = 0 }),
-                reason: "Account automatically unlocked by background scheduler after 30-minute lockout expiration (JOB-01).",
+                reason: "Hệ thống tự động mở khóa tài khoản sau khi hết thời gian tạm khóa 30 phút (JOB-01).",
                 ipAddress: "SYSTEM_SCHEDULER",
                 cancellationToken: cancellationToken);
         }

@@ -62,20 +62,20 @@ public class SmtpEmailService : IEmailService
 
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(fromEmail, "WMMS Security System"),
-                Subject = "[WMMS] Password Reset Verification Code (OTP)",
+                From = new MailAddress(fromEmail, "Hệ thống Bảo mật WMMS"),
+                Subject = "[WMMS] Mã xác thực đặt lại mật khẩu (OTP)",
                 IsBodyHtml = true,
                 Body = $"""
                     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-                        <h2>WMMS - Password Reset Request</h2>
-                        <p>Hello <strong>{WebUtility.HtmlEncode(fullName)}</strong>,</p>
-                        <p>We received a request to reset the password for your WMMS account.</p>
-                        <p>Your 6-digit OTP verification code is:</p>
+                        <h2>WMMS - Yêu cầu đặt lại mật khẩu</h2>
+                        <p>Xin chào <strong>{WebUtility.HtmlEncode(fullName)}</strong>,</p>
+                        <p>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản WMMS của bạn.</p>
+                        <p>Mã xác thực OTP gồm 6 chữ số của bạn là:</p>
                         <h1 style="letter-spacing: 4px; color: #1d4ed8;">{otpCode}</h1>
-                        <p>Or click the link below to reset your password:</p>
+                        <p>Hoặc nhấp vào liên kết bên dưới để đặt lại mật khẩu:</p>
                         <p><a href="{resetLink}">{resetLink}</a></p>
-                        <p>This code and link will expire in <strong>15 minutes</strong> (at {expiresAtUtc:yyyy-MM-dd HH:mm:ss} UTC).</p>
-                        <p>If you did not request a password reset, please ignore this email.</p>
+                        <p>Mã xác thực và liên kết này sẽ hết hạn sau <strong>15 phút</strong> (vào lúc {expiresAtUtc:yyyy-MM-dd HH:mm:ss} UTC).</p>
+                        <p>Nếu bạn không thực hiện yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
                     </div>
                     """
             };

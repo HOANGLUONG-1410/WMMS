@@ -37,7 +37,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _inventoryService.GetStocksAsync(filter, cancellationToken);
-        return Ok(ApiResponse<PagedResult<InventoryStockDto>>.Ok(result, "Fetched 3-tier inventory stocks (SC-12)."));
+        return Ok(ApiResponse<PagedResult<InventoryStockDto>>.Ok(result, "Lấy danh sách tồn kho 3 cấp thành công (SC-12)."));
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var detail = await _inventoryService.GetStockByMaterialIdAsync(materialId, cancellationToken);
-        return Ok(ApiResponse<InventoryStockDetailDto>.Ok(detail, "Fetched material stock detail and reserved orders (SC-12)."));
+        return Ok(ApiResponse<InventoryStockDetailDto>.Ok(detail, "Lấy chi tiết tồn kho vật tư và danh sách đơn giữ chỗ thành công (SC-12)."));
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _inventoryService.GetLedgerAsync(filter, cancellationToken);
-        return Ok(ApiResponse<PagedResult<InventoryTransactionDto>>.Ok(result, "Fetched inventory transaction ledger (SC-13)."));
+        return Ok(ApiResponse<PagedResult<InventoryTransactionDto>>.Ok(result, "Truy vấn sổ kho điện tử thành công (SC-13)."));
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.AnalyzeOrderMrpAsync(orderId, cancellationToken);
-        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Analyzed order MRP material requirements (SC-14)."));
+        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Phân tích nhu cầu vật tư MRP cho đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.AnalyzeOrderSpaceMrpAsync(spaceId, cancellationToken);
-        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Analyzed order space MRP material requirements (SC-14)."));
+        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Phân tích nhu cầu vật tư MRP cho không gian đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public class InventoryController : MasterDataControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _mrpAllocationService.ExecuteAutoAllocationForOrderAsync(orderId, request, userId, cancellationToken);
-        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Executed automated MRP inventory allocation for order (SC-14)."));
+        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Thực thi phân bổ tồn kho MRP tự động cho đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public class InventoryController : MasterDataControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _mrpAllocationService.ExecuteAutoAllocationForOrderSpaceAsync(spaceId, request, userId, cancellationToken);
-        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Executed automated MRP inventory allocation for order space (SC-14)."));
+        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Thực thi phân bổ tồn kho MRP tự động cho không gian đơn hàng thành công (SC-14)."));
     }
 
     /// <summary>
@@ -140,6 +140,6 @@ public class InventoryController : MasterDataControllerBase
             request ?? new ReallocateByEtdRequestDto(),
             userId,
             cancellationToken);
-        return Ok(ApiResponse<ReallocateByEtdResultDto>.Ok(result, "Executed FIFO ETD-prioritized inventory re-allocation (SC-14)."));
+        return Ok(ApiResponse<ReallocateByEtdResultDto>.Ok(result, "Thực thi tái phân bổ tồn kho ưu tiên theo ngày giao hàng ETD sớm nhất thành công (SC-14)."));
     }
 }

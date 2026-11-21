@@ -59,7 +59,7 @@ public class RoleService : IRoleService
 
         if (role is null)
         {
-            throw AppException.NotFound($"Role with ID {roleId} was not found.");
+            throw AppException.NotFound($"Không tìm thấy vai trò với ID {roleId}.");
         }
 
         // Kiểm tra chuỗi JSON phân quyền có đúng cú pháp JSON Object hay không
@@ -69,12 +69,12 @@ public class RoleService : IRoleService
             parsedJson = JsonDocument.Parse(dto.PermissionsJson);
             if (parsedJson.RootElement.ValueKind != JsonValueKind.Object)
             {
-                throw new AppException("PermissionsJson must be a valid JSON object.", 400, MessageCodes.Msg13ValidationError);
+                throw new AppException("Chuỗi PermissionsJson phải là một đối tượng JSON hợp lệ.", 400, MessageCodes.Msg13ValidationError);
             }
         }
         catch (JsonException)
         {
-            throw new AppException("PermissionsJson is not a valid JSON format.", 400, MessageCodes.Msg13ValidationError);
+            throw new AppException("Chuỗi PermissionsJson không đúng định dạng JSON.", 400, MessageCodes.Msg13ValidationError);
         }
 
         // BR-ADM-03: Bảo vệ quyền cốt lõi của vai trò ADMIN (không cho phép đặt "all": false hoặc xóa quyền quản trị)
@@ -83,7 +83,7 @@ public class RoleService : IRoleService
             if (parsedJson.RootElement.TryGetProperty("all", out var allProp) && allProp.ValueKind == JsonValueKind.False)
             {
                 throw AppException.Forbidden(
-                    "Core administrative privileges of the ADMIN role cannot be revoked (BR-ADM-03).",
+                    "Không thể thu hồi quyền quản trị cốt lõi của vai trò ADMIN (BR-ADM-03).",
                     MessageCodes.Msg11ForbiddenRule);
             }
         }
@@ -124,7 +124,7 @@ public class RoleService : IRoleService
             EntityId = role.RoleId.ToString(),
             BeforeState = beforeSnapshot,
             AfterState = afterSnapshot,
-            Reason = string.IsNullOrWhiteSpace(dto.Reason) ? $"Updated permissions matrix for role {role.RoleCode} (UC-12)." : dto.Reason.Trim(),
+            Reason = string.IsNullOrWhiteSpace(dto.Reason) ? $"Đã cập nhật ma trận phân quyền cho vai trò {role.RoleCode} (UC-12)." : dto.Reason.Trim(),
             IpAddress = ipAddress,
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);
@@ -212,7 +212,7 @@ public class AuditLogService : IAuditLogService
 
         if (log is null)
         {
-            throw AppException.NotFound($"Audit log entry #{logId} was not found.");
+            throw AppException.NotFound($"Không tìm thấy bản ghi nhật ký kiểm toán #{logId}.");
         }
 
         return new AuditLogDto
@@ -246,7 +246,7 @@ public class AuditLogService : IAuditLogService
                 LogId = al.LogId,
                 UserId = al.UserId,
                 Username = al.User != null ? al.User.Username : "SYSTEM",
-                UserFullName = al.User != null ? al.User.FullName : "System Process",
+                UserFullName = al.User != null ? al.User.FullName : "Hệ thống tự động",
                 PrimaryRole = al.User != null
                     ? al.User.UserRoles.OrderBy(ur => ur.RoleId).Select(ur => ur.Role.RoleCode).FirstOrDefault() ?? "USER"
                     : "SYSTEM",
@@ -316,14 +316,14 @@ public class AuditLogService : IAuditLogService
     {
         if (string.IsNullOrWhiteSpace(configKey) || string.IsNullOrWhiteSpace(dto.ConfigValue))
         {
-            throw new AppException("ConfigKey and ConfigValue are required (UC-15).", 400, MessageCodes.Msg01RequiredField);
+            throw new AppException("Khóa cấu hình (ConfigKey) và giá trị (ConfigValue) là bắt buộc (UC-15).", 400, MessageCodes.Msg01RequiredField);
         }
 
         var normalizedKey = configKey.Trim().ToUpperInvariant();
         var config = await _context.SystemConfigs.FirstOrDefaultAsync(c => c.ConfigKey == normalizedKey, cancellationToken);
         if (config is null)
         {
-            throw AppException.NotFound($"System configuration key '{normalizedKey}' was not found.");
+            throw AppException.NotFound($"Không tìm thấy khóa cấu hình hệ thống '{normalizedKey}'.");
         }
 
         // Kiểm tra ngưỡng hợp lệ cho tỷ lệ hao hụt gỗ (1% - 30%) theo UC-15.E1 & BR-002
@@ -332,7 +332,7 @@ public class AuditLogService : IAuditLogService
             if (!decimal.TryParse(dto.ConfigValue.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var scrapVal)
                 || scrapVal < 1m || scrapVal > 30m)
             {
-                throw new AppException("Scrap rate bounds must be between 1% and 30% (UC-15.E1).", 400, MessageCodes.Msg13ValidationError);
+                throw new AppException("Giới hạn tỷ lệ hao hụt gỗ phải nằm trong khoảng từ 1% đến 30% (UC-15.E1).", 400, MessageCodes.Msg13ValidationError);
             }
         }
         else if (normalizedKey == SystemConfigKeys.EtdWarningDays)
@@ -340,7 +340,7 @@ public class AuditLogService : IAuditLogService
             if (!int.TryParse(dto.ConfigValue.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var days)
                 || days < 1 || days > 90)
             {
-                throw new AppException("ETD warning days must be a positive integer between 1 and 90 (UC-15).", 400, MessageCodes.Msg13ValidationError);
+                throw new AppException("Số ngày cảnh báo hạn giao hàng (ETD) phải là số nguyên dương từ 1 đến 90 (UC-15).", 400, MessageCodes.Msg13ValidationError);
             }
         }
 
@@ -364,7 +364,7 @@ public class AuditLogService : IAuditLogService
             BeforeState = beforeSnapshot,
             AfterState = afterSnapshot,
             Reason = string.IsNullOrWhiteSpace(dto.Reason)
-                ? $"Updated system configuration {config.ConfigKey} to {config.ConfigValue} (UC-15)."
+                ? $"Đã cập nhật cấu hình hệ thống {config.ConfigKey} thành {config.ConfigValue} (UC-15)."
                 : dto.Reason.Trim(),
             IpAddress = ipAddress,
             CreatedAt = DateTime.UtcNow

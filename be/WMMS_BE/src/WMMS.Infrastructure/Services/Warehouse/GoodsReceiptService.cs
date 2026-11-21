@@ -127,7 +127,7 @@ public class GoodsReceiptService : IGoodsReceiptService
             if (total > detail.OrderedQty * OverDeliveryTolerance)
             {
                 throw new AppException(
-                    $"Delivered quantity exceeds PO threshold. Requires Purchasing confirmation " +
+                    $"Số lượng giao vượt quá ngưỡng cho phép trên đơn mua hàng (PO). Cần bộ phận Thu mua xác nhận " +
                     $"(vật tư {detail.Material.MaterialCode}: đặt {detail.OrderedQty}, đã nhận {detail.ReceivedQty}, lần này {qty}).");
             }
         }
@@ -471,7 +471,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         }
         if (request.Lines.Any(l => l.ReceivedQty < 0))
         {
-            throw new AppException("Received quantity cannot be negative or blank. (MSG-WHS-02)");
+            throw new AppException("Số lượng thực nhận không được âm hoặc để trống. (MSG-WHS-02)");
         }
         if (request.Lines.All(l => l.ReceivedQty == 0))
         {

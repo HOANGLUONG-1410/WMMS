@@ -46,7 +46,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> GetUsersAsync([FromQuery] UserQueryFilterDto filter, CancellationToken cancellationToken)
     {
         var result = await _userService.GetUsersAsync(filter, cancellationToken);
-        return Ok(ApiResponse<PagedResult<UserDto>>.Ok(result, "Fetched paginated user account list (UC-06)."));
+        return Ok(ApiResponse<PagedResult<UserDto>>.Ok(result, "Lấy danh sách tài khoản người dùng phân trang thành công (UC-06)."));
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> GetUserByIdAsync([FromRoute] long id, CancellationToken cancellationToken)
     {
         var user = await _userService.GetUserByIdAsync(id, cancellationToken);
-        return Ok(ApiResponse<UserDto>.Ok(user, "Fetched user account details (UC-07)."));
+        return Ok(ApiResponse<UserDto>.Ok(user, "Lấy thông tin chi tiết tài khoản người dùng thành công (UC-07)."));
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public class UsersController : ControllerBase
 
         return StatusCode(
             StatusCodes.Status201Created,
-            ApiResponse<UserDto>.Ok(createdUser, "Staff account created and roles assigned successfully (UC-08)."));
+            ApiResponse<UserDto>.Ok(createdUser, "Tạo tài khoản nhân sự và gán vai trò thành công (UC-08)."));
     }
 
     /// <summary>
@@ -100,7 +100,7 @@ public class UsersController : ControllerBase
         var adminUserId = GetCurrentUserId();
         var updatedUser = await _userService.UpdateUserAsync(id, dto, adminUserId, GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<UserDto>.Ok(updatedUser, "User profile updated successfully (UC-09)."));
+        return Ok(ApiResponse<UserDto>.Ok(updatedUser, "Cập nhật hồ sơ người dùng thành công (UC-09)."));
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public class UsersController : ControllerBase
         var adminUserId = GetCurrentUserId();
         var updatedUser = await _userService.UpdateStaffRolesAsync(id, dto, adminUserId, GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<UserDto>.Ok(updatedUser, "User multi-role assignments updated successfully (UC-09, GBR-04)."));
+        return Ok(ApiResponse<UserDto>.Ok(updatedUser, "Cập nhật danh sách đa vai trò cho người dùng thành công (UC-09, GBR-04)."));
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public class UsersController : ControllerBase
         var adminUserId = GetCurrentUserId();
         var updatedUser = await _userService.UpdateUserStatusAsync(id, dto, adminUserId, GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<UserDto>.Ok(updatedUser, $"Account status changed to {updatedUser.Status} (UC-10)."));
+        return Ok(ApiResponse<UserDto>.Ok(updatedUser, $"Đã cập nhật trạng thái tài khoản sang {updatedUser.Status} (UC-10)."));
     }
 
     private long GetCurrentUserId()
@@ -150,7 +150,7 @@ public class UsersController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         if (!long.TryParse(sub, out var userId))
         {
-            throw AppException.Unauthorized("Invalid user identity claim.");
+            throw AppException.Unauthorized("Thông tin định danh người dùng trong token không hợp lệ.");
         }
         return userId;
     }

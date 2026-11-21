@@ -75,7 +75,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                 InitialQty = initialQty,
                 CurrentQty = batch.BatchQty,
                 OrderedQty = batch.OrderItem?.OrderedQty ?? 0,
-                CurrentStageCode = currentStep?.StageName ?? $"STAGE_{batch.CurrentStageSeq}",
+                CurrentStageCode = currentStep?.StageName ?? $"Công đoạn #{batch.CurrentStageSeq}",
                 IsAllRoutingStepsPassed = isAllStepsPassed,
                 IsReadyForFinishedGoodsReceipt = isReadyForReceipt,
                 EtdDate = customerOrder?.EtdDate ?? DateTime.MinValue,

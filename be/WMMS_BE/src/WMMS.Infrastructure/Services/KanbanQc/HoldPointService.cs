@@ -125,9 +125,9 @@ public class HoldPointService : IHoldPointService
                     BatchId = ol.BatchId,
                     BatchCode = batch.BatchCode,
                     RequestedBy = ol.RequestedBy,
-                    RequesterName = ol.Requester?.FullName ?? ol.Requester?.Username ?? $"User #{ol.RequestedBy}",
+                    RequesterName = ol.Requester?.FullName ?? ol.Requester?.Username ?? $"Người dùng #{ol.RequestedBy}",
                     ApprovedBy = ol.ApprovedBy,
-                    ApproverName = ol.Approver?.FullName ?? ol.Approver?.Username ?? $"User #{ol.ApprovedBy}",
+                    ApproverName = ol.Approver?.FullName ?? ol.Approver?.Username ?? $"Người dùng #{ol.ApprovedBy}",
                     Justification = ol.Justification,
                     HoldPointStageSeq = ol.HoldPointStageSeq,
                     ApprovedAt = ol.ApprovedAt
@@ -238,7 +238,7 @@ public class HoldPointService : IHoldPointService
                 await _notificationHubService.NotifyHoldPointOverrideRequestedAsync(
                     batch.BatchCode,
                     targetHoldPointSeq,
-                    requester?.FullName ?? requester?.Username ?? $"User #{requesterUserId}",
+                    requester?.FullName ?? requester?.Username ?? $"Người dùng #{requesterUserId}",
                     request.Justification,
                     cancellationToken);
             }
@@ -259,7 +259,7 @@ public class HoldPointService : IHoldPointService
             BatchStatus = batch.BatchStatus.ToString(),
             GoodsIssuedUnlocked = batch.GoodsIssuedUnlocked,
             RequestedBy = requesterUserId,
-            RequesterName = requester?.FullName ?? requester?.Username ?? $"User #{requesterUserId}",
+            RequesterName = requester?.FullName ?? requester?.Username ?? $"Người dùng #{requesterUserId}",
             ApprovedBy = null,
             ApproverName = null,
             Justification = request.Justification,
@@ -385,7 +385,7 @@ public class HoldPointService : IHoldPointService
                     batch.BatchCode,
                     holdPointSeq,
                     true,
-                    approver?.FullName ?? approver?.Username ?? $"User #{approverUserId}",
+                    approver?.FullName ?? approver?.Username ?? $"Người dùng #{approverUserId}",
                     request.Justification,
                     cancellationToken);
             }
@@ -406,9 +406,9 @@ public class HoldPointService : IHoldPointService
             BatchStatus = batch.BatchStatus.ToString(),
             GoodsIssuedUnlocked = batch.GoodsIssuedUnlocked,
             RequestedBy = requesterUserId,
-            RequesterName = requester?.FullName ?? requester?.Username ?? $"User #{requesterUserId}",
+            RequesterName = requester?.FullName ?? requester?.Username ?? $"Người dùng #{requesterUserId}",
             ApprovedBy = approverUserId,
-            ApproverName = approver?.FullName ?? approver?.Username ?? $"User #{approverUserId}",
+            ApproverName = approver?.FullName ?? approver?.Username ?? $"Người dùng #{approverUserId}",
             Justification = request.Justification,
             ApprovedAt = now,
             ActionTaken = "APPROVED"
@@ -509,7 +509,7 @@ public class HoldPointService : IHoldPointService
                     batch.BatchCode,
                     holdPointSeq,
                     false,
-                    rejecter?.FullName ?? rejecter?.Username ?? $"User #{rejecterUserId}",
+                    rejecter?.FullName ?? rejecter?.Username ?? $"Người dùng #{rejecterUserId}",
                     request.Reason,
                     cancellationToken);
             }
@@ -530,9 +530,9 @@ public class HoldPointService : IHoldPointService
             BatchStatus = batch.BatchStatus.ToString(),
             GoodsIssuedUnlocked = batch.GoodsIssuedUnlocked,
             RequestedBy = requesterUserId,
-            RequesterName = requester?.FullName ?? requester?.Username ?? $"User #{requesterUserId}",
+            RequesterName = requester?.FullName ?? requester?.Username ?? $"Người dùng #{requesterUserId}",
             ApprovedBy = rejecterUserId,
-            ApproverName = rejecter?.FullName ?? rejecter?.Username ?? $"User #{rejecterUserId}",
+            ApproverName = rejecter?.FullName ?? rejecter?.Username ?? $"Người dùng #{rejecterUserId}",
             Justification = request.Reason,
             ApprovedAt = DateTime.UtcNow,
             ActionTaken = "REJECTED"

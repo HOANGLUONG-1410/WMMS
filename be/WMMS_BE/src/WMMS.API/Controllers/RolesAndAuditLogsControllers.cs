@@ -40,7 +40,7 @@ public class RolesController : ControllerBase
     public async Task<IActionResult> GetRolesAsync(CancellationToken cancellationToken)
     {
         var roles = await _roleService.GetAllRolesAsync(cancellationToken);
-        return Ok(ApiResponse<IReadOnlyList<RoleDto>>.Ok(roles, "Fetched system roles and permission matrices (UC-11)."));
+        return Ok(ApiResponse<IReadOnlyList<RoleDto>>.Ok(roles, "Lấy danh sách vai trò và ma trận phân quyền thành công (UC-11)."));
     }
 
     /// <summary>
@@ -63,13 +63,13 @@ public class RolesController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         if (!long.TryParse(sub, out var adminUserId))
         {
-            throw AppException.Unauthorized("Invalid user identity claim.");
+            throw AppException.Unauthorized("Thông tin định danh người dùng trong token không hợp lệ.");
         }
 
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         var updatedRole = await _roleService.UpdateRolePermissionsAsync(id, dto, adminUserId, ip, cancellationToken);
 
-        return Ok(ApiResponse<RoleDto>.Ok(updatedRole, "Role permissions updated and logged to audit trail (UC-12)."));
+        return Ok(ApiResponse<RoleDto>.Ok(updatedRole, "Cập nhật phân quyền vai trò và ghi nhật ký kiểm toán thành công (UC-12)."));
     }
 }
 
@@ -98,7 +98,7 @@ public class AuditLogsController : ControllerBase
     public async Task<IActionResult> GetAuditLogsAsync([FromQuery] AuditLogFilterDto filter, CancellationToken cancellationToken)
     {
         var result = await _auditLogService.GetAuditLogsAsync(filter, cancellationToken);
-        return Ok(ApiResponse<PagedResult<AuditLogDto>>.Ok(result, "Fetched system audit logs (UC-13)."));
+        return Ok(ApiResponse<PagedResult<AuditLogDto>>.Ok(result, "Lấy danh sách nhật ký kiểm toán hệ thống thành công (UC-13)."));
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public class AuditLogsController : ControllerBase
     public async Task<IActionResult> GetAuditLogByIdAsync([FromRoute] long id, CancellationToken cancellationToken)
     {
         var log = await _auditLogService.GetAuditLogByIdAsync(id, cancellationToken);
-        return Ok(ApiResponse<AuditLogDto>.Ok(log, "Fetched audit log details (UC-14)."));
+        return Ok(ApiResponse<AuditLogDto>.Ok(log, "Lấy chi tiết nhật ký kiểm toán thành công (UC-14)."));
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ public class AuditLogsController : ControllerBase
     public async Task<IActionResult> GetSystemConfigsAsync(CancellationToken cancellationToken)
     {
         var configs = await _auditLogService.GetSystemConfigsAsync(cancellationToken);
-        return Ok(ApiResponse<IReadOnlyList<SystemConfigDto>>.Ok(configs, "Fetched system configuration parameters (UC-15)."));
+        return Ok(ApiResponse<IReadOnlyList<SystemConfigDto>>.Ok(configs, "Lấy danh sách tham số cấu hình hệ thống thành công (UC-15)."));
     }
 
     /// <summary>
@@ -152,11 +152,11 @@ public class AuditLogsController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         if (!long.TryParse(sub, out var actorUserId))
         {
-            throw AppException.Unauthorized("Invalid user identity claim.");
+            throw AppException.Unauthorized("Thông tin định danh người dùng trong token không hợp lệ.");
         }
 
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         var updated = await _auditLogService.UpdateSystemConfigAsync(configKey, dto, actorUserId, ip, cancellationToken);
-        return Ok(ApiResponse<SystemConfigDto>.Ok(updated, "Factory operating parameter saved successfully (UC-15, MSG-ADM-05)."));
+        return Ok(ApiResponse<SystemConfigDto>.Ok(updated, "Lưu tham số vận hành xưởng gỗ thành công (UC-15, MSG-ADM-05)."));
     }
 }

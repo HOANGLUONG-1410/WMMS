@@ -15,7 +15,7 @@ public class ApiResponse<T>
     public object? Errors { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-    public static ApiResponse<T> Ok(T data, string message = "Success", string messageCode = MessageCodes.Msg07Success)
+    public static ApiResponse<T> Ok(T data, string message = "Thành công.", string messageCode = MessageCodes.Msg07Success)
     {
         return new ApiResponse<T>
         {
@@ -51,7 +51,7 @@ public class ApiResponse<T>
 
 public class ApiResponse : ApiResponse<object>
 {
-    public static ApiResponse Ok(string message = "Success", string messageCode = MessageCodes.Msg07Success)
+    public static ApiResponse Ok(string message = "Thành công.", string messageCode = MessageCodes.Msg07Success)
     {
         return new ApiResponse
         {

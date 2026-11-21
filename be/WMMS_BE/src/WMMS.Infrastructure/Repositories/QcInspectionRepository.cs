@@ -114,9 +114,10 @@ public class QcInspectionRepository : IQcInspectionRepository
             query = query.Where(dl => dl.QcInspection.InspectedAt >= fromDate.Value);
         }
 
-        if (toDate.HasValue)
+        var effectiveTo = NormalizeInclusiveEndDate(toDate);
+        if (effectiveTo.HasValue)
         {
-            query = query.Where(dl => dl.QcInspection.InspectedAt <= toDate.Value);
+            query = query.Where(dl => dl.QcInspection.InspectedAt <= effectiveTo.Value);
         }
 
         if (orderId.HasValue)
@@ -147,6 +148,11 @@ public class QcInspectionRepository : IQcInspectionRepository
                     .ThenInclude(oi => oi.Product)
             .Include(ol => ol.ProductionBatch)
                 .ThenInclude(pb => pb.OrderItem)
+                    .ThenInclude(oi => oi.BomHeader)
+                        .ThenInclude(bh => bh!.BomDetails)
+                            .ThenInclude(bd => bd.Material)
+            .Include(ol => ol.ProductionBatch)
+                .ThenInclude(pb => pb.OrderItem)
                     .ThenInclude(oi => oi.CustomerOrder)
             .AsQueryable();
 
@@ -155,9 +161,10 @@ public class QcInspectionRepository : IQcInspectionRepository
             query = query.Where(ol => ol.ApprovedAt >= fromDate.Value);
         }
 
-        if (toDate.HasValue)
+        var effectiveTo = NormalizeInclusiveEndDate(toDate);
+        if (effectiveTo.HasValue)
         {
-            query = query.Where(ol => ol.ApprovedAt <= toDate.Value);
+            query = query.Where(ol => ol.ApprovedAt <= effectiveTo.Value);
         }
 
         if (orderId.HasValue)
@@ -191,6 +198,12 @@ public class QcInspectionRepository : IQcInspectionRepository
             .Include(qi => qi.BatchRoutingStep)
                 .ThenInclude(brs => brs.ProductionBatch)
                     .ThenInclude(pb => pb.OrderItem)
+                        .ThenInclude(oi => oi.BomHeader)
+                            .ThenInclude(bh => bh!.BomDetails)
+                                .ThenInclude(bd => bd.Material)
+            .Include(qi => qi.BatchRoutingStep)
+                .ThenInclude(brs => brs.ProductionBatch)
+                    .ThenInclude(pb => pb.OrderItem)
                         .ThenInclude(oi => oi.CustomerOrder)
             .AsQueryable();
 
@@ -199,9 +212,10 @@ public class QcInspectionRepository : IQcInspectionRepository
             query = query.Where(qi => qi.InspectedAt >= fromDate.Value);
         }
 
-        if (toDate.HasValue)
+        var effectiveTo = NormalizeInclusiveEndDate(toDate);
+        if (effectiveTo.HasValue)
         {
-            query = query.Where(qi => qi.InspectedAt <= toDate.Value);
+            query = query.Where(qi => qi.InspectedAt <= effectiveTo.Value);
         }
 
         if (orderId.HasValue)
@@ -213,6 +227,21 @@ public class QcInspectionRepository : IQcInspectionRepository
             .OrderByDescending(qi => qi.InspectedAt)
             .ThenByDescending(qi => qi.QcId)
             .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Chuẩn hóa mốc kết thúc <paramref name="toDate"/> khi người dùng truyền dạng ngày thuần (00:00:00) thành cuối ngày (23:59:59.9999999).
+    /// </summary>
+    private static DateTime? NormalizeInclusiveEndDate(DateTime? toDate)
+    {
+        if (!toDate.HasValue)
+        {
+            return null;
+        }
+
+        return toDate.Value.TimeOfDay == TimeSpan.Zero
+            ? toDate.Value.Date.AddDays(1).AddTicks(-1)
+            : toDate.Value;
     }
 
     public async Task AddInspectionAsync(QcInspection inspection, CancellationToken cancellationToken = default)

@@ -65,7 +65,7 @@ public class OrderIntakeService : IOrderIntakeService
             if (ext is not ".xlsx" and not ".xls")
             {
                 throw new AppException(
-                    "Invalid spreadsheet format. File must be .xlsx or .xls and under 20MB (MSG-ORD-02).",
+                    "Định dạng bảng tính không hợp lệ. Tệp phải có đuôi .xlsx hoặc .xls và dung lượng dưới 20MB (MSG-ORD-02).",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -93,7 +93,7 @@ public class OrderIntakeService : IOrderIntakeService
             catch (Exception ex)
             {
                 throw new AppException(
-                    $"Could not read Excel PO file: {ex.Message} (MSG-ORD-02).",
+                    $"Không thể đọc tệp PO Excel: {ex.Message} (MSG-ORD-02).",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -168,7 +168,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.ProductSku),
-                    ErrorMessage = "Internal Product SKU cannot be empty."
+                    ErrorMessage = "Mã sản phẩm nội bộ (SKU) không được để trống."
                 });
             }
             else
@@ -182,7 +182,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.ProductDescription),
-                    ErrorMessage = "Product Description is required."
+                    ErrorMessage = "Tên mô tả sản phẩm không được để trống."
                 });
             }
             else
@@ -196,7 +196,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.DimensionsMm),
-                    ErrorMessage = "Dimensions (L x W x H mm) are required."
+                    ErrorMessage = "Kích thước (Dài x Rộng x Cao mm) không được để trống."
                 });
             }
             else
@@ -208,7 +208,7 @@ public class OrderIntakeService : IOrderIntakeService
                     row.CellErrors.Add(new StagingCellErrorDto
                     {
                         FieldName = nameof(row.DimensionsMm),
-                        ErrorMessage = "Invalid dimension syntax. Expected format: L x W x H (e.g. 450 x 520 x 850)."
+                        ErrorMessage = "Sai cú pháp kích thước. Định dạng đúng: Dài x Rộng x Cao (VD: 450 x 520 x 850)."
                     });
                 }
                 else
@@ -221,7 +221,7 @@ public class OrderIntakeService : IOrderIntakeService
                         row.CellErrors.Add(new StagingCellErrorDto
                         {
                             FieldName = nameof(row.DimensionsMm),
-                            ErrorMessage = "Dimensions L, W, H must be positive numbers."
+                            ErrorMessage = "Các thông số kích thước Dài, Rộng, Cao phải là số dương."
                         });
                     }
                     else
@@ -240,7 +240,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.FinishColor),
-                    ErrorMessage = "Finish / Color specification is required."
+                    ErrorMessage = "Quy cách màu sơn / bề mặt hoàn thiện không được để trống."
                 });
             }
             else
@@ -254,7 +254,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.OrderQty),
-                    ErrorMessage = "Order Qty must be a positive integer greater than 0."
+                    ErrorMessage = "Số lượng đặt hàng phải là số nguyên dương lớn hơn 0."
                 });
             }
 
@@ -264,7 +264,7 @@ public class OrderIntakeService : IOrderIntakeService
                 row.CellErrors.Add(new StagingCellErrorDto
                 {
                     FieldName = nameof(row.TargetEtd),
-                    ErrorMessage = "Invalid ETD date format. Use YYYY-MM-DD (e.g. 2026-11-15)."
+                    ErrorMessage = "Định dạng ngày giao hàng (ETD) không hợp lệ. Vui lòng dùng YYYY-MM-DD (VD: 2026-11-15)."
                 });
             }
             else
@@ -316,8 +316,8 @@ public class OrderIntakeService : IOrderIntakeService
 
         var canConfirm = validatedRows.Count > 0 && totalErrorCells == 0;
         var summaryMsg = totalErrorCells == 0
-            ? $"Parsed {validatedRows.Count} lines. {matchedCatalogCount} matched catalog, {newProductCount} flagged as new, 0 errors. Ready to confirm (MSG-ORD-01)."
-            : $"Found {totalErrorCells} formatted data errors across {invalidRowCount} row(s) (highlighted in red). Please correct directly before confirming (MSG-ORD-03).";
+            ? $"Đã phân tích {validatedRows.Count} dòng. {matchedCatalogCount} khớp danh mục, {newProductCount} đánh dấu sản phẩm mới, 0 lỗi. Sẵn sàng xác nhận (MSG-ORD-01)."
+            : $"Phát hiện {totalErrorCells} lỗi định dạng dữ liệu trên {invalidRowCount} dòng (được tô đỏ). Vui lòng chỉnh sửa trực tiếp trước khi xác nhận (MSG-ORD-03).";
 
         return new StagingOrderGridResponseDto
         {
@@ -368,7 +368,7 @@ public class OrderIntakeService : IOrderIntakeService
         if (duplicatePo)
         {
             throw AppException.Conflict(
-                $"Purchase Order number '{normalizedPoNumber}' already exists in the system (UC-33).",
+                $"Số đơn hàng PO '{normalizedPoNumber}' đã tồn tại trong hệ thống (UC-33).",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -561,7 +561,7 @@ public class OrderIntakeService : IOrderIntakeService
                 BeforeState = "STAGING_RAW",
                 AfterState = $"NEWLY_RECEIVED ({afterSnapshot})",
                 Reason = string.IsNullOrWhiteSpace(request.Notes)
-                    ? $"Cleaned staging format errors. Generated Order Space for {totalUnits} units across {validationResult.Rows.Count} line items (UC-33)."
+                    ? $"Đã làm sạch lỗi định dạng bảng tạm Staging. Khởi tạo Order Space cho {totalUnits} sản phẩm thuộc {validationResult.Rows.Count} dòng đơn hàng (UC-33)."
                     : request.Notes.Trim(),
                 IpAddress = ipAddress,
                 CreatedAt = now
@@ -674,7 +674,7 @@ public class OrderIntakeService : IOrderIntakeService
     {
         if (string.IsNullOrWhiteSpace(idOrKey))
         {
-            throw new AppException("Order Space identifier or key is required.", 400, MessageCodes.Msg01RequiredField);
+            throw new AppException("Mã hoặc khóa định danh Order Space không được để trống.", 400, MessageCodes.Msg01RequiredField);
         }
 
         var trimmed = idOrKey.Trim();
@@ -713,7 +713,7 @@ public class OrderIntakeService : IOrderIntakeService
 
         if (space is null)
         {
-            throw AppException.NotFound($"Order Space '{idOrKey}' was not found (MSG10).");
+            throw AppException.NotFound($"Không tìm thấy Order Space '{idOrKey}' (MSG10).");
         }
 
         var order = space.CustomerOrder;
@@ -768,31 +768,33 @@ public class OrderIntakeService : IOrderIntakeService
         var avgScrap = lineDtos.Where(l => l.ScrapRatePct.HasValue).Select(l => l.ScrapRatePct!.Value).DefaultIfEmpty(3.5m).Average();
 
         var bomStatusTitle = bomReadyPct == 100
-            ? "100% Ready"
+            ? "Hoàn tất 100%"
             : bomReadyPct > 0
-                ? $"{bomReadyPct}% Ready"
-                : "Pending Setup";
+                ? $"{bomReadyPct}% Hoàn tất"
+                : "Chờ thiết lập";
         var bomStatusSubtitle = bomReadyPct > 0
-            ? $"Active breakdown with {avgScrap:0.#}% scrap rate"
-            : "Awaiting BOM & Dynamic Routing breakdown";
+            ? $"Đang áp dụng định mức hao hụt {avgScrap:0.#}%"
+            : "Đang chờ lập định mức BOM & quy trình sản xuất";
 
         var allAllocations = order.OrderItems.SelectMany(oi => oi.MaterialAllocations).ToList();
-        var materialAllocationTitle = allAllocations.Count > 0 && allAllocations.All(a => a.ShortageQty <= 0)
-            ? "Fully Locked"
+        var isFullyAllocated = (allAllocations.Count > 0 && allAllocations.All(a => a.ShortageQty <= 0)) ||
+                               (allAllocations.Count == 0 && bomReadyPct == 100);
+        var materialAllocationTitle = isFullyAllocated
+            ? "Đã khóa đủ 100%"
             : allAllocations.Count > 0
-                ? "Partial / Waiting"
-                : bomReadyPct == 100 ? "Fully Locked" : "Unallocated";
-        var materialAllocationSubtitle = materialAllocationTitle == "Fully Locked"
-            ? "Allocated Stock secured by Warehouse"
-            : "Pending stock reconciliation & reservation";
+                ? "Cấp phát một phần / Chờ bổ sung"
+                : "Chưa phân bổ";
+        var materialAllocationSubtitle = isFullyAllocated
+            ? "Kho đã giữ chỗ và đảm bảo đủ nguyên vật liệu"
+            : "Đang chờ đối chiếu tồn kho và phân bổ vật tư";
 
         var lifecycleBadge = DetermineLifecycleBadge(order);
         var floorProgressPct = space.OverallProgressPct;
         var floorSubtitle = floorProgressPct >= 100
-            ? "Stage 6: Final Packaging completed"
+            ? "Công đoạn 6: Đóng gói thành phẩm đã hoàn tất"
             : floorProgressPct > 0
-                ? "Station 4: Structure Assembly in progress"
-                : "Waiting for shop-floor dispatch";
+                ? "Công đoạn 4: Đang lắp ráp kết cấu khung"
+                : "Đang chờ điều độ xuất xưởng sản xuất";
 
         // Xây dựng dòng thời gian hoạt động Recent Space Activity & Milestones (SCR-ORD-03)
         var milestones = new List<OrderSpaceMilestoneDto>();
@@ -800,9 +802,9 @@ public class OrderIntakeService : IOrderIntakeService
         {
             milestones.Add(new OrderSpaceMilestoneDto
             {
-                Title = "Goods Issue Released to Floor",
-                ActorAndTimestamp = $"{order.OrderDate.AddDays(4):MMM dd, yyyy} 14:20 by Vu Duc Thang (Warehouse)",
-                Description = "Handed over 100% lumber and hardware to Production Leader. Kanban card unlocked.",
+                Title = "Đã xuất kho vật tư ra xưởng",
+                ActorAndTimestamp = $"{order.OrderDate.AddDays(4):dd/MM/yyyy} 14:20 bởi Vu Duc Thang (Thủ kho)",
+                Description = "Đã bàn giao 100% phôi gỗ và phụ kiện phần cứng cho Tổ trưởng sản xuất. Thẻ lô Kanban đã được mở khóa.",
                 DotColor = "green",
                 OccurredAt = order.OrderDate.AddDays(4)
             });
@@ -812,20 +814,20 @@ public class OrderIntakeService : IOrderIntakeService
         {
             milestones.Add(new OrderSpaceMilestoneDto
             {
-                Title = "BOM & Routing Approved",
-                ActorAndTimestamp = $"{order.OrderDate.AddDays(1):MMM dd, yyyy} 10:15 by Nguyen Van Khoa (Owner)",
-                Description = $"Configured 6-step dynamic routing and calculated gross raw material demand with {avgScrap:0.#}% loss allowance.",
+                Title = "Đã phê duyệt BOM & Quy trình sản xuất",
+                ActorAndTimestamp = $"{order.OrderDate.AddDays(1):dd/MM/yyyy} 10:15 bởi Nguyen Van Khoa (Chủ xưởng)",
+                Description = $"Đã cấu hình quy trình sản xuất 6 công đoạn động và tính toán tổng nhu cầu vật tư gộp với hao hụt {avgScrap:0.#}%.",
                 DotColor = "blue",
                 OccurredAt = order.OrderDate.AddDays(1)
             });
         }
 
-        var creatorName = order.Creator?.FullName ?? "Tran Thi Mai (Sales)";
+        var creatorName = order.Creator?.FullName ?? "Tran Thi Mai (Kinh doanh)";
         milestones.Add(new OrderSpaceMilestoneDto
         {
-            Title = "Order Space Initialized",
-            ActorAndTimestamp = $"{order.CreatedAt:MMM dd, yyyy HH:mm} by {creatorName}",
-            Description = "PO confirmed via Staging Area. Attached CAD drawings and buyer packaging specs.",
+            Title = "Đã khởi tạo Không gian Đơn hàng (Order Space)",
+            ActorAndTimestamp = $"{order.CreatedAt:dd/MM/yyyy HH:mm} bởi {creatorName}",
+            Description = "Đơn mua hàng (PO) đã được xác nhận từ khu vực Staging. Đã đính kèm bản vẽ kỹ thuật CAD và quy cách đóng gói.",
             DotColor = "slate",
             OccurredAt = order.CreatedAt
         });
@@ -894,7 +896,7 @@ public class OrderIntakeService : IOrderIntakeService
     {
         if (string.IsNullOrWhiteSpace(dto.DrawingUrl))
         {
-            throw new AppException("DrawingUrl is required.", 400, MessageCodes.Msg01RequiredField);
+            throw new AppException("Đường dẫn bản vẽ kỹ thuật (DrawingUrl) không được để trống.", 400, MessageCodes.Msg01RequiredField);
         }
 
         var detail = await GetOrderSpaceDetailAsync(spaceIdOrKey, false, cancellationToken);
@@ -925,7 +927,7 @@ public class OrderIntakeService : IOrderIntakeService
             EntityId = space.SpaceKey,
             BeforeState = beforeUrl,
             AfterState = space.DrawingFolderUrl,
-            Reason = $"Updated technical CAD drawing attachment for {space.SpaceKey}.",
+            Reason = $"Đã cập nhật bản vẽ kỹ thuật CAD đính kèm cho {space.SpaceKey}.",
             IpAddress = ipAddress,
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);

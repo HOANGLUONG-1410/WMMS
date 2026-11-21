@@ -11,7 +11,7 @@ public class ValidateStagingGridRequestValidator : AbstractValidator<ValidateSta
     public ValidateStagingGridRequestValidator()
     {
         RuleFor(x => x.Rows)
-            .NotEmpty().WithMessage("Staging grid must contain at least one order line item (BR-ORD-02).");
+            .NotEmpty().WithMessage("Bảng tạm (Staging Grid) phải có ít nhất một dòng sản phẩm đặt hàng (BR-ORD-02).");
     }
 }
 
@@ -23,14 +23,14 @@ public class ConfirmSalesOrderRequestValidator : AbstractValidator<ConfirmSalesO
     public ConfirmSalesOrderRequestValidator()
     {
         RuleFor(x => x.PoNumber)
-            .NotEmpty().WithMessage("PO Number is required before confirming sales order (MSG01).")
-            .MaximumLength(100).WithMessage("PO Number cannot exceed 100 characters.");
+            .NotEmpty().WithMessage("Số PO khách hàng không được để trống trước khi xác nhận đơn hàng (MSG01).")
+            .MaximumLength(100).WithMessage("Số PO khách hàng không được vượt quá 100 ký tự.");
 
         RuleFor(x => x.CustomerName)
-            .NotEmpty().WithMessage("Customer / Buyer name is required (MSG01).")
-            .MaximumLength(255);
+            .NotEmpty().WithMessage("Tên khách hàng / Đối tác mua hàng là bắt buộc (MSG01).")
+            .MaximumLength(255).WithMessage("Tên khách hàng không được vượt quá 255 ký tự.");
 
         RuleFor(x => x.Rows)
-            .NotEmpty().WithMessage("Cannot confirm an empty sales order. At least one product line is required (BR-ORD-02).");
+            .NotEmpty().WithMessage("Không thể xác nhận đơn hàng trống. Cần ít nhất một dòng sản phẩm (BR-ORD-02).");
     }
 }

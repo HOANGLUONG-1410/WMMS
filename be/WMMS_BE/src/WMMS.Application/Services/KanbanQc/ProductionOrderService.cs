@@ -239,7 +239,7 @@ public class ProductionOrderService : IProductionOrderService
                         ProductionBatch = batch,
                         RequestedBy = currentUserId,
                         ApprovedBy = currentUserId,
-                        Justification = request.Justification?.Trim() ?? "Overdrive requested due to delivery deadline risk.",
+                        Justification = request.Justification?.Trim() ?? "Yêu cầu mở khóa Hold Point Overdrive do nguy cơ trễ hạn giao hàng (ETD).",
                         HoldPointStageSeq = holdPointSeq.Value,
                         ApprovedAt = DateTime.UtcNow
                     });
@@ -287,7 +287,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = orderItem.OrderItemId.ToString(),
                 BeforeState = null,
                 AfterState = auditPayload,
-                Reason = $"Released production order and split {splits.Count} lots ({splits.Sum()} units) for {product.ProductSku} (Overdrive: {isOverdriver}) (SC-19, UC-62).",
+                Reason = $"Đã phát hành lệnh sản xuất và tách {splits.Count} lô ({splits.Sum()} sản phẩm) cho mã {product.ProductSku} (Overdrive: {isOverdriver}) (SC-19, UC-62).",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -1571,11 +1571,11 @@ public class ProductionOrderService : IProductionOrderService
 
     private static string InferQualityGateName(int seq, string stageName, bool isHoldPoint)
     {
-        if (isHoldPoint) return "QC Hold Point Gate (100% Inspection bắt buộc)";
+        if (isHoldPoint) return "Cổng Hold Point QC (Kiểm định 100% bắt buộc)";
         var lower = (stageName ?? string.Empty).ToLowerInvariant();
         if (lower.Contains("carton") || lower.Contains("xuất xưởng") || lower.Contains("đóng gói"))
-            return "Final Packing QC Gate (100% Gate)";
-        return "In-Process Self-Check";
+            return "Cổng QC Đóng gói Thành phẩm (100%)";
+        return "Tự kiểm tra tại công đoạn";
     }
 
     private static string InferInspectionCriteria(int seq, string stageName, bool isHoldPoint)

@@ -45,7 +45,7 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> GetSalesOrdersAsync([FromQuery] SalesOrderFilterDto filter, CancellationToken cancellationToken)
     {
         var result = await _orderIntakeService.GetSalesOrdersAsync(filter, cancellationToken);
-        return Ok(ApiResponse<SalesOrderListSummaryDto>.Ok(result, "Fetched official sales orders directory and space metrics (UC-34)."));
+        return Ok(ApiResponse<SalesOrderListSummaryDto>.Ok(result, "Lấy danh sách đơn hàng bán chính thức và chỉ số không gian đơn hàng thành công (UC-34)."));
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> GetCustomersAsync(CancellationToken cancellationToken)
     {
         var customers = await _orderIntakeService.GetCustomersAsync(cancellationToken);
-        return Ok(ApiResponse<IReadOnlyList<CustomerDto>>.Ok(customers, "Fetched B2B customer directory."));
+        return Ok(ApiResponse<IReadOnlyList<CustomerDto>>.Ok(customers, "Lấy danh sách khách hàng B2B thành công."));
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ public class OrdersController : ControllerBase
             StatusCodes.Status201Created,
             ApiResponse<OrderSpaceDetailDto>.Ok(
                 createdSpace,
-                $"Sales Order confirmed successfully! Order Space #{createdSpace.SpaceKey} initialized and notification dispatched to Material Planning (UC-33, MSG-ORD-04)."));
+                $"Xác nhận đơn hàng thành công! Đã khởi tạo Không gian Đơn hàng #{createdSpace.SpaceKey} và gửi thông báo tới Kế hoạch vật tư (UC-33, MSG-ORD-04)."));
     }
 
     /// <summary>
@@ -151,7 +151,7 @@ public class OrdersController : ControllerBase
                          !User.IsInRole(RoleConstants.Admin);
 
         var detail = await _orderIntakeService.GetOrderSpaceDetailAsync(idOrKey, isViewOnly, cancellationToken);
-        return Ok(ApiResponse<OrderSpaceDetailDto>.Ok(detail, "Fetched Order Space detail dashboard (UC-35)."));
+        return Ok(ApiResponse<OrderSpaceDetailDto>.Ok(detail, "Lấy thông tin chi tiết Không gian Đơn hàng thành công (UC-35)."));
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public class OrdersController : ControllerBase
             GetClientIpAddress(),
             cancellationToken);
 
-        return Ok(ApiResponse<OrderSpaceDetailDto>.Ok(updated, "Attached technical CAD drawing to Order Space successfully."));
+        return Ok(ApiResponse<OrderSpaceDetailDto>.Ok(updated, "Đính kèm bản vẽ kỹ thuật CAD vào Không gian Đơn hàng thành công."));
     }
 
     private long GetRequiredCurrentUserId()
@@ -181,7 +181,7 @@ public class OrdersController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         if (!long.TryParse(sub, out var userId))
         {
-            throw AppException.Unauthorized("Invalid user identity claim.");
+            throw AppException.Unauthorized("Thông tin định danh người dùng trong token không hợp lệ.");
         }
         return userId;
     }

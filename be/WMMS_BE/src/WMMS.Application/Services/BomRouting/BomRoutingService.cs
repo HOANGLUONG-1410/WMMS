@@ -242,7 +242,7 @@ public class BomRoutingService : IBomRoutingService
                 EntityId = template.RoutingId.ToString(),
                 BeforeState = null,
                 AfterState = afterStateJson,
-                Reason = $"Configured dynamic product routing with {domainStages.Count} stages (HoldPoints: {domainStages.Count(s => s.IsHoldPoint)}) for Product #{product.ProductSku} (UC-37, BR-007).",
+                Reason = $"Đã cấu hình quy trình sản xuất động gồm {domainStages.Count} công đoạn (Hold Points: {domainStages.Count(s => s.IsHoldPoint)}) cho sản phẩm #{product.ProductSku} (UC-37, BR-007).",
                 CreatedAt = now
             });
 
@@ -299,7 +299,7 @@ public class BomRoutingService : IBomRoutingService
             {
                 MaterialId = item.MaterialId,
                 MaterialCode = mat?.MaterialCode ?? $"MAT-{item.MaterialId}",
-                MaterialName = mat?.MaterialName ?? "Unknown Material",
+                MaterialName = mat?.MaterialName ?? "Vật tư chưa xác định",
                 MaterialGroup = mat?.MaterialGroup.ToString() ?? string.Empty,
                 UnitOfMeasure = mat?.UnitOfMeasure ?? "PCS",
                 NetQtyPerUnit = item.NetQtyPerUnit,
@@ -415,7 +415,7 @@ public class BomRoutingService : IBomRoutingService
                 EntityId = bomHeader.BomId.ToString(),
                 BeforeState = null,
                 AfterState = afterStateJson,
-                Reason = $"Created BOM in DRAFT state for OrderItem #{request.OrderItemId} with {request.ScrapRatePercent:0.##}% scrap rate (SC-10, BR-001, BR-002).",
+                Reason = $"Đã tạo định mức BOM ở trạng thái DRAFT cho dòng đơn hàng #{request.OrderItemId} với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}% (SC-10, BR-001, BR-002).",
                 CreatedAt = now
             });
 
@@ -513,7 +513,7 @@ public class BomRoutingService : IBomRoutingService
                 EntityId = bomHeader.BomId.ToString(),
                 BeforeState = beforeStateJson,
                 AfterState = afterStateJson,
-                Reason = $"Updated BOM #{bomId} material breakdown and recalculated gross demand with {request.ScrapRatePercent:0.##}% scrap rate (SC-10, BR-002).",
+                Reason = $"Đã cập nhật định mức BOM #{bomId} và tính lại tổng nhu cầu gộp với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}% (SC-10, BR-002).",
                 CreatedAt = now
             });
 
@@ -584,8 +584,8 @@ public class BomRoutingService : IBomRoutingService
                     HasMaterialShortage = hasShortage
                 }),
                 Reason = hasShortage
-                    ? $"Approved BOM #{bomId} with material shortage flagged for daily MRP PR aggregation (QT-03, SC-10)."
-                    : $"Locked and approved BOM #{bomId} to READY_FOR_PRODUCTION with sufficient available stock (QT-02, SC-10).",
+                    ? $"Đã phê duyệt BOM #{bomId} kèm cảnh báo thiếu hụt vật tư để tổng hợp yêu cầu mua hàng MRP hàng ngày (QT-03, SC-10)."
+                    : $"Đã chốt và phê duyệt BOM #{bomId} sang trạng thái READY_FOR_PRODUCTION với tồn kho khả dụng đáp ứng đủ (QT-02, SC-10).",
                 CreatedAt = now
             });
 

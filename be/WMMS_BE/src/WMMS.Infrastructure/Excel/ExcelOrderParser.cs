@@ -36,7 +36,7 @@ public class ExcelOrderParser : IExcelOrderParser
         if (worksheet is null || worksheet.Dimension is null)
         {
             throw new AppException(
-                "Invalid Excel template. Worksheet is empty (UC030.E1).",
+                "Mẫu tệp Excel không hợp lệ. Trang tính (worksheet) đang trống (UC030.E1).",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -353,8 +353,8 @@ public class ExcelOrderParser : IExcelOrderParser
             if (string.IsNullOrWhiteSpace(desc) && !string.IsNullOrWhiteSpace(sku))
             {
                 desc = !string.IsNullOrWhiteSpace(finishNormalized)
-                    ? $"Wooden Furniture Item #{sku} ({finishNormalized})"
-                    : $"Wooden Furniture Item #{sku}";
+                    ? $"Sản phẩm nội thất gỗ #{sku} ({finishNormalized})"
+                    : $"Sản phẩm nội thất gỗ #{sku}";
             }
 
             // Nếu từng dòng không có cột ETD riêng, kế thừa ngày ETD ở khối Footer của đơn hàng (VD: Jan 15,2027 -> 2027-01-15)
