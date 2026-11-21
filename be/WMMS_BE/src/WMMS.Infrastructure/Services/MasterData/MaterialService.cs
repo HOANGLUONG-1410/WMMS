@@ -8,6 +8,7 @@ using WMMS.Domain.Entities.Identity;
 using WMMS.Domain.Entities.InventoryPr;
 using WMMS.Domain.Entities.Orders;
 using WMMS.Domain.Entities.WarehousePo;
+using WMMS.Domain.Constants;
 using WMMS.Domain.Enums;
 using WMMS.Domain.Exceptions;
 using WMMS.Infrastructure.Persistence;
@@ -32,7 +33,7 @@ public class MaterialService : IMaterialService
         if (!string.IsNullOrWhiteSpace(filter.Category))
         {
             if (!Enum.TryParse<MaterialGroupEnum>(filter.Category, true, out var group))
-                throw new AppException($"Nhóm vật tư '{filter.Category}' không hợp lệ.");
+                throw new AppException($"Nhóm vật tư '{filter.Category}' không hợp lệ.", 400, MessageCodes.Msg13ValidationError);
             query = query.Where(m => m.MaterialGroup == group);
         }
         if (!string.IsNullOrWhiteSpace(filter.Status))
@@ -57,7 +58,7 @@ public class MaterialService : IMaterialService
     {
         var m = await _context.Materials.AsNoTracking().Include(x => x.MaterialStock)
             .FirstOrDefaultAsync(x => x.MaterialId == materialId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy vật tư ID = {materialId}.");
+            ?? throw AppException.NotFound("Không tìm thấy nguyên vật tư được yêu cầu trong danh mục.");
 
         return new MaterialDetailDto
         {
@@ -98,7 +99,7 @@ public class MaterialService : IMaterialService
     public async Task<MaterialDto> UpdateMaterialAsync(long materialId, UpdateMaterialDto dto, long userId, string? ipAddress, CancellationToken cancellationToken = default)
     {
         var m = await _context.Materials.FirstOrDefaultAsync(x => x.MaterialId == materialId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy vật tư ID = {materialId}.");
+            ?? throw AppException.NotFound("Không tìm thấy nguyên vật tư được yêu cầu trong danh mục.");
 
         var before = ToDto(m);
         m.MaterialName = dto.MaterialName.Trim();
@@ -119,7 +120,7 @@ public class MaterialService : IMaterialService
     public async Task DeactivateMaterialAsync(long materialId, long userId, string? ipAddress, CancellationToken cancellationToken = default)
     {
         var m = await _context.Materials.FirstOrDefaultAsync(x => x.MaterialId == materialId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy vật tư ID = {materialId}.");
+            ?? throw AppException.NotFound("Không tìm thấy nguyên vật tư được yêu cầu trong danh mục.");
 
         var before = ToDto(m);
         m.Status = "INACTIVE"; // Soft-delete: giữ nguyên tham chiếu BOM cũ (UC-21).

@@ -129,7 +129,7 @@ public class ProductionDashboardService : IProductionDashboardService
             if (singleOrder == null)
             {
                 throw AppException.NotFound(
-                    $"Không tìm thấy đơn hàng với mã định danh ID = {orderId.Value} để phân tích hao hụt.");
+                    "Không tìm thấy đơn hàng được chọn để phân tích hao hụt vật tư.");
             }
 
             orders = new List<Domain.Entities.Orders.CustomerOrder> { singleOrder };
@@ -1002,7 +1002,7 @@ public class ProductionDashboardService : IProductionDashboardService
             if (existingOrder == null)
             {
                 throw AppException.NotFound(
-                    $"Không tìm thấy đơn hàng với mã định danh ID = {activeFilter.OrderId.Value} để thống kê chất lượng & Overdriver.");
+                    "Không tìm thấy đơn hàng được chọn để thống kê chất lượng sản xuất.");
             }
         }
 

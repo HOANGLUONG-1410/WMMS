@@ -215,7 +215,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         var ws = package.Workbook.Worksheets.Add(sheetName);
         WriteBannerTitle(
             ws,
-            "BÁO CÁO ĐỐI CHIẾU TỶ LỆ HAO HỤT THỰC TẾ SO VỚI ĐỊNH MỨC BOM (BR-002 / ITERATION 3)",
+            "BÁO CÁO ĐỐI CHIẾU TỶ LỆ HAO HỤT THỰC TẾ SO VỚI ĐỊNH MỨC VẬT TƯ",
             $"Tổng dòng sản phẩm phân tích: {scrapVarianceReport.TotalAnalyzedOrderItems} | Hao hụt BOM TB: {scrapVarianceReport.AveragePlannedBomScrapRatePercent}% | Hao hụt thực tế TB: {scrapVarianceReport.AverageActualDefectScrapRatePercent}% | Số mục vượt ngưỡng: {scrapVarianceReport.ExceededThresholdItemsCount}",
             12);
 
@@ -270,7 +270,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         var ws = package.Workbook.Worksheets.Add(sheetName);
         WriteBannerTitle(
             ws,
-            "PHIẾU KIỂM ĐỊNH CHẤT LƯỢNG KCS 100% TỪNG CÔNG ĐOẠN SẢN XUẤT (BR-008 / KBN01 / QT-06)",
+            "PHIẾU KIỂM ĐỊNH CHẤT LƯỢNG KCS 100% TỪNG CÔNG ĐOẠN SẢN XUẤT",
             $"Tổng biên bản KCS: {inspectionRows.Count} | Tổng SP lỗi ghi nhận: {defectAnalytics.TotalDefectUnits} SP (Rework: {defectAnalytics.TotalReworkUnits} SP, Hủy bù phôi: {defectAnalytics.TotalScrapReplenishUnits} SP)",
             14);
 
@@ -465,7 +465,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         var ws = package.Workbook.Worksheets.Add(sheetName);
         WriteBannerTitle(
             ws,
-            "LỊCH SỬ ĐIỀU ĐỘ PHÂN XƯỞNG & LỘ TRÌNH THẺ LÔ SẢN XUẤT KANBAN (SC-19 / SC-20 / SC-20b)",
+            "LỊCH SỬ ĐIỀU ĐỘ PHÂN XƯỞNG & LỘ TRÌNH THẺ LÔ SẢN XUẤT KANBAN",
             $"Tổng số thẻ lô Kanban (Thẻ chính + Thẻ nhánh 3%): {dispatchRows.Count} thẻ | Kết xuất lúc: {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC",
             14);
 
@@ -523,7 +523,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         var ws = package.Workbook.Worksheets.Add(sheetName);
         WriteBannerTitle(
             ws,
-            "NHẬT KÝ PHÊ DUYỆT PHÁ KHÓA NGOẠI LỆ HOLD POINT (OVERDRIVER LOGS - SC-20 / KBN02 / GBR-05)",
+            "NHẬT KÝ PHÊ DUYỆT PHÁ KHÓA NGOẠI LỆ TRẠM DỪNG KỸ THUẬT (HOLD POINT)",
             overdriveAnalytics.GovernanceEvaluation,
             10);
 

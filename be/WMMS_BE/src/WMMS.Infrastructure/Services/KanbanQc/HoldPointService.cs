@@ -49,7 +49,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {batchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         var sortedSteps = batch.BatchRoutingSteps
@@ -155,7 +155,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {request.BatchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         var requester = await _context.Users
@@ -289,7 +289,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {batchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         var approver = await _context.Users
@@ -436,7 +436,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {batchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         var rejecter = await _context.Users
@@ -563,7 +563,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy Thẻ Lô Sản Xuất ID = {batchId}.");
+            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
         if (batch.BatchStatus == BatchStatusEnum.DONE)

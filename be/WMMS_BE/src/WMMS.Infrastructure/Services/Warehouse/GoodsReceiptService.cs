@@ -103,7 +103,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         var po = await _context.PurchaseOrders
             .Include(p => p.Details).ThenInclude(d => d.Material)
             .FirstOrDefaultAsync(p => p.PoId == request.PoId, ct)
-            ?? throw AppException.NotFound($"Không tìm thấy đơn mua hàng PO ID = {request.PoId}.");
+            ?? throw AppException.NotFound("Không tìm thấy đơn mua hàng đã chọn.");
 
         if (po.PoStatus != PoStatusEnum.ISSUED && po.PoStatus != PoStatusEnum.PARTIALLY_RECEIVED)
         {
@@ -121,14 +121,16 @@ public class GoodsReceiptService : IGoodsReceiptService
         foreach (var (materialId, qty) in lines)
         {
             var detail = po.Details.FirstOrDefault(d => d.MaterialId == materialId)
-                ?? throw new AppException($"Vật tư ID = {materialId} không thuộc đơn mua hàng '{po.PoCode}'.");
+                ?? throw new AppException($"Nguyên vật tư được chọn không thuộc đơn mua hàng '{po.PoCode}'.", 400, MessageCodes.Msg13ValidationError);
 
             var total = detail.ReceivedQty + qty;
             if (total > detail.OrderedQty * OverDeliveryTolerance)
             {
                 throw new AppException(
                     $"Số lượng thực nhận vượt quá dung sai cho phép của đơn mua hàng " +
-                    $"(vật tư {detail.Material.MaterialCode}: đặt {detail.OrderedQty}, đã nhận {detail.ReceivedQty}, nhập lần này {qty}). Vui lòng xác nhận lại với bộ phận Thu mua.");
+                    $"(vật tư {detail.Material.MaterialCode}: đặt {detail.OrderedQty}, đã nhận {detail.ReceivedQty}, nhập lần này {qty}). Vui lòng xác nhận lại với bộ phận Thu mua.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
             }
         }
 
@@ -471,11 +473,11 @@ public class GoodsReceiptService : IGoodsReceiptService
         }
         if (request.Lines.Any(l => l.ReceivedQty < 0))
         {
-            throw new AppException("Số lượng vật tư thực nhận không được âm hoặc để trống.");
+            throw new AppException("Số lượng vật tư thực nhận không được là số âm.", 400, MessageCodes.Msg13ValidationError);
         }
         if (request.Lines.All(l => l.ReceivedQty == 0))
         {
-            throw new AppException("Phải có ít nhất một dòng vật tư có số lượng thực nhận lớn hơn 0.");
+            throw new AppException("Phải có ít nhất một dòng vật tư có số lượng thực nhận lớn hơn 0.", 400, MessageCodes.Msg13ValidationError);
         }
     }
 }

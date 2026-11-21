@@ -327,7 +327,7 @@ public class BomRoutingService : IBomRoutingService
         if (exists)
         {
             throw new ActiveBomConflictException(
-                $"Định mức BOM cho dòng sản phẩm #{request.OrderItemId} đã tồn tại. Mỗi dòng sản phẩm trong đơn hàng chỉ được phép có một định mức BOM hoạt động.");
+                "Định mức vật tư cho hạng mục sản phẩm này đã tồn tại. Mỗi dòng sản phẩm trong đơn hàng chỉ được phép có một định mức vật tư hoạt động.");
         }
 
         // 2. Validate BR-002 (Tỷ lệ hao hụt tự nhiên theo SystemConfig DEFAULT_SCRAP_MIN .. DEFAULT_SCRAP_MAX)
@@ -337,13 +337,13 @@ public class BomRoutingService : IBomRoutingService
         var orderItem = await _orderItemRepository.GetByIdAsync(request.OrderItemId);
         if (orderItem == null)
         {
-            throw new NotFoundException($"Không tìm thấy mục đơn hàng với ID {request.OrderItemId}.");
+            throw new NotFoundException("Không tìm thấy hạng mục sản phẩm trong đơn hàng.");
         }
 
         var product = await _productRepository.GetByIdAsync(request.ProductId);
         if (product == null)
         {
-            throw new NotFoundException($"Không tìm thấy sản phẩm với ID {request.ProductId}.");
+            throw new NotFoundException("Không tìm thấy sản phẩm đã chọn trong danh mục.");
         }
 
         await _unitOfWork.BeginTransactionAsync();
@@ -415,7 +415,7 @@ public class BomRoutingService : IBomRoutingService
                 EntityId = bomHeader.BomId.ToString(),
                 BeforeState = null,
                 AfterState = afterStateJson,
-                Reason = $"Khởi tạo bản nháp định mức BOM cho dòng sản phẩm #{request.OrderItemId} với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}%.",
+                Reason = $"Khởi tạo bản nháp định mức vật tư cho hạng mục sản phẩm với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}%.",
                 CreatedAt = now
             });
 
@@ -436,7 +436,7 @@ public class BomRoutingService : IBomRoutingService
         var bomHeader = await _bomRepository.GetByIdAsync(bomId);
         if (bomHeader == null)
         {
-            throw new NotFoundException($"Không tìm thấy định mức BOM với ID {bomId}.");
+            throw new NotFoundException("Không tìm thấy bảng định mức vật tư cần cập nhật.");
         }
 
         // Validate BR-002
@@ -711,7 +711,7 @@ public class BomRoutingService : IBomRoutingService
             if (existingBom.BomStatus != BomStatusEnum.DRAFT)
             {
                 throw new DomainException(
-                    $"Không thể nhập BOM. Định mức BOM #{existingBom.BomId} hiện tại đã được phê duyệt ({existingBom.BomStatus}). Chỉ có BOM ở trạng thái DRAFT mới được phép cập nhật từ Staging.",
+                    "Không thể nhập lại định mức vật tư vì bảng định mức hiện tại đã được phê duyệt. Chỉ những định mức đang ở trạng thái bản nháp mới được phép cập nhật.",
                     "BOM_ALREADY_APPROVED");
             }
 
@@ -782,7 +782,7 @@ public class BomRoutingService : IBomRoutingService
         if (scrapRate < minScrap || scrapRate > maxScrap)
         {
             throw new InvalidScrapRateException(
-                $"Tỷ lệ hao hụt {scrapRate:F2}% vi phạm quy tắc BR-002: Tỷ lệ hao hụt gỗ tự nhiên phải nằm trong khoảng {minScrap:F2}% đến {maxScrap:F2}%.");
+                $"Tỷ lệ hao hụt {scrapRate:F2}% không hợp lệ. Tỷ lệ hao hụt gỗ tự nhiên phải nằm trong khoảng từ {minScrap:F2}% đến {maxScrap:F2}%.");
         }
     }
 

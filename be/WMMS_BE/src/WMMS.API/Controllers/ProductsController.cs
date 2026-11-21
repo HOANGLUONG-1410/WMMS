@@ -78,7 +78,7 @@ public class ProductsController : MasterDataControllerBase
     {
         if (file == null || file.Length == 0)
         {
-            throw new AppException("Vui lòng chọn tệp bản vẽ kỹ thuật cần tải lên.");
+            throw new AppException("Vui lòng chọn tệp bản vẽ kỹ thuật cần tải lên.", 400, MessageCodes.Msg13ValidationError);
         }
 
         await using var stream = file.OpenReadStream();

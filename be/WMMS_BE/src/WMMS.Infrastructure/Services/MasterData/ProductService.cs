@@ -8,6 +8,7 @@ using WMMS.Domain.Entities.Identity;
 using WMMS.Domain.Entities.InventoryPr;
 using WMMS.Domain.Entities.Orders;
 using WMMS.Domain.Entities.WarehousePo;
+using WMMS.Domain.Constants;
 using WMMS.Domain.Enums;
 using WMMS.Domain.Exceptions;
 using WMMS.Infrastructure.Persistence;
@@ -57,7 +58,7 @@ public class ProductService : IProductService
         var p = await _context.Products.AsNoTracking()
             .Include(x => x.RoutingTemplates).ThenInclude(rt => rt.RoutingStages)
             .FirstOrDefaultAsync(x => x.ProductId == productId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy sản phẩm ID = {productId}.");
+            ?? throw AppException.NotFound("Không tìm thấy sản phẩm được yêu cầu trong danh mục.");
 
         var template = p.RoutingTemplates.Where(rt => rt.IsActive).OrderByDescending(rt => rt.RoutingId).FirstOrDefault();
         var b = ToDto(p);
@@ -99,7 +100,7 @@ public class ProductService : IProductService
     public async Task<ProductDto> UpdateProductAsync(long productId, UpdateProductDto dto, long userId, string? ipAddress, CancellationToken cancellationToken = default)
     {
         var p = await _context.Products.FirstOrDefaultAsync(x => x.ProductId == productId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy sản phẩm ID = {productId}.");
+            ?? throw AppException.NotFound("Không tìm thấy sản phẩm được yêu cầu trong danh mục.");
 
         var before = ToDto(p);
         p.ProductName = dto.ProductName.Trim();
@@ -122,13 +123,13 @@ public class ProductService : IProductService
     public async Task<ProductDto> UploadCadDrawingAsync(long productId, string fileName, Stream content, long length, long userId, string? ipAddress, CancellationToken cancellationToken = default)
     {
         var p = await _context.Products.FirstOrDefaultAsync(x => x.ProductId == productId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy sản phẩm ID = {productId}.");
+            ?? throw AppException.NotFound("Không tìm thấy sản phẩm được yêu cầu trong danh mục.");
 
         var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
         if (!AllowedCadExtensions.Contains(ext))
-            throw new AppException($"Định dạng '{ext}' không được hỗ trợ (cho phép: {string.Join(", ", AllowedCadExtensions)}).");
-        if (length <= 0) throw new AppException("File bản vẽ rỗng.");
-        if (length > MaxCadBytes) throw new AppException("File bản vẽ vượt quá 20MB.");
+            throw new AppException($"Định dạng tệp '{ext}' không được hỗ trợ (chỉ chấp nhận: {string.Join(", ", AllowedCadExtensions)}).", 400, MessageCodes.Msg13ValidationError);
+        if (length <= 0) throw new AppException("Tệp bản vẽ kỹ thuật đang trống, vui lòng chọn tệp hợp lệ.", 400, MessageCodes.Msg13ValidationError);
+        if (length > MaxCadBytes) throw new AppException("Dung lượng tệp bản vẽ vượt quá giới hạn 20MB cho phép.", 400, MessageCodes.Msg13ValidationError);
 
         // Tên file lưu là GUID để chống path traversal / trùng tên.
         var folder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "cad");

@@ -59,7 +59,7 @@ public class PurchaseRequestService : IPurchaseRequestService
             if (!Enum.TryParse<PrStatusEnum>(filter.Status.Trim(), ignoreCase: true, out var parsed))
             {
                 throw new AppException(
-                    "Trạng thái PR không hợp lệ. Các giá trị hợp lệ: PENDING_APPROVAL, APPROVED, REJECTED, PO_ISSUED.",
+                    "Trạng thái phiếu yêu cầu mua hàng không hợp lệ. Vui lòng chọn một trong các trạng thái: Chờ phê duyệt, Đã phê duyệt, Đã từ chối hoặc Đã phát hành đơn đặt hàng.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -208,7 +208,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (previousStatus != PrStatusEnum.PENDING_APPROVAL)
         {
             throw AppException.Conflict(
-                $"Phiếu PR {pr.PrCode} đã ở trạng thái {previousStatus} và không thể duyệt lại.",
+                $"Phiếu yêu cầu mua hàng {pr.PrCode} đã được xử lý trước đó và không thể duyệt lại.",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -287,7 +287,7 @@ public class PurchaseRequestService : IPurchaseRequestService
     private async Task<PurchaseRequest> GetOrThrowAsync(long prId, CancellationToken cancellationToken)
     {
         return await _purchaseRequestRepository.GetByIdAsync(prId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy Phiếu Yêu cầu Mua hàng với ID = {prId}.");
+            ?? throw AppException.NotFound("Không tìm thấy phiếu yêu cầu mua hàng được yêu cầu.");
     }
 
     private static PurchaseRequestListItemDto MapToListItem(PurchaseRequest pr)
