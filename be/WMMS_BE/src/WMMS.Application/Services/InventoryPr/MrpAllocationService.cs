@@ -57,7 +57,7 @@ public class MrpAllocationService : IMrpAllocationService
         CancellationToken cancellationToken = default)
     {
         var order = await _orderItemRepository.GetOrderByIdAsync(orderId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy đơn hàng với ID = {orderId}.");
+            ?? throw AppException.NotFound("Không tìm thấy đơn hàng được yêu cầu.");
 
         var orderItems = await _orderItemRepository.GetByOrderIdWithFullMrpGraphAsync(orderId, cancellationToken);
         var warningDays = (int)await _systemConfigRepository.GetDecimalConfigAsync(SystemConfigKeys.EtdWarningDays, 7m);
@@ -78,7 +78,7 @@ public class MrpAllocationService : IMrpAllocationService
         CancellationToken cancellationToken = default)
     {
         var space = await _orderItemRepository.GetOrderSpaceByIdAsync(spaceId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy Không gian đơn hàng (OrderSpace) với ID = {spaceId}.");
+            ?? throw AppException.NotFound("Không tìm thấy không gian đơn hàng được yêu cầu.");
 
         var orderItems = await _orderItemRepository.GetBySpaceIdWithFullMrpGraphAsync(spaceId, cancellationToken);
         var warningDays = (int)await _systemConfigRepository.GetDecimalConfigAsync(SystemConfigKeys.EtdWarningDays, 7m);
@@ -116,12 +116,12 @@ public class MrpAllocationService : IMrpAllocationService
         CancellationToken cancellationToken = default)
     {
         var order = await _orderItemRepository.GetOrderByIdAsync(orderId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy đơn hàng với ID = {orderId}.");
+            ?? throw AppException.NotFound("Không tìm thấy đơn hàng được yêu cầu.");
 
         var orderItems = await _orderItemRepository.GetByOrderIdWithFullMrpGraphAsync(orderId, cancellationToken);
         if (orderItems.Count == 0)
         {
-            throw new AppException($"Đơn hàng {order.PoNumber} chưa có dòng sản phẩm (OrderItem) nào để phân bổ tồn kho.");
+            throw new AppException($"Đơn hàng {order.PoNumber} chưa có hạng mục sản phẩm nào để phân bổ tồn kho.", 400, MessageCodes.Msg13ValidationError);
         }
 
         return await ExecuteCoreAutoAllocationAsync(
@@ -141,12 +141,12 @@ public class MrpAllocationService : IMrpAllocationService
         CancellationToken cancellationToken = default)
     {
         var space = await _orderItemRepository.GetOrderSpaceByIdAsync(spaceId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy Không gian đơn hàng (OrderSpace) với ID = {spaceId}.");
+            ?? throw AppException.NotFound("Không tìm thấy không gian đơn hàng được yêu cầu.");
 
         var orderItems = await _orderItemRepository.GetBySpaceIdWithFullMrpGraphAsync(spaceId, cancellationToken);
         if (orderItems.Count == 0)
         {
-            throw new AppException($"Không gian đơn hàng {space.SpaceKey} chưa có dòng sản phẩm nào để phân bổ tồn kho.");
+            throw new AppException($"Không gian đơn hàng {space.SpaceKey} chưa có hạng mục sản phẩm nào để phân bổ tồn kho.", 400, MessageCodes.Msg13ValidationError);
         }
 
         return await ExecuteCoreAutoAllocationAsync(
@@ -166,7 +166,7 @@ public class MrpAllocationService : IMrpAllocationService
         CancellationToken cancellationToken = default)
     {
         var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(orderItemId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy dòng sản phẩm đơn hàng (OrderItem) với ID = {orderItemId}.");
+            ?? throw AppException.NotFound("Không tìm thấy hạng mục sản phẩm trong đơn hàng.");
 
         return await ExecuteCoreAutoAllocationAsync(
             orderItems: new List<OrderItem> { orderItem },
@@ -317,7 +317,7 @@ public class MrpAllocationService : IMrpAllocationService
                         AllocationsIncreasedCount = allocationsIncreasedCount,
                         UnlockedOrderItemIds = unlockedOrderItemIds
                     }),
-                    Reason = $"Tự động phân bổ lại tồn kho khả dụng theo thứ tự ưu tiên ETD gần nhất (FIFO by ETD, SC-14/SC-17). Đã mở khóa {unlockedOrderItemIds.Count} dòng đơn hàng sang READY_PROD.",
+                    Reason = $"Tự động phân bổ lại tồn kho khả dụng theo thứ tự ưu tiên ngày giao hàng gần nhất. Đã mở khóa {unlockedOrderItemIds.Count} hạng mục đơn hàng sang trạng thái sẵn sàng sản xuất.",
                     CreatedAt = now
                 });
             }
@@ -452,7 +452,7 @@ public class MrpAllocationService : IMrpAllocationService
 
         if (itemsWithBom.Count == 0)
         {
-            throw new AppException("Chưa có định mức nguyên vật liệu (BOM) nào được thiết lập cho đơn hàng này để chạy tính toán nhu cầu vật tư và phân bổ tồn kho tự động.");
+            throw new AppException("Chưa có định mức nguyên vật liệu (BOM) nào được thiết lập cho đơn hàng này để chạy tính toán nhu cầu vật tư và phân bổ tồn kho tự động.", 400, MessageCodes.Msg13ValidationError);
         }
 
         var allMaterialIds = itemsWithBom

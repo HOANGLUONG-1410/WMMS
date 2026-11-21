@@ -54,7 +54,7 @@ public class SupplierService : ISupplierService
     public async Task<SupplierDto> GetSupplierByIdAsync(long supplierId, CancellationToken cancellationToken = default)
     {
         var s = await _context.Suppliers.AsNoTracking().FirstOrDefaultAsync(x => x.SupplierId == supplierId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy nhà cung cấp ID = {supplierId}.");
+            ?? throw AppException.NotFound("Không tìm thấy thông tin nhà cung cấp được yêu cầu.");
         return ToDto(s);
     }
 
@@ -84,7 +84,7 @@ public class SupplierService : ISupplierService
     public async Task<SupplierDto> UpdateSupplierAsync(long supplierId, UpdateSupplierDto dto, long userId, string? ipAddress, CancellationToken cancellationToken = default)
     {
         var s = await _context.Suppliers.FirstOrDefaultAsync(x => x.SupplierId == supplierId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy nhà cung cấp ID = {supplierId}.");
+            ?? throw AppException.NotFound("Không tìm thấy thông tin nhà cung cấp được yêu cầu.");
 
         var before = ToDto(s);
         s.SupplierName = dto.SupplierName.Trim();

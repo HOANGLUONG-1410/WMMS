@@ -59,7 +59,7 @@ public class RoleService : IRoleService
 
         if (role is null)
         {
-            throw AppException.NotFound($"Không tìm thấy vai trò với mã ID = {roleId}.");
+            throw AppException.NotFound("Không tìm thấy vai trò được yêu cầu trong hệ thống.");
         }
 
         // Kiểm tra chuỗi JSON phân quyền có đúng cú pháp JSON Object hay không

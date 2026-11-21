@@ -208,7 +208,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         CancellationToken cancellationToken = default)
     {
         var pr = await _purchaseRequestRepository.GetByIdAsync(request.PrId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy Phiếu yêu cầu mua hàng (PR) với mã ID = {request.PrId}.");
+            ?? throw AppException.NotFound("Không tìm thấy phiếu yêu cầu mua hàng được chọn.");
 
         // BR-PUR-02: Không được phát hành PO trên PR chưa được Chủ xưởng phê duyệt
         if (pr.PrStatus is PrStatusEnum.PENDING_APPROVAL or PrStatusEnum.REJECTED)
@@ -244,7 +244,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         {
             if (!suppliers.TryGetValue(supplierId, out var supplier))
             {
-                throw AppException.NotFound($"Không tìm thấy Nhà cung cấp với mã ID = {supplierId}.");
+                throw AppException.NotFound("Không tìm thấy nhà cung cấp đã chọn trong danh mục.");
             }
 
             if (!string.Equals(supplier.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
@@ -666,7 +666,10 @@ public class PurchaseOrderService : IPurchaseOrderService
         var po = await GetOrThrowAsync(poId, cancellationToken);
         if (!Enum.TryParse<PoStatusEnum>(request.Status, true, out var newStatus))
         {
-            throw new AppException($"Trạng thái đơn mua hàng '{request.Status}' không hợp lệ. Vui lòng chọn: Đã phát hành, Nhận một phần, Đã nhận đủ hoặc Đã hủy.");
+            throw new AppException(
+                $"Trạng thái đơn mua hàng '{request.Status}' không hợp lệ. Vui lòng chọn: Đã phát hành, Nhận một phần, Đã nhận đủ hoặc Đã hủy.",
+                400,
+                MessageCodes.Msg13ValidationError);
         }
 
         var oldStatus = po.PoStatus;
@@ -710,7 +713,7 @@ public class PurchaseOrderService : IPurchaseOrderService
     private async Task<PurchaseOrder> GetOrThrowAsync(long poId, CancellationToken cancellationToken)
     {
         return await _purchaseOrderRepository.GetByIdAsync(poId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy Đơn đặt hàng (PO) với mã ID = {poId}.");
+            ?? throw AppException.NotFound("Không tìm thấy đơn đặt hàng được yêu cầu.");
     }
 
     private async Task NotifyAsync(string poCode, string supplierName, DateTime eta, bool isNew, CancellationToken cancellationToken)

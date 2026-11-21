@@ -34,6 +34,9 @@ public class OrderIntakeService : IOrderIntakeService
     private readonly IExcelOrderParser _excelOrderParser;
     private readonly INotificationHubService? _notificationHubService;
 
+    /// <summary>Đường dẫn thư mục gốc <c>wwwroot</c> do tầng API cấu hình nhằm lưu ảnh bản vẽ đúng vị trí phục vụ tệp tĩnh.</summary>
+    public static string? ConfiguredWebRootPath { get; set; }
+
     public OrderIntakeService(
         WmmsDbContext context,
         IExcelOrderParser? excelOrderParser = null,
@@ -59,8 +62,16 @@ public class OrderIntakeService : IOrderIntakeService
         var sheetName = "OrderDetails";
         ExcelOrderParseResultDto? parsedExcel = null;
 
-        if (excelStream is not null && excelStream.Length > 0)
+        if (excelStream is not null)
         {
+            if (excelStream.Length == 0)
+            {
+                throw new AppException(
+                    "Tệp bảng tính tải lên rỗng (0 bytes). Vui lòng chọn tệp Excel hợp lệ có nội dung.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+
             var ext = Path.GetExtension(fileName).ToLowerInvariant();
             if (ext is not ".xlsx" and not ".xls")
             {
@@ -1183,7 +1194,10 @@ public class OrderIntakeService : IOrderIntakeService
         var safeSku = Regex.Replace(string.IsNullOrWhiteSpace(sku) ? "ITEM" : sku.Trim(), @"[^a-zA-Z0-9_\-]", "_");
         var fileName = $"{safeSku}{ext}";
 
-        var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products");
+        var webRoot = !string.IsNullOrWhiteSpace(ConfiguredWebRootPath)
+            ? ConfiguredWebRootPath
+            : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var uploadDir = Path.Combine(webRoot, "uploads", "products");
         Directory.CreateDirectory(uploadDir);
 
         var fullPath = Path.Combine(uploadDir, fileName);

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using WMMS.Application.Common.Models;
 using WMMS.Application.DTOs.InventoryPr;
 using WMMS.Application.Interfaces.Services;
+using WMMS.Domain.Constants;
 using WMMS.Domain.Enums;
 using WMMS.Domain.Exceptions;
 using WMMS.Infrastructure.Persistence;
@@ -118,7 +119,7 @@ public class InventoryService : IInventoryService
             .AsNoTracking()
             .Include(m => m.MaterialStock)
             .FirstOrDefaultAsync(m => m.MaterialId == materialId, cancellationToken)
-            ?? throw AppException.NotFound($"Không tìm thấy tồn kho cho vật tư ID = {materialId}.");
+            ?? throw AppException.NotFound("Không tìm thấy thông tin tồn kho của vật tư được chọn.");
 
         var physical = material.MaterialStock?.PhysicalQty ?? 0m;
         var allocated = material.MaterialStock?.AllocatedQty ?? 0m;
@@ -276,7 +277,7 @@ public class InventoryService : IInventoryService
         {
             if (!Enum.TryParse<InventoryTransactionTypeEnum>(filter.TxType.Trim(), true, out var txType))
             {
-                throw new AppException($"Loại giao dịch kho '{filter.TxType}' không hợp lệ.");
+                throw new AppException($"Loại giao dịch kho '{filter.TxType}' không hợp lệ.", 400, MessageCodes.Msg13ValidationError);
             }
             query = query.Where(tx => tx.TxType == txType);
         }
