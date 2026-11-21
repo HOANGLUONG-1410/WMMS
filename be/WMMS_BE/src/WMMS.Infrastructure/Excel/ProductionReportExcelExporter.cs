@@ -152,42 +152,51 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
 
         int row = 8;
         int stt = 1;
-        foreach (var order in orderProgressList)
+        if (orderProgressList.Count == 0)
         {
-            var spaceDisplay = order.SpaceId.HasValue ? $"SPACE-{order.SpaceId.Value}" : "-";
-            if (order.Items.Count == 0)
+            WriteEmptyStateRow(ws, row, headers.Length, "(Không có đơn hàng sản xuất nào khớp với bộ lọc hiện tại)");
+            row++;
+        }
+        else
+        {
+            foreach (var order in orderProgressList)
             {
-                ws.Cells[row, 1].Value = stt++;
-                ws.Cells[row, 2].Value = order.PoNumber;
-                ws.Cells[row, 3].Value = spaceDisplay;
-                ws.Cells[row, 4].Value = order.CustomerName;
-                ws.Cells[row, 5].Value = order.EtdDate.ToString("yyyy-MM-dd");
-                ws.Cells[row, 6].Value = order.DaysUntilEtd;
-                ws.Cells[row, 7].Value = order.EtdRiskLevel;
-                ws.Cells[row, 8].Value = "-";
-                ws.Cells[row, 9].Value = "(Chưa có dòng sản phẩm)";
-                ws.Cells[row, 10].Value = order.TotalOrderedUnits;
-                ws.Cells[row, 11].Value = order.TotalCompletedUnits;
-                ws.Cells[row, 12].Value = order.OverallCompletionPercent;
-                row++;
-                continue;
-            }
+                var spaceDisplay = order.SpaceId.HasValue ? $"SPACE-{order.SpaceId.Value}" : "-";
+                var etdRiskVi = FormatEtdRiskVi(order.EtdRiskLevel);
+                if (order.Items.Count == 0)
+                {
+                    ws.Cells[row, 1].Value = stt++;
+                    ws.Cells[row, 2].Value = order.PoNumber;
+                    ws.Cells[row, 3].Value = spaceDisplay;
+                    ws.Cells[row, 4].Value = order.CustomerName;
+                    ws.Cells[row, 5].Value = order.EtdDate.ToString("yyyy-MM-dd");
+                    ws.Cells[row, 6].Value = order.DaysUntilEtd;
+                    ws.Cells[row, 7].Value = etdRiskVi;
+                    ws.Cells[row, 8].Value = "-";
+                    ws.Cells[row, 9].Value = "(Chưa có dòng sản phẩm)";
+                    ws.Cells[row, 10].Value = order.TotalOrderedUnits;
+                    ws.Cells[row, 11].Value = order.TotalCompletedUnits;
+                    ws.Cells[row, 12].Value = order.OverallCompletionPercent;
+                    row++;
+                    continue;
+                }
 
-            foreach (var item in order.Items)
-            {
-                ws.Cells[row, 1].Value = stt++;
-                ws.Cells[row, 2].Value = order.PoNumber;
-                ws.Cells[row, 3].Value = spaceDisplay;
-                ws.Cells[row, 4].Value = order.CustomerName;
-                ws.Cells[row, 5].Value = order.EtdDate.ToString("yyyy-MM-dd");
-                ws.Cells[row, 6].Value = order.DaysUntilEtd;
-                ws.Cells[row, 7].Value = order.EtdRiskLevel;
-                ws.Cells[row, 8].Value = item.ProductCode;
-                ws.Cells[row, 9].Value = item.ProductName;
-                ws.Cells[row, 10].Value = item.OrderedQty;
-                ws.Cells[row, 11].Value = item.CompletedQty;
-                ws.Cells[row, 12].Value = item.CompletionPercent;
-                row++;
+                foreach (var item in order.Items)
+                {
+                    ws.Cells[row, 1].Value = stt++;
+                    ws.Cells[row, 2].Value = order.PoNumber;
+                    ws.Cells[row, 3].Value = spaceDisplay;
+                    ws.Cells[row, 4].Value = order.CustomerName;
+                    ws.Cells[row, 5].Value = order.EtdDate.ToString("yyyy-MM-dd");
+                    ws.Cells[row, 6].Value = order.DaysUntilEtd;
+                    ws.Cells[row, 7].Value = etdRiskVi;
+                    ws.Cells[row, 8].Value = item.ProductCode;
+                    ws.Cells[row, 9].Value = item.ProductName;
+                    ws.Cells[row, 10].Value = item.OrderedQty;
+                    ws.Cells[row, 11].Value = item.CompletedQty;
+                    ws.Cells[row, 12].Value = item.CompletionPercent;
+                    row++;
+                }
             }
         }
 
@@ -220,21 +229,29 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
 
         int row = 5;
         int stt = 1;
-        foreach (var item in scrapVarianceReport.Items)
+        if (scrapVarianceReport.Items.Count == 0)
         {
-            ws.Cells[row, 1].Value = stt++;
-            ws.Cells[row, 2].Value = item.PoNumber;
-            ws.Cells[row, 3].Value = item.ProductCode;
-            ws.Cells[row, 4].Value = item.ProductName;
-            ws.Cells[row, 5].Value = item.OrderedQty;
-            ws.Cells[row, 6].Value = item.TotalInitialBatchQty;
-            ws.Cells[row, 7].Value = item.TotalGoodCompletedQty;
-            ws.Cells[row, 8].Value = item.TotalDefectQty;
-            ws.Cells[row, 9].Value = item.TotalReworkQty;
-            ws.Cells[row, 10].Value = item.TotalScrappedQty;
-            ws.Cells[row, 11].Value = item.PlannedBomScrapRatePercent;
-            ws.Cells[row, 12].Value = $"{item.ActualDefectRatePercent}% (Chênh lệch: {item.ScrapVariancePercent}%) - {item.VarianceEvaluation}";
+            WriteEmptyStateRow(ws, row, headers.Length, "(Không có dữ liệu đối chiếu hao hụt BOM nào khớp với bộ lọc hiện tại)");
             row++;
+        }
+        else
+        {
+            foreach (var item in scrapVarianceReport.Items)
+            {
+                ws.Cells[row, 1].Value = stt++;
+                ws.Cells[row, 2].Value = item.PoNumber;
+                ws.Cells[row, 3].Value = item.ProductCode;
+                ws.Cells[row, 4].Value = item.ProductName;
+                ws.Cells[row, 5].Value = item.OrderedQty;
+                ws.Cells[row, 6].Value = item.TotalInitialBatchQty;
+                ws.Cells[row, 7].Value = item.TotalGoodCompletedQty;
+                ws.Cells[row, 8].Value = item.TotalDefectQty;
+                ws.Cells[row, 9].Value = item.TotalReworkQty;
+                ws.Cells[row, 10].Value = item.TotalScrappedQty;
+                ws.Cells[row, 11].Value = item.PlannedBomScrapRatePercent;
+                ws.Cells[row, 12].Value = $"{item.ActualDefectRatePercent}% (Chênh lệch: {item.ScrapVariancePercent}%) - {item.VarianceEvaluation}";
+                row++;
+            }
         }
 
         if (row > 5)
@@ -269,10 +286,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         int row = 5;
         if (inspectionRows.Count == 0)
         {
-            ws.Cells[row, 1, row, headers.Length].Merge = true;
-            ws.Cells[row, 1].Value = "(Không có phiếu kiểm định KCS nào khớp với bộ lọc hiện tại)";
-            ws.Cells[row, 1].Style.Font.Italic = true;
-            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            WriteEmptyStateRow(ws, row, headers.Length, "(Không có phiếu kiểm định KCS nào khớp với bộ lọc hiện tại)");
             row++;
         }
         else
@@ -281,7 +295,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
             {
                 ws.Cells[row, 1].Value = item.QcId;
                 ws.Cells[row, 2].Value = item.BatchCode;
-                ws.Cells[row, 3].Value = item.BatchType;
+                ws.Cells[row, 3].Value = FormatBatchTypeVi(item.BatchType);
                 ws.Cells[row, 4].Value = item.PoNumber;
                 ws.Cells[row, 5].Value = item.ProductCode;
                 ws.Cells[row, 6].Value = item.ProductName;
@@ -292,7 +306,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
                 ws.Cells[row, 11].Value = item.InspectedQty;
                 ws.Cells[row, 12].Value = item.PassQty;
                 ws.Cells[row, 13].Value = item.FailQty;
-                ws.Cells[row, 14].Value = $"{item.ResultStatus} | KCS: {item.InspectorName} ({item.InspectedAt:yyyy-MM-dd HH:mm}) {(string.IsNullOrWhiteSpace(item.DefectSummary) ? "" : "- " + item.DefectSummary)}";
+                ws.Cells[row, 14].Value = $"{FormatQcResultVi(item.ResultStatus)} | KCS: {item.InspectorName} ({item.InspectedAt:yyyy-MM-dd HH:mm}) {(string.IsNullOrWhiteSpace(item.DefectSummary) ? "" : "- " + item.DefectSummary)}";
                 row++;
             }
         }
@@ -328,37 +342,84 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
             11);
 
         // Khối 1: Thống kê theo Trạm máy
+        WriteSectionTitle(ws, 4, 11, "1. PHÂN TÍCH LỖI CHẤT LƯỢNG THEO TRẠM MÁY / CÔNG ĐOẠN", Color.FromArgb(252, 228, 214));
         string[] stationHeaders =
         {
             "Thứ tự Trạm", "Tên Trạm máy / Công đoạn", "Số lượt lỗi", "Tổng SP lỗi",
             "SL Rework (3%)", "SL Hủy bù phôi", "Tỷ trọng lỗi (%)", "Mã lỗi phổ biến nhất",
             "Tên lỗi chính", "Nguyên nhân gốc rễ (Root Cause)", "Khuyến nghị khắc phục"
         };
-        WriteHeaderRow(ws, 4, stationHeaders, Color.FromArgb(131, 60, 12));
+        WriteHeaderRow(ws, 5, stationHeaders, Color.FromArgb(131, 60, 12));
 
-        int row = 5;
-        foreach (var st in defectAnalytics.DefectsByStation)
+        int row = 6;
+        if (defectAnalytics.DefectsByStation.Count == 0)
         {
-            ws.Cells[row, 1].Value = st.StageSequence;
-            ws.Cells[row, 2].Value = st.StationName;
-            ws.Cells[row, 3].Value = st.TotalDefectEventsCount;
-            ws.Cells[row, 4].Value = st.TotalDefectQty;
-            ws.Cells[row, 5].Value = st.ReworkQty;
-            ws.Cells[row, 6].Value = st.ScrapReplenishQty;
-            ws.Cells[row, 7].Value = st.ShareOfTotalDefectsPercent;
-            ws.Cells[row, 8].Value = st.TopDefectCode;
-            ws.Cells[row, 9].Value = st.TopDefectName;
-            ws.Cells[row, 10].Value = st.RootCauseSummary;
-            ws.Cells[row, 11].Value = st.RecommendedAction;
+            WriteEmptyStateRow(ws, row, stationHeaders.Length, "(Không ghi nhận lỗi theo trạm máy nào trong phạm vi lọc)");
             row++;
         }
-        if (row > 5)
+        else
         {
-            ApplyGridBorders(ws, 4, row - 1, 1, stationHeaders.Length);
+            foreach (var st in defectAnalytics.DefectsByStation)
+            {
+                ws.Cells[row, 1].Value = st.StageSequence;
+                ws.Cells[row, 2].Value = st.StationName;
+                ws.Cells[row, 3].Value = st.TotalDefectEventsCount;
+                ws.Cells[row, 4].Value = st.TotalDefectQty;
+                ws.Cells[row, 5].Value = st.ReworkQty;
+                ws.Cells[row, 6].Value = st.ScrapReplenishQty;
+                ws.Cells[row, 7].Value = st.ShareOfTotalDefectsPercent;
+                ws.Cells[row, 8].Value = st.TopDefectCode;
+                ws.Cells[row, 9].Value = st.TopDefectName;
+                ws.Cells[row, 10].Value = st.RootCauseSummary;
+                ws.Cells[row, 11].Value = st.RecommendedAction;
+                row++;
+            }
         }
+        ApplyGridBorders(ws, 5, row - 1, 1, stationHeaders.Length);
 
-        // Khối 2: Nhật ký chi tiết từng lỗi phát sinh (defect_logs)
-        int detailHeaderRow = row + 2;
+        // Khối 2: Thống kê lỗi theo Loại gỗ nguyên liệu
+        int woodSectionRow = row + 2;
+        WriteSectionTitle(ws, woodSectionRow, 11, "2. PHÂN TÍCH LỖI CHẤT LƯỢNG THEO LOẠI GỖ NGUYÊN LIỆU", Color.FromArgb(226, 239, 218));
+        int woodHeaderRow = woodSectionRow + 1;
+        string[] woodHeaders =
+        {
+            "STT", "Loại gỗ nguyên liệu", "Số lượt lỗi", "Tổng SP lỗi",
+            "SL Rework (3%)", "SL Hủy bù phôi", "Tỷ trọng lỗi (%)", "Số SP ảnh hưởng",
+            "Mã lỗi phổ biến", "Tên lỗi chính", "Trạm phát sinh nhiều nhất"
+        };
+        WriteHeaderRow(ws, woodHeaderRow, woodHeaders, Color.FromArgb(55, 86, 35));
+
+        int wRow = woodHeaderRow + 1;
+        int wStt = 1;
+        if (defectAnalytics.DefectsByWoodType.Count == 0)
+        {
+            WriteEmptyStateRow(ws, wRow, woodHeaders.Length, "(Không ghi nhận lỗi theo loại gỗ nào trong phạm vi lọc)");
+            wRow++;
+        }
+        else
+        {
+            foreach (var wt in defectAnalytics.DefectsByWoodType)
+            {
+                ws.Cells[wRow, 1].Value = wStt++;
+                ws.Cells[wRow, 2].Value = wt.WoodType;
+                ws.Cells[wRow, 3].Value = wt.TotalDefectEventsCount;
+                ws.Cells[wRow, 4].Value = wt.TotalDefectQty;
+                ws.Cells[wRow, 5].Value = wt.ReworkQty;
+                ws.Cells[wRow, 6].Value = wt.ScrapReplenishQty;
+                ws.Cells[wRow, 7].Value = wt.ShareOfTotalDefectsPercent;
+                ws.Cells[wRow, 8].Value = wt.AffectedProductsCount;
+                ws.Cells[wRow, 9].Value = wt.MostCommonDefectCode;
+                ws.Cells[wRow, 10].Value = wt.MostCommonDefectName;
+                ws.Cells[wRow, 11].Value = wt.MostProblematicStationName;
+                wRow++;
+            }
+        }
+        ApplyGridBorders(ws, woodHeaderRow, wRow - 1, 1, woodHeaders.Length);
+
+        // Khối 3: Nhật ký chi tiết từng lỗi phát sinh (defect_logs)
+        int detailSectionRow = wRow + 2;
+        WriteSectionTitle(ws, detailSectionRow, 11, "3. NHẬT KÝ CHI TIẾT LỖI KCS & TÁCH NHÁNH 97%-3%", Color.FromArgb(217, 225, 242));
+        int detailHeaderRow = detailSectionRow + 1;
         string[] detailHeaders =
         {
             "Mã Log", "Mã Lô Chính", "Mã PO#", "Sản phẩm", "Loại Gỗ",
@@ -368,25 +429,31 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         WriteHeaderRow(ws, detailHeaderRow, detailHeaders, Color.FromArgb(47, 85, 151));
 
         int dRow = detailHeaderRow + 1;
-        foreach (var d in defectRows)
+        if (defectRows.Count == 0)
         {
-            ws.Cells[dRow, 1].Value = d.DefectLogId;
-            ws.Cells[dRow, 2].Value = d.BatchCode;
-            ws.Cells[dRow, 3].Value = d.PoNumber;
-            ws.Cells[dRow, 4].Value = $"{d.ProductCode} - {d.ProductName}";
-            ws.Cells[dRow, 5].Value = d.WoodType;
-            ws.Cells[dRow, 6].Value = d.StageName;
-            ws.Cells[dRow, 7].Value = d.DefectCode;
-            ws.Cells[dRow, 8].Value = d.DefectName;
-            ws.Cells[dRow, 9].Value = d.DefectQty;
-            ws.Cells[dRow, 10].Value = d.Disposition;
-            ws.Cells[dRow, 11].Value = $"{(string.IsNullOrWhiteSpace(d.SpawnedSubBatchCode) ? "Không" : d.SpawnedSubBatchCode)} ({d.InspectedAt:yyyy-MM-dd HH:mm})";
+            WriteEmptyStateRow(ws, dRow, detailHeaders.Length, "(Không có nhật ký lỗi chi tiết nào khớp với bộ lọc hiện tại)");
             dRow++;
         }
-        if (dRow > detailHeaderRow + 1)
+        else
         {
-            ApplyGridBorders(ws, detailHeaderRow, dRow - 1, 1, detailHeaders.Length);
+            foreach (var d in defectRows)
+            {
+                ws.Cells[dRow, 1].Value = d.DefectLogId;
+                ws.Cells[dRow, 2].Value = d.BatchCode;
+                ws.Cells[dRow, 3].Value = d.PoNumber;
+                ws.Cells[dRow, 4].Value = $"{d.ProductCode} - {d.ProductName}";
+                ws.Cells[dRow, 5].Value = d.WoodType;
+                ws.Cells[dRow, 6].Value = d.StageName;
+                ws.Cells[dRow, 7].Value = d.DefectCode;
+                ws.Cells[dRow, 8].Value = d.DefectName;
+                ws.Cells[dRow, 9].Value = d.DefectQty;
+                ws.Cells[dRow, 10].Value = FormatDispositionVi(d.Disposition);
+                var timeLabel = d.InspectedAt == DateTime.MinValue ? "Không rõ thời gian" : $"{d.InspectedAt:yyyy-MM-dd HH:mm}";
+                ws.Cells[dRow, 11].Value = $"{(string.IsNullOrWhiteSpace(d.SpawnedSubBatchCode) ? "Không sinh thẻ phụ" : d.SpawnedSubBatchCode)} ({timeLabel})";
+                dRow++;
+            }
         }
+        ApplyGridBorders(ws, detailHeaderRow, dRow - 1, 1, detailHeaders.Length);
         AutoFitColumnsSafe(ws, detailHeaders.Length);
     }
 
@@ -412,25 +479,33 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         WriteHeaderRow(ws, 4, headers, Color.FromArgb(31, 78, 120));
 
         int row = 5;
-        foreach (var b in dispatchRows)
+        if (dispatchRows.Count == 0)
         {
-            ws.Cells[row, 1].Value = b.BatchId;
-            ws.Cells[row, 2].Value = b.BatchCode;
-            ws.Cells[row, 3].Value = b.BatchType;
-            ws.Cells[row, 4].Value = string.IsNullOrWhiteSpace(b.ParentBatchCode) ? "-" : b.ParentBatchCode;
-            ws.Cells[row, 5].Value = b.PoNumber;
-            ws.Cells[row, 6].Value = b.CustomerName;
-            ws.Cells[row, 7].Value = b.EtdDate.ToString("yyyy-MM-dd");
-            ws.Cells[row, 8].Value = $"{b.ProductCode} - {b.ProductName}";
-            ws.Cells[row, 9].Value = b.InitialQty;
-            ws.Cells[row, 10].Value = b.CurrentQty;
-            ws.Cells[row, 11].Value = $"#{b.CurrentStageSeq} - {b.CurrentStageName}";
-            ws.Cells[row, 12].Value = b.BatchStatus;
-            ws.Cells[row, 13].Value = b.IsOverdriver
-                ? $"OVERDRIVER (Hold Point #{b.HoldPointStageSeq ?? 5} | Xuất kho: {(b.GoodsIssuedUnlocked ? "Đã mở" : "Chưa mở")})"
-                : "Chuẩn (Đủ vật tư)";
-            ws.Cells[row, 14].Value = $"{b.PassedStagesCount}/{b.TotalStagesCount} trạm đạt | {b.RoutingTimelineSummary}";
+            WriteEmptyStateRow(ws, row, headers.Length, "(Không có thẻ lô Kanban nào khớp với bộ lọc hiện tại)");
             row++;
+        }
+        else
+        {
+            foreach (var b in dispatchRows)
+            {
+                ws.Cells[row, 1].Value = b.BatchId;
+                ws.Cells[row, 2].Value = b.BatchCode;
+                ws.Cells[row, 3].Value = FormatBatchTypeVi(b.BatchType);
+                ws.Cells[row, 4].Value = string.IsNullOrWhiteSpace(b.ParentBatchCode) ? "-" : b.ParentBatchCode;
+                ws.Cells[row, 5].Value = b.PoNumber;
+                ws.Cells[row, 6].Value = b.CustomerName;
+                ws.Cells[row, 7].Value = b.EtdDate.ToString("yyyy-MM-dd");
+                ws.Cells[row, 8].Value = $"{b.ProductCode} - {b.ProductName}";
+                ws.Cells[row, 9].Value = b.InitialQty;
+                ws.Cells[row, 10].Value = b.CurrentQty;
+                ws.Cells[row, 11].Value = $"#{b.CurrentStageSeq} - {b.CurrentStageName}";
+                ws.Cells[row, 12].Value = FormatBatchStatusVi(b.BatchStatus);
+                ws.Cells[row, 13].Value = b.IsOverdriver
+                    ? $"OVERDRIVER (Hold Point #{b.HoldPointStageSeq ?? 5} | Xuất kho: {(b.GoodsIssuedUnlocked ? "Đã mở" : "Chưa mở")})"
+                    : "Chuẩn (Đủ vật tư)";
+                ws.Cells[row, 14].Value = $"{b.PassedStagesCount}/{b.TotalStagesCount} trạm đạt | {b.RoutingTimelineSummary}";
+                row++;
+            }
         }
 
         if (row > 5)
@@ -452,36 +527,184 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
             overdriveAnalytics.GovernanceEvaluation,
             10);
 
+        // Khối 1: Thống kê tần suất phá khóa theo Người phê duyệt (Chủ xưởng / Quản lý)
+        WriteSectionTitle(ws, 4, 10, "1. THỐNG KÊ TẦN SUẤT PHÁ KHÓA THEO NGƯỜI PHÊ DUYỆT & TRẠM HOLD POINT", Color.FromArgb(252, 228, 214));
+        string[] approverHeaders =
+        {
+            "STT", "Mã Người duyệt", "Tài khoản", "Họ tên Quản lý / Chủ xưởng",
+            "Số lượt duyệt", "Số lô ảnh hưởng", "Tỷ trọng (%)", "Lần duyệt gần nhất",
+            "Trạm Hold Point nóng nhất", "Đánh giá quản trị"
+        };
+        WriteHeaderRow(ws, 5, approverHeaders, Color.FromArgb(131, 60, 12));
+
+        int aRow = 6;
+        int aStt = 1;
+        if (overdriveAnalytics.ByApprover.Count == 0)
+        {
+            WriteEmptyStateRow(ws, aRow, approverHeaders.Length, "(Không có lượt phê duyệt phá khóa Overdriver nào trong phạm vi lọc)");
+            aRow++;
+        }
+        else
+        {
+            var topStageSummary = !string.IsNullOrWhiteSpace(overdriveAnalytics.MostOverdrivenHoldPointName)
+                ? $"#{overdriveAnalytics.MostOverdrivenHoldPointSeq} - {overdriveAnalytics.MostOverdrivenHoldPointName} ({overdriveAnalytics.MostOverdrivenStageCount} lần)"
+                : "-";
+            foreach (var app in overdriveAnalytics.ByApprover)
+            {
+                ws.Cells[aRow, 1].Value = aStt++;
+                ws.Cells[aRow, 2].Value = app.ApproverUserId;
+                ws.Cells[aRow, 3].Value = app.ApproverUsername;
+                ws.Cells[aRow, 4].Value = app.ApproverFullName;
+                ws.Cells[aRow, 5].Value = app.TotalApprovalsCount;
+                ws.Cells[aRow, 6].Value = app.DistinctBatchesCount;
+                ws.Cells[aRow, 7].Value = app.SharePercent;
+                ws.Cells[aRow, 8].Value = app.LastApprovedAt.HasValue ? app.LastApprovedAt.Value.ToString("yyyy-MM-dd HH:mm") : "-";
+                ws.Cells[aRow, 9].Value = topStageSummary;
+                ws.Cells[aRow, 10].Value = app.TotalApprovalsCount >= 3 ? "Tần suất cao - cần rà soát cung ứng vật tư" : "Trong ngưỡng kiểm soát";
+                aRow++;
+            }
+        }
+        ApplyGridBorders(ws, 5, aRow - 1, 1, approverHeaders.Length);
+
+        // Khối 2: Thống kê tần suất phá khóa theo từng Trạm dừng kỹ thuật Hold Point
+        int stageSectionRow = aRow + 2;
+        WriteSectionTitle(ws, stageSectionRow, 10, "2. THỐNG KÊ TẦN SUẤT PHÁ KHÓA THEO TRẠM DỪNG KỸ THUẬT HOLD POINT", Color.FromArgb(226, 239, 218));
+        int stageHeaderRow = stageSectionRow + 1;
+        WriteHeaderRow(ws, stageHeaderRow, new[]
+        {
+            "STT", "Thứ tự Trạm", "Tên Trạm Hold Point", "Số lần phá khóa",
+            "Số lô ảnh hưởng", "Tỷ trọng (%)", "Lý do giải trình tiêu biểu", "", "", ""
+        }, Color.FromArgb(55, 86, 35));
+        ws.Cells[stageHeaderRow, 7, stageHeaderRow, 10].Merge = true;
+
+        int sRow = stageHeaderRow + 1;
+        int sStt = 1;
+        if (overdriveAnalytics.ByHoldPointStage.Count == 0)
+        {
+            WriteEmptyStateRow(ws, sRow, 10, "(Không có dữ liệu thống kê theo trạm Hold Point)");
+            sRow++;
+        }
+        else
+        {
+            foreach (var stg in overdriveAnalytics.ByHoldPointStage)
+            {
+                ws.Cells[sRow, 1].Value = sStt++;
+                ws.Cells[sRow, 2].Value = stg.HoldPointStageSeq;
+                ws.Cells[sRow, 3].Value = stg.StageName;
+                ws.Cells[sRow, 4].Value = stg.OverdriveCount;
+                ws.Cells[sRow, 5].Value = stg.DistinctBatchesCount;
+                ws.Cells[sRow, 6].Value = stg.SharePercent;
+                ws.Cells[sRow, 7, sRow, 10].Merge = true;
+                ws.Cells[sRow, 7].Value = stg.SampleJustifications.Count > 0
+                    ? string.Join(" | ", stg.SampleJustifications)
+                    : "-";
+                sRow++;
+            }
+        }
+        ApplyGridBorders(ws, stageHeaderRow, sRow - 1, 1, 10);
+
+        // Khối 3: Bảng Nhật ký chi tiết từng lần phê duyệt phá khóa
+        int detailSectionRow = sRow + 2;
+        WriteSectionTitle(ws, detailSectionRow, 10, "3. NHẬT KÝ CHI TIẾT CÁC LẦN PHÁ KHÓA NGOẠI LỆ HOLD POINT", Color.FromArgb(217, 225, 242));
+        int detailHeaderRow = detailSectionRow + 1;
         string[] headers =
         {
             "Mã Overdrive", "Mã Thẻ Lô", "Mã PO#", "Mã SKU", "Tên Sản phẩm",
             "Trạm Hold Point", "Tên Trạm Dừng", "Tổ trưởng Yêu cầu", "Chủ xưởng / Quản lý Phê duyệt",
             "Lý do Giải trình & Thời điểm Duyệt"
         };
-        WriteHeaderRow(ws, 4, headers, Color.FromArgb(131, 60, 12));
+        WriteHeaderRow(ws, detailHeaderRow, headers, Color.FromArgb(47, 85, 151));
 
-        int row = 5;
-        foreach (var log in overdriveAnalytics.RecentOverdriveLogs)
+        int row = detailHeaderRow + 1;
+        if (overdriveAnalytics.RecentOverdriveLogs.Count == 0)
         {
-            ws.Cells[row, 1].Value = log.OverdriveId;
-            ws.Cells[row, 2].Value = log.BatchCode;
-            ws.Cells[row, 3].Value = log.PoNumber;
-            ws.Cells[row, 4].Value = log.ProductCode;
-            ws.Cells[row, 5].Value = log.ProductName;
-            ws.Cells[row, 6].Value = log.HoldPointStageSeq;
-            ws.Cells[row, 7].Value = log.StageName;
-            ws.Cells[row, 8].Value = log.RequesterName;
-            ws.Cells[row, 9].Value = log.ApproverName;
-            ws.Cells[row, 10].Value = $"{log.Justification} ({log.ApprovedAt:yyyy-MM-dd HH:mm} UTC)";
+            WriteEmptyStateRow(ws, row, headers.Length, "(Không có nhật ký phá khóa Hold Point nào khớp với bộ lọc hiện tại)");
             row++;
         }
-
-        if (row > 5)
+        else
         {
-            ApplyGridBorders(ws, 4, row - 1, 1, headers.Length);
+            foreach (var log in overdriveAnalytics.RecentOverdriveLogs)
+            {
+                ws.Cells[row, 1].Value = log.OverdriveId;
+                ws.Cells[row, 2].Value = log.BatchCode;
+                ws.Cells[row, 3].Value = log.PoNumber;
+                ws.Cells[row, 4].Value = log.ProductCode;
+                ws.Cells[row, 5].Value = log.ProductName;
+                ws.Cells[row, 6].Value = log.HoldPointStageSeq;
+                ws.Cells[row, 7].Value = log.StageName;
+                ws.Cells[row, 8].Value = log.RequesterName;
+                ws.Cells[row, 9].Value = log.ApproverName;
+                ws.Cells[row, 10].Value = $"{log.Justification} ({log.ApprovedAt:yyyy-MM-dd HH:mm} UTC)";
+                row++;
+            }
         }
+
+        ApplyGridBorders(ws, detailHeaderRow, row - 1, 1, headers.Length);
         AutoFitColumnsSafe(ws, headers.Length);
     }
+
+    private static void WriteSectionTitle(ExcelWorksheet ws, int row, int totalCols, string title, Color bgColor)
+    {
+        ws.Cells[row, 1, row, totalCols].Merge = true;
+        ws.Cells[row, 1].Value = title;
+        ws.Cells[row, 1].Style.Font.Size = 11;
+        ws.Cells[row, 1].Style.Font.Bold = true;
+        ws.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+        ws.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(bgColor);
+        ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+        ws.Cells[row, 1].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+        ws.Row(row).Height = 22;
+    }
+
+    private static void WriteEmptyStateRow(ExcelWorksheet ws, int row, int totalCols, string message)
+    {
+        ws.Cells[row, 1, row, totalCols].Merge = true;
+        ws.Cells[row, 1].Value = message;
+        ws.Cells[row, 1].Style.Font.Italic = true;
+        ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+    }
+
+    private static string FormatEtdRiskVi(string riskLevel) => riskLevel switch
+    {
+        "ON_TRACK" => "Đúng tiến độ",
+        "WARNING" => "Cảnh báo cận ETD",
+        "OVERDUE" => "Trễ hạn ETD",
+        "COMPLETED" => "Đã hoàn tất",
+        _ => riskLevel
+    };
+
+    private static string FormatBatchTypeVi(string batchType) => batchType switch
+    {
+        "MAIN_CARD" => "Thẻ chính",
+        "REWORK_SUB_CARD" => "Thẻ sửa chữa (3%)",
+        "REPLENISH_LOT" => "Lô bù phôi hủy",
+        _ => batchType
+    };
+
+    private static string FormatQcResultVi(string resultStatus) => resultStatus switch
+    {
+        "FULL_PASS_100" => "Đạt chuẩn 100%",
+        "BRANCHED_PARTIAL" => "Tách nhánh lỗi (97-3)",
+        "FULL_REJECT" => "Không đạt toàn bộ",
+        _ => resultStatus
+    };
+
+    private static string FormatDispositionVi(string disposition) => disposition switch
+    {
+        "REWORK_SUB_CARD" => "Sửa chữa (Rework)",
+        "SCRAP_REPLENISH" => "Hủy & Bù phôi mới",
+        _ => disposition
+    };
+
+    private static string FormatBatchStatusVi(string batchStatus) => batchStatus switch
+    {
+        "LOCKED" => "Khóa chờ vật tư",
+        "IN_PROGRESS" => "Đang gia công",
+        "QC_PENDING" => "Chờ kiểm định KCS",
+        "HOLD_POINT_BLOCKED" => "Khóa cứng Hold Point",
+        "DONE" => "Hoàn tất (DONE)",
+        _ => batchStatus
+    };
 
     private static void WriteBannerTitle(ExcelWorksheet ws, string title, string subtitle, int totalCols)
     {
@@ -503,7 +726,8 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         ws.Cells[2, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
         ws.Cells[2, 1].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(237, 242, 248));
         ws.Cells[2, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
-        ws.Row(2).Height = 20;
+        ws.Cells[2, 1].Style.WrapText = true;
+        ws.Row(2).Height = 24;
     }
 
     private static void WriteHeaderRow(ExcelWorksheet ws, int row, string[] headers, Color bgColor)
@@ -530,6 +754,8 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
         range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
         range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+        range.Style.WrapText = true;
+        range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
     }
 
     private static void AutoFitColumnsSafe(ExcelWorksheet ws, int totalCols)

@@ -28,7 +28,7 @@ public class ConfirmSalesOrderRequestValidator : AbstractValidator<ConfirmSalesO
 
         RuleFor(x => x.CustomerName)
             .NotEmpty().WithMessage("Vui lòng nhập tên khách hàng / đối tác mua hàng.")
-            .MaximumLength(255);
+            .MaximumLength(255).WithMessage("Tên khách hàng không được vượt quá 255 ký tự.");
 
         RuleFor(x => x.Rows)
             .NotEmpty().WithMessage("Không thể xác nhận đơn hàng trống. Vui lòng thêm ít nhất một dòng sản phẩm.");

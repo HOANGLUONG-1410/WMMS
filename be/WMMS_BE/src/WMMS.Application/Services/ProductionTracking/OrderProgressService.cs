@@ -215,7 +215,7 @@ public class OrderProgressService : IOrderProgressService
                     BatchStatus = b.BatchStatus.ToString(),
                     InitialQty = initialQty,
                     CurrentQty = b.BatchQty,
-                    CurrentStageCode = currentStep?.StageName ?? $"STAGE_{b.CurrentStageSeq}",
+                    CurrentStageCode = currentStep?.StageName ?? $"Công đoạn #{b.CurrentStageSeq}",
                     PassedStepsCount = passedSteps,
                     TotalStepsCount = totalSteps,
                     StageProgressPercent = stagePercent
