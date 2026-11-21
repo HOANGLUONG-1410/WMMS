@@ -1585,11 +1585,11 @@ public class ProductionOrderService : IProductionOrderService
 
     private static string InferQualityGateName(int seq, string stageName, bool isHoldPoint)
     {
-        if (isHoldPoint) return "QC Hold Point Gate (100% Inspection bắt buộc)";
+        if (isHoldPoint) return "Cổng kiểm soát Hold Point (Kiểm định 100% bắt buộc)";
         var lower = (stageName ?? string.Empty).ToLowerInvariant();
         if (lower.Contains("carton") || lower.Contains("xuất xưởng") || lower.Contains("đóng gói"))
-            return "Final Packing QC Gate (100% Gate)";
-        return "In-Process Self-Check";
+            return "Cổng kiểm định đóng gói thành phẩm (100%)";
+        return "Tự kiểm tra chất lượng tại công đoạn";
     }
 
     private static string InferInspectionCriteria(int seq, string stageName, bool isHoldPoint)
