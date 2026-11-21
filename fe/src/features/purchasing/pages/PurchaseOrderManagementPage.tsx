@@ -8,11 +8,14 @@ import type { SupplierPurchaseOrderDto } from "../types";
 import { fulfillmentStatusLabel } from "../types";
 import GeneratePoModal from "../components/GeneratePoModal";
 import UpdateEtaModal from "../components/UpdateEtaModal";
+import SendPoEmailModal from "../components/SendPoEmailModal";
 
 export default function PurchaseOrderManagementPage() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showGeneratePoModal, setShowGeneratePoModal] = useState(false);
   const [selectedPoForEta, setSelectedPoForEta] =
+    useState<SupplierPurchaseOrderDto | null>(null);
+  const [selectedPoForEmail, setSelectedPoForEmail] =
     useState<SupplierPurchaseOrderDto | null>(null);
   const [toastBanner, setToastBanner] = useState<{
     type: "success" | "error";
@@ -30,7 +33,7 @@ export default function PurchaseOrderManagementPage() {
     await batchIssueMutation.mutateAsync();
     setToastBanner({
       type: "success",
-      text: "Tất cả đơn đặt hàng nhà cung cấp đã được duyệt đã được phát hành hàng loạt và gửi tới NCC!",
+      text: "Tất cả đơn đặt hàng nhà cung cấp đã được duyệt đã được phát hành hàng loạt và gửi tới nhà cung cấp!",
     });
   };
 
@@ -93,7 +96,7 @@ export default function PurchaseOrderManagementPage() {
               Quản lý đơn đặt hàng nhà cung cấp
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Gom các yêu cầu mua đã duyệt theo nhà cung cấp, phát hành đơn đặt hàng chính thức và ghi nhận ngày giao hàng (ETA) mà nhà cung cấp cam kết.
+              Gom các yêu cầu mua đã duyệt theo nhà cung cấp, phát hành đơn đặt hàng chính thức và ghi nhận ngày giao hàng mà nhà cung cấp cam kết.
             </p>
           </div>
 
@@ -106,7 +109,7 @@ export default function PurchaseOrderManagementPage() {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span>Lập PO từ PR</span>
+            <span>Lập đơn mua nguyên liệu</span>
           </button>
         </div>
 
@@ -116,7 +119,7 @@ export default function PurchaseOrderManagementPage() {
             <strong className="font-bold text-slate-900">
               Phê duyệt mới từ Chủ xưởng:
             </strong>{" "}
-            PR gộp ngày 2026-10-20 đã được phê duyệt. 3 đơn đặt hàng NCC sẵn sàng phát hành.
+            Yêu cầu mua hàng tổng hợp ngày 2026-10-20 đã được phê duyệt. 3 đơn đặt hàng nhà cung cấp sẵn sàng phát hành.
           </div>
 
           <button
@@ -125,7 +128,7 @@ export default function PurchaseOrderManagementPage() {
             disabled={batchIssueMutation.isPending}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-xs transition self-start sm:self-auto shrink-0 disabled:opacity-60"
           >
-            {batchIssueMutation.isPending ? "Đang phát hành..." : "Phát hành PO hàng loạt"}
+            {batchIssueMutation.isPending ? "Đang phát hành..." : "Phát hành đơn mua hàng loạt"}
           </button>
         </div>
 
@@ -133,7 +136,7 @@ export default function PurchaseOrderManagementPage() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="text-base font-bold text-slate-900">
-              Đơn đặt hàng NCC đang hoạt động
+              Đơn đặt hàng nhà cung cấp đang hoạt động
             </h2>
 
             {/* Search PO #, supplier... */}
@@ -152,7 +155,7 @@ export default function PurchaseOrderManagementPage() {
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Tìm số PO, nhà cung cấp..."
+                placeholder="Tìm mã đơn mua, nhà cung cấp..."
                 className="w-full pl-9 pr-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
               />
             </div>
@@ -163,12 +166,12 @@ export default function PurchaseOrderManagementPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
-                  <th className="py-3.5 px-6">Mã PO</th>
+                  <th className="py-3.5 px-6">Mã đơn mua</th>
                   <th className="py-3.5 px-4">Nhà cung cấp</th>
                   <th className="py-3.5 px-4">Nhóm vật tư</th>
                   <th className="py-3.5 px-4">Tóm tắt hàng đặt</th>
                   <th className="py-3.5 px-4">Ngày phát hành</th>
-                  <th className="py-3.5 px-4">Ngày giao cam kết (ETA)</th>
+                  <th className="py-3.5 px-4">Ngày giao cam kết</th>
                   <th className="py-3.5 px-4">Trạng thái thực hiện</th>
                   <th className="py-3.5 px-6 text-right">Thao tác</th>
                 </tr>
@@ -239,27 +242,50 @@ export default function PurchaseOrderManagementPage() {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-right whitespace-nowrap">
-                          {isCompleted ? (
-                            <span className="inline-block px-3.5 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 text-xs font-semibold rounded-lg select-none">
-                              Hoàn tất
-                            </span>
-                          ) : isConfirmed ? (
+                          <div className="inline-flex items-center justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => setSelectedPoForEta(po)}
-                              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
+                              onClick={() => setSelectedPoForEmail(po)}
+                              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-lg shadow-2xs transition inline-flex items-center gap-1.5"
                             >
-                              Cập nhật ETA
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.2"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <span>Gửi email</span>
                             </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedPoForEta(po)}
-                              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
-                            >
-                              Theo dõi hàng về →
-                            </button>
-                          )}
+
+                            {isCompleted ? (
+                              <span className="inline-block px-3.5 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 text-xs font-semibold rounded-lg select-none">
+                                Hoàn tất
+                              </span>
+                            ) : isConfirmed ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPoForEta(po)}
+                                className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
+                              >
+                                Cập nhật ngày giao
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPoForEta(po)}
+                                className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
+                              >
+                                Theo dõi hàng về →
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -281,6 +307,13 @@ export default function PurchaseOrderManagementPage() {
       <UpdateEtaModal
         purchaseOrder={selectedPoForEta}
         onClose={() => setSelectedPoForEta(null)}
+        onSuccess={(msg) => setToastBanner({ type: "success", text: msg })}
+      />
+
+      {/* Modal Gửi email Đơn đặt hàng (ĐƠN ĐẶT HÀNG theo mẫu hành chính Việt Nam) */}
+      <SendPoEmailModal
+        purchaseOrder={selectedPoForEmail}
+        onClose={() => setSelectedPoForEmail(null)}
         onSuccess={(msg) => setToastBanner({ type: "success", text: msg })}
       />
     </WmmsAppShell>

@@ -57,6 +57,146 @@ export const INITIAL_SUPPLIER_POS: SupplierPurchaseOrderDto[] = [
   },
 ];
 
+export interface PoLineItemDto {
+  poDetailId: number;
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  unitOfMeasure: string;
+  orderedQty: number;
+  receivedQty: number;
+  remainingQty: number;
+  unitPrice?: number | null;
+  lineAmount?: number | null;
+}
+
+export interface PurchaseOrderDetailViewDto extends SupplierPurchaseOrderDto {
+  supplierId?: number;
+  supplierCode?: string | null;
+  supplierEmail?: string | null;
+  supplierPhone?: string | null;
+  terms?: string | null;
+  totalAmount?: number | null;
+  lines: PoLineItemDto[];
+}
+
+export interface ActiveSupplierOptionDto {
+  supplierId: number;
+  supplierCode: string;
+  supplierName: string;
+  supplyCategory?: string | null;
+  contactEmail?: string | null;
+  phone?: string | null;
+  status: string;
+}
+
+export interface SendPoMaterialAssignmentDto {
+  poDetailId: number;
+  supplierId: number;
+}
+
+export interface ApprovedRequisitionLineItemDto {
+  prItemId: number;
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  materialGroup: string;
+  unitOfMeasure: string;
+  suggestedOrderQty: number;
+  orderedQty: number;
+  remainingQty: number;
+}
+
+export interface ApprovedRequisitionViewDto {
+  prId: number;
+  prCode: string;
+  aggregationDate: string;
+  reviewedAt?: string | null;
+  lines: ApprovedRequisitionLineItemDto[];
+}
+
+export interface DistributeMaterialLinePayloadDto {
+  prId: number;
+  prItemId: number;
+  supplierId: number;
+  orderedQty: number;
+  unitPrice: number;
+  materialName?: string;
+  materialCode?: string;
+  materialGroup?: string;
+  unitOfMeasure?: string;
+}
+
+export interface SendPoEmailRequestDto {
+  supplierId?: number;
+  materialAssignments?: SendPoMaterialAssignmentDto[];
+  recipientEmail?: string;
+  deliveryAddress?: string;
+  paymentMethodNote?: string;
+}
+
+export interface SendPoEmailResponseDto {
+  poId: number;
+  poCode: string;
+  supplierId: number;
+  supplierName: string;
+  recipientEmail: string;
+  sentViaSmtp: boolean;
+  sentAt: string;
+  previewHtml: string;
+}
+
+const FALLBACK_ACTIVE_SUPPLIERS: ActiveSupplierOptionDto[] = [
+  {
+    supplierId: 1,
+    supplierCode: "SUP-WOOD-LAMVIET",
+    supplierName: "Công ty CP Chế biến Gỗ Lâm Việt",
+    supplyCategory: "LUMBER",
+    contactEmail: "sales@lamvietwood.vn",
+    status: "ACTIVE",
+  },
+  {
+    supplierId: 2,
+    supplierCode: "SUP-WOOD-TAVICO",
+    supplierName: "Công ty CP Gỗ Tây Ngô Tavico Timber",
+    supplyCategory: "LUMBER",
+    contactEmail: "info@tavicowood.com",
+    status: "ACTIVE",
+  },
+  {
+    supplierId: 3,
+    supplierCode: "SUP-HARDWARE-HAFELE",
+    supplierName: "Công ty TNHH Hafele Việt Nam",
+    supplyCategory: "HARDWARE",
+    contactEmail: "support.vn@hafele.com",
+    status: "ACTIVE",
+  },
+  {
+    supplierId: 4,
+    supplierCode: "SUP-HARDWARE-BLUM",
+    supplierName: "Công ty TNHH Phụ kiện Mộc Blum",
+    supplyCategory: "HARDWARE",
+    contactEmail: "sales@blum.vn",
+    status: "ACTIVE",
+  },
+  {
+    supplierId: 5,
+    supplierCode: "SUP-PAINT-OSEVEN",
+    supplierName: "Công ty Cổ phần Sơn Oseven PU",
+    supplyCategory: "FINISH_PAINT",
+    contactEmail: "kinhdoanh@osevenpaint.com",
+    status: "ACTIVE",
+  },
+  {
+    supplierId: 6,
+    supplierCode: "SUP-PACK-THANGLONG",
+    supplierName: "Bao bì & Thùng Carton Thăng Long",
+    supplyCategory: "PACKAGING",
+    contactEmail: "sales@thanglongbox.com.vn",
+    status: "ACTIVE",
+  },
+];
+
 let inMemoryPurchaseOrders: SupplierPurchaseOrderDto[] = [...INITIAL_SUPPLIER_POS];
 
 export const purchasingApi = {
@@ -67,10 +207,28 @@ export const purchasingApi = {
     try {
       const res = await apiClient.get<{
         success: boolean;
-        data: SupplierPurchaseOrderDto[];
+        data:
+          | SupplierPurchaseOrderDto[]
+          | { items?: Array<SupplierPurchaseOrderDto & { expectedArrivalDate?: string }> };
       }>("/purchase-orders", { params });
-      if (res.data?.data && res.data.data.length > 0) {
-        return res.data.data;
+
+      const payload = res.data?.data;
+      const rawItems = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : [];
+
+      if (rawItems.length > 0) {
+        return rawItems.map((po) => ({
+          ...po,
+          issueDate: String(po.issueDate || "").slice(0, 10),
+          promisedEtaDate: String(
+            po.promisedEtaDate ||
+              (po as { expectedArrivalDate?: string }).expectedArrivalDate ||
+              "",
+          ).slice(0, 10),
+        }));
       }
     } catch (err: any) {
       if (err?.status && err.status !== 0 && err.status !== 404) {
@@ -89,6 +247,242 @@ export const purchasingApi = {
         po.materialCategory.toLowerCase().includes(kw) ||
         po.orderItemsSummary.toLowerCase().includes(kw),
     );
+  },
+
+  /** UC-51: Xem chi tiết đơn đặt hàng kèm danh sách mặt hàng nguyên vật liệu (GET /api/v1/purchase-orders/:id) */
+  getPurchaseOrderById: async (
+    poId: number,
+    fallbackPo?: SupplierPurchaseOrderDto | null,
+  ): Promise<PurchaseOrderDetailViewDto> => {
+    try {
+      const res = await apiClient.get<{
+        success: boolean;
+        data: PurchaseOrderDetailViewDto & { expectedArrivalDate?: string };
+      }>(`/purchase-orders/${poId}`);
+      if (res.data?.data) {
+        const d = res.data.data;
+        return {
+          ...d,
+          issueDate: String(d.issueDate || "").slice(0, 10),
+          promisedEtaDate: String(d.promisedEtaDate || d.expectedArrivalDate || "").slice(0, 10),
+          lines: Array.isArray(d.lines) ? d.lines : [],
+        };
+      }
+    } catch {
+      // Fallback nếu là đơn mẫu trong bộ nhớ
+    }
+
+    const base =
+      fallbackPo ||
+      inMemoryPurchaseOrders.find((p) => p.poId === poId) ||
+      INITIAL_SUPPLIER_POS[0];
+
+    return {
+      ...base,
+      supplierId: 1,
+      supplierEmail: "sales@lamvietwood.vn",
+      terms: "Thanh toán trước 50% giá trị hợp đồng, 50% còn lại thanh toán sau khi giao hàng.",
+      totalAmount: 92500000,
+      lines: [
+        {
+          poDetailId: 1,
+          materialId: 1,
+          materialCode: "WOOD_OAK_01",
+          materialName: base.orderItemsSummary || "Gỗ sồi Bắc Mỹ xẻ sấy FAS",
+          unitOfMeasure: "M3",
+          orderedQty: 7.4,
+          receivedQty: 0,
+          remainingQty: 7.4,
+          unitPrice: 12500000,
+          lineAmount: 92500000,
+        },
+      ],
+    };
+  },
+
+  /** UC-26: Lấy danh sách nhà cung cấp đang hoạt động (ACTIVE) để chọn gửi đơn đặt hàng */
+  getActiveSuppliers: async (): Promise<ActiveSupplierOptionDto[]> => {
+    try {
+      const res = await apiClient.get<{
+        success: boolean;
+        data:
+          | ActiveSupplierOptionDto[]
+          | { items?: ActiveSupplierOptionDto[] };
+      }>("/suppliers", { params: { status: "ACTIVE", pageSize: 100 } });
+
+      const payload = res.data?.data;
+      const list = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : [];
+
+      const activeList = list.filter(
+        (s) => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE",
+      );
+      if (activeList.length > 0) {
+        return activeList;
+      }
+    } catch {
+      // Fallback sang danh sách nhà cung cấp mặc định
+    }
+    return FALLBACK_ACTIVE_SUPPLIERS;
+  },
+
+  /** UC-49: Lấy danh sách nguyên vật liệu cần mua từ các Yêu cầu mua hàng đã được Chủ xưởng duyệt */
+  getApprovedRequisitions: async (): Promise<ApprovedRequisitionViewDto[]> => {
+    try {
+      const res = await apiClient.get<{
+        success: boolean;
+        data: ApprovedRequisitionViewDto[];
+      }>("/purchase-orders/approved-requisitions");
+
+      if (Array.isArray(res.data?.data) && res.data.data.length > 0) {
+        return res.data.data;
+      }
+    } catch {
+      // Fallback nếu chưa có PR ở trạng thái APPROVED
+    }
+
+    return [
+      {
+        prId: 0,
+        prCode: "PR-20261121-001",
+        aggregationDate: new Date().toISOString().slice(0, 10),
+        lines: [
+          {
+            prItemId: 101,
+            materialId: 1,
+            materialCode: "WOOD_OAK_01",
+            materialName: "Gỗ sồi Bắc Mỹ xẻ sấy FAS (Oak Timber)",
+            materialGroup: "LUMBER",
+            unitOfMeasure: "M3",
+            suggestedOrderQty: 7.4,
+            orderedQty: 0,
+            remainingQty: 7.4,
+          },
+          {
+            prItemId: 102,
+            materialId: 2,
+            materialCode: "HW_HINGE_02",
+            materialName: "Bản lề giảm chấn & Ke góc thép chịu lực",
+            materialGroup: "HARDWARE",
+            unitOfMeasure: "BO",
+            suggestedOrderQty: 300,
+            orderedQty: 0,
+            remainingQty: 300,
+          },
+          {
+            prItemId: 103,
+            materialId: 3,
+            materialCode: "PAINT_PU_03",
+            materialName: "Sơn lót & Sơn phủ PU 2 thành phần",
+            materialGroup: "FINISH_PAINT",
+            unitOfMeasure: "KG",
+            suggestedOrderQty: 150,
+            orderedQty: 0,
+            remainingQty: 150,
+          },
+          {
+            prItemId: 104,
+            materialId: 4,
+            materialCode: "PACK_CARTON_04",
+            materialName: "Thùng Carton 5 lớp sóng BC đóng gói xuất khẩu",
+            materialGroup: "PACKAGING",
+            unitOfMeasure: "THUNG",
+            suggestedOrderQty: 600,
+            orderedQty: 0,
+            remainingQty: 600,
+          },
+        ],
+      },
+    ];
+  },
+
+  /** UC-52: Phân phối danh sách nguyên liệu cần mua cho các nhà cung cấp đã chọn và tách thành các đơn đặt hàng tương ứng */
+  distributeMaterialsToSuppliers: async (payload: {
+    promisedEtaDate: string;
+    terms?: string;
+    lines: DistributeMaterialLinePayloadDto[];
+  }): Promise<SupplierPurchaseOrderDto[]> => {
+    const realLines = payload.lines.filter((l) => l.prId > 0);
+    if (realLines.length > 0) {
+      const uniqueSupplierIds = Array.from(
+        new Set(realLines.map((l) => l.supplierId)),
+      );
+      const res = await apiClient.post<{
+        success: boolean;
+        data: SupplierPurchaseOrderDto[];
+      }>("/purchase-orders/batch-issue", {
+        lines: realLines.map((l) => ({
+          prId: l.prId,
+          prItemId: l.prItemId,
+          supplierId: l.supplierId,
+          orderedQty: l.orderedQty,
+          unitPrice: l.unitPrice,
+        })),
+        supplierTerms: uniqueSupplierIds.map((supplierId) => ({
+          supplierId,
+          expectedArrivalDate: payload.promisedEtaDate,
+          terms:
+            payload.terms ||
+            "Thanh toán trước 50% giá trị hợp đồng, 50% còn lại thanh toán sau khi giao hàng.",
+        })),
+      });
+
+      if (Array.isArray(res.data?.data)) {
+        return res.data.data;
+      }
+    }
+
+    // Trường hợp tạo từ danh sách mẫu khi mọi PR trong DB đã phát hành hết
+    const suppliers = await purchasingApi.getActiveSuppliers();
+    const grouped = new Map<number, DistributeMaterialLinePayloadDto[]>();
+    for (const line of payload.lines) {
+      const arr = grouped.get(line.supplierId) || [];
+      arr.push(line);
+      grouped.set(line.supplierId, arr);
+    }
+
+    const createdList: SupplierPurchaseOrderDto[] = [];
+    for (const [supplierId, groupLines] of grouped.entries()) {
+      const sup = suppliers.find((s) => s.supplierId === supplierId);
+      const summary = groupLines
+        .map(
+          (g) =>
+            `${g.orderedQty} ${g.unitOfMeasure || ""} ${g.materialName || ""}`.trim(),
+        )
+        .join(" + ");
+      const created = await purchasingApi.createPurchaseOrder({
+        supplierName: sup?.supplierName || `Nhà cung cấp #${supplierId}`,
+        materialCategory: groupLines[0]?.materialGroup || "Vật tư sản xuất",
+        orderItemsSummary: summary,
+        promisedEtaDate: payload.promisedEtaDate,
+        sourcePrCode: "PR-20261121-001",
+      });
+      createdList.push(created);
+    }
+
+    return createdList;
+  },
+
+  /** UC-52: Gửi email Đơn đặt hàng (ĐƠN ĐẶT HÀNG theo mẫu hành chính Việt Nam) tới nhà cung cấp */
+  sendPurchaseOrderEmail: async (
+    poId: number,
+    payload: SendPoEmailRequestDto,
+  ): Promise<{ message: string; data: SendPoEmailResponseDto }> => {
+    const res = await apiClient.post<{
+      success: boolean;
+      message: string;
+      data: SendPoEmailResponseDto;
+    }>(`/purchase-orders/${poId}/send-email`, payload);
+
+    return {
+      message:
+        res.data?.message ||
+        `Đã gửi đơn đặt hàng tới nhà cung cấp (${res.data?.data?.recipientEmail || payload.recipientEmail}) thành công.`,
+      data: res.data?.data,
+    };
   },
 
   /** UC-52: Tạo đơn đặt hàng nhà cung cấp từ PR đã duyệt (POST /api/v1/purchase-orders) */

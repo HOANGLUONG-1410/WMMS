@@ -235,3 +235,53 @@ public class UpdatePoStatusDto
     public string Status { get; set; } = "ISSUED";
     public string? Reason { get; set; }
 }
+
+/// <summary>
+/// SC-16 / UC-52: Gán nhà cung cấp gửi email cho từng dòng nguyên vật liệu trong Đơn đặt hàng.
+/// </summary>
+public class SendPoMaterialSupplierAssignmentDto
+{
+    /// <summary>ID dòng chi tiết vật tư trong đơn đặt hàng (<c>PoDetailId</c>).</summary>
+    public long PoDetailId { get; set; }
+
+    /// <summary>Mã nhà cung cấp được người dùng chọn để gửi dòng vật tư này.</summary>
+    public long SupplierId { get; set; }
+}
+
+/// <summary>
+/// SC-16 / UC-52: Yêu cầu gửi email Đơn đặt hàng nguyên vật liệu cho Nhà cung cấp theo biểu mẫu chuẩn.
+/// Hỗ trợ chọn nhà cung cấp riêng cho từng loại vật liệu (<see cref="MaterialAssignments"/>) hoặc chọn một <see cref="SupplierId"/> chung.
+/// </summary>
+public class SendPurchaseOrderEmailDto
+{
+    /// <summary>Mã nhà cung cấp được chọn thủ công (áp dụng khi gửi toàn bộ đơn cho 1 nhà cung cấp).</summary>
+    public long? SupplierId { get; set; }
+
+    /// <summary>Danh sách phân bổ nhà cung cấp cho từng loại vật liệu trong đơn đặt hàng.</summary>
+    public List<SendPoMaterialSupplierAssignmentDto>? MaterialAssignments { get; set; }
+
+    /// <summary>Địa chỉ email người nhận (nếu bỏ trống sẽ tự động lấy ContactEmail của nhà cung cấp).</summary>
+    public string? RecipientEmail { get; set; }
+
+    /// <summary>Địa điểm giao hàng hiển thị trên mẫu Đơn đặt hàng.</summary>
+    public string? DeliveryAddress { get; set; }
+
+    /// <summary>Ghi chú phương thức thanh toán hiển thị trên mẫu Đơn đặt hàng.</summary>
+    public string? PaymentMethodNote { get; set; }
+}
+
+/// <summary>
+/// SC-16 / UC-52: Kết quả gửi email Đơn đặt hàng nguyên vật liệu cho Nhà cung cấp kèm nội dung HTML mẫu Đơn đặt hàng.
+/// </summary>
+public class SendPurchaseOrderEmailResultDto
+{
+    public long PoId { get; set; }
+    public string PoCode { get; set; } = string.Empty;
+    public long SupplierId { get; set; }
+    public string SupplierName { get; set; } = string.Empty;
+    public string RecipientEmail { get; set; } = string.Empty;
+    public int DispatchedSupplierCount { get; set; } = 1;
+    public bool SentViaSmtp { get; set; }
+    public DateTime SentAt { get; set; }
+    public string PreviewHtml { get; set; } = string.Empty;
+}

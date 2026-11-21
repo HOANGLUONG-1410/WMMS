@@ -149,7 +149,7 @@ export default function SalesOrderListPage() {
               Danh sách đơn hàng
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Theo dõi tiến độ thực hiện PO của khách hàng, ngày giao dự kiến (ETD) và tổng hợp Không gian sản xuất.
+              Theo dõi tiến độ thực hiện đơn hàng của khách hàng, ngày giao dự kiến và tiếp nhận đơn hàng từ tệp Excel.
             </p>
           </div>
 
@@ -159,18 +159,10 @@ export default function SalesOrderListPage() {
               onClick={() => navigate('/orders/staging')}
               className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition self-start sm:self-auto flex items-center gap-2 cursor-pointer"
             >
-              <svg
-                className="w-4 h-4 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Nhập PO Excel (Staging)</span>
-            </button>
-          )}
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Nhập đơn hàng Excel</span>
+          </button>
         </div>
 
         {loadError && (
