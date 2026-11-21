@@ -188,4 +188,26 @@ public class PurchaseOrdersController : MasterDataControllerBase
 
         return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Đã cập nhật trạng thái đơn đặt hàng {result.PoCode} sang '{result.FulfillmentStatus}'."));
     }
+
+    /// <summary>
+    /// SC-16 / UC-52: Gửi email Đơn đặt hàng nguyên vật liệu theo biểu mẫu chuẩn cho Nhà cung cấp
+    /// (hỗ trợ gửi ngay cho Nhà cung cấp ACTIVE mặc định hoặc chọn Nhà cung cấp thủ công).
+    /// </summary>
+    [HttpPost("{id:long}/send-email")]
+    [Authorize(Roles = WriteRoles)]
+    [ProducesResponseType(typeof(ApiResponse<SendPurchaseOrderEmailResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendPurchaseOrderEmailAsync(
+        [FromRoute] long id,
+        [FromBody] SendPurchaseOrderEmailDto? request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _purchaseOrderService.SendPurchaseOrderEmailAsync(
+            id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
+
+        return Ok(ApiResponse<SendPurchaseOrderEmailResultDto>.Ok(
+            result,
+            $"Đã gửi đơn đặt hàng {result.PoCode} tới nhà cung cấp {result.SupplierName} ({result.RecipientEmail}) thành công."));
+    }
 }

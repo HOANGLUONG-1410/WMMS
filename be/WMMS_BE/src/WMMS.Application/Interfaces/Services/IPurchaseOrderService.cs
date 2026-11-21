@@ -62,4 +62,15 @@ public interface IPurchaseOrderService
         long purchasingUserId,
         string? ipAddress,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// SC-16 / UC-52: Gửi email Đơn đặt hàng nguyên vật liệu theo mẫu chuẩn cho Nhà cung cấp
+    /// (hỗ trợ gửi ngay cho Nhà cung cấp ACTIVE mặc định hoặc chọn Nhà cung cấp thủ công).
+    /// </summary>
+    Task<SendPurchaseOrderEmailResultDto> SendPurchaseOrderEmailAsync(
+        long poId,
+        SendPurchaseOrderEmailDto? request,
+        long purchasingUserId,
+        string? ipAddress,
+        CancellationToken cancellationToken = default);
 }

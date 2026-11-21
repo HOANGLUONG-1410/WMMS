@@ -36,19 +36,22 @@ public class PurchaseOrderService : IPurchaseOrderService
     private readonly IBomRepository _bomRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationHubService? _notificationHubService;
+    private readonly IEmailService? _emailService;
 
     public PurchaseOrderService(
         IPurchaseOrderRepository purchaseOrderRepository,
         IPurchaseRequestRepository purchaseRequestRepository,
         IBomRepository bomRepository,
         IUnitOfWork unitOfWork,
-        INotificationHubService? notificationHubService = null)
+        INotificationHubService? notificationHubService = null,
+        IEmailService? emailService = null)
     {
         _purchaseOrderRepository = purchaseOrderRepository;
         _purchaseRequestRepository = purchaseRequestRepository;
         _bomRepository = bomRepository;
         _unitOfWork = unitOfWork;
         _notificationHubService = notificationHubService;
+        _emailService = emailService;
     }
 
     // =========================================================================
@@ -701,6 +704,332 @@ public class PurchaseOrderService : IPurchaseOrderService
         }
 
         return MapToDetail(po, DateTime.UtcNow.Date);
+    }
+
+    // =========================================================================
+    // [SC-16 MỞ RỘNG]: GỬI EMAIL ĐƠN ĐẶT HÀNG NGUYÊN LIỆU CHO NHÀ CUNG CẤP (UC-52)
+    // =========================================================================
+    /// <inheritdoc />
+    public async Task<SendPurchaseOrderEmailResultDto> SendPurchaseOrderEmailAsync(
+        long poId,
+        SendPurchaseOrderEmailDto? request,
+        long purchasingUserId,
+        string? ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        var po = await GetOrThrowAsync(poId, cancellationToken);
+        var activeSuppliers = await _purchaseOrderRepository.GetActiveSuppliersAsync(cancellationToken);
+
+        var deliveryAddress = !string.IsNullOrWhiteSpace(request?.DeliveryAddress)
+            ? request.DeliveryAddress.Trim()
+            : "Kho nguyên vật liệu — Công ty TNHH Nguyên Khoa Hà Nam, KCN Châu Sơn, TP. Phủ Lý, Tỉnh Hà Nam";
+
+        var paymentNote = !string.IsNullOrWhiteSpace(request?.PaymentMethodNote)
+            ? request.PaymentMethodNote.Trim()
+            : (string.IsNullOrWhiteSpace(po.Terms)
+                ? "Thanh toán trước 50% giá trị hợp đồng, 50% còn lại thanh toán sau khi giao hàng."
+                : po.Terms);
+
+        var now = DateTime.UtcNow;
+
+        // Trường hợp người dùng chọn nhà cung cấp riêng cho từng loại vật liệu trong đơn
+        if (request?.MaterialAssignments != null && request.MaterialAssignments.Count > 0)
+        {
+            var detailById = po.Details.ToDictionary(d => d.PoDetailId);
+            var validAssignments = new List<(PurchaseOrderDetail Detail, long SupplierId)>();
+
+            foreach (var item in request.MaterialAssignments)
+            {
+                if (item.SupplierId <= 0)
+                {
+                    throw new AppException(
+                        "Vui lòng chọn nhà cung cấp cho tất cả các loại vật liệu trước khi gửi.",
+                        400,
+                        MessageCodes.Msg13ValidationError);
+                }
+
+                if (!detailById.TryGetValue(item.PoDetailId, out var detail))
+                {
+                    throw new AppException(
+                        $"Không tìm thấy dòng vật tư #{item.PoDetailId} trong đơn đặt hàng {po.PoCode}.",
+                        400,
+                        MessageCodes.Msg13ValidationError);
+                }
+
+                validAssignments.Add((detail, item.SupplierId));
+            }
+
+            if (validAssignments.Count == 0)
+            {
+                throw new AppException(
+                    "Vui lòng chọn nhà cung cấp cho từng loại vật liệu trước khi gửi.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+
+            var requestedSupplierIds = validAssignments.Select(x => x.SupplierId).Distinct().ToList();
+            var suppliersById = await _purchaseOrderRepository.GetSuppliersByIdsAsync(requestedSupplierIds, cancellationToken);
+
+            var anySentViaSmtp = false;
+            var dispatchedSuppliers = new List<string>();
+            var dispatchedEmails = new List<string>();
+            var firstHtmlDoc = string.Empty;
+            long firstSupplierId = 0;
+
+            foreach (var group in validAssignments.GroupBy(x => x.SupplierId))
+            {
+                var supplier = activeSuppliers.FirstOrDefault(s => s.SupplierId == group.Key)
+                    ?? (suppliersById.TryGetValue(group.Key, out var loadedSup) ? loadedSup : null);
+
+                if (supplier == null)
+                {
+                    throw new AppException(
+                        $"Không tìm thấy nhà cung cấp với mã ID = {group.Key}.",
+                        400,
+                        MessageCodes.Msg13ValidationError);
+                }
+
+                var targetEmail = supplier.ContactEmail?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(targetEmail))
+                {
+                    throw new AppException(
+                        $"Nhà cung cấp '{supplier.SupplierName}' chưa có địa chỉ email liên hệ.",
+                        400,
+                        MessageCodes.Msg13ValidationError);
+                }
+
+                var supplierDetails = group.Select(x => x.Detail).OrderBy(d => d.PoDetailId).ToList();
+                var htmlDoc = BuildPurchaseOrderHtmlDocument(po, supplier, supplierDetails, deliveryAddress, paymentNote);
+                if (string.IsNullOrEmpty(firstHtmlDoc))
+                {
+                    firstHtmlDoc = htmlDoc;
+                    firstSupplierId = supplier.SupplierId;
+                }
+
+                if (_emailService != null)
+                {
+                    var sent = await _emailService.SendPurchaseOrderEmailAsync(
+                        targetEmail,
+                        supplier.SupplierName,
+                        po.PoCode,
+                        htmlDoc,
+                        cancellationToken);
+                    anySentViaSmtp = anySentViaSmtp || sent;
+                }
+
+                dispatchedSuppliers.Add(supplier.SupplierName);
+                dispatchedEmails.Add(targetEmail);
+            }
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = purchasingUserId > 0 ? purchasingUserId : null,
+                ActionType = "PURCHASE_ORDER_UPDATED",
+                EntityName = nameof(PurchaseOrder),
+                EntityId = po.PoCode,
+                BeforeState = JsonSerializer.Serialize(new { po.SupplierId, CurrentSupplier = po.Supplier?.SupplierName }),
+                AfterState = JsonSerializer.Serialize(new
+                {
+                    DispatchedSuppliers = dispatchedSuppliers,
+                    DispatchedEmails = dispatchedEmails,
+                    SentViaSmtp = anySentViaSmtp
+                }),
+                Reason = $"Gửi email đơn đặt hàng nguyên vật liệu {po.PoCode} theo từng loại vật liệu tới {dispatchedSuppliers.Count} nhà cung cấp: {string.Join(", ", dispatchedSuppliers)}.",
+                IpAddress = ipAddress,
+                CreatedAt = now
+            });
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return new SendPurchaseOrderEmailResultDto
+            {
+                PoId = po.PoId,
+                PoCode = po.PoCode,
+                SupplierId = firstSupplierId,
+                SupplierName = string.Join(", ", dispatchedSuppliers),
+                RecipientEmail = string.Join(", ", dispatchedEmails),
+                DispatchedSupplierCount = dispatchedSuppliers.Count,
+                SentViaSmtp = anySentViaSmtp,
+                SentAt = now,
+                PreviewHtml = firstHtmlDoc
+            };
+        }
+
+        Supplier? targetSupplier = null;
+        if (request?.SupplierId is > 0)
+        {
+            targetSupplier = activeSuppliers.FirstOrDefault(s => s.SupplierId == request.SupplierId.Value);
+            if (targetSupplier == null)
+            {
+                var map = await _purchaseOrderRepository.GetSuppliersByIdsAsync(new[] { request.SupplierId.Value }, cancellationToken);
+                map.TryGetValue(request.SupplierId.Value, out targetSupplier);
+            }
+        }
+
+        if (targetSupplier == null)
+        {
+            throw new AppException(
+                "Vui lòng chọn nhà cung cấp trước khi gửi đơn đặt hàng.",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
+
+        var recipientEmail = !string.IsNullOrWhiteSpace(request?.RecipientEmail)
+            ? request.RecipientEmail.Trim()
+            : (targetSupplier.ContactEmail?.Trim() ?? string.Empty);
+
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+        {
+            throw new AppException(
+                $"Nhà cung cấp '{targetSupplier.SupplierName}' chưa có địa chỉ email liên hệ. Vui lòng chọn nhà cung cấp khác.",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
+
+        var singleHtmlDoc = BuildPurchaseOrderHtmlDocument(
+            po,
+            targetSupplier,
+            po.Details.OrderBy(d => d.PoDetailId).ToList(),
+            deliveryAddress,
+            paymentNote);
+
+        var sentViaSmtp = false;
+        if (_emailService != null)
+        {
+            sentViaSmtp = await _emailService.SendPurchaseOrderEmailAsync(
+                recipientEmail,
+                targetSupplier.SupplierName,
+                po.PoCode,
+                singleHtmlDoc,
+                cancellationToken);
+        }
+
+        await _bomRepository.AddAuditLogAsync(new AuditLog
+        {
+            UserId = purchasingUserId > 0 ? purchasingUserId : null,
+            ActionType = "PURCHASE_ORDER_UPDATED",
+            EntityName = nameof(PurchaseOrder),
+            EntityId = po.PoCode,
+            BeforeState = JsonSerializer.Serialize(new { po.SupplierId, CurrentSupplier = po.Supplier?.SupplierName }),
+            AfterState = JsonSerializer.Serialize(new
+            {
+                TargetSupplierId = targetSupplier.SupplierId,
+                TargetSupplierName = targetSupplier.SupplierName,
+                RecipientEmail = recipientEmail,
+                SentViaSmtp = sentViaSmtp
+            }),
+            Reason = $"Gửi email đơn đặt hàng nguyên vật liệu {po.PoCode} tới nhà cung cấp {targetSupplier.SupplierName} ({recipientEmail}).",
+            IpAddress = ipAddress,
+            CreatedAt = now
+        });
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new SendPurchaseOrderEmailResultDto
+        {
+            PoId = po.PoId,
+            PoCode = po.PoCode,
+            SupplierId = targetSupplier.SupplierId,
+            SupplierName = targetSupplier.SupplierName,
+            RecipientEmail = recipientEmail,
+            DispatchedSupplierCount = 1,
+            SentViaSmtp = sentViaSmtp,
+            SentAt = now,
+            PreviewHtml = singleHtmlDoc
+        };
+    }
+
+    /// <summary>
+    /// Dựng biểu mẫu HTML "ĐƠN ĐẶT HÀNG" theo chuẩn văn bản hành chính Việt Nam (khớp mẫu Quốc hiệu, Tiêu ngữ, Bảng 6 cột STT - Tên mặt hàng - ĐVT - Số lượng - Đơn giá - Thành tiền, Tổng cộng, Thời gian/Địa điểm giao hàng, Phương thức thanh toán và chữ ký Giám đốc).
+    /// </summary>
+    private static string BuildPurchaseOrderHtmlDocument(
+        PurchaseOrder po,
+        Supplier supplier,
+        IReadOnlyList<PurchaseOrderDetail> details,
+        string deliveryAddress,
+        string paymentNote)
+    {
+        var now = DateTime.Now;
+        var rowsSb = new System.Text.StringBuilder();
+        decimal grandTotal = 0m;
+
+        for (var i = 0; i < details.Count; i++)
+        {
+            var d = details[i];
+            var unitPrice = d.UnitPrice ?? GetDefaultUnitPriceByGroup(d.Material?.MaterialGroup.ToString());
+            var lineTotal = Math.Round(d.OrderedQty * unitPrice, 0);
+            grandTotal += lineTotal;
+
+            var matName = d.Material != null
+                ? $"{System.Net.WebUtility.HtmlEncode(d.Material.MaterialName)} ({System.Net.WebUtility.HtmlEncode(d.Material.MaterialCode)})"
+                : $"Nguyên vật liệu #{d.MaterialId}";
+            var uom = System.Net.WebUtility.HtmlEncode(d.Material?.UnitOfMeasure ?? "Đơn vị");
+
+            rowsSb.Append($"""
+                <tr>
+                    <td style="border:1px solid #333;padding:8px;text-align:center;">{i + 1}</td>
+                    <td style="border:1px solid #333;padding:8px;">{matName}</td>
+                    <td style="border:1px solid #333;padding:8px;text-align:center;">{uom}</td>
+                    <td style="border:1px solid #333;padding:8px;text-align:right;">{d.OrderedQty:0.##}</td>
+                    <td style="border:1px solid #333;padding:8px;text-align:right;">{unitPrice:N0} đ</td>
+                    <td style="border:1px solid #333;padding:8px;text-align:right;font-weight:bold;">{lineTotal:N0} đ</td>
+                </tr>
+                """);
+        }
+
+        var encodedSupplier = System.Net.WebUtility.HtmlEncode(supplier.SupplierName);
+        var encodedPoCode = System.Net.WebUtility.HtmlEncode(po.PoCode);
+        var encodedAddress = System.Net.WebUtility.HtmlEncode(deliveryAddress);
+        var encodedPayment = System.Net.WebUtility.HtmlEncode(paymentNote);
+
+        return $"""
+            <div style="font-family:'Times New Roman',Times,serif;max-width:760px;margin:0 auto;padding:28px 36px;color:#111;background:#fff;line-height:1.55;font-size:15px;border:1px solid #d1d5db;">
+                <div style="text-align:center;margin-bottom:18px;">
+                    <div style="font-weight:bold;font-size:16px;text-transform:uppercase;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                    <div style="font-weight:bold;font-size:15px;text-decoration:underline;margin-top:2px;">Độc lập – Tự do – Hạnh phúc</div>
+                </div>
+
+                <div style="text-align:center;margin:22px 0 18px 0;">
+                    <div style="font-weight:bold;font-size:20px;text-transform:uppercase;">ĐƠN ĐẶT HÀNG</div>
+                    <div style="font-style:italic;font-size:14.5px;margin-top:4px;">Số: <strong>{encodedPoCode}</strong></div>
+                </div>
+
+                <p style="margin:8px 0;"><strong>Kính gửi:</strong> <strong>{encodedSupplier}</strong></p>
+                <p style="margin:8px 0;"><strong>Công ty TNHH Nguyên Khoa Hà Nam</strong> có nhu cầu đặt hàng tại Quý công ty theo mẫu yêu cầu.</p>
+                <p style="margin:8px 0 12px 0;">Nội dung đặt hàng như sau:</p>
+
+                <table style="width:100%;border-collapse:collapse;margin:10px 0 16px 0;font-size:14.5px;">
+                    <thead>
+                        <tr style="background:#f3f4f6;font-weight:bold;text-align:center;">
+                            <th style="border:1px solid #333;padding:8px;width:48px;">STT</th>
+                            <th style="border:1px solid #333;padding:8px;">Tên mặt hàng</th>
+                            <th style="border:1px solid #333;padding:8px;width:72px;">ĐVT</th>
+                            <th style="border:1px solid #333;padding:8px;width:85px;">Số lượng</th>
+                            <th style="border:1px solid #333;padding:8px;width:120px;">Đơn giá</th>
+                            <th style="border:1px solid #333;padding:8px;width:135px;">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rowsSb}
+                    </tbody>
+                </table>
+
+                <p style="margin:12px 0;font-size:15.5px;"><strong>Tổng cộng: {grandTotal:N0} VNĐ</strong></p>
+                <p style="margin:8px 0;"><strong>Thời gian giao hàng:</strong> {po.ExpectedArrivalDate:dd/MM/yyyy}</p>
+                <p style="margin:8px 0;"><strong>Địa điểm giao hàng:</strong> {encodedAddress}</p>
+                <div style="margin:8px 0;">
+                    <strong>Phương thức thanh toán:</strong>
+                    <div style="margin-left:12px;margin-top:4px;">- Thanh toán bằng tiền mặt hoặc chuyển khoản</div>
+                    <div style="margin-left:12px;margin-top:2px;">- {encodedPayment}</div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;margin-top:26px;">
+                    <div style="text-align:center;min-width:250px;">
+                        <div style="font-style:italic;">Hà Nam, ngày {now:dd} tháng {now:MM} năm {now:yyyy}</div>
+                        <div style="font-weight:bold;margin-top:6px;text-transform:uppercase;">GIÁM ĐỐC</div>
+                        <div style="margin-top:48px;font-weight:bold;">Công ty TNHH Nguyên Khoa Hà Nam</div>
+                    </div>
+                </div>
+            </div>
+            """;
     }
 
     // =========================================================================

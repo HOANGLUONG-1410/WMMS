@@ -40,7 +40,7 @@ public interface IPasswordHasher
 }
 
 /// <summary>
-/// Giao diện Dịch vụ gửi Email thông báo (dùng cho UC-04: Gửi mã OTP và liên kết đặt lại mật khẩu).
+/// Giao diện Dịch vụ gửi Email thông báo (dùng cho UC-04: Gửi mã OTP đặt lại mật khẩu và SC-16: Gửi Đơn đặt hàng nguyên liệu cho Nhà cung cấp).
 /// </summary>
 public interface IEmailService
 {
@@ -51,4 +51,15 @@ public interface IEmailService
         string otpCode,
         DateTime expiresAtUtc,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// SC-16 / UC-52: Gửi email Đơn đặt hàng nguyên vật liệu (kèm tệp đính kèm biểu mẫu ĐƠN ĐẶT HÀNG) tới Nhà cung cấp.
+    /// Trả về <c>true</c> nếu đã gửi trực tiếp qua máy chủ SMTP, hoặc <c>false</c> nếu môi trường local ghi nhận bản xem trước.
+    /// </summary>
+    Task<bool> SendPurchaseOrderEmailAsync(
+        string toEmail,
+        string supplierName,
+        string poCode,
+        string htmlDocument,
+        CancellationToken cancellationToken = default) => Task.FromResult(false);
 }

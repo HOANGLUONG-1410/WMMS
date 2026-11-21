@@ -142,7 +142,7 @@ export default function SalesOrderListPage() {
               Danh sách đơn hàng
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Theo dõi tiến độ thực hiện PO của khách hàng, ngày giao dự kiến (ETD) và tiếp nhận PO Excel qua Staging.
+              Theo dõi tiến độ thực hiện đơn hàng của khách hàng, ngày giao dự kiến và tiếp nhận đơn hàng từ tệp Excel.
             </p>
           </div>
 
@@ -160,7 +160,7 @@ export default function SalesOrderListPage() {
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            <span>Nhập PO Excel (Staging)</span>
+            <span>Nhập đơn hàng Excel</span>
           </button>
         </div>
 

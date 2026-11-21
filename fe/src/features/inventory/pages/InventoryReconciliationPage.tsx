@@ -618,7 +618,7 @@ export default function InventoryReconciliationPage() {
               onClick={() => navigate("/purchasing/requisitions")}
               className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition border border-slate-300 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              <span>Yêu cầu mua hàng PR →</span>
+              <span>Yêu cầu mua hàng →</span>
             </button>
           </div>
         </div>

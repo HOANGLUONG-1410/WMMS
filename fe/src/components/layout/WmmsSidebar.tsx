@@ -291,7 +291,7 @@ export default function WmmsSidebar({
             items: [
               { icon: Icons.reports, label: "Báo cáo sản xuất & KCS", path: "/analytics/reports" },
               { icon: Icons.inventory, label: "Tồn kho vật tư 3 cấp", path: "/inventory/stock" },
-              { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
+              { icon: Icons.audit, label: "Yêu cầu mua hàng", path: "/purchasing/requisitions" },
               { icon: Icons.orders, label: "Nhập kho vật tư", path: "/warehouse/receipts" },
               { icon: Icons.space, label: "Xuất kho & bàn giao", path: "/warehouse/issues" },
             ],
@@ -323,8 +323,8 @@ export default function WmmsSidebar({
             heading: "TỒN KHO & MUA HÀNG",
             items: [
               { icon: Icons.inventory, label: "Tồn kho vật tư 3 cấp", path: "/inventory/stock" },
-              { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
-              { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
+              { icon: Icons.purchasing, label: "Đơn đặt hàng", path: "/purchasing/orders" },
+              { icon: Icons.audit, label: "Yêu cầu mua hàng", path: "/purchasing/requisitions" },
             ],
           },
           {
@@ -350,7 +350,7 @@ export default function WmmsSidebar({
                 path: "/orders",
                 children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
               },
-              { icon: Icons.audit, label: "Lưới Staging PO Excel", path: "/orders/staging" },
+              { icon: Icons.audit, label: "Tiếp nhận đơn hàng Excel", path: "/orders/staging" },
             ],
           },
         ];
@@ -367,8 +367,8 @@ export default function WmmsSidebar({
                 children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
               },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
-              { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
-              { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
+              { icon: Icons.purchasing, label: "Đơn đặt hàng", path: "/purchasing/orders" },
+              { icon: Icons.audit, label: "Yêu cầu mua hàng", path: "/purchasing/requisitions" },
             ],
           },
         ];
@@ -378,9 +378,9 @@ export default function WmmsSidebar({
           {
             heading: "NGHIỆP VỤ MUA HÀNG",
             items: [
-              { icon: Icons.purchasing, label: "Đơn đặt hàng (PO)", path: "/purchasing/orders" },
-              { icon: Icons.audit, label: "Yêu cầu mua hàng (PR)", path: "/purchasing/requisitions" },
-              { icon: Icons.catalog, label: "Danh mục NCC & vật tư", path: "/catalog" },
+              { icon: Icons.purchasing, label: "Đơn đặt hàng", path: "/purchasing/orders" },
+              { icon: Icons.audit, label: "Yêu cầu mua hàng", path: "/purchasing/requisitions" },
+              { icon: Icons.catalog, label: "Danh mục nhà cung cấp & vật tư", path: "/catalog" },
             ],
           },
           {
