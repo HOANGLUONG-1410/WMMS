@@ -117,9 +117,10 @@ public class BomRoutingController : ControllerBase
 
     /// <summary>
     /// UC-37 &amp; BR-007 (Report 4 BOM01, Screen 14): Cấu hình quy trình sản xuất động (Dynamic Routing) &amp; trạm dừng kỹ thuật (Hold Points) cho sản phẩm.
+    /// Cho phép Kỹ sư Kế hoạch / Kỹ sư BOM (Planner), Chủ xưởng (Owner) và Quản trị viên (Admin) cấu hình quy trình.
     /// </summary>
     [HttpPut("routing/{productId:long}")]
-    [Authorize(Roles = OwnerAdminRoles)]
+    [Authorize(Roles = BomWriteRoles)]
     public async Task<ActionResult<ApiResponse<RoutingDto>>> ConfigureDynamicRouting(
         long productId,
         [FromBody] RoutingConfigDto request)
