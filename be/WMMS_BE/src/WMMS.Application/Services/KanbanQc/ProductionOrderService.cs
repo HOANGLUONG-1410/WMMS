@@ -1417,9 +1417,9 @@ public class ProductionOrderService : IProductionOrderService
     /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
     /// <returns>DTO kết quả nghiệm thu lại thẻ nhánh phụ.</returns>
     /// <remarks>
-    /// Lưu ý nghiệm thu SC-20b (Điểm đã code nhưng cần lưu ý khi review nghiệp vụ):
-    /// 1. Khi <c>FailQty &gt; 0</c> trong lần tái kiểm (phôi sửa không được phải hủy bỏ), hàm mới giảm <c>subBatch.BatchQty = request.PassQty</c> nhưng chưa tự động ghi thêm dòng <see cref="DefectLog"/> thứ cấp (<c>SCRAP_REPLENISH</c>) cho phần phôi hỏng sau tái kiểm.
-    /// 2. Chưa kiểm tra ràng buộc <c>step.StageSequence == subBatch.CurrentStageSeq</c> khi truyền <c>request.BatchStepId</c>.
+    /// Đã chuẩn hóa SC-20b:
+    /// 1. Bắt buộc <c>step.StageSequence == subBatch.CurrentStageSeq</c> (chặn <c>INVALID_REINSPECT_STAGE</c> nếu truyền nhầm ID công đoạn khác).
+    /// 2. Khi <c>FailQty &gt; 0</c> trong lần tái kiểm, ngoài việc giảm <c>subBatch.BatchQty = request.PassQty</c>, tự động tạo thêm bản ghi <see cref="DefectLog"/> thứ cấp với <c>Disposition = SCRAP_REPLENISH</c>.
     /// </remarks>
     public async Task<ReinspectSubBatchResultDto> ReinspectSubBatchAsync(
         long subBatchId,
@@ -1448,6 +1448,13 @@ public class ProductionOrderService : IProductionOrderService
         if (step == null)
         {
             throw new NotFoundException("Không tìm thấy công đoạn của lô phụ cần nghiệm thu.");
+        }
+
+        if (step.StageSequence != subBatch.CurrentStageSeq)
+        {
+            throw new DomainException(
+                $"Công đoạn nghiệm thu lại (#{step.StageSequence} - {step.StageName}) không khớp với công đoạn hiện tại (#{subBatch.CurrentStageSeq}) của thẻ nhánh phụ {subBatch.BatchCode}.",
+                "INVALID_REINSPECT_STAGE");
         }
 
         if (request.InspectedQty != subBatch.BatchQty)
@@ -1489,13 +1496,22 @@ public class ProductionOrderService : IProductionOrderService
 
             if (request.FailQty > 0)
             {
-                // Nếu vẫn có phôi không đạt sau sửa chữa, giảm số lượng thẻ phụ xuống số lượng Pass thực tế
+                // Nếu vẫn có phôi không đạt sau sửa chữa, giảm số lượng thẻ phụ xuống Pass thực tế và ghi DefectLog thứ cấp (SCRAP_REPLENISH)
                 subBatch.BatchQty = request.PassQty;
                 foreach (var ds in steps.Where(s => s.StageSequence > step.StageSequence))
                 {
                     ds.TargetQty = request.PassQty;
                     await _batchRepository.UpdateStepAsync(ds);
                 }
+
+                var secondaryDefect = await BuildSecondaryScrapDefectLogAsync(
+                    subBatch,
+                    step,
+                    inspection,
+                    request.FailQty,
+                    request.Notes,
+                    cancellationToken);
+                await _unitOfWork.QcInspections.AddDefectLogsRangeAsync(new[] { secondaryDefect }, cancellationToken);
             }
 
             if (subBatch.BatchQty == 0)
@@ -1541,13 +1557,81 @@ public class ProductionOrderService : IProductionOrderService
         }
     }
 
+    private async Task<DefectLog> BuildSecondaryScrapDefectLogAsync(
+        ProductionBatch subBatch,
+        BatchRoutingStep step,
+        QcInspection inspection,
+        int failQty,
+        string? notes,
+        CancellationToken cancellationToken)
+    {
+        string? resolvedDefectCode = null;
+        string? resolvedDefectName = null;
+
+        if (subBatch.ParentBatchId.HasValue)
+        {
+            var parentInspections = await _unitOfWork.QcInspections.GetByBatchIdAsync(subBatch.ParentBatchId.Value, cancellationToken);
+            var originDefect = parentInspections
+                .SelectMany(i => i.DefectLogs)
+                .FirstOrDefault(dl => dl.SpawnedSubBatchId == subBatch.BatchId);
+            if (originDefect != null && !string.IsNullOrWhiteSpace(originDefect.DefectCode))
+            {
+                resolvedDefectCode = originDefect.DefectCode;
+                resolvedDefectName = originDefect.DefectName;
+            }
+        }
+
+        DefectCatalog? createdCatalog = null;
+        if (string.IsNullOrWhiteSpace(resolvedDefectCode))
+        {
+            var catalogs = await _unitOfWork.QcInspections.GetAllDefectCatalogsAsync(cancellationToken);
+            var fallback = catalogs.FirstOrDefault(c => c.DefectCode == "ERR_REWORK_SCRAP")
+                ?? catalogs.FirstOrDefault();
+            if (fallback != null)
+            {
+                resolvedDefectCode = fallback.DefectCode;
+                resolvedDefectName = fallback.DefectName;
+            }
+            else
+            {
+                resolvedDefectCode = "ERR_REWORK_SCRAP";
+                resolvedDefectName = "Phôi hỏng không thể sửa chữa sau tái kiểm KCS";
+                createdCatalog = new DefectCatalog
+                {
+                    DefectCode = resolvedDefectCode,
+                    DefectName = resolvedDefectName,
+                    StandardStage = step.StageName
+                };
+            }
+        }
+
+        var secondaryDefect = new DefectLog
+        {
+            QcInspection = inspection,
+            DefectCode = resolvedDefectCode,
+            DefectName = string.IsNullOrWhiteSpace(notes)
+                ? (resolvedDefectName ?? "Phôi hỏng không thể sửa chữa sau tái kiểm KCS")
+                : $"{resolvedDefectName ?? "Phôi hỏng sau tái kiểm"} ({notes.Trim()})",
+            DefectQty = failQty,
+            Disposition = DefectDispositionEnum.SCRAP_REPLENISH,
+            SpawnedSubBatchId = subBatch.BatchId
+        };
+
+        if (createdCatalog != null)
+        {
+            secondaryDefect.DefectCatalog = createdCatalog;
+        }
+
+        return secondaryDefect;
+    }
+
     /// <summary>
     /// [BE-Iter 3] SC-20b: Tái hòa nhập / Gộp lô (Merge Lot) thẻ nhánh phụ (<c>REWORK_SUB_CARD</c> / <c>REPLENISH_LOT</c>) đã sửa chữa đạt chuẩn vào thẻ chính (<c>MAIN_CARD</c>).
     /// <para>
     /// - Chức năng &amp; Móc nối:
     ///   + Đối chiếu thẻ phụ với thẻ chính qua khóa ngoại tự tham chiếu <c>subBatch.ParentBatchId</c> trên bảng <c>production_batches</c>.
     ///   + Yêu cầu cả 2 thẻ đang ở cùng công đoạn (<c>mainBatch.CurrentStageSeq == subBatch.CurrentStageSeq</c>) và bước hiện tại của thẻ phụ đã đạt chuẩn KCS (<c>StepStatus == PASSED</c>).
-    ///   + Cộng dồn <c>mergeQty</c> của thẻ phụ vào <c>mainBatch.BatchQty</c> và <c>TargetQty</c>/<c>PassedQty</c> của thẻ chính, đồng thời đóng thẻ phụ sang trạng thái <c>DONE</c> và ghi vết <c>SUB_BATCH_MERGED</c> vào <c>audit_logs</c>.
+    ///   + Cộng dồn <c>mergeQty</c> của thẻ phụ vào <c>mainBatch.BatchQty</c> và <c>TargetQty</c> của thẻ chính (chỉ cộng <c>PassedQty</c> nếu bước hiện tại của thẻ chính đã <c>PASSED</c>), đồng thời đóng thẻ phụ sang <c>DONE</c> và ghi vết <c>SUB_BATCH_MERGED</c> vào <c>audit_logs</c>.
     /// </para>
     /// </summary>
     /// <param name="subBatchId">ID thẻ nhánh phụ (<c>BatchId</c>).</param>
@@ -1556,9 +1640,9 @@ public class ProductionOrderService : IProductionOrderService
     /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
     /// <returns>DTO kết quả gộp lô kèm số lượng mới của thẻ chính.</returns>
     /// <remarks>
-    /// Lưu ý nghiệm thu SC-20b (Điểm đã code nhưng cần lưu ý khi review nghiệp vụ):
-    /// 1. Điều kiện <c>mainBatch.CurrentStageSeq == subBatch.CurrentStageSeq</c> kèm <c>subCurrentStep.StepStatus == PASSED</c> yêu cầu thẻ chính phải đang đứng chờ ở đúng công đoạn <c>S</c> (chưa <c>AdvanceStep</c> sang <c>S+1</c>), hoặc nếu thẻ chính đã sang <c>S+1</c> thì thẻ phụ phải <c>ContinueSubBatchIndependentlyAsync</c> lên <c>S+1</c> và QC Pass ở <c>S+1</c> mới gộp được.
-    /// 2. Khi gộp tại công đoạn <c>CurrentStageSeq</c>, dòng <c>step.PassedQty += mergeQty</c> giả định bước hiện tại của thẻ chính cũng đã QC; nếu thẻ chính đang ở <c>S+1</c> (<c>IN_PROGRESS</c>, <c>PassedQty = 0</c>) thì cần lưu ý khi nghiệm thu tổng số lượng đã QC tại <c>S+1</c>.
+    /// Đã chuẩn hóa SC-20b:
+    /// 1. Điều kiện <c>mainBatch.CurrentStageSeq == subBatch.CurrentStageSeq</c> kèm <c>subCurrentStep.StepStatus == PASSED</c>.
+    /// 2. Khi gộp vào thẻ chính đang ở trạng thái <c>IN_PROGRESS</c> (chưa QC tại công đoạn hiện tại), chỉ tăng <c>TargetQty</c> và giữ nguyên <c>PassedQty</c> chờ KCS kiểm định đủ 100%; chỉ cộng <c>step.PassedQty += mergeQty</c> khi bước của thẻ chính đã <c>StepStatus == PASSED</c>.
     /// </remarks>
     public async Task<MergeSubBatchResultDto> MergeSubBatchAsync(
         long subBatchId,
@@ -1631,7 +1715,7 @@ public class ProductionOrderService : IProductionOrderService
             foreach (var step in mainSteps.Where(s => s.StageSequence >= mainBatch.CurrentStageSeq))
             {
                 step.TargetQty += mergeQty;
-                if (step.StageSequence == mainBatch.CurrentStageSeq)
+                if (step.StageSequence == mainBatch.CurrentStageSeq && step.StepStatus == StepStatusEnum.PASSED)
                 {
                     step.PassedQty += mergeQty;
                 }
@@ -1699,7 +1783,7 @@ public class ProductionOrderService : IProductionOrderService
     /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
     /// <returns>DTO kết quả chuyển tiếp độc lập kèm công đoạn kế tiếp.</returns>
     /// <remarks>
-    /// Lưu ý nghiệm thu SC-20b: Khi chuyển thẻ phụ sang <c>nextStep</c>, hàm hiện tại chưa kiểm tra chốt chặn <c>nextStep.IsHoldPoint &amp;&amp; !subBatch.GoodsIssuedUnlocked</c> như <c>AdvanceStepAsync</c> của thẻ chính.
+    /// Đã chuẩn hóa SC-20b: Khi chuyển thẻ phụ sang <c>nextStep</c>, kiểm tra chốt chặn <c>!subBatch.GoodsIssuedUnlocked &amp;&amp; (nextStep.IsHoldPoint || nextStep.StageSequence &gt;= HoldPointStageSeq)</c>; nếu chưa mở khóa vật tư thì khóa sang <c>HOLD_POINT_BLOCKED</c>, ghi AuditLog và ném <see cref="DomainException"/> (<c>HOLD_POINT_BLOCKED</c>).
     /// </remarks>
     public async Task<ContinueSubBatchResultDto> ContinueSubBatchIndependentlyAsync(
         long subBatchId,
@@ -1723,6 +1807,13 @@ public class ProductionOrderService : IProductionOrderService
             throw new DomainException("Thẻ nhánh phụ này đã hoàn tất sản xuất, không thể chuyển tiếp thêm.", "SUB_BATCH_ALREADY_DONE");
         }
 
+        if (subBatch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
+        {
+            throw new DomainException(
+                $"Thẻ nhánh phụ {subBatch.BatchCode} đang bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn #{subBatch.HoldPointStageSeq ?? subBatch.CurrentStageSeq} do chưa xuất kho đủ phụ kiện/vật tư bổ sung.",
+                "HOLD_POINT_BLOCKED");
+        }
+
         var steps = subBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
         var currentStep = steps.FirstOrDefault(s => s.StageSequence == subBatch.CurrentStageSeq);
         if (currentStep == null)
@@ -1736,6 +1827,47 @@ public class ProductionOrderService : IProductionOrderService
         }
 
         var nextStep = steps.FirstOrDefault(s => s.StageSequence > subBatch.CurrentStageSeq);
+        bool isBlockedByHoldPoint = nextStep != null
+            && !subBatch.GoodsIssuedUnlocked
+            && (nextStep.IsHoldPoint || (subBatch.HoldPointStageSeq.HasValue && nextStep.StageSequence >= subBatch.HoldPointStageSeq.Value));
+
+        if (isBlockedByHoldPoint)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                nextStep!.StepStatus = StepStatusEnum.BLOCKED;
+                subBatch.BatchStatus = BatchStatusEnum.HOLD_POINT_BLOCKED;
+                subBatch.HoldPointStageSeq ??= nextStep.StageSequence;
+                subBatch.UpdatedAt = DateTime.UtcNow;
+
+                await _batchRepository.UpdateStepAsync(nextStep);
+                await _batchRepository.UpdateAsync(subBatch);
+                await _bomRepository.AddAuditLogAsync(new AuditLog
+                {
+                    UserId = currentUserId,
+                    ActionType = "HOLD_POINT_BARRIER_LOCKED",
+                    EntityName = "ProductionBatch",
+                    EntityId = subBatch.BatchCode,
+                    BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{currentStep.StageSequence}",
+                    AfterState = $"SubCard_{subBatch.BatchCode}_Stage_{nextStep.StageSequence}_HOLD_POINT_BLOCKED",
+                    Reason = $"Thẻ nhánh phụ {subBatch.BatchCode} tự động bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn #{nextStep.StageSequence} ({nextStep.StageName}) do chưa xuất kho phụ kiện.",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+
+            throw new DomainException(
+                $"Thẻ nhánh phụ {subBatch.BatchCode} không thể chuyển tiếp sang công đoạn #{nextStep.StageSequence} ({nextStep.StageName}) vì đây là trạm dừng kỹ thuật (Hold Point) và kho chưa mở khóa cấp phát vật tư/phụ kiện.",
+                "HOLD_POINT_BLOCKED");
+        }
 
         await _unitOfWork.BeginTransactionAsync();
         try
