@@ -59,8 +59,16 @@ public class OrderIntakeService : IOrderIntakeService
         var sheetName = "OrderDetails";
         ExcelOrderParseResultDto? parsedExcel = null;
 
-        if (excelStream is not null && excelStream.Length > 0)
+        if (excelStream is not null)
         {
+            if (excelStream.Length == 0)
+            {
+                throw new AppException(
+                    "Tệp bảng tính tải lên rỗng (0 bytes). Vui lòng chọn tệp Excel hợp lệ có nội dung.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+
             var ext = Path.GetExtension(fileName).ToLowerInvariant();
             if (ext is not ".xlsx" and not ".xls")
             {
