@@ -7,11 +7,15 @@ using WMMS.Application.Interfaces.External;
 namespace WMMS.Infrastructure.Excel;
 
 /// <summary>
-/// Thực thi bộ xuất báo cáo Excel chuẩn xưởng gỗ (<c>.xlsx</c>) bằng thư viện EPPlus 7 (Iteration 3):
-/// - Mẫu Báo cáo Thống kê Sản xuất, Tổng kết Tiến độ Đơn hàng &amp; Đối chiếu Hao hụt BOM.
-/// - Mẫu Phiếu Kiểm định Chất lượng KCS &amp; Bảng Nhật ký Kiểm định Từng Công đoạn phục vụ lưu trữ nghiệm thu.
-/// - Mẫu Lịch sử Điều độ Phân xưởng, Lộ trình Thẻ Lô Kanban &amp; Nhật ký Phá khóa Hold Point (Overdriver).
-/// - Mẫu Sổ tay Nghiệm thu Tổng hợp Toàn Xưởng (All-in-One Workbook).
+/// [BE-Iter 3] Thực thi bộ xuất báo cáo Excel chuẩn xưởng gỗ (<c>.xlsx</c>) bằng thư viện EPPlus (SC-26 / Báo cáo &amp; Lưu trữ Nghiệm thu):
+/// <para>
+/// - Chức năng (4 chế độ xuất tệp <c>.xlsx</c>):
+///   1. <see cref="ExportProductionStatisticsExcel"/>: 2 Sheets (<c>1_TongKetTienDoDonHang</c>, <c>2_DoiChieuHaoHutBOM</c>) — Thống kê KPI sản xuất, tiến độ từng PO/SKU và đối chiếu hao hụt thực tế so với định mức BOM.
+///   2. <see cref="ExportQualityInspectionSheetExcel"/>: 2 Sheets (<c>1_PhieuKiemDinhCongDoan</c>, <c>2_NhatKyLoi_PhanTichTram</c>) — Phiếu kiểm định KCS từng công đoạn, phân tích lỗi theo Trạm máy, theo Loại gỗ (<c>DefectsByWoodType</c>) và nhật ký lỗi chi tiết.
+///   3. <see cref="ExportWorkshopDispatchHistoryExcel"/>: 2 Sheets (<c>1_LichSuDieuDoKanban</c>, <c>2_NhatKyPhaKhoaHoldPoint</c>) — Lộ trình thẻ lô Kanban (Main/Rework/Replenish) và thống kê tần suất phá khóa Overdriver theo Người duyệt, Trạm dừng &amp; Nhật ký chi tiết.
+///   4. <see cref="ExportComprehensiveWorkshopWorkbookExcel"/>: Sổ tay Nghiệm thu Tổng hợp Toàn Xưởng gồm trọn bộ 6 Sheets trên trong một tệp <c>.xlsx</c> duy nhất.
+/// - Móc nối: Được gọi trực tiếp bởi <c>ProductionDashboardService</c> thông qua interface <see cref="IProductionReportExcelExporter"/> và trả mảng byte <c>.xlsx</c> về <c>ProductionDashboardController</c>.
+/// </para>
 /// </summary>
 public class ProductionReportExcelExporter : IProductionReportExcelExporter
 {

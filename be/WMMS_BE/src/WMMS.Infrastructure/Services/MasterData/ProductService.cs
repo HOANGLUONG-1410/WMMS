@@ -14,7 +14,16 @@ using WMMS.Infrastructure.Persistence;
 
 namespace WMMS.Infrastructure.Services.MasterData;
 
-/// <summary>Dịch vụ danh mục Sản phẩm (SC-05, UC-22..UC-25).</summary>
+/// <summary>
+/// [Dev-Iter 1] Dịch vụ xử lý nghiệp vụ Danh mục Sản phẩm SKU &amp; Upload Bản vẽ Kỹ thuật (SC-05, UC-22..UC-25, BR-MDM-01, GBR-05).
+/// <para>
+/// - Chức năng: Quản lý danh mục sản phẩm đồ gỗ B2B (kích thước, loại gỗ <c>WoodSpecies</c>, màu sơn hoàn thiện, quy cách đóng gói, số khối CBM) và lưu trữ tệp bản vẽ CAD/Spec đặt tên theo GUID chống trùng/path-traversal.
+/// - Móc nối dữ liệu:
+///   + Truy vấn liên kết <c>Products.Include(x =&gt; x.RoutingTemplates).ThenInclude(rt =&gt; rt.RoutingStages)</c> để trả về công đoạn gia công mẫu cho phân hệ Dynamic Routing (SC-18).
+///   + Trường <c>WoodSpecies</c> của <see cref="Product"/> được móc nối sang Báo cáo Phân tích Lỗi Chất lượng theo Loại gỗ &amp; Tần suất Overdriver (Iteration 3 - <c>ProductionDashboardService</c>).
+///   + Móc nối <see cref="MasterDataAudit"/> ghi nhật ký kiểm toán bất biến vào bảng <c>audit_logs</c>.
+/// </para>
+/// </summary>
 public class ProductService : IProductService
 {
     private static readonly string[] AllowedCadExtensions = { ".dwg", ".dxf", ".pdf", ".png", ".jpg", ".jpeg" };

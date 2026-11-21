@@ -15,7 +15,16 @@ using WMMS.Infrastructure.Persistence;
 namespace WMMS.Infrastructure.Services.KanbanQc;
 
 /// <summary>
-/// Thực thi dịch vụ kiểm soát điểm dừng Hold Point và luồng gửi yêu cầu &amp; phê duyệt ghi đè Overdriver (SC-20, KBN02, GBR-05).
+/// [Dev-Iter 2] Thực thi dịch vụ kiểm soát Điểm dừng Kiểm tra Hold Point &amp; Luồng Gửi yêu cầu / Phê duyệt Ghi đè Overdriver (SC-20, KBN01, KBN02, GBR-05).
+/// <para>
+/// - Chức năng cốt lõi:
+///   1. Cưỡng chế quy tắc 100% QC Pass (<see cref="InsufficientQcPassException"/>) trước khi cho phép thẻ lô tiến sang công đoạn kế tiếp (<c>S -&gt; S + 1</c>).
+///   2. Tự động khóa cứng thẻ lô (<c>BatchStatus = HOLD_POINT_BLOCKED</c>, ném <see cref="HoldPointLockedException"/>) ngay khi chạm trạm <c>IsHoldPoint</c> (hoặc <c>HoldPointStageSeq</c>) mà chưa được Thủ kho xác nhận xuất kho cấp phát (<c>GoodsIssuedUnlocked == false</c>).
+///   3. Xử lý quy trình xin ghi đè (<c>RequestOverrideAsync</c>) và Chủ xưởng phê duyệt/từ chối (<c>ApproveOverrideAsync</c> / <c>RejectOverrideAsync</c>): chỉ khi được <c>Approve</c> mới sinh bản ghi <see cref="OverdriveLog"/> trong bảng <c>overdrive_logs</c> và mở khóa thẻ.
+/// - Móc nối dữ liệu:
+///   + Lưu vết kiểm toán bất biến (<c>BeforeState</c> / <c>AfterState</c> JSON) vào bảng <c>audit_logs</c> và phát thông báo realtime qua <see cref="INotificationHubService"/>.
+///   + Bảng <c>overdrive_logs</c> được móc nối sang <c>ProductionDashboardService.GetOverdriveAnalyticsReportAsync</c> và <c>ProductionReportExcelExporter</c> (Iteration 3).
+/// </para>
 /// </summary>
 public class HoldPointService : IHoldPointService
 {

@@ -8,7 +8,16 @@ using WMMS.Domain.Constants;
 namespace WMMS.API.Controllers;
 
 /// <summary>
-/// Controller Quản lý điểm dừng Hold Point và Luồng gửi yêu cầu &amp; Phê duyệt ghi đè Overdriver (SC-20, KBN02, GBR-05).
+/// [Dev-Iter 2] Controller Quản lý Điểm dừng Kiểm tra Hold Point &amp; Luồng Gửi yêu cầu / Phê duyệt Ghi đè Overdriver (SC-20, KBN02, GBR-05).
+/// <para>
+/// - Chức năng:
+///   + <c>GET /api/v1/hold-point/batches/{batchId}/status</c>: Xem trạng thái trạm dừng kỹ thuật, tiến độ công đoạn và lý do bị chặn của Thẻ Lô Sản Xuất.
+///   + <c>POST /api/v1/hold-point/override-requests</c>: Tổ trưởng SX (<c>LEADER</c>/<c>PLANNER</c>) gửi yêu cầu xin ghi đè / chạy trước Overdriver kèm lý do giải trình bắt buộc.
+///   + <c>POST /api/v1/hold-point/override-requests/{batchId}/approve</c> &amp; <c>reject</c>: Chủ xưởng (<c>OWNER</c>) phê duyệt mở khóa hoặc từ chối khóa cứng thẻ tại trạm Hold Point.
+///   + <c>POST /api/v1/hold-point/batches/{batchId}/advance</c>: Chuyển bước công đoạn tuần tự có kiểm soát 100% QC Pass (KBN01) và chặn tự động tại Hold Point (KBN02).
+///   + <c>GET /api/v1/hold-point/overdrive-logs</c>: Tra cứu nhật ký phá khóa ngoại lệ (<c>overdrive_logs</c>).
+/// - Móc nối: Gọi <see cref="IHoldPointService"/> (<c>HoldPointService</c>) -&gt; Tác động bảng <c>production_batches</c>, <c>batch_routing_steps</c>, <c>overdrive_logs</c>, <c>audit_logs</c>; dữ liệu <c>overdrive_logs</c> móc nối trực tiếp sang Báo cáo Thống kê Tần suất Overdriver &amp; Xuất Excel ở Iteration 3.
+/// </para>
 /// </summary>
 [Route("api/v1/hold-point")]
 [Authorize]

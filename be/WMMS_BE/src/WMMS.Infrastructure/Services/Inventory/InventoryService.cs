@@ -10,9 +10,16 @@ using WMMS.Infrastructure.Services.MasterData;
 namespace WMMS.Infrastructure.Services.Inventory;
 
 /// <summary>
-/// Thực thi dịch vụ Quản lý Tồn kho 3 cấp &amp; Sổ kho điện tử (SC-12, SC-13).
-/// Tuân thủ phương trình cân đối: AvailableQty = max(0, PhysicalQty - AllocatedQty).
-/// Khớp 100% với 14 bản ghi số dư kho ban đầu trong WMMS_DB_Test_Iteration1.sql.
+/// [Demo-Iter 1] Thực thi dịch vụ Quản lý Tồn kho 3 cấp &amp; Sổ kho điện tử (SC-12, SC-13, BR-003).
+/// <para>
+/// - Chức năng:
+///   + Cân đối và truy vấn tồn kho 3 cấp theo công thức bắt buộc: <c>AvailableQty = max(0, PhysicalQty - AllocatedQty)</c>.
+///   + Hỗ trợ chuẩn hóa bộ lọc nhóm vật tư cả Tiếng Việt lẫn mã Enum (<c>Gỗ/LUMBER</c>, <c>Sơn/FINISH_PAINT</c>, <c>Phụ kiện/HARDWARE</c>, <c>Đóng gói/PACKAGING</c>).
+///   + Truy vết chi tiết các đơn hàng đang khóa giữ chỗ vật tư (<c>MaterialAllocations</c> -&gt; <c>BomHeader</c> -&gt; <c>OrderItem</c> -&gt; <c>CustomerOrder</c>) và lịch sử biến động nhập/xuất trên Sổ cái kho (<c>InventoryTransactions</c>).
+/// - Móc nối dữ liệu:
+///   + Đọc dữ liệu khởi tạo từ <c>DbInitializer.cs</c> (14 danh mục vật tư &amp; bút toán tồn đầu kỳ <c>WMMS_DB_Test_Iteration1.sql</c>).
+///   + Phản ánh tức thời kết quả giữ chỗ từ Module MRP (SC-14) và kết quả cộng tồn vật lý + Auto-Allocation từ Module Nhập kho PO (SC-17 - <c>GoodsReceiptService</c>).
+/// </para>
 /// </summary>
 public class InventoryService : IInventoryService
 {

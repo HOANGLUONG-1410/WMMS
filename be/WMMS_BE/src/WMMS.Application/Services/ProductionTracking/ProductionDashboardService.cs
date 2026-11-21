@@ -11,9 +11,15 @@ using WMMS.Domain.Exceptions;
 namespace WMMS.Application.Services.ProductionTracking;
 
 /// <summary>
-/// Dịch vụ Dashboard Tổng quan Sản xuất cho Chủ xưởng &amp; Báo cáo Đối chiếu Hao hụt Gỗ Thực tế so với Định mức BOM (Iteration 3).
-/// Cung cấp số liệu thời gian thực về WIP theo từng trạm công đoạn, cảnh báo đơn hàng trễ hạn ETD, tỷ lệ thu hồi thành phẩm (Yield Rate)
-/// và phân tích chênh lệch giữa tỷ lệ hao hụt thực tế tại xưởng so với định mức hao hụt tự nhiên đã duyệt trong BOM (`ScrapRatePercent`).
+/// [BE-Iter 3] Dịch vụ Dashboard Điều hành Sản xuất, Báo cáo Phân tích Lỗi Chất lượng (Defect Analytics by Station / Wood Type),
+/// Thống kê Tần suất Phá khóa Ngoại lệ Overdriver &amp; Điều phối Xuất Báo cáo Excel (SC-26, QT-06, KBN01, KBN02, BR-002).
+/// <para>
+/// - Chức năng &amp; Móc nối dữ liệu liên phân hệ:
+///   + <see cref="GetDefectAnalyticsReportAsync"/>: Truy vấn đồ thị <c>defect_logs -&gt; qc_inspections -&gt; batch_routing_steps -&gt; production_batches -&gt; order_items -&gt; products / boms</c> qua <c>IQcInspectionRepository</c>;
+///     nhóm lỗi theo Trạm gia công (<c>DefectsByStation</c>), Loại gỗ (<c>DefectsByWoodType</c> có cơ chế fallback từ <c>Product.WoodSpecies</c> sang vật tư <c>LUMBER</c> trong BOM) và Danh mục lỗi (<c>DefectsByCode</c>).
+///   + <see cref="GetOverdriveAnalyticsReportAsync"/>: Truy vấn bảng <c>overdrive_logs</c> (được ghi từ <c>HoldPointService.ApproveOverrideAsync</c> / <c>ProductionOrderService.ApproveOverdriveAsync</c> ở SC-20) kết hợp tổng số lô từ <c>IProductionBatchRepository</c> để tính tỷ lệ lô phải phá khóa Overdriver, thống kê theo Người duyệt (<c>ByApprover</c>), Người yêu cầu (<c>ByRequester</c>) và Trạm dừng (<c>ByHoldPointStage</c>).
+///   + Cụm 4 hàm <c>Export*ExcelAsync</c>: Chuẩn hóa bộ lọc (<c>QualityAnalyticsFilterValidator</c>, chuẩn hóa <c>ToDate</c> tới cuối ngày <c>23:59:59.9999999</c>) rồi truyền dữ liệu đã tổng hợp sang <see cref="IProductionReportExcelExporter"/> (<c>ProductionReportExcelExporter</c>) để sinh tệp <c>.xlsx</c>.
+/// </para>
 /// </summary>
 public class ProductionDashboardService : IProductionDashboardService
 {

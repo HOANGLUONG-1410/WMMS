@@ -14,7 +14,16 @@ using WMMS.Infrastructure.Persistence;
 
 namespace WMMS.Infrastructure.Services.MasterData;
 
-/// <summary>Dịch vụ danh mục Đối tác: Nhà cung cấp & Khách hàng (SC-06, UC-26..UC-29).</summary>
+/// <summary>
+/// [Dev-Iter 1] Dịch vụ xử lý nghiệp vụ Danh mục Đối tác: Nhà cung cấp &amp; Khách hàng (SC-06, UC-26..UC-29, BR-MDM-01, GBR-05).
+/// <para>
+/// - Chức năng: Kiểm soát mã đối tác duy nhất (<c>SupplierCode</c>, <c>CustomerCode</c>), thông tin liên hệ, nhóm vật tư cung ứng (<c>SupplyCategory</c>) và thời gian giao hàng tiêu chuẩn (<c>LeadTimeDays</c>).
+/// - Móc nối dữ liệu:
+///   + Bảng <c>suppliers</c> được tham chiếu khóa ngoại bởi <c>purchase_orders</c> (SC-16 lập PO theo NCC &amp; tính ETA theo LeadTimeDays, SC-17 nhập kho GRN).
+///   + Bảng <c>customers</c> được tham chiếu khóa ngoại bởi <c>sales_orders</c> (SC-08/SC-09 tiếp nhận PO khách hàng).
+///   + Ghi vết toàn bộ thay đổi qua <see cref="MasterDataAudit"/> vào bảng <c>audit_logs</c>.
+/// </para>
+/// </summary>
 public class SupplierService : ISupplierService
 {
     private readonly WmmsDbContext _context;

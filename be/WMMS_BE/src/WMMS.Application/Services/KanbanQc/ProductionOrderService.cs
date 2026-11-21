@@ -1224,7 +1224,20 @@ public class ProductionOrderService : IProductionOrderService
         };
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// [BE-Iter 3] SC-20b: Nghiệm thu lại (Re-inspection) cho thẻ nhánh phụ 3% Rework / Scrap Replenish (<c>REWORK_SUB_CARD</c> / <c>REPLENISH_LOT</c>) sau khi sửa chữa phôi gỗ.
+    /// <para>
+    /// - Chức năng &amp; Móc nối:
+    ///   + Kiểm tra quy tắc 100% QC (<c>InspectedQty == subBatch.BatchQty</c> và <c>PassQty + FailQty == InspectedQty</c>).
+    ///   + Tạo bản ghi <see cref="QcInspection"/> mới gắn vào <c>BatchStepId</c> của thẻ phụ, cập nhật <c>step.PassedQty</c>, <c>step.DefectQty</c> và chuyển <c>step.StepStatus = PASSED</c> (nếu <c>PassQty &gt; 0</c>).
+    ///   + Nếu vẫn có phôi hỏng sau sửa chữa (<c>FailQty &gt; 0</c>), hạ <c>subBatch.BatchQty</c> và <c>TargetQty</c> các bước sau xuống <c>PassQty</c>; ghi vết <c>REWORK_REINSPECTED</c> vào <c>audit_logs</c>.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// Lưu ý nghiệm thu SC-20b (Điểm đã code nhưng cần lưu ý khi review nghiệp vụ):
+    /// 1. Khi <c>FailQty &gt; 0</c> trong lần tái kiểm (phôi sửa không được phải hủy bỏ), hàm mới giảm <c>subBatch.BatchQty = request.PassQty</c> nhưng chưa tự động ghi thêm dòng <see cref="DefectLog"/> thứ cấp (<c>SCRAP_REPLENISH</c>) cho phần phôi hỏng sau tái kiểm.
+    /// 2. Chưa kiểm tra ràng buộc <c>step.StageSequence == subBatch.CurrentStageSeq</c> khi truyền <c>request.BatchStepId</c>.
+    /// </remarks>
     public async Task<ReinspectSubBatchResultDto> ReinspectSubBatchAsync(
         long subBatchId,
         ReinspectSubBatchDto request,
@@ -1345,7 +1358,20 @@ public class ProductionOrderService : IProductionOrderService
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// [BE-Iter 3] SC-20b: Tái hòa nhập / Gộp lô (Merge Lot) thẻ nhánh phụ (<c>REWORK_SUB_CARD</c> / <c>REPLENISH_LOT</c>) đã sửa chữa đạt chuẩn vào thẻ chính (<c>MAIN_CARD</c>).
+    /// <para>
+    /// - Chức năng &amp; Móc nối:
+    ///   + Đối chiếu thẻ phụ với thẻ chính qua khóa ngoại tự tham chiếu <c>subBatch.ParentBatchId</c> trên bảng <c>production_batches</c>.
+    ///   + Yêu cầu cả 2 thẻ đang ở cùng công đoạn (<c>mainBatch.CurrentStageSeq == subBatch.CurrentStageSeq</c>) và bước hiện tại của thẻ phụ đã đạt chuẩn KCS (<c>StepStatus == PASSED</c>).
+    ///   + Cộng dồn <c>mergeQty</c> của thẻ phụ vào <c>mainBatch.BatchQty</c> và <c>TargetQty</c>/<c>PassedQty</c> của thẻ chính, đồng thời đóng thẻ phụ sang trạng thái <c>DONE</c> và ghi vết <c>SUB_BATCH_MERGED</c> vào <c>audit_logs</c>.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// Lưu ý nghiệm thu SC-20b (Điểm đã code nhưng cần lưu ý khi review nghiệp vụ):
+    /// 1. Điều kiện <c>mainBatch.CurrentStageSeq == subBatch.CurrentStageSeq</c> kèm <c>subCurrentStep.StepStatus == PASSED</c> yêu cầu thẻ chính phải đang đứng chờ ở đúng công đoạn <c>S</c> (chưa <c>AdvanceStep</c> sang <c>S+1</c>), hoặc nếu thẻ chính đã sang <c>S+1</c> thì thẻ phụ phải <c>ContinueSubBatchIndependentlyAsync</c> lên <c>S+1</c> và QC Pass ở <c>S+1</c> mới gộp được.
+    /// 2. Khi gộp tại công đoạn <c>CurrentStageSeq</c>, dòng <c>step.PassedQty += mergeQty</c> giả định bước hiện tại của thẻ chính cũng đã QC; nếu thẻ chính đang ở <c>S+1</c> (<c>IN_PROGRESS</c>, <c>PassedQty = 0</c>) thì cần lưu ý khi nghiệm thu tổng số lượng đã QC tại <c>S+1</c>.
+    /// </remarks>
     public async Task<MergeSubBatchResultDto> MergeSubBatchAsync(
         long subBatchId,
         MergeSubBatchDto request,
@@ -1471,7 +1497,17 @@ public class ProductionOrderService : IProductionOrderService
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// [BE-Iter 3] SC-20b: Cho phép thẻ nhánh phụ (<c>REWORK_SUB_CARD</c> / <c>REPLENISH_LOT</c>) chuyển tiếp độc lập sang công đoạn kế tiếp (<c>S -&gt; S + 1</c>) khi thẻ chính đã chạy vượt lên trước.
+    /// <para>
+    /// - Chức năng &amp; Móc nối:
+    ///   + Kiểm tra bước hiện tại của thẻ phụ đã được nghiệm thu đạt chuẩn (<c>StepStatus == PASSED</c> từ <see cref="ReinspectSubBatchAsync"/>).
+    ///   + Cập nhật <c>subBatch.CurrentStageSeq = nextStep.StageSequence</c> và mở bước kế tiếp sang <c>IN_PROGRESS</c> (hoặc đóng thẻ phụ sang <c>DONE</c> nếu đã ở công đoạn cuối), giúp thẻ phụ đuổi kịp công đoạn của thẻ chính để gọi <see cref="MergeSubBatchAsync"/>.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// Lưu ý nghiệm thu SC-20b: Khi chuyển thẻ phụ sang <c>nextStep</c>, hàm hiện tại chưa kiểm tra chốt chặn <c>nextStep.IsHoldPoint &amp;&amp; !subBatch.GoodsIssuedUnlocked</c> như <c>AdvanceStepAsync</c> của thẻ chính.
+    /// </remarks>
     public async Task<ContinueSubBatchResultDto> ContinueSubBatchIndependentlyAsync(
         long subBatchId,
         ContinueSubBatchIndependentlyDto request,

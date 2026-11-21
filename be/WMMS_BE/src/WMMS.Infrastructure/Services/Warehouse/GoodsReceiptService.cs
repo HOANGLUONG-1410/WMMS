@@ -14,8 +14,15 @@ using WMMS.Infrastructure.Services.MasterData;
 namespace WMMS.Infrastructure.Services.Warehouse;
 
 /// <summary>
-/// Nhập kho theo đơn mua hàng PO (GRN) & Phân bổ tự động vật tư mới về vào Staging (SC-17, UC-56, UC-57, BR-005, BR-WHS-01).
-/// Toàn bộ nghiệp vụ chạy trong MỘT giao dịch nguyên tử; xung đột RowVersion kho được thử lại tối đa 3 lần (UC057.E1).
+/// [Dev-Iter 2] Dịch vụ Nhập kho theo đơn mua hàng PO (GRN) &amp; Phân bổ tự động vật tư mới về vào Staging kho (SC-17, UC-56, UC-57, BR-005, BR-WHS-01, GBR-05).
+/// <para>
+/// - Chức năng &amp; Luồng xử lý nguyên tử (Atomic Transaction + Optimistic Concurrency Retry 3 lần trên <c>RowVersion</c>):
+///   1. Đối chiếu đơn <see cref="PurchaseOrder"/> (chỉ nhận khi <c>ISSUED</c> hoặc <c>PARTIALLY_RECEIVED</c>) và kiểm tra ngưỡng giao vượt tối đa 110% (<c>OverDeliveryTolerance</c> - UC056.E1).
+///   2. Khởi tạo phiếu <see cref="GoodsReceipt"/> (<c>goods_receipt_notes</c>) trạng thái <c>COMMITTED</c>.
+///   3. Cộng tồn vật lý <c>PhysicalQty</c> trong <c>inventory_stocks</c>, ghi bút toán <c>IN_RECEIPT</c> vào sổ kho <c>inventory_transactions</c> (móc nối SC-12, SC-13) và cập nhật trạng thái PO (<c>PARTIALLY_RECEIVED</c> / <c>FULFILLED</c>).
+///   4. Kích hoạt thuật toán Auto-Allocation: Truy vấn các dòng <see cref="MaterialAllocation"/> đang thiếu vật tư (<c>ShortageQty &gt; 0</c> / BOM <c>WAITING_FOR_MATERIALS</c>), sắp xếp ưu tiên theo hạn giao hàng <c>CustomerOrder.EtdDate ASC</c> (FIFO by ETD), tự động bù vào <c>ReservedQty</c> và tăng <c>AllocatedQty</c>.
+///   5. Nếu toàn bộ vật tư trong BOM của đơn hàng đã đủ 100%, tự động chuyển BOM sang <c>READY_FOR_PRODUCTION</c>, mở khóa điều kiện phát hành Lệnh sản xuất (SC-19), ghi <c>audit_logs</c> và bắn thông báo SignalR qua <see cref="INotificationHubService"/>.
+/// </para>
 /// </summary>
 public class GoodsReceiptService : IGoodsReceiptService
 {
