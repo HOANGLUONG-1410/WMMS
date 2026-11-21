@@ -59,7 +59,7 @@ public class AuthController : ControllerBase
         var result = await _authService.AuthenticateAsync(request, GetClientIpAddress(), cancellationToken);
         SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt, result.RememberMe);
 
-        return Ok(ApiResponse<AuthResponseDto>.Ok(result, "Đăng nhập thành công (UC-01)."));
+        return Ok(ApiResponse<AuthResponseDto>.Ok(result, "Đăng nhập thành công."));
     }
 
     /// <summary>
@@ -79,13 +79,13 @@ public class AuthController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(rawToken))
         {
-            throw AppException.Unauthorized("Không tìm thấy Refresh Token trong nội dung yêu cầu hoặc Cookie phiên.", MessageCodes.Msg12InvalidToken);
+            throw AppException.Unauthorized("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.", MessageCodes.Msg12InvalidToken);
         }
 
         var result = await _authService.RefreshTokenAsync(rawToken, GetClientIpAddress(), cancellationToken);
         SetRefreshTokenCookie(result.RefreshToken, result.RefreshTokenExpiresAt, result.RememberMe);
 
-        return Ok(ApiResponse<AuthResponseDto>.Ok(result, "Làm mới mã truy cập (Access Token) thành công."));
+        return Ok(ApiResponse<AuthResponseDto>.Ok(result, "Đã làm mới phiên đăng nhập thành công."));
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public class AuthController : ControllerBase
 
         DeleteRefreshTokenCookie();
 
-        return Ok(ApiResponse<object?>.Ok(null, "Đăng xuất thành công và đã thu hồi phiên làm việc (UC-02)."));
+        return Ok(ApiResponse<object?>.Ok(null, "Đã đăng xuất khỏi hệ thống thành công."));
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ public class AuthController : ControllerBase
     {
         var userId = GetRequiredCurrentUserId();
         var profile = await _authService.GetCurrentUserProfileAsync(userId, cancellationToken);
-        return Ok(ApiResponse<CurrentUserProfileDto>.Ok(profile, "Lấy thông tin hồ sơ người dùng và danh sách vai trò thành công."));
+        return Ok(ApiResponse<CurrentUserProfileDto>.Ok(profile, "Đã tải thông tin tài khoản và phân quyền vai trò."));
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public class AuthController : ControllerBase
 
         DeleteRefreshTokenCookie();
 
-        return Ok(ApiResponse<object?>.Ok(null, "Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới (UC-03)."));
+        return Ok(ApiResponse<object?>.Ok(null, "Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới."));
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ public class AuthController : ControllerBase
         await _resetPasswordValidator.ValidateAndThrowAsync(request, cancellationToken);
 
         await _authService.ConfirmPasswordResetAsync(request, GetClientIpAddress(), cancellationToken);
-        return Ok(ApiResponse<object?>.Ok(null, "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới ngay bây giờ (UC-05)."));
+        return Ok(ApiResponse<object?>.Ok(null, "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới."));
     }
 
     /// <summary>
@@ -215,7 +215,7 @@ public class AuthController : ControllerBase
         var userId = TryGetCurrentUserId();
         if (!userId.HasValue)
         {
-            throw AppException.Unauthorized("Thông tin định danh người dùng trong token không hợp lệ hoặc bị thiếu.");
+            throw AppException.Unauthorized("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
         }
         return userId.Value;
     }

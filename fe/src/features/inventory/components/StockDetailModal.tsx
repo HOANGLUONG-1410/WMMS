@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useInventoryStockDetail } from "../hooks/useInventory";
 import type { InventoryStockDto } from "../types";
 
@@ -14,6 +15,7 @@ export default function StockDetailModal({
   onClose,
   onOpenFullLedgerForMaterial,
 }: StockDetailModalProps) {
+  const navigate = useNavigate();
   const { data: detail, isLoading } = useInventoryStockDetail(
     isOpen && stockItem ? stockItem.materialId : null,
   );
@@ -187,9 +189,20 @@ export default function StockDetailModal({
                         activeData.allocations.map((alloc) => (
                           <tr key={alloc.allocationId} className="hover:bg-slate-50">
                             <td className="py-3.5 px-4 whitespace-nowrap">
-                              <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-mono text-xs font-bold">
-                                {alloc.spaceKey}
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigate(
+                                    `/orders/spaces/${encodeURIComponent(alloc.spaceKey)}`,
+                                  );
+                                  onClose();
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-mono text-xs font-bold cursor-pointer transition"
+                                title={`Mở Không gian đơn hàng ${alloc.spaceKey}`}
+                              >
+                                <span>{alloc.spaceKey}</span>
+                                <span className="text-[10px]">↗</span>
+                              </button>
                             </td>
                             <td className="py-3.5 px-4 font-mono font-semibold text-slate-800 whitespace-nowrap">
                               {alloc.poNumber}

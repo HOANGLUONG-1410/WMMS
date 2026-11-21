@@ -76,15 +76,16 @@ public class AuthService : IAuthService
         if (user is null)
         {
             throw AppException.Unauthorized(
-                "Tên đăng nhập, email hoặc mật khẩu không chính xác.",
+                "Tên đăng nhập/email hoặc mật khẩu không chính xác.",
                 MessageCodes.Msg02InvalidCredentials);
         }
 
         // Kiểm tra nếu tài khoản bị Admin khóa vĩnh viễn (BANNED) hoặc vô hiệu hóa (INACTIVE) -> MSG04
         if (user.Status == UserStatusEnum.BANNED || user.Status == UserStatusEnum.INACTIVE)
         {
+            var statusLabel = user.Status == UserStatusEnum.BANNED ? "bị khóa vĩnh viễn" : "ngừng kích hoạt";
             throw AppException.Forbidden(
-                $"Tài khoản của bạn hiện đang ở trạng thái {user.Status}. Vui lòng liên hệ Quản trị viên Hệ thống.",
+                $"Tài khoản của bạn hiện đang {statusLabel}. Vui lòng liên hệ Quản trị viên hệ thống.",
                 MessageCodes.Msg04AccountBannedOrInactive);
         }
 
@@ -93,7 +94,7 @@ public class AuthService : IAuthService
         {
             var remainingMinutes = Math.Max(1, (int)Math.Ceiling((user.LockedUntil!.Value - DateTime.UtcNow).TotalMinutes));
             throw AppException.Locked(
-                $"Tài khoản đang tạm khóa do đăng nhập sai 5 lần liên tiếp. Vui lòng thử lại sau {remainingMinutes} phút.",
+                $"Tài khoản tạm thời bị khóa do đăng nhập sai 5 lần liên tiếp. Vui lòng thử lại sau {remainingMinutes} phút.",
                 MessageCodes.Msg03AccountLocked);
         }
 
@@ -118,8 +119,8 @@ public class AuthService : IAuthService
                 beforeState: null,
                 afterState: JsonSerializer.Serialize(new { user.FailedLoginCount, Status = user.Status.ToString(), user.LockedUntil }),
                 reason: isNowLocked
-                    ? "Tài khoản tự động bị khóa 30 phút sau 5 lần đăng nhập sai liên tiếp (BR-SEC-02)."
-                    : $"Đăng nhập thất bại lần thứ #{user.FailedLoginCount}.",
+                    ? "Tài khoản tự động bị khóa tạm thời 30 phút sau 5 lần đăng nhập sai liên tiếp."
+                    : $"Đăng nhập thất bại lần thứ {user.FailedLoginCount}.",
                 ipAddress: ipAddress,
                 cancellationToken: cancellationToken);
 
@@ -128,12 +129,12 @@ public class AuthService : IAuthService
             if (isNowLocked)
             {
                 throw AppException.Locked(
-                    "Tài khoản đã bị tạm khóa trong 30 phút do nhập sai mật khẩu 5 lần liên tiếp.",
+                    "Tài khoản đã bị tạm khóa 30 phút do nhập sai mật khẩu 5 lần liên tiếp.",
                     MessageCodes.Msg03AccountLocked);
             }
 
             throw AppException.Unauthorized(
-                "Tên đăng nhập, email hoặc mật khẩu không chính xác.",
+                "Tên đăng nhập/email hoặc mật khẩu không chính xác.",
                 MessageCodes.Msg02InvalidCredentials);
         }
 
@@ -169,7 +170,7 @@ public class AuthService : IAuthService
             user.UserId.ToString(),
             beforeState: null,
             afterState: JsonSerializer.Serialize(new { user.Username, Roles = roleCodes, request.RememberMe }),
-            reason: "User logged in successfully (UC-01).",
+            reason: "Người dùng đăng nhập hệ thống thành công.",
             ipAddress: ipAddress,
             cancellationToken: cancellationToken);
 
@@ -199,7 +200,7 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(rawRefreshToken))
         {
-            throw AppException.Unauthorized("Thiếu mã làm mới phiên đăng nhập (Refresh Token).", MessageCodes.Msg12InvalidToken);
+            throw AppException.Unauthorized("Vui lòng cung cấp mã làm mới phiên đăng nhập.", MessageCodes.Msg12InvalidToken);
         }
 
         var tokenHash = _jwtTokenGenerator.ComputeSha256Hash(rawRefreshToken);
@@ -212,7 +213,7 @@ public class AuthService : IAuthService
 
         if (existingToken is null || !existingToken.IsActive)
         {
-            throw AppException.Unauthorized("Mã làm mới phiên đăng nhập không hợp lệ, đã hết hạn hoặc đã bị thu hồi.", MessageCodes.Msg12InvalidToken);
+            throw AppException.Unauthorized("Phiên đăng nhập không hợp lệ, đã hết hạn hoặc đã bị thu hồi. Vui lòng đăng nhập lại.", MessageCodes.Msg12InvalidToken);
         }
 
         var user = existingToken.User;
@@ -220,7 +221,7 @@ public class AuthService : IAuthService
         {
             existingToken.Revoke();
             await _context.SaveChangesAsync(cancellationToken);
-            throw AppException.Forbidden("Tài khoản người dùng hiện không còn hoạt động.", MessageCodes.Msg04AccountBannedOrInactive);
+            throw AppException.Forbidden("Tài khoản người dùng hiện không hoạt động.", MessageCodes.Msg04AccountBannedOrInactive);
         }
 
         var roleCodes = user.UserRoles
@@ -307,7 +308,7 @@ public class AuthService : IAuthService
                 resolvedUserId.Value.ToString(),
                 beforeState: null,
                 afterState: null,
-                reason: "Người dùng đã đăng xuất và thu hồi mã phiên hoạt động (UC-02).",
+                reason: "Người dùng đăng xuất và kết thúc phiên làm việc.",
                 ipAddress: ipAddress,
                 cancellationToken: cancellationToken);
         }
@@ -377,7 +378,7 @@ public class AuthService : IAuthService
             user.UserId.ToString(),
             beforeState: null,
             afterState: JsonSerializer.Serialize(new { PasswordChangedAt = DateTime.UtcNow }),
-            reason: "Người dùng đã đổi mật khẩu cá nhân và thu hồi các phiên đăng nhập đang hoạt động (UC-03).",
+            reason: "Người dùng đổi mật khẩu cá nhân và thu hồi các phiên đăng nhập cũ.",
             ipAddress: ipAddress,
             cancellationToken: cancellationToken);
 
@@ -396,7 +397,7 @@ public class AuthService : IAuthService
         string? ipAddress,
         CancellationToken cancellationToken = default)
     {
-        var genericMessage = "Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu và mã OTP 6 chữ số đã được gửi đi (MSG05).";
+        var genericMessage = "Nếu địa chỉ email tồn tại trong hệ thống, mã xác thực OTP 6 chữ số và hướng dẫn đặt lại mật khẩu đã được gửi tới hộp thư của bạn.";
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
         var user = await _context.Users
@@ -420,7 +421,7 @@ public class AuthService : IAuthService
         if (recentRequestsCount >= MaxResetRequestsPerWindow)
         {
             throw AppException.TooManyRequests(
-                "Quá nhiều yêu cầu đặt lại mật khẩu. Tối đa 3 yêu cầu trong vòng 10 phút. Vui lòng thử lại sau.",
+                "Bạn đã gửi quá nhiều yêu cầu khôi phục mật khẩu (tối đa 3 lần trong 10 phút). Vui lòng thử lại sau.",
                 MessageCodes.Msg09RateLimitExceeded);
         }
 
@@ -460,7 +461,7 @@ public class AuthService : IAuthService
             user.UserId.ToString(),
             beforeState: null,
             afterState: JsonSerializer.Serialize(new { ExpiresAt = expiresAt, RequestedByIp = ipAddress }),
-            reason: "Đã tạo mã OTP và liên kết đặt lại mật khẩu (hiệu lực 15 phút, UC-04).",
+            reason: "Hệ thống đã khởi tạo mã OTP và liên kết khôi phục mật khẩu (hiệu lực 15 phút).",
             ipAddress: ipAddress,
             cancellationToken: cancellationToken);
 
@@ -509,7 +510,7 @@ public class AuthService : IAuthService
         if (user is null)
         {
             throw new AppException(
-                "Mã đặt lại mật khẩu / mã OTP không hợp lệ hoặc đã hết hạn.",
+                "Mã xác thực OTP hoặc liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.",
                 400,
                 MessageCodes.Msg06ResetTokenInvalidOrExpired);
         }
@@ -524,7 +525,7 @@ public class AuthService : IAuthService
         if (matchingResetToken is null)
         {
             throw new AppException(
-                "Mã đặt lại mật khẩu / mã OTP không hợp lệ hoặc đã hết hạn (MSG06).",
+                "Mã xác thực OTP hoặc liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.",
                 400,
                 MessageCodes.Msg06ResetTokenInvalidOrExpired);
         }
@@ -550,7 +551,7 @@ public class AuthService : IAuthService
             user.UserId.ToString(),
             beforeState: null,
             afterState: JsonSerializer.Serialize(new { ResetTokenId = matchingResetToken.ResetTokenId, ResetCompletedAt = DateTime.UtcNow }),
-            reason: "Đã đặt lại mật khẩu thành công qua token/OTP và thu hồi toàn bộ phiên đăng nhập trước đó (UC-05).",
+            reason: "Đặt lại mật khẩu thành công qua mã OTP/liên kết khôi phục và thu hồi các phiên cũ.",
             ipAddress: ipAddress,
             cancellationToken: cancellationToken);
 
@@ -584,7 +585,7 @@ public class AuthService : IAuthService
                 user.UserId.ToString(),
                 beforeState: JsonSerializer.Serialize(new { Status = UserStatusEnum.LOCKED.ToString() }),
                 afterState: JsonSerializer.Serialize(new { Status = UserStatusEnum.ACTIVE.ToString(), FailedLoginCount = 0 }),
-                reason: "Hệ thống tự động mở khóa tài khoản sau khi hết thời gian tạm khóa 30 phút (JOB-01).",
+                reason: "Hệ thống tự động mở khóa tài khoản sau khi hết thời gian tạm khóa 30 phút.",
                 ipAddress: "SYSTEM_SCHEDULER",
                 cancellationToken: cancellationToken);
         }

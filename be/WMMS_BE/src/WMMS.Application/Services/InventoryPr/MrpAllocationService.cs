@@ -452,7 +452,7 @@ public class MrpAllocationService : IMrpAllocationService
 
         if (itemsWithBom.Count == 0)
         {
-            throw new AppException("Chưa có định mức nguyên vật liệu (BOM) nào được thiết lập cho đơn hàng này để chạy tính toán MRP & Phân bổ tồn kho tự động (SC-14).");
+            throw new AppException("Chưa có định mức nguyên vật liệu (BOM) nào được thiết lập cho đơn hàng này để chạy tính toán nhu cầu vật tư và phân bổ tồn kho tự động.");
         }
 
         var allMaterialIds = itemsWithBom
@@ -638,8 +638,8 @@ public class MrpAllocationService : IMrpAllocationService
                     ConsolidatedPrCode = consolidatedPrCode,
                     QueuedShortageMaterialsCount = queuedShortageCount
                 }),
-                Reason = $"Thực thi tính toán MRP & Phân bổ tồn kho tự động (SC-14): Trạng thái = {overallReadiness}, Đủ vật tư = {fullyAllocatedItemsCount}/{itemsWithBom.Count} dòng" +
-                         (consolidatedPrCode != null ? $", Đã gom thiếu hụt vào PR tổng hợp {consolidatedPrCode}." : "."),
+                Reason = $"Thực thi tính toán nhu cầu vật tư & phân bổ tồn kho tự động: {(waitingMaterialItemsCount == 0 ? "Đủ 100% vật tư sẵn sàng sản xuất" : "Đang chờ mua bổ sung vật tư")}, đã giữ chỗ đủ cho {fullyAllocatedItemsCount}/{itemsWithBom.Count} dòng sản phẩm" +
+                         (consolidatedPrCode != null ? $", đã gom phần thiếu hụt vào phiếu PR tổng hợp {consolidatedPrCode}." : "."),
                 CreatedAt = now
             });
 

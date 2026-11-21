@@ -242,7 +242,7 @@ public class BomRoutingService : IBomRoutingService
                 EntityId = template.RoutingId.ToString(),
                 BeforeState = null,
                 AfterState = afterStateJson,
-                Reason = $"Đã cấu hình quy trình sản xuất động gồm {domainStages.Count} công đoạn (Hold Points: {domainStages.Count(s => s.IsHoldPoint)}) cho sản phẩm #{product.ProductSku} (UC-37, BR-007).",
+                Reason = $"Cấu hình quy trình sản xuất gồm {domainStages.Count} công đoạn (trong đó có {domainStages.Count(s => s.IsHoldPoint)} trạm dừng kỹ thuật) cho sản phẩm {product.ProductSku}.",
                 CreatedAt = now
             });
 
@@ -327,7 +327,7 @@ public class BomRoutingService : IBomRoutingService
         if (exists)
         {
             throw new ActiveBomConflictException(
-                $"BOM cho mục đơn hàng {request.OrderItemId} đã tồn tại. Quy tắc BR-001: Mỗi mục đơn hàng chỉ được phép có một định mức BOM hoạt động.");
+                $"Định mức BOM cho dòng sản phẩm #{request.OrderItemId} đã tồn tại. Mỗi dòng sản phẩm trong đơn hàng chỉ được phép có một định mức BOM hoạt động.");
         }
 
         // 2. Validate BR-002 (Tỷ lệ hao hụt tự nhiên theo SystemConfig DEFAULT_SCRAP_MIN .. DEFAULT_SCRAP_MAX)
@@ -415,7 +415,7 @@ public class BomRoutingService : IBomRoutingService
                 EntityId = bomHeader.BomId.ToString(),
                 BeforeState = null,
                 AfterState = afterStateJson,
-                Reason = $"Đã tạo định mức BOM ở trạng thái DRAFT cho dòng đơn hàng #{request.OrderItemId} với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}% (SC-10, BR-001, BR-002).",
+                Reason = $"Khởi tạo bản nháp định mức BOM cho dòng sản phẩm #{request.OrderItemId} với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}%.",
                 CreatedAt = now
             });
 
@@ -513,7 +513,7 @@ public class BomRoutingService : IBomRoutingService
                 EntityId = bomHeader.BomId.ToString(),
                 BeforeState = beforeStateJson,
                 AfterState = afterStateJson,
-                Reason = $"Đã cập nhật định mức BOM #{bomId} và tính lại tổng nhu cầu gộp với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}% (SC-10, BR-002).",
+                Reason = $"Cập nhật định mức vật tư cho BOM #{bomId} và tính lại tổng nhu cầu với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}%.",
                 CreatedAt = now
             });
 
@@ -584,8 +584,8 @@ public class BomRoutingService : IBomRoutingService
                     HasMaterialShortage = hasShortage
                 }),
                 Reason = hasShortage
-                    ? $"Đã phê duyệt BOM #{bomId} kèm cảnh báo thiếu hụt vật tư để tổng hợp yêu cầu mua hàng MRP hàng ngày (QT-03, SC-10)."
-                    : $"Đã chốt và phê duyệt BOM #{bomId} sang trạng thái READY_FOR_PRODUCTION với tồn kho khả dụng đáp ứng đủ (QT-02, SC-10).",
+                    ? $"Phê duyệt định mức BOM #{bomId} kèm đánh dấu thiếu hụt vật tư để đưa vào danh sách tổng hợp yêu cầu mua hàng."
+                    : $"Chốt khóa và phê duyệt định mức BOM #{bomId} sẵn sàng sản xuất (đủ tồn kho vật tư khả dụng).",
                 CreatedAt = now
             });
 

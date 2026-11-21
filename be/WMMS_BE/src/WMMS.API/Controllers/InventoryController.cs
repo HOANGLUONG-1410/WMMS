@@ -37,7 +37,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _inventoryService.GetStocksAsync(filter, cancellationToken);
-        return Ok(ApiResponse<PagedResult<InventoryStockDto>>.Ok(result, "Lấy danh sách tồn kho 3 cấp thành công (SC-12)."));
+        return Ok(ApiResponse<PagedResult<InventoryStockDto>>.Ok(result, "Đã tải danh sách tồn kho nguyên vật liệu."));
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var detail = await _inventoryService.GetStockByMaterialIdAsync(materialId, cancellationToken);
-        return Ok(ApiResponse<InventoryStockDetailDto>.Ok(detail, "Lấy chi tiết tồn kho vật tư và danh sách đơn giữ chỗ thành công (SC-12)."));
+        return Ok(ApiResponse<InventoryStockDetailDto>.Ok(detail, "Đã tải chi tiết tồn kho và danh sách đơn hàng đang giữ chỗ."));
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _inventoryService.GetLedgerAsync(filter, cancellationToken);
-        return Ok(ApiResponse<PagedResult<InventoryTransactionDto>>.Ok(result, "Truy vấn sổ kho điện tử thành công (SC-13)."));
+        return Ok(ApiResponse<PagedResult<InventoryTransactionDto>>.Ok(result, "Đã tải lịch sử giao dịch sổ kho."));
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.AnalyzeOrderMrpAsync(orderId, cancellationToken);
-        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Phân tích nhu cầu vật tư MRP cho đơn hàng thành công (SC-14)."));
+        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Đã phân tích nhu cầu nguyên vật liệu cho đơn hàng."));
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public class InventoryController : MasterDataControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mrpAllocationService.AnalyzeOrderSpaceMrpAsync(spaceId, cancellationToken);
-        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Phân tích nhu cầu vật tư MRP cho không gian đơn hàng thành công (SC-14)."));
+        return Ok(ApiResponse<MrpAnalysisResultDto>.Ok(result, "Đã phân tích nhu cầu nguyên vật liệu cho không gian đơn hàng."));
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public class InventoryController : MasterDataControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _mrpAllocationService.ExecuteAutoAllocationForOrderAsync(orderId, request, userId, cancellationToken);
-        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Thực thi phân bổ tồn kho MRP tự động cho đơn hàng thành công (SC-14)."));
+        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Đã thực hiện phân bổ tồn kho tự động cho đơn hàng."));
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public class InventoryController : MasterDataControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _mrpAllocationService.ExecuteAutoAllocationForOrderSpaceAsync(spaceId, request, userId, cancellationToken);
-        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Thực thi phân bổ tồn kho MRP tự động cho không gian đơn hàng thành công (SC-14)."));
+        return Ok(ApiResponse<AutoAllocationResultDto>.Ok(result, "Đã thực hiện phân bổ tồn kho tự động cho không gian đơn hàng."));
     }
 
     /// <summary>
@@ -140,6 +140,6 @@ public class InventoryController : MasterDataControllerBase
             request ?? new ReallocateByEtdRequestDto(),
             userId,
             cancellationToken);
-        return Ok(ApiResponse<ReallocateByEtdResultDto>.Ok(result, "Thực thi tái phân bổ tồn kho ưu tiên theo ngày giao hàng ETD sớm nhất thành công (SC-14)."));
+        return Ok(ApiResponse<ReallocateByEtdResultDto>.Ok(result, "Đã tái phân bổ tồn kho khả dụng theo thứ tự ưu tiên ngày giao hàng (ETD)."));
     }
 }

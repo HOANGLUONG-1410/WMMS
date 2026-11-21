@@ -34,14 +34,14 @@ public class ProductsController : MasterDataControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<ProductDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetProductsAsync([FromQuery] ProductQueryFilterDto filter, CancellationToken ct)
-        => Ok(ApiResponse<PagedResult<ProductDto>>.Ok(await _service.GetProductsAsync(filter, ct), "Lấy danh sách sản phẩm thành công (UC-22)."));
+        => Ok(ApiResponse<PagedResult<ProductDto>>.Ok(await _service.GetProductsAsync(filter, ct), "Đã tải danh sách sản phẩm."));
 
     /// <summary>UC-23: Chi tiết sản phẩm kèm công đoạn định tuyến mặc định.</summary>
     [HttpGet("{id:long}")]
     [ProducesResponseType(typeof(ApiResponse<ProductDetailDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProductByIdAsync([FromRoute] long id, CancellationToken ct)
-        => Ok(ApiResponse<ProductDetailDto>.Ok(await _service.GetProductByIdAsync(id, ct), "Lấy chi tiết sản phẩm thành công (UC-23)."));
+        => Ok(ApiResponse<ProductDetailDto>.Ok(await _service.GetProductByIdAsync(id, ct), "Đã tải thông tin chi tiết sản phẩm."));
 
     /// <summary>UC-24: Tạo sản phẩm (SKU duy nhất, 409 MSG08 nếu trùng).</summary>
     [HttpPost]
@@ -52,7 +52,7 @@ public class ProductsController : MasterDataControllerBase
     {
         await _createValidator.ValidateAndThrowAsync(dto, ct);
         var created = await _service.CreateProductAsync(dto, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return StatusCode(StatusCodes.Status201Created, ApiResponse<ProductDto>.Ok(created, "Tạo mới sản phẩm thành công (UC-24)."));
+        return StatusCode(StatusCodes.Status201Created, ApiResponse<ProductDto>.Ok(created, "Đã thêm sản phẩm mới thành công."));
     }
 
     /// <summary>UC-24: Cập nhật sản phẩm (SKU bất biến).</summary>
@@ -64,7 +64,7 @@ public class ProductsController : MasterDataControllerBase
     {
         await _updateValidator.ValidateAndThrowAsync(dto, ct);
         var updated = await _service.UpdateProductAsync(id, dto, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return Ok(ApiResponse<ProductDto>.Ok(updated, "Cập nhật thông tin sản phẩm thành công (UC-24)."));
+        return Ok(ApiResponse<ProductDto>.Ok(updated, "Đã cập nhật thông tin sản phẩm thành công."));
     }
 
     /// <summary>UC-25: Tải bản vẽ CAD/ảnh (.dwg, .dxf, .pdf, .png, .jpg; tối đa 20MB).</summary>
@@ -78,11 +78,11 @@ public class ProductsController : MasterDataControllerBase
     {
         if (file == null || file.Length == 0)
         {
-            throw new AppException("Vui lòng chọn file bản vẽ (MSG01).");
+            throw new AppException("Vui lòng chọn tệp bản vẽ kỹ thuật cần tải lên.");
         }
 
         await using var stream = file.OpenReadStream();
         var updated = await _service.UploadCadDrawingAsync(id, file.FileName, stream, file.Length, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return Ok(ApiResponse<ProductDto>.Ok(updated, "Tải lên bản vẽ kỹ thuật CAD thành công (UC-25)."));
+        return Ok(ApiResponse<ProductDto>.Ok(updated, "Đã tải lên bản vẽ kỹ thuật cho sản phẩm thành công."));
     }
 }

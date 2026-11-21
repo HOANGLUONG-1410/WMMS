@@ -80,8 +80,7 @@ public class GlobalExceptionMiddleware
             case ValidationException valEx:
                 statusCode = HttpStatusCode.BadRequest;
                 var errors = valEx.Errors.Select(e => e.ErrorMessage).ToList();
-                var primaryValidationMessage = errors.FirstOrDefault() ?? "Dữ liệu đầu vào không hợp lệ.";
-                response = ApiResponse<object>.Fail(primaryValidationMessage, errors);
+                response = ApiResponse<object>.Fail("Dữ liệu nhập vào chưa hợp lệ. Vui lòng kiểm tra lại các trường thông tin.", errors);
                 break;
 
             case DomainException domainEx:
@@ -91,7 +90,7 @@ public class GlobalExceptionMiddleware
 
             default:
                 statusCode = HttpStatusCode.InternalServerError;
-                response = ApiResponse<object>.Fail("Đã xảy ra lỗi hệ thống không mong muốn. Vui lòng thử lại sau.");
+                response = ApiResponse<object>.Fail("Đã xảy ra lỗi hệ thống ngoài dự kiến. Vui lòng thử lại sau.");
                 break;
         }
 

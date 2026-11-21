@@ -59,7 +59,7 @@ public class RoleService : IRoleService
 
         if (role is null)
         {
-            throw AppException.NotFound($"Không tìm thấy vai trò với ID {roleId}.");
+            throw AppException.NotFound($"Không tìm thấy vai trò với mã ID = {roleId}.");
         }
 
         // Kiểm tra chuỗi JSON phân quyền có đúng cú pháp JSON Object hay không
@@ -69,12 +69,12 @@ public class RoleService : IRoleService
             parsedJson = JsonDocument.Parse(dto.PermissionsJson);
             if (parsedJson.RootElement.ValueKind != JsonValueKind.Object)
             {
-                throw new AppException("Chuỗi PermissionsJson phải là một đối tượng JSON hợp lệ.", 400, MessageCodes.Msg13ValidationError);
+                throw new AppException("Dữ liệu cấu hình phân quyền phải là một đối tượng JSON hợp lệ.", 400, MessageCodes.Msg13ValidationError);
             }
         }
         catch (JsonException)
         {
-            throw new AppException("Chuỗi PermissionsJson không đúng định dạng JSON.", 400, MessageCodes.Msg13ValidationError);
+            throw new AppException("Dữ liệu cấu hình phân quyền không đúng định dạng JSON.", 400, MessageCodes.Msg13ValidationError);
         }
 
         // BR-ADM-03: Bảo vệ quyền cốt lõi của vai trò ADMIN (không cho phép đặt "all": false hoặc xóa quyền quản trị)
@@ -83,7 +83,7 @@ public class RoleService : IRoleService
             if (parsedJson.RootElement.TryGetProperty("all", out var allProp) && allProp.ValueKind == JsonValueKind.False)
             {
                 throw AppException.Forbidden(
-                    "Không thể thu hồi quyền quản trị cốt lõi của vai trò ADMIN (BR-ADM-03).",
+                    "Không được phép thu hồi các quyền quản trị cốt lõi của vai trò Quản trị viên (ADMIN).",
                     MessageCodes.Msg11ForbiddenRule);
             }
         }
@@ -124,7 +124,7 @@ public class RoleService : IRoleService
             EntityId = role.RoleId.ToString(),
             BeforeState = beforeSnapshot,
             AfterState = afterSnapshot,
-            Reason = string.IsNullOrWhiteSpace(dto.Reason) ? $"Đã cập nhật ma trận phân quyền cho vai trò {role.RoleCode} (UC-12)." : dto.Reason.Trim(),
+            Reason = string.IsNullOrWhiteSpace(dto.Reason) ? $"Cập nhật ma trận phân quyền cho vai trò {role.RoleCode}." : dto.Reason.Trim(),
             IpAddress = ipAddress,
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);
@@ -167,7 +167,7 @@ public class AuditLogService : IAuditLogService
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
+        var rawItems = await query
             .OrderByDescending(al => al.CreatedAt)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -191,9 +191,16 @@ public class AuditLogService : IAuditLogService
             })
             .ToListAsync(cancellationToken);
 
+        foreach (var item in rawItems)
+        {
+            item.BeforeState = FormatAuditStateForDisplay(item.BeforeState);
+            item.AfterState = FormatAuditStateForDisplay(item.AfterState);
+            item.Reason = FormatAuditReasonForDisplay(item.Reason);
+        }
+
         return new PagedResult<AuditLogDto>
         {
-            Items = items,
+            Items = rawItems,
             PageNumber = pageNumber,
             PageSize = pageSize,
             TotalCount = totalCount
@@ -212,7 +219,7 @@ public class AuditLogService : IAuditLogService
 
         if (log is null)
         {
-            throw AppException.NotFound($"Không tìm thấy bản ghi nhật ký kiểm toán #{logId}.");
+            throw AppException.NotFound($"Không tìm thấy bản ghi nhật ký hoạt động #{logId}.");
         }
 
         return new AuditLogDto
@@ -225,9 +232,9 @@ public class AuditLogService : IAuditLogService
             ActionType = log.ActionType,
             EntityName = log.EntityName,
             EntityId = log.EntityId,
-            BeforeState = log.BeforeState,
-            AfterState = log.AfterState,
-            Reason = log.Reason,
+            BeforeState = FormatAuditStateForDisplay(log.BeforeState),
+            AfterState = FormatAuditStateForDisplay(log.AfterState),
+            Reason = FormatAuditReasonForDisplay(log.Reason),
             IpAddress = log.IpAddress,
             CreatedAt = log.CreatedAt
         };
@@ -260,6 +267,13 @@ public class AuditLogService : IAuditLogService
                 CreatedAt = al.CreatedAt
             })
             .ToListAsync(cancellationToken);
+
+        foreach (var l in logs)
+        {
+            l.BeforeState = FormatAuditStateForDisplay(l.BeforeState);
+            l.AfterState = FormatAuditStateForDisplay(l.AfterState);
+            l.Reason = FormatAuditReasonForDisplay(l.Reason);
+        }
 
         var sb = new StringBuilder();
         sb.AppendLine("LogId,TimestampUtc,ActorFullName,Username,Role,ActionType,TargetEntity,EntityId,BeforeState,AfterState,MandatoryJustification,IpAddress");
@@ -316,14 +330,14 @@ public class AuditLogService : IAuditLogService
     {
         if (string.IsNullOrWhiteSpace(configKey) || string.IsNullOrWhiteSpace(dto.ConfigValue))
         {
-            throw new AppException("Khóa cấu hình (ConfigKey) và giá trị (ConfigValue) là bắt buộc (UC-15).", 400, MessageCodes.Msg01RequiredField);
+            throw new AppException("Vui lòng nhập đầy đủ mã cấu hình và giá trị cấu hình.", 400, MessageCodes.Msg01RequiredField);
         }
 
         var normalizedKey = configKey.Trim().ToUpperInvariant();
         var config = await _context.SystemConfigs.FirstOrDefaultAsync(c => c.ConfigKey == normalizedKey, cancellationToken);
         if (config is null)
         {
-            throw AppException.NotFound($"Không tìm thấy khóa cấu hình hệ thống '{normalizedKey}'.");
+            throw AppException.NotFound($"Không tìm thấy tham số cấu hình hệ thống '{normalizedKey}'.");
         }
 
         // Kiểm tra ngưỡng hợp lệ cho tỷ lệ hao hụt gỗ (1% - 30%) theo UC-15.E1 & BR-002
@@ -332,7 +346,7 @@ public class AuditLogService : IAuditLogService
             if (!decimal.TryParse(dto.ConfigValue.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var scrapVal)
                 || scrapVal < 1m || scrapVal > 30m)
             {
-                throw new AppException("Giới hạn tỷ lệ hao hụt gỗ phải nằm trong khoảng từ 1% đến 30% (UC-15.E1).", 400, MessageCodes.Msg13ValidationError);
+                throw new AppException("Ngưỡng tỷ lệ hao hụt gỗ cấu hình phải nằm trong khoảng từ 1% đến 30%.", 400, MessageCodes.Msg13ValidationError);
             }
         }
         else if (normalizedKey == SystemConfigKeys.EtdWarningDays)
@@ -340,7 +354,7 @@ public class AuditLogService : IAuditLogService
             if (!int.TryParse(dto.ConfigValue.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var days)
                 || days < 1 || days > 90)
             {
-                throw new AppException("Số ngày cảnh báo hạn giao hàng (ETD) phải là số nguyên dương từ 1 đến 90 (UC-15).", 400, MessageCodes.Msg13ValidationError);
+                throw new AppException("Số ngày cảnh báo hạn giao hàng (ETD) phải là số nguyên dương từ 1 đến 90 ngày.", 400, MessageCodes.Msg13ValidationError);
             }
         }
 
@@ -364,7 +378,7 @@ public class AuditLogService : IAuditLogService
             BeforeState = beforeSnapshot,
             AfterState = afterSnapshot,
             Reason = string.IsNullOrWhiteSpace(dto.Reason)
-                ? $"Đã cập nhật cấu hình hệ thống {config.ConfigKey} thành {config.ConfigValue} (UC-15)."
+                ? $"Cập nhật tham số cấu hình hệ thống {config.ConfigKey} thành {config.ConfigValue}."
                 : dto.Reason.Trim(),
             IpAddress = ipAddress,
             CreatedAt = DateTime.UtcNow
@@ -440,4 +454,193 @@ public class AuditLogService : IAuditLogService
         }
         return $"\"{input.Replace("\"", "\"\"")}\"";
     }
+
+    /// <summary>
+    /// Chuyển đổi chuỗi JSON thô của <c>BeforeState</c> / <c>AfterState</c> thành chuỗi tiếng Việt tự nhiên, dễ đọc trên bảng Nhật ký hoạt động FE.
+    /// </summary>
+    internal static string? FormatAuditStateForDisplay(string? rawState)
+    {
+        if (string.IsNullOrWhiteSpace(rawState))
+        {
+            return null;
+        }
+
+        var trimmed = rawState.Trim();
+
+        // Trường hợp dạng "NEWLY_RECEIVED ({...})"
+        if (trimmed.StartsWith("NEWLY_RECEIVED", StringComparison.OrdinalIgnoreCase) && trimmed.Contains('{'))
+        {
+            var jsonIdx = trimmed.IndexOf('{');
+            var innerJson = trimmed[jsonIdx..].TrimEnd(')');
+            return "Mới tiếp nhận: " + (FormatAuditStateForDisplay(innerJson) ?? innerJson);
+        }
+
+        if (trimmed.Equals("STAGING_RAW", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Dữ liệu xem trước";
+        }
+
+        if (!trimmed.StartsWith('{') || !trimmed.EndsWith('}'))
+        {
+            return TranslateAuditValue(trimmed);
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(trimmed);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return trimmed;
+            }
+
+            var parts = new List<string>();
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                var label = TranslateAuditKey(prop.Name);
+                var valStr = FormatJsonElementValue(prop.Value);
+                if (!string.IsNullOrWhiteSpace(valStr))
+                {
+                    parts.Add($"{label}: {valStr}");
+                }
+            }
+
+            return parts.Count > 0 ? string.Join(" | ", parts) : trimmed;
+        }
+        catch
+        {
+            return trimmed;
+        }
+    }
+
+    /// <summary>
+    /// Chuẩn hóa các lý do nhật ký hoạt động cũ bằng tiếng Anh hoặc dính mã tài liệu nội bộ sang tiếng Việt tự nhiên.
+    /// </summary>
+    internal static string? FormatAuditReasonForDisplay(string? rawReason)
+    {
+        if (string.IsNullOrWhiteSpace(rawReason))
+        {
+            return rawReason;
+        }
+
+        var r = rawReason.Trim();
+        if (r.Equals("User logged in successfully (UC-01).", StringComparison.OrdinalIgnoreCase) ||
+            r.Equals("User logged in successfully.", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Người dùng đăng nhập hệ thống thành công.";
+        }
+
+        if (r.Equals("User logged out and revoked active session token (UC-02).", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Người dùng đăng xuất và kết thúc phiên làm việc.";
+        }
+
+        if (r.Equals("User changed personal password and revoked active sessions (UC-03).", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Người dùng đổi mật khẩu cá nhân và thu hồi các phiên đăng nhập cũ.";
+        }
+
+        if (r.Equals("Admin created new staff account with multi-role assignment (UC-08).", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Quản trị viên tạo mới tài khoản nhân sự và phân quyền vai trò.";
+        }
+
+        if (r.Equals("Updated user profile and role assignments (UC-09).", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Cập nhật thông tin hồ sơ và phân quyền vai trò của tài khoản.";
+        }
+
+        if (r.Equals("Updated multi-role assignments (UC-09, GBR-04).", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Cập nhật phân quyền đa vai trò cho nhân sự.";
+        }
+
+        // Loại bỏ các mã nội bộ như (UC-01), (SC-14), (BR-002), (GBR-05), (KBN01) ở cuối câu
+        r = System.Text.RegularExpressions.Regex.Replace(
+            r,
+            @"\s*\((?:UC|SC|BR|GBR|MSG|QT|KBN|JOB)[A-Za-z0-9\-,\s\.]*\)\.?",
+            "").Trim();
+
+        if (!r.EndsWith('.') && !r.EndsWith('!'))
+        {
+            r += ".";
+        }
+
+        return r;
+    }
+
+    private static string TranslateAuditKey(string key) =>
+        key switch
+        {
+            "Username" => "Tài khoản",
+            "FullName" => "Họ tên",
+            "Email" => "Email",
+            "Phone" => "SĐT",
+            "Roles" => "Vai trò",
+            "RememberMe" => "Ghi nhớ đăng nhập",
+            "Status" or "OrderStatus" or "BatchStatus" or "PrStatus" or "PoStatus" or "BomStatus" or "OrderItemStatus" => "Trạng thái",
+            "FailedLoginCount" => "Số lần nhập sai",
+            "LockedUntil" => "Khóa đến",
+            "RevokedSessionsCount" => "Số phiên thu hồi",
+            "ConfigKey" => "Mã cấu hình",
+            "ConfigValue" => "Giá trị",
+            "Description" => "Mô tả",
+            "PoCode" or "PoNumber" => "Mã đơn hàng",
+            "PrCode" => "Mã PR",
+            "SpaceKey" => "Mã không gian đơn",
+            "Customer" => "Khách hàng",
+            "Supplier" => "Nhà cung cấp",
+            "ExpectedArrivalDate" => "Ngày hẹn giao (ETA)",
+            "EtdDate" => "Hạn xuất hàng (ETD)",
+            "TotalAmount" => "Tổng tiền",
+            "LinesCount" or "LineItemsCount" or "ItemsCount" => "Số dòng",
+            "TotalUnits" or "OrderedQty" => "Tổng SL đặt",
+            "CompletedQty" or "TotalCompletedQty" => "SL hoàn thành",
+            "BatchQty" or "CurrentQty" => "SL lô",
+            "WarehouseLocation" => "Vị trí kho",
+            "HandoverNote" => "Ghi chú bàn giao",
+            "RejectionReason" => "Lý do từ chối",
+            "Terms" => "Điều khoản",
+            "Notes" or "Reason" => "Ghi chú",
+            _ => key
+        };
+
+    private static string FormatJsonElementValue(JsonElement el) =>
+        el.ValueKind switch
+        {
+            JsonValueKind.String => TranslateAuditValue(el.GetString() ?? string.Empty),
+            JsonValueKind.True => "Có",
+            JsonValueKind.False => "Không",
+            JsonValueKind.Number => el.GetRawText(),
+            JsonValueKind.Array => string.Join(", ", el.EnumerateArray().Select(FormatJsonElementValue)),
+            JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+            _ => el.GetRawText()
+        };
+
+    private static string TranslateAuditValue(string val) =>
+        val.Trim() switch
+        {
+            "ACTIVE" => "Đang hoạt động",
+            "INACTIVE" => "Ngừng kích hoạt",
+            "BANNED" => "Khóa vĩnh viễn",
+            "LOCKED" => "Đang khóa",
+            "PENDING_APPROVAL" => "Chờ phê duyệt",
+            "APPROVED" => "Đã phê duyệt",
+            "REJECTED" => "Đã từ chối",
+            "PO_ISSUED" => "Đã phát hành PO",
+            "ISSUED" => "Đã phát hành",
+            "PARTIALLY_RECEIVED" => "Đã nhận một phần",
+            "FULFILLED" => "Đã nhận đủ hàng",
+            "CANCELLED" => "Đã hủy",
+            "CONFIRMED" => "Đã xác nhận",
+            "IN_PLANNING" => "Đang lập kế hoạch",
+            "IN_PRODUCTION" or "IN_PROD" or "IN_PROGRESS" => "Đang sản xuất",
+            "COMPLETED" or "DONE" => "Đã hoàn thành",
+            "DRAFT" or "BOM_DRAFT" => "Bản nháp",
+            "PENDING_BOM" => "Chờ lập BOM",
+            "WAITING_MAT" or "WAITING_FOR_MATERIALS" => "Chờ vật tư",
+            "READY_PROD" or "READY_FOR_PRODUCTION" => "Sẵn sàng sản xuất",
+            "HOLD_POINT_BLOCKED" or "BLOCKED" => "Đang tạm dừng tại chốt kiểm soát",
+            "PASSED" => "Đạt kiểm định",
+            _ => val
+        };
 }

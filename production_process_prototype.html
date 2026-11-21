@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-[#F8FAFC]">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WMMS - Quản lý Quy trình &amp; Tiến độ Sản xuất Sản phẩm</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          boxShadow: {
+            'xs': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+            '2xs': '0 1px 1px 0 rgb(0 0 0 / 0.03)',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1E293B;
+    }
+    .table-scroll::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    @keyframes pulseRing {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35); }
+      50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+    }
+    .step-active-ring {
+      animation: pulseRing 2.2s infinite;
+    }
+  </style>
+</head>
+<body class="h-full antialiased bg-[#F8FAFC] text-[#1E293B]">
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-[60] flex flex-col gap-2 max-w-md pointer-events-none"></div>
+
+  <!-- Main Application Shell -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- Left Sidebar (Chuẩn WMMS #F1F5F9) -->
+    <aside class="w-64 lg:w-72 bg-[#F1F5F9] text-slate-700 flex flex-col justify-between shrink-0 border-r border-slate-200 hidden md:flex">
+      <div>
+        <!-- Brand & Active Role -->
+        <div class="h-16 px-5 flex items-center justify-between border-b border-slate-200 bg-[#F1F5F9]">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-base shadow-sm">
+              W
+            </div>
+            <div>
+              <span class="text-slate-900 font-extrabold tracking-tight text-base block leading-none">WMMSWOOD</span>
+              <span class="text-[11px] text-slate-500 font-medium">Sản xuất nội thất</span>
+            </div>
+          </div>
+          <span id="sidebar-role-badge" class="text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-blue-100 text-blue-700 border border-blue-200">
+            LEADER
+          </span>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="p-3 space-y-5 overflow-y-auto max-h-[calc(100vh-8.5rem)] table-scroll">
+          <!-- Section 1 -->
+          <div>
+            <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              ĐIỀU HÀNH &amp; ĐƠN HÀNG
+            </div>
+            <ul class="space-y-1">
+              <li>
+                <a href="#" onclick="showToast('info', 'Màn hình Bảng điều hành & ETD (Dashboard)'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                  <span>Bảng điều hành &amp; ETD</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" onclick="showToast('info', 'Chuyển về Danh sách đơn hàng'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                  <span>Danh sách đơn hàng</span>
+                </a>
+                <!-- Active Order Space Submenu -->
+                <div class="mt-1 ml-3 pl-3 border-l border-slate-300 space-y-1">
+                  <div class="flex items-center gap-2 px-2 py-1 text-xs font-bold text-slate-700">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    <span id="sidebar-space-key">SPACE-PO-880505</span>
+                  </div>
+                  <a href="#" onclick="showToast('info', 'Màn hình BOM & quy trình sản xuất'); return false;" class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-200/70">
+                    <span class="text-slate-400">↳</span>
+                    <span>BOM &amp; quy trình sản xuất</span>
+                  </a>
+                  <a href="#" onclick="showToast('info', 'Màn hình Đối chiếu & phân bổ vật tư'); return false;" class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-200/70">
+                    <span class="text-slate-400">↳</span>
+                    <span>Đối chiếu &amp; phân bổ vật tư</span>
+                  </a>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Section 2 -->
+          <div>
+            <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              KỸ THUẬT &amp; QUY TRÌNH
+            </div>
+            <ul class="space-y-1">
+              <li>
+                <a href="#" onclick="showToast('info', 'Cấu hình quy trình động (Screen 14 / PUT /api/v1/bom/routing/{productId})'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  <span>Cấu hình quy trình động</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" onclick="showToast('info', 'Danh mục vật tư & sản phẩm'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                  <span>Danh mục vật tư &amp; sản phẩm</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Section 3 -->
+          <div>
+            <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              TỒN KHO &amp; MUA HÀNG
+            </div>
+            <ul class="space-y-1">
+              <li>
+                <a href="#" onclick="showToast('info', 'Tồn kho vật tư 3 cấp'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                  <span>Tồn kho vật tư 3 cấp</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" onclick="showToast('info', 'Yêu cầu mua hàng (PR)'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  <span>Yêu cầu mua hàng (PR)</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Section 4: ACTIVE PAGE REPLACING KANBAN -->
+          <div>
+            <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              XƯỞNG &amp; KIỂM TOÁN
+            </div>
+            <ul class="space-y-1">
+              <li>
+                <a href="#" class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold bg-white text-blue-700 border-l-4 border-blue-600 shadow-xs transition-colors">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <svg class="w-4 h-4 shrink-0 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    <span class="truncate">Tiến độ &amp; Quy trình SX</span>
+                  </div>
+                  <span class="px-1.5 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded">Mới</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" onclick="showToast('info', 'Duyệt vượt chốt (Overdriver)'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  <span>Duyệt vượt chốt (Overdriver)</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" onclick="showToast('info', 'Báo cáo sản xuất & KCS'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                  <span>Báo cáo sản xuất &amp; KCS</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" onclick="showToast('info', 'Nhật ký hoạt động (Audit Logs)'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 transition-colors">
+                  <svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <span>Nhật ký hoạt động</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="p-4 border-t border-slate-200 text-xs text-slate-500 space-y-0.5 bg-[#F1F5F9]">
+        <div class="font-semibold text-slate-700">Hệ thống WMMS v2.6.4</div>
+        <div class="text-slate-500">Quản lý sản xuất xưởng gỗ</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Column -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F8FAFC]">
+      <!-- Top Bar (Chuẩn WMMS + Interactive Demo Role & Product Switchers) -->
+      <header class="min-h-16 bg-white border-b border-slate-200 px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-xs">
+        <!-- Context Breadcrumb Pills -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="showToast('info', 'Quay về Danh sách đơn hàng')" class="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition cursor-pointer">
+            ← Danh sách đơn hàng
+          </button>
+          <span id="header-space-pill" class="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg font-mono">
+            Không gian: SPACE-PO-880505
+          </span>
+          <span class="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hidden sm:inline-flex items-center gap-1.5">
+            <span>Tiến trình sản xuất sản phẩm</span>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">SCR-PRD-01</span>
+          </span>
+        </div>
+
+        <!-- Interactive Prototype Simulator Controls & User Info -->
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Demo Control: Switch Product (Quy trình động N bước) -->
+          <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1" title="Chuyển đổi sản phẩm mẫu để xem quy trình động N bước (4, 5, 6 công đoạn)">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide hidden lg:inline">SP mẫu:</span>
+            <select id="product-switcher" onchange="switchProduct(this.value)" class="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer pr-1">
+              <option value="table">Bàn ăn kéo dài (6 bước • có Hold Point)</option>
+              <option value="chair">Ghế ăn gỗ sồi (5 bước • đang chạy)</option>
+              <option value="cabinet">Tủ Sideboard (4 bước • sẵn sàng nhập kho)</option>
+            </select>
+          </div>
+
+          <!-- Demo Control: Switch Logged-in Role (Kiểm chứng phân quyền ủy quyền) -->
+          <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1" title="Chuyển vai trò người dùng đang đăng nhập để kiểm chứng cơ chế Khung Highlighted Ủy quyền">
+            <span class="text-[11px] font-bold text-amber-700 uppercase tracking-wide hidden lg:inline">Vai trò test:</span>
+            <select id="role-switcher" onchange="switchRole(this.value)" class="text-xs font-bold text-amber-900 bg-transparent focus:outline-none cursor-pointer pr-1">
+              <option value="LEADER">LEADER — Tổ trưởng SX (Ủy quyền Bước)</option>
+              <option value="QC">QC — Kiểm định viên KCS (Ủy quyền KCS)</option>
+              <option value="OWNER">OWNER — Chủ xưởng (Toàn quyền)</option>
+              <option value="WAREHOUSE">WAREHOUSE — Thủ kho (Hold Point &amp; Kho TP)</option>
+              <option value="SALES">SALES — Kinh doanh (Chỉ xem - Không ủy quyền)</option>
+            </select>
+          </div>
+
+          <!-- User Profile -->
+          <div class="flex items-center gap-2.5 pl-2 border-l border-slate-200">
+            <div id="header-avatar" class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+              LN
+            </div>
+            <div class="hidden xl:block text-left leading-tight">
+              <div id="header-user-name" class="text-xs font-bold text-slate-900">Lê Hoàng Nam</div>
+              <div id="header-user-title" class="text-[11px] text-slate-500 font-medium">Tổ trưởng sản xuất</div>
+            </div>
+            <button onclick="resetDemoData()" title="Khôi phục dữ liệu mẫu ban đầu" class="px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition cursor-pointer">
+              Reset Demo
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Scrollable Main Workspace -->
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 table-scroll">
+        
+        <!-- 1. Product & Order Context Card -->
+        <section class="bg-white rounded-xl border border-slate-200 p-5 md:p-6 shadow-xs">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="space-y-1.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <span id="ctx-space-badge" class="px-2.5 py-0.5 text-xs font-bold uppercase rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-mono">
+                  SPACE-PO-880505
+                </span>
+                <span id="ctx-batch-badge" class="px-2.5 py-0.5 text-xs font-bold uppercase rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono">
+                  BATCH-880505-MAIN-01
+                </span>
+                <span class="text-xs md:text-sm text-slate-600">
+                  Mã PO: <strong id="ctx-po-number" class="font-mono text-slate-900">ASH-2026-OCT-880505</strong>
+                </span>
+                <span class="text-xs md:text-sm text-slate-600">
+                  • Khách hàng: <strong id="ctx-customer" class="text-slate-900">Ashley Furniture HomeStore (USA)</strong>
+                </span>
+              </div>
+              <h1 id="ctx-product-title" class="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+                Bàn ăn thông minh kéo dài gỗ sồi
+              </h1>
+              <p class="text-xs md:text-sm text-slate-600">
+                SKU: <strong id="ctx-product-sku" class="font-mono text-slate-800">TABLE-DINING-EXT-02</strong>
+                • Quy trình công nghệ động: <strong id="ctx-routing-count" class="text-blue-700">6 công đoạn tùy biến</strong>
+                • Hạn giao hàng (ETD): <strong id="ctx-etd" class="text-slate-900">21/11/2026</strong>
+              </p>
+            </div>
+
+            <!-- Right Metric Summary Pills -->
+            <div class="flex flex-wrap items-center gap-3 shrink-0">
+              <div class="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-left">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">SẢN LƯỢNG LỆNH SX</div>
+                <div id="ctx-qty" class="text-base font-extrabold text-slate-900 mt-0.5">350 sản phẩm</div>
+              </div>
+              <div class="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-left">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">TRẠNG THÁI TỔNG</div>
+                <div id="ctx-batch-status" class="mt-1"></div>
+              </div>
+              <button type="button" onclick="openApiArchitectureModal()" class="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-2xs transition cursor-pointer flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                <span>Xem DTO &amp; API Backend</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Visual Production Progress Bar & Dynamic Stepper -->
+        <section class="bg-white rounded-xl border border-slate-200 p-5 md:p-6 shadow-xs space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>Thanh tiến trình sản xuất trực quan</span>
+                <span id="stepper-routing-tag" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                  Quy trình động 6 bước
+                </span>
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Hiển thị tuần tự các công đoạn đã cấu hình cho sản phẩm. Bấm vào công đoạn đã hoàn thành để xem biên bản bàn giao.
+              </p>
+            </div>
+
+            <!-- Overall Progress % -->
+            <div class="flex items-center gap-3 min-w-[220px]">
+              <div class="flex-1">
+                <div class="flex items-center justify-between text-xs font-bold mb-1">
+                  <span class="text-slate-600">Tiến độ hoàn thành</span>
+                  <span id="progress-percent-text" class="text-blue-700 font-mono">33%</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                  <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full transition-all duration-500" style="width: 33%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Horizontal Stepper Container -->
+          <div class="overflow-x-auto pb-2 table-scroll">
+            <div id="dynamic-stepper-container" class="flex items-start justify-between min-w-[680px] gap-2 pt-2">
+              <!-- Rendered dynamically by JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. HIGHLIGHTED AUTHORIZED STAGE SECTION (Chỉ hiển thị nổi bật cho người được ủy quyền công đoạn hiện tại) -->
+        <section id="authorized-stage-highlight" class="transition-all duration-300">
+          <!-- Rendered dynamically by JS based on current role & current stage -->
+        </section>
+
+        <!-- 4. Process Stages Detail Table (Đã xong / Đang thực hiện / Tương lai) -->
+        <section class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">
+                Bảng chi tiết các công đoạn trong quy trình sản xuất
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Theo dõi đầy đủ công đoạn đã xong, công đoạn đang gia công hiện tại và các công đoạn sắp tới. Tùy chọn xác nhận chỉ hiển thị ở công đoạn hiện tại cho đúng người được ủy quyền.
+              </p>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200 self-start md:self-auto">
+              <button type="button" onclick="setStageFilter('ALL')" id="tab-ALL" class="px-3 py-1.5 text-xs font-bold rounded-md bg-white text-slate-900 shadow-2xs transition cursor-pointer">
+                Tất cả (<span id="count-ALL">0</span>)
+              </button>
+              <button type="button" onclick="setStageFilter('PASSED')" id="tab-PASSED" class="px-3 py-1.5 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                Đã xong (<span id="count-PASSED">0</span>)
+              </button>
+              <button type="button" onclick="setStageFilter('CURRENT')" id="tab-CURRENT" class="px-3 py-1.5 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                Đang thực hiện (<span id="count-CURRENT">0</span>)
+              </button>
+              <button type="button" onclick="setStageFilter('WAITING')" id="tab-WAITING" class="px-3 py-1.5 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                Tương lai (<span id="count-WAITING">0</span>)
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto table-scroll">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
+                  <th class="py-3.5 px-4 w-20 text-center">Bước</th>
+                  <th class="py-3.5 px-4 min-w-[230px]">Công đoạn &amp; Trạm máy</th>
+                  <th class="py-3.5 px-4 min-w-[200px]">Cổng KCS &amp; Tiêu chí</th>
+                  <th class="py-3.5 px-3 text-right min-w-[130px]">Sản lượng đạt / Lỗi</th>
+                  <th class="py-3.5 px-4 min-w-[155px]">Người được ủy quyền</th>
+                  <th class="py-3.5 px-4 text-center min-w-[140px]">Trạng thái</th>
+                  <th class="py-3.5 px-4 min-w-[220px]">Thời gian &amp; Ghi chú bàn giao</th>
+                  <th class="py-3.5 px-4 text-right min-w-[180px]">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="stages-table-body" class="divide-y divide-slate-200 text-sm bg-white">
+                <!-- Rendered dynamically by JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 1: XÁC NHẬN HOÀN THÀNH & CẬP NHẬT TIẾN ĐỘ CÔNG ĐOẠN (QC + ADVANCE) -->
+  <!-- ========================================================================= -->
+  <div id="confirm-step-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-[1px] p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden my-auto">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-[#F8FAFC]">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="modal-step-badge" class="px-2 py-0.5 text-[11px] font-bold uppercase rounded bg-blue-100 text-blue-700">Công đoạn #3</span>
+            <span id="modal-workstation-badge" class="px-2 py-0.5 text-[11px] font-bold rounded bg-slate-200 text-slate-700 font-mono">WS-03</span>
+          </div>
+          <h3 id="modal-step-title" class="text-lg font-extrabold text-slate-900 mt-1">
+            Xác nhận Hoàn thành &amp; Cập nhật Tiến độ Công đoạn
+          </h3>
+        </div>
+        <button type="button" onclick="closeConfirmStepModal()" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <form id="confirm-step-form" onsubmit="submitConfirmStepModal(event)" class="p-6 space-y-5 max-h-[78vh] overflow-y-auto table-scroll">
+        <!-- Inspection Criteria Banner -->
+        <div class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
+          <svg class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div>
+            <div class="font-bold">Tiêu chí nghiệm thu tại trạm (<span id="modal-gate-name">QC-GATE</span>):</div>
+            <div id="modal-criteria-text" class="mt-0.5 text-blue-800">Kiểm tra phẳng bề mặt, kích thước dung sai ±0.5mm.</div>
+          </div>
+        </div>
+
+        <!-- Section A: Action Mode / Status Target -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            1. Trạng thái &amp; Hành động cập nhật tiến độ
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <label class="flex items-start gap-2.5 p-3 rounded-xl border-2 border-blue-500 bg-blue-50/40 cursor-pointer">
+              <input type="radio" name="updateMode" value="COMPLETE_AND_ADVANCE" checked onchange="onUpdateModeChange()" class="mt-0.5 text-blue-600" />
+              <div>
+                <div class="text-xs font-bold text-slate-900">Hoàn thành &amp; Chuyển bước S + 1</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">Ghi nhận KCS đạt chuẩn và đẩy sang công đoạn tiếp theo</div>
+              </div>
+            </label>
+            <label class="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white cursor-pointer">
+              <input type="radio" name="updateMode" value="QC_ONLY" onchange="onUpdateModeChange()" class="mt-0.5 text-blue-600" />
+              <div>
+                <div class="text-xs font-bold text-slate-900">Chỉ ghi nhận kiểm định KCS (Giữ tại bước)</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">Cập nhật số đạt/lỗi ở công đoạn này, chưa chuyển bước</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Section B: Inspection Quantities (Khớp RecordQcInspectionDto) -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
+              2. Số liệu kiểm định chất lượng (Quy tắc 100% — BR-008)
+            </label>
+            <span class="text-[11px] font-semibold text-slate-500">Inspected = Pass + Fail</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Tổng kiểm định</label>
+              <input type="number" id="input-inspected-qty" readonly class="w-full px-3 py-2 text-sm font-mono font-bold bg-slate-100 border border-slate-300 rounded-lg text-slate-700 cursor-not-allowed" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-emerald-700 mb-1">Đạt chuẩn (PassQty)</label>
+              <input type="number" id="input-pass-qty" min="0" oninput="syncQtyFromPass()" class="w-full px-3 py-2 text-sm font-mono font-bold bg-white border border-slate-300 rounded-lg text-emerald-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-rose-700 mb-1">Phát hiện lỗi (FailQty)</label>
+              <input type="number" id="input-fail-qty" min="0" oninput="syncQtyFromFail()" class="w-full px-3 py-2 text-sm font-mono font-bold bg-white border border-slate-300 rounded-lg text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Conditional Section: Defect Details when FailQty > 0 -->
+        <div id="defect-fields-panel" class="hidden p-4 rounded-xl bg-rose-50/70 border border-rose-200 space-y-3">
+          <div class="flex items-center gap-2 text-xs font-bold text-rose-800">
+            <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span>Phát hiện phôi lỗi (KBN01) — Tự động tách nhánh xử lý 97% - 3%</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Mã lỗi (DefectCode)</label>
+              <select id="input-defect-code" onchange="updateJsonPreview()" class="w-full px-3 py-2 text-xs font-semibold bg-white border border-rose-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <option value="ERR_WOOD_01">ERR_WOOD_01 — Nứt phôi / Mắt gỗ chết</option>
+                <option value="ERR_CUT_01">ERR_CUT_01 — Sai kích thước / Vát mộng hở</option>
+                <option value="ERR_SAND_01">ERR_SAND_01 — Bề mặt xước lông gỗ chưa mịn</option>
+                <option value="ERR_PAINT_01">ERR_PAINT_01 — Sơn bọt khí / Chảy sơn</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Phương án xử lý (Disposition)</label>
+              <select id="input-disposition" onchange="updateJsonPreview()" class="w-full px-3 py-2 text-xs font-semibold bg-white border border-rose-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <option value="REWORK_SUB_CARD">REWORK_SUB_CARD — Sửa chữa lại phôi lỗi</option>
+                <option value="SCRAP_REPLENISH">SCRAP_REPLENISH — Hủy phế phẩm &amp; Làm bù phôi</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Mô tả chi tiết lỗi (DefectName)</label>
+            <input type="text" id="input-defect-name" oninput="updateJsonPreview()" placeholder="Ví dụ: Mộng chân bàn lệch 1.5mm cần phay chỉnh lại..." class="w-full px-3 py-2 text-xs bg-white border border-rose-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          </div>
+        </div>
+
+        <!-- Section C: Handover Notes (Khớp AdvanceStepRequestDto.Notes & RecordQcInspectionDto.Notes) -->
+        <div class="space-y-1.5">
+          <label for="input-step-notes" class="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            3. Ghi chú xác nhận &amp; Nhật ký bàn giao công đoạn (Notes)
+          </label>
+          <textarea id="input-step-notes" rows="3" oninput="updateJsonPreview()" placeholder="Nhập thông tin ca sản xuất, tổ thợ thực hiện, lưu ý kỹ thuật hoặc ghi chú bàn giao sang công đoạn kế tiếp..." class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+          <p class="text-[11px] text-slate-500">
+            Thông tin này sẽ được lưu vĩnh viễn vào Nhật ký kiểm toán (Audit Log) và hiển thị trực tiếp ở cột Ghi chú bàn giao.
+          </p>
+        </div>
+
+        <!-- Live Backend Payload Preview (Collapsible/Transparent for Developer Review) -->
+        <div class="rounded-xl border border-slate-200 bg-slate-900 text-slate-100 overflow-hidden">
+          <div class="px-3.5 py-2 bg-slate-800 border-b border-slate-700 flex items-center justify-between text-[11px]">
+            <span class="font-bold text-emerald-400 font-mono">API Request Preview (Khớp DTO Backend)</span>
+            <span id="preview-endpoint-label" class="text-slate-300 font-mono">POST /qc-inspect → /advance-step</span>
+          </div>
+          <pre id="json-payload-preview" class="p-3.5 text-[11px] font-mono leading-relaxed overflow-x-auto text-sky-200"></pre>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeConfirmStepModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition cursor-pointer">
+            Hủy bỏ
+          </button>
+          <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition cursor-pointer flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <span id="modal-submit-btn-text">Xác nhận Hoàn thành &amp; Chuyển bước</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2: HOÀN TẤT CÔNG ĐOẠN CUỐI & NHẬP KHO THÀNH PHẨM (CompleteBatch)    -->
+  <!-- ========================================================================= -->
+  <div id="complete-fg-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-[1px] p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-emerald-50/70">
+        <div>
+          <span class="px-2 py-0.5 text-[11px] font-bold uppercase rounded bg-emerald-100 text-emerald-800">Bước cuối • Nhập kho Thành phẩm</span>
+          <h3 class="text-lg font-extrabold text-slate-900 mt-1">Xác nhận Hoàn tất &amp; Bàn giao Kho TP</h3>
+        </div>
+        <button type="button" onclick="closeCompleteFgModal()" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form onsubmit="submitCompleteFgModal(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Số lượng thực nhập kho (ReceivedQty)</label>
+          <input type="number" id="fg-received-qty" min="1" required oninput="updateFgJsonPreview()" class="w-full px-3 py-2 text-sm font-mono font-bold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Vị trí lưu kho thành phẩm (WarehouseLocation)</label>
+          <input type="text" id="fg-warehouse-loc" required oninput="updateFgJsonPreview()" value="KHO-TP-KHU-A2 (Chờ xuất cont Mỹ)" class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú bàn giao nhập kho (HandoverNote)</label>
+          <textarea id="fg-handover-note" rows="3" oninput="updateFgJsonPreview()" placeholder="Ghi nhận tình trạng kiện hàng, tem nhãn FSC, chứng từ bàn giao kho..." class="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-900 text-slate-100 overflow-hidden">
+          <div class="px-3 py-1.5 bg-slate-800 text-[11px] font-mono text-emerald-400">POST /api/v1/finished-goods/batches/{batchId}/complete</div>
+          <pre id="fg-json-preview" class="p-3 text-[11px] font-mono text-sky-200 overflow-x-auto"></pre>
+        </div>
+        <div class="pt-2 border-t border-slate-200 flex justify-end gap-2.5">
+          <button type="button" onclick="closeCompleteFgModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer">Hủy</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm cursor-pointer">Xác nhận Nhập kho Thành phẩm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 3: XEM BIÊN BẢN CÔNG ĐOẠN ĐÃ HOÀN TẤT                              -->
+  <!-- ========================================================================= -->
+  <div id="view-step-detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-[1px] p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-[#F8FAFC]">
+        <h3 id="detail-modal-title" class="text-base font-extrabold text-slate-900">Biên bản công đoạn</h3>
+        <button type="button" onclick="closeDetailModal()" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="detail-modal-body" class="p-6 space-y-3 text-sm"></div>
+      <div class="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex justify-end">
+        <button type="button" onclick="closeDetailModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 cursor-pointer">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 4: KIẾN TRÚC DTO & API BACKEND LIÊN QUAN                            -->
+  <!-- ========================================================================= -->
+  <div id="api-arch-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-[1px] p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl overflow-hidden my-auto">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-[#F8FAFC]">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900">Đối chiếu Request DTO &amp; API Backend hiện tại</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Kiểm chứng sự tương thích 100% giữa giao diện mới và Backend .NET 8 hiện có</p>
+        </div>
+        <button type="button" onclick="closeApiArchModal()" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-4 text-xs leading-relaxed max-h-[75vh] overflow-y-auto table-scroll">
+        <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900">
+          <strong>Kết luận: Không hề xung đột với Backend!</strong> Backend hiện đã có đầy đủ trường <code class="font-mono font-bold">Notes</code>, <code class="font-mono font-bold">PassQty/FailQty</code>, <code class="font-mono font-bold">DefectCode/DefectName</code> và <code class="font-mono font-bold">HandoverNote</code>. Duy nhất cần lưu ý quy trình 2 bước (hoặc gọi tuần tự) giữa KCS và Chuyển bước.
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+            <div class="font-bold text-slate-900 text-sm">1. RecordQcInspectionDto</div>
+            <div class="font-mono text-[11px] text-blue-700">POST /api/v1/production-orders/batches/{batchId}/qc-inspect</div>
+            <ul class="list-disc pl-4 space-y-1 text-slate-600 mt-2">
+              <li><code>batchStepId</code>: ID bước công đoạn</li>
+              <li><code>inspectedQty</code>: Phải bằng 100% <code>batchQty</code></li>
+              <li><code>passQty</code> &amp; <code>failQty</code>: Số đạt / lỗi</li>
+              <li><code>defectCode</code>, <code>defectName</code>, <code>disposition</code></li>
+              <li><code>notes</code>: Ghi chú của kiểm định viên KCS</li>
+            </ul>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+            <div class="font-bold text-slate-900 text-sm">2. AdvanceStepRequestDto</div>
+            <div class="font-mono text-[11px] text-blue-700">POST /api/v1/production-orders/batches/{batchId}/advance-step</div>
+            <ul class="list-disc pl-4 space-y-1 text-slate-600 mt-2">
+              <li><code>targetStageSeq</code>: Công đoạn tiếp theo (bắt buộc <code>S + 1</code>)</li>
+              <li><code>notes</code>: Ghi chú chuyển công đoạn / Nhật ký phân xưởng</li>
+              <li><em>Ràng buộc BE:</em> Yêu cầu bước hiện tại đã qua KCS (<code>StepStatus == PASSED</code> hoặc <code>PassedQty &gt;= BatchQty</code>).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+          <div class="font-bold text-slate-900 text-sm">3. CompleteFinishedBatchRequestDto (Công đoạn cuối)</div>
+          <div class="font-mono text-[11px] text-emerald-700">POST /api/v1/finished-goods/batches/{batchId}/complete</div>
+          <p class="text-slate-600">Gồm: <code>receivedQty</code> (số thực nhập), <code>warehouseLocation</code> (vị trí kho TP), <code>handoverNote</code> (ghi chú bàn giao nhập kho).</p>
+        </div>
+      </div>
+      <div class="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex justify-end">
+        <button type="button" onclick="closeApiArchModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 cursor-pointer">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // DỮ LIỆU MẪU PHẢN ÁNH ĐÚNG CẤU TRÚC BACKEND (Dynamic N Routing Stages)
+    // =========================================================================
+    const ROLE_META = {
+      LEADER: {
+        name: "Lê Hoàng Nam",
+        title: "Tổ trưởng sản xuất",
+        avatar: "LN",
+        badgeClass: "bg-blue-100 text-blue-700 border-blue-200",
+        avatarBg: "bg-blue-600",
+        canAdvanceStep: true,
+        canInspectQc: false,
+        canUnlockHoldPoint: false,
+        canCompleteFg: true
+      },
+      QC: {
+        name: "Trần Thị Mai",
+        title: "Kiểm định viên chất lượng (KCS)",
+        avatar: "TM",
+        badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        avatarBg: "bg-emerald-600",
+        canAdvanceStep: false,
+        canInspectQc: true,
+        canUnlockHoldPoint: false,
+        canCompleteFg: false
+      },
+      OWNER: {
+        name: "Nguyễn Khoa",
+        title: "Giám đốc / Chủ xưởng",
+        avatar: "NK",
+        badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+        avatarBg: "bg-amber-600",
+        canAdvanceStep: true,
+        canInspectQc: true,
+        canUnlockHoldPoint: true,
+        canCompleteFg: true
+      },
+      WAREHOUSE: {
+        name: "Phạm Văn Hùng",
+        title: "Thủ kho nguyên vật liệu & TP",
+        avatar: "VH",
+        badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200",
+        avatarBg: "bg-indigo-600",
+        canAdvanceStep: false,
+        canInspectQc: false,
+        canUnlockHoldPoint: true,
+        canCompleteFg: true
+      },
+      SALES: {
+        name: "Vũ Thu Hà",
+        title: "Nhân viên Kinh doanh B2B",
+        avatar: "TH",
+        badgeClass: "bg-slate-200 text-slate-700 border-slate-300",
+        avatarBg: "bg-slate-600",
+        canAdvanceStep: false,
+        canInspectQc: false,
+        canUnlockHoldPoint: false,
+        canCompleteFg: false
+      }
+    };
+
+    const INITIAL_PRODUCTS = {
+      table: {
+        key: "table",
+        spaceKey: "SPACE-PO-880505",
+        poNumber: "ASH-2026-OCT-880505",
+        customerName: "Ashley Furniture HomeStore (USA)",
+        productSku: "TABLE-DINING-EXT-02",
+        productName: "Bàn ăn thông minh kéo dài gỗ sồi",
+        etdDate: "21/11/2026",
+        batchId: 102,
+        batchCode: "KBN-880505-MAIN-01",
+        batchQty: 350,
+        currentStageSeq: 3,
+        isOverdriver: true,
+        holdPointStageSeq: 4,
+        goodsIssuedUnlocked: false,
+        batchStatus: "IN_PROGRESS",
+        steps: [
+          {
+            batchStepId: 201,
+            stageSequence: 1,
+            stageName: "Pha phôi & Sấy ổn định độ ẩm gỗ sồi",
+            workstationCode: "WS-01",
+            workstationName: "Tổ Xẻ & Sấy phôi gỗ",
+            qualityGateCode: "QC-MOISTURE-01",
+            qualityGateName: "Kiểm ẩm & Độ thẳng phôi",
+            inspectionCriteria: "Độ ẩm gỗ 8%–10%, không nứt toác đầu phôi, đúng quy cách dày 26mm.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 350,
+            passedQty: 350,
+            defectQty: 0,
+            stepStatus: "PASSED",
+            completedAt: "16/11/2026 09:30",
+            completedBy: "Lê Hoàng Nam (Tổ trưởng)",
+            notes: "Đã xẻ đủ 350 bộ phôi mặt bàn và chân hộp gỗ sồi FAS. Độ ẩm đo thực tế 9.2%."
+          },
+          {
+            batchStepId: 202,
+            stageSequence: 2,
+            stageName: "Gia công CNC rãnh ray trượt & Bào nhám mịn",
+            workstationCode: "WS-02",
+            workstationName: "Tổ CNC & Chà nhám phẳng",
+            qualityGateCode: "QC-DIM-02",
+            qualityGateName: "Kiểm dung sai CNC & Độ nhám",
+            inspectionCriteria: "Dung sai rãnh ray mở rộng ±0.3mm, bề mặt nhám #240 đạt độ mịn chuẩn.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 350,
+            passedQty: 350,
+            defectQty: 0,
+            stepStatus: "PASSED",
+            completedAt: "17/11/2026 14:15",
+            completedBy: "Trần Thị Mai (KCS)",
+            notes: "Kiểm tra dưỡng rãnh ray trượt 450mm khớp 100%, chuyển tổ khoan mộng hoàn thiện."
+          },
+          {
+            batchStepId: 203,
+            stageSequence: 3,
+            stageName: "Khoan lỗ chốt & Thử khớp khung ray mở rộng",
+            workstationCode: "WS-03",
+            workstationName: "Tổ Khoan mộng đa trục",
+            qualityGateCode: "QC-JOINERY-03",
+            qualityGateName: "Kiểm khớp mộng & Tâm lỗ chốt",
+            inspectionCriteria: "Lỗ chốt âm dương khớp khít 100%, không sứt mép cạnh veneer mặt bàn.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 350,
+            passedQty: 0,
+            defectQty: 0,
+            stepStatus: "IN_PROGRESS",
+            completedAt: null,
+            completedBy: null,
+            notes: "Đang thực hiện khoan định vị trên chuyền B2."
+          },
+          {
+            batchStepId: 204,
+            stageSequence: 4,
+            stageName: "Lắp ráp bộ ray trượt 3 tầng & Vào mộng ép vam",
+            workstationCode: "WS-04",
+            workstationName: "Tổ Lắp ráp kết cấu & Phụ kiện",
+            qualityGateCode: "QC-HOLD-ASM-04",
+            qualityGateName: "Hold Point — Lắp ray & Kết cấu",
+            inspectionCriteria: "Bắt buộc xuất đủ bộ ray trượt 450mm & vít M5 từ kho. Kiểm lực kéo trượt êm.",
+            isHoldPoint: true,
+            authorizedRoles: ["WAREHOUSE", "LEADER", "QC", "OWNER"],
+            roleDisplay: "Thủ kho (Mở khóa) / Tổ trưởng",
+            targetQty: 350,
+            passedQty: 0,
+            defectQty: 0,
+            stepStatus: "WAITING",
+            completedAt: null,
+            completedBy: null,
+            notes: "Trạm dừng kỹ thuật Hold Point (Chờ xuất phụ kiện ray trượt & vít liên kết)."
+          },
+          {
+            batchStepId: 205,
+            stageSequence: 5,
+            stageName: "Phun sơn lót PU & Sơn phủ màu sồi khói",
+            workstationCode: "WS-05",
+            workstationName: "Buồng Sơn PU khép kín",
+            qualityGateCode: "QC-FINISH-05",
+            qualityGateName: "Kiểm bề mặt sơn & Độ bóng 50%",
+            inspectionCriteria: "Không bọt khí, không chảy sơn, khớp bảng màu Smoky Oak của Ashley.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 350,
+            passedQty: 0,
+            defectQty: 0,
+            stepStatus: "WAITING",
+            completedAt: null,
+            completedBy: null,
+            notes: ""
+          },
+          {
+            batchStepId: 206,
+            stageSequence: 6,
+            stageName: "Kiểm tra KCS xuất xưởng & Đóng thùng Master Case",
+            workstationCode: "WS-06",
+            workstationName: "Tổ KCS & Đóng gói xuất khẩu",
+            qualityGateCode: "QC-FINAL-06",
+            qualityGateName: "Nghiệm thu xuất xưởng & Nhập kho TP",
+            inspectionCriteria: "Đủ 2 kiện carton/bàn, lót xốp PE chống sốc góc, dán tem FSC & barcode PO.",
+            isHoldPoint: false,
+            authorizedRoles: ["WAREHOUSE", "LEADER", "OWNER"],
+            roleDisplay: "Thủ kho TP / Tổ trưởng SX",
+            targetQty: 350,
+            passedQty: 0,
+            defectQty: 0,
+            stepStatus: "WAITING",
+            completedAt: null,
+            completedBy: null,
+            notes: ""
+          }
+        ]
+      },
+      chair: {
+        key: "chair",
+        spaceKey: "SPACE-PO-880504",
+        poNumber: "ASH-2026-OCT-880504",
+        customerName: "Ashley Furniture HomeStore (USA)",
+        productSku: "CHAIR-DINING-OAK-01",
+        productName: "Ghế ăn tựa nan gỗ sồi Bắc Mỹ",
+        etdDate: "15/01/2027",
+        batchId: 101,
+        batchCode: "KBN-880504-MAIN-01",
+        batchQty: 500,
+        currentStageSeq: 2,
+        isOverdriver: false,
+        holdPointStageSeq: null,
+        goodsIssuedUnlocked: true,
+        batchStatus: "IN_PROGRESS",
+        steps: [
+          {
+            batchStepId: 101,
+            stageSequence: 1,
+            stageName: "Pha phôi chân ghế & Uốn hơi nan lưng tựa",
+            workstationCode: "WS-01",
+            workstationName: "Tổ Pha phôi & Ép cong",
+            qualityGateCode: "QC-BEND-01",
+            qualityGateName: "Kiểm độ cong nan lưng & Vân gỗ",
+            inspectionCriteria: "Độ cong đúng dưỡng R450, không tét thớ gỗ ở lưng ghế.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 500,
+            passedQty: 500,
+            defectQty: 0,
+            stepStatus: "PASSED",
+            completedAt: "17/11/2026 11:00",
+            completedBy: "Lê Hoàng Nam (Tổ trưởng)",
+            notes: "Đã uốn và ổn định hình 500 bộ nan lưng gỗ sồi đạt 100%."
+          },
+          {
+            batchStepId: 102,
+            stageSequence: 2,
+            stageName: "Phay mộng âm dương & Chà nhám tinh khung ghế",
+            workstationCode: "WS-02",
+            workstationName: "Tổ Mộng & Chà nhám",
+            qualityGateCode: "QC-SAND-02",
+            qualityGateName: "Kiểm mộng khớp & Độ mịn cạnh bo",
+            inspectionCriteria: "Cạnh bo R3 đều tay, mộng khít không rơ lắc trước khi ép keo.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 500,
+            passedQty: 500,
+            defectQty: 0,
+            stepStatus: "IN_PROGRESS",
+            completedAt: null,
+            completedBy: null,
+            notes: "KCS Trần Thị Mai đã kiểm 500/500 đạt chuẩn, chờ Tổ trưởng xác nhận chuyển bước sang Ép lắp ráp."
+          },
+          {
+            batchStepId: 103,
+            stageSequence: 3,
+            stageName: "Lắp ráp kết cấu, Vào mộng dán keo Titebond & Bắn vít",
+            workstationCode: "WS-03",
+            workstationName: "Tổ Lắp ráp & Ép vam",
+            qualityGateCode: "QC-LOAD-03",
+            qualityGateName: "Kiểm thử chịu tải & Vuông góc chân",
+            inspectionCriteria: "Độ bập bênh 4 chân < 0.5mm trên bàn chuẩn, chịu tải tĩnh 120kg.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 500,
+            passedQty: 0,
+            defectQty: 0,
+            stepStatus: "WAITING",
+            completedAt: null,
+            completedBy: null,
+            notes: ""
+          },
+          {
+            batchStepId: 104,
+            stageSequence: 4,
+            stageName: "Phun sơn lót PU 2K & Sơn phủ bóng mờ hoàn thiện",
+            workstationCode: "WS-04",
+            workstationName: "Dây chuyền Sơn treo",
+            qualityGateCode: "QC-PAINT-04",
+            qualityGateName: "Kiểm độ bám màng sơn",
+            inspectionCriteria: "Đều màu gỗ óc chó tự nhiên trên các nan tựa, không đọng sơn góc khuất.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 500,
+            passedQty: 0,
+            defectQty: 0,
+            stepStatus: "WAITING",
+            completedAt: null,
+            completedBy: null,
+            notes: ""
+          },
+          {
+            batchStepId: 105,
+            stageSequence: 5,
+            stageName: "KCS cuối & Đóng gói 2 ghế / thùng carton xuất khẩu",
+            workstationCode: "WS-05",
+            workstationName: "Tổ Đóng gói thành phẩm",
+            qualityGateCode: "QC-FINAL-05",
+            qualityGateName: "Nghiệm thu nhập kho thành phẩm",
+            inspectionCriteria: "250 thùng carton đầy đủ xốp PE bảo vệ nan lưng.",
+            isHoldPoint: false,
+            authorizedRoles: ["WAREHOUSE", "LEADER", "OWNER"],
+            roleDisplay: "Thủ kho TP / Tổ trưởng SX",
+            targetQty: 500,
+            passedQty: 0,
+            defectQty: 0,
+            stepStatus: "WAITING",
+            completedAt: null,
+            completedBy: null,
+            notes: ""
+          }
+        ]
+      },
+      cabinet: {
+        key: "cabinet",
+        spaceKey: "SPACE-PO-990102",
+        poNumber: "IKE-2026-OCT-990102",
+        customerName: "IKEA Supply Chain Operations",
+        productSku: "CABINET-SIDEBOARD-03",
+        productName: "Tủ Sideboard 3 cánh 2 hộc kéo",
+        etdDate: "28/11/2026",
+        batchId: 103,
+        batchCode: "KBN-990102-MAIN-01",
+        batchQty: 300,
+        currentStageSeq: 4,
+        isOverdriver: false,
+        holdPointStageSeq: 2,
+        goodsIssuedUnlocked: true,
+        batchStatus: "IN_PROGRESS",
+        steps: [
+          {
+            batchStepId: 301,
+            stageSequence: 1,
+            stageName: "Cắt ván gỗ cao su ghép & Phủ Veneer sồi khung tủ",
+            workstationCode: "WS-01",
+            workstationName: "Tổ Cắt Panel & Ép Veneer",
+            qualityGateCode: "QC-PANEL-01",
+            qualityGateName: "Kiểm phẳng tấm & Mép dán veneer",
+            inspectionCriteria: "Không bong rộp veneer, vuông góc cạnh 90°.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 300,
+            passedQty: 300,
+            defectQty: 0,
+            stepStatus: "PASSED",
+            completedAt: "15/11/2026 16:40",
+            completedBy: "Lê Hoàng Nam (Tổ trưởng)",
+            notes: "Đã cắt ép đủ 300 bộ vách tủ và mặt cánh."
+          },
+          {
+            batchStepId: 302,
+            stageSequence: 2,
+            stageName: "Lắp khung tủ, Gắn bản lề Hafele & Ray hộc kéo",
+            workstationCode: "WS-02",
+            workstationName: "Tổ Lắp ráp Tủ hộp",
+            qualityGateCode: "QC-HOLD-CAB-02",
+            qualityGateName: "Hold Point — Phụ kiện Hafele",
+            inspectionCriteria: "Khe hở cánh tủ đều 2mm, bản lề giảm chấn đóng mở êm.",
+            isHoldPoint: true,
+            authorizedRoles: ["WAREHOUSE", "LEADER", "QC", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 300,
+            passedQty: 300,
+            defectQty: 0,
+            stepStatus: "PASSED",
+            completedAt: "16/11/2026 17:10",
+            completedBy: "Phạm Văn Hùng / Lê Hoàng Nam",
+            notes: "Kho đã xuất đủ 1.890 bản lề Hafele & 630 cặp ray. Lắp ráp đạt 100%."
+          },
+          {
+            batchStepId: 303,
+            stageSequence: 3,
+            stageName: "Sơn hoàn thiện màu hạt dẻ ấm (Warm Chestnut)",
+            workstationCode: "WS-03",
+            workstationName: "Buồng Sơn màu hoàn thiện",
+            qualityGateCode: "QC-PAINT-03",
+            qualityGateName: "Kiểm màu sắc & Độ cứng màng sơn",
+            inspectionCriteria: "Khớp mẫu chuẩn IKEA Warm Chestnut, khô hoàn toàn sau 12h.",
+            isHoldPoint: false,
+            authorizedRoles: ["QC", "LEADER", "OWNER"],
+            roleDisplay: "Tổ trưởng SX / KCS",
+            targetQty: 300,
+            passedQty: 300,
+            defectQty: 0,
+            stepStatus: "PASSED",
+            completedAt: "17/11/2026 18:00",
+            completedBy: "Trần Thị Mai (KCS)",
+            notes: "Màu sơn đạt chuẩn 300/300 tủ."
+          },
+          {
+            batchStepId: 304,
+            stageSequence: 4,
+            stageName: "Kiểm định xuất xưởng & Bàn giao nhập kho Thành phẩm",
+            workstationCode: "WS-04",
+            workstationName: "Khu vực KCS & Nhập kho TP",
+            qualityGateCode: "QC-FINAL-04",
+            qualityGateName: "Hoàn tất đơn & Nhập kho TP",
+            inspectionCriteria: "Đã kiểm 100% ngoại quan và đóng thùng xốp góc định hình, sẵn sàng nhập kho.",
+            isHoldPoint: false,
+            authorizedRoles: ["WAREHOUSE", "LEADER", "OWNER"],
+            roleDisplay: "Thủ kho TP / Tổ trưởng SX / Chủ xưởng",
+            targetQty: 300,
+            passedQty: 300,
+            defectQty: 0,
+            stepStatus: "IN_PROGRESS",
+            completedAt: null,
+            completedBy: null,
+            notes: "Đã qua kiểm định cuối cùng, chờ xác nhận nhập kho thành phẩm để hoàn tất sản phẩm."
+          }
+        ]
+      }
+    };
+
+    // Deep clone helper
+    function cloneData(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    let state = {
+      currentRole: "LEADER",
+      currentProductKey: "table",
+      stageFilter: "ALL",
+      products: cloneData(INITIAL_PRODUCTS)
+    };
+
+    function getProduct() {
+      return state.products[state.currentProductKey];
+    }
+
+    function getCurrentStep(prod) {
+      if (prod.batchStatus === "DONE") return null;
+      return prod.steps.find(s => s.stageSequence === prod.currentStageSeq) || null;
+    }
+
+    function isLastStep(prod, step) {
+      if (!step) return false;
+      const maxSeq = Math.max(...prod.steps.map(s => s.stageSequence));
+      return step.stageSequence === maxSeq;
+    }
+
+    // Kiểm tra người dùng hiện tại có được ủy quyền cho công đoạn hiện tại hay không
+    function checkCurrentRoleAuthorization(prod, step) {
+      if (!step || prod.batchStatus === "DONE") return false;
+      const role = state.currentRole;
+      const roleMeta = ROLE_META[role];
+      if (!roleMeta) return false;
+
+      if (step.stepStatus === "BLOCKED") {
+        // Nếu bị chặn Hold Point: chỉ Thủ kho (xuất phụ kiện mở khóa) hoặc Chủ xưởng
+        return role === "WAREHOUSE" || role === "OWNER";
+      }
+
+      if (isLastStep(prod, step) && step.passedQty >= step.targetQty) {
+        // Bước cuối đã KCS xong -> chờ nhập kho thành phẩm
+        return roleMeta.canCompleteFg;
+      }
+
+      // Kiểm tra trong danh sách authorizedRoles của công đoạn
+      if (Array.isArray(step.authorizedRoles) && !step.authorizedRoles.includes(role)) {
+        return false;
+      }
+
+      return roleMeta.canInspectQc || roleMeta.canAdvanceStep;
+    }
+
+    // =========================================================================
+    // RENDER PIPELINE
+    // =========================================================================
+    function renderAll() {
+      const prod = getProduct();
+      const roleMeta = ROLE_META[state.currentRole];
+      const currentStep = getCurrentStep(prod);
+      const isAuthorized = checkCurrentRoleAuthorization(prod, currentStep);
+
+      // Update Header & Sidebar User Context
+      document.getElementById("sidebar-role-badge").textContent = state.currentRole;
+      document.getElementById("sidebar-role-badge").className =
+        `text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${roleMeta.badgeClass}`;
+      document.getElementById("sidebar-space-key").textContent = prod.spaceKey;
+      document.getElementById("header-space-pill").textContent = `Không gian: ${prod.spaceKey}`;
+
+      const avatar = document.getElementById("header-avatar");
+      avatar.textContent = roleMeta.avatar;
+      avatar.className = `w-8 h-8 rounded-full ${roleMeta.avatarBg} text-white font-bold text-xs flex items-center justify-center shadow-xs`;
+      document.getElementById("header-user-name").textContent = roleMeta.name;
+      document.getElementById("header-user-title").textContent = roleMeta.title;
+
+      // Update Product Context Card
+      document.getElementById("ctx-space-badge").textContent = prod.spaceKey;
+      document.getElementById("ctx-batch-badge").textContent = prod.batchCode;
+      document.getElementById("ctx-po-number").textContent = prod.poNumber;
+      document.getElementById("ctx-customer").textContent = prod.customerName;
+      document.getElementById("ctx-product-title").textContent = prod.productName;
+      document.getElementById("ctx-product-sku").textContent = prod.productSku;
+      document.getElementById("ctx-routing-count").textContent = `${prod.steps.length} công đoạn tùy biến`;
+      document.getElementById("stepper-routing-tag").textContent = `Quy trình động ${prod.steps.length} bước`;
+      document.getElementById("ctx-etd").textContent = prod.etdDate;
+      document.getElementById("ctx-qty").textContent = `${prod.batchQty.toLocaleString("vi-VN")} sản phẩm`;
+
+      const statusContainer = document.getElementById("ctx-batch-status");
+      if (prod.batchStatus === "DONE") {
+        statusContainer.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200"><span class="w-2 h-2 rounded-full bg-emerald-600"></span>HOÀN TẤT &amp; ĐÃ NHẬP KHO</span>`;
+      } else if (prod.batchStatus === "HOLD_POINT_BLOCKED") {
+        statusContainer.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300"><span class="w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>CHỜ MỞ KHÓA HOLD POINT</span>`;
+      } else {
+        statusContainer.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-200"><span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>ĐANG SẢN XUẤT (BƯỚC ${prod.currentStageSeq}/${prod.steps.length})</span>`;
+      }
+
+      // Compute Overall Progress %
+      const passedCount = prod.steps.filter(s => s.stepStatus === "PASSED").length;
+      const pct = Math.round((passedCount / prod.steps.length) * 100);
+      document.getElementById("progress-percent-text").textContent = `${pct}% (${passedCount}/${prod.steps.length} bước)`;
+      document.getElementById("progress-bar-fill").style.width = `${pct}%`;
+
+      renderStepper(prod, currentStep, isAuthorized);
+      renderAuthorizedHighlight(prod, currentStep, isAuthorized, roleMeta);
+      renderTable(prod, currentStep, isAuthorized);
+    }
+
+    // Render Horizontal Dynamic Stepper
+    function renderStepper(prod, currentStep, isAuthorized) {
+      const container = document.getElementById("dynamic-stepper-container");
+      const steps = prod.steps;
+
+      container.innerHTML = steps.map((step, idx) => {
+        const isLast = idx === steps.length - 1;
+        const isPassed = step.stepStatus === "PASSED";
+        const isBlocked = step.stepStatus === "BLOCKED";
+        const isCurrent = currentStep && step.stageSequence === currentStep.stageSequence;
+
+        let circleHtml = "";
+        let labelColor = "text-slate-500";
+        let statusTag = `<span class="text-[10px] font-semibold text-slate-400">Chờ tới lượt</span>`;
+
+        if (isPassed) {
+          circleHtml = `
+            <button type="button" onclick="openStepDetailModal(${step.stageSequence})" title="Bấm để xem biên bản bước ${step.stageSequence}" class="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-sm transition cursor-pointer relative z-10">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </button>`;
+          labelColor = "text-slate-900 font-bold";
+          statusTag = `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Xong (${step.passedQty}/${step.targetQty})</span>`;
+        } else if (isBlocked) {
+          circleHtml = `
+            <div class="w-10 h-10 rounded-full bg-amber-500 text-white font-extrabold text-sm flex items-center justify-center ring-4 ring-amber-100 shadow-sm relative z-10">
+              🔒
+            </div>`;
+          labelColor = "text-amber-900 font-bold";
+          statusTag = `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-100 text-amber-800 border border-amber-300">KHÓA HOLD POINT</span>`;
+        } else if (isCurrent) {
+          circleHtml = `
+            <div class="w-10 h-10 rounded-full bg-blue-600 text-white font-extrabold text-sm flex items-center justify-center step-active-ring shadow-md relative z-10">
+              ${step.stageSequence}
+            </div>`;
+          labelColor = "text-blue-800 font-extrabold";
+          statusTag = isAuthorized
+            ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-700 border border-blue-300">⚡ Ủy quyền của bạn</span>`
+            : `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-50 text-blue-700 border border-blue-200">Đang thực hiện</span>`;
+        } else {
+          circleHtml = `
+            <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 border-2 border-slate-200 font-bold text-sm flex items-center justify-center relative z-10">
+              ${step.stageSequence}
+            </div>`;
+          if (step.isHoldPoint) {
+            statusTag = `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-rose-50 text-rose-700 border border-rose-200">🔒 Hold Point</span>`;
+          }
+        }
+
+        const connectorColor = isPassed ? "bg-emerald-500" : "bg-slate-200";
+        const connectorHtml = !isLast
+          ? `<div class="flex-1 h-1 ${connectorColor} mt-5 -mx-2 rounded-full transition-colors"></div>`
+          : "";
+
+        return `
+          <div class="flex items-start flex-1 min-w-[115px] ${isLast ? 'flex-grow-0' : ''}">
+            <div class="flex flex-col items-center text-center w-32 shrink-0 px-1">
+              ${circleHtml}
+              <div class="mt-2 text-xs ${labelColor} leading-snug line-clamp-2" title="${step.stageName}">
+                ${step.stageSequence}. ${step.stageName}
+              </div>
+              <div class="mt-1">${statusTag}</div>
+            </div>
+            ${connectorHtml}
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Render Highlighted Authorized Stage Card ABOVE the table
+    function renderAuthorizedHighlight(prod, currentStep, isAuthorized, roleMeta) {
+      const box = document.getElementById("authorized-stage-highlight");
+
+      // Case 1: Completed entire product
+      if (prod.batchStatus === "DONE") {
+        box.innerHTML = `
+          <div class="rounded-xl border-2 border-emerald-400 bg-gradient-to-r from-emerald-50 via-white to-emerald-50/40 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5">
+              <div class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <span class="px-2 py-0.5 text-[11px] font-bold uppercase rounded bg-emerald-100 text-emerald-800 border border-emerald-200">Hoàn tất sản xuất 100%</span>
+                <h3 class="text-base font-extrabold text-slate-900 mt-1">Sản phẩm ${prod.productName} đã hoàn thành toàn bộ ${prod.steps.length} công đoạn và nhập kho thành phẩm!</h3>
+                <p class="text-xs text-slate-600 mt-0.5">Trạng thái dòng đơn hàng (OrderItem) và Order Space đã được đồng bộ sang DONE.</p>
+              </div>
+            </div>
+          </div>`;
+        return;
+      }
+
+      // Case 2: User IS NOT authorized for the current active stage
+      if (!isAuthorized) {
+        box.innerHTML = `
+          <div class="rounded-xl border border-slate-200 bg-white px-5 py-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-slate-800">
+                  Chế độ Theo dõi (Chỉ xem) — Công đoạn hiện tại: <span class="text-blue-700">Bước ${currentStep.stageSequence}: ${currentStep.stageName}</span>
+                </div>
+                <div class="text-xs text-slate-500 mt-0.5">
+                  Vai trò hiện tại của bạn (<strong class="text-slate-700">${state.currentRole}</strong>) không nằm trong danh sách ủy quyền thao tác cho bước này (Phụ trách: <strong>${currentStep.roleDisplay}</strong>).
+                </div>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+              Không có quyền xác nhận bước
+            </span>
+          </div>`;
+        return;
+      }
+
+      // Case 3: Blocked at Hold Point & Authorized (WAREHOUSE / OWNER)
+      if (currentStep.stepStatus === "BLOCKED") {
+        box.innerHTML = `
+          <div class="rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-50 via-white to-orange-50/40 p-5 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2.5 py-0.5 text-[11px] font-extrabold uppercase rounded-md bg-amber-500 text-white shadow-2xs">
+                  🔒 TRẠM DỪNG HOLD POINT ĐANG CHỜ BẠN MỞ KHÓA
+                </span>
+                <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white text-amber-800 border border-amber-300 font-mono">
+                  Bước ${currentStep.stageSequence}/${prod.steps.length} • ${currentStep.workstationCode}
+                </span>
+              </div>
+              <h3 class="text-lg font-extrabold text-slate-900">
+                ${currentStep.stageSequence}. ${currentStep.stageName}
+              </h3>
+              <p class="text-xs md:text-sm text-slate-700">
+                Lệnh sản xuất chạy trước (Overdrive) đã tới trạm dừng kỹ thuật. Cần Thủ kho / Chủ xưởng xác nhận đã cấp phát đủ phụ kiện (ray trượt, vít liên kết) để mở khóa sản xuất tiếp.
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+              <button type="button" onclick="unlockHoldPointNow()" class="px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white text-xs md:text-sm font-bold rounded-xl shadow-sm transition cursor-pointer flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+                <span>Mở khóa Hold Point (Đã xuất phụ kiện)</span>
+              </button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      // Case 4: Last step and 100% KCS passed -> Highlight Finished Goods Receipt
+      const lastStepReadyForReceipt = isLastStep(prod, currentStep) && currentStep.passedQty >= currentStep.targetQty;
+      if (lastStepReadyForReceipt) {
+        box.innerHTML = `
+          <div class="rounded-xl border-2 border-emerald-500 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/50 p-5 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="space-y-1.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2.5 py-0.5 text-[11px] font-extrabold uppercase rounded-md bg-emerald-600 text-white shadow-2xs">
+                  ⚡ CÔNG ĐOẠN CUỐI ĐANG CHỜ BẠN XÁC NHẬN NHẬP KHO
+                </span>
+                <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white text-emerald-800 border border-emerald-300 font-mono">
+                  Bước ${currentStep.stageSequence}/${prod.steps.length} • ${currentStep.workstationCode}
+                </span>
+                <span class="text-xs font-semibold text-emerald-700">• Đã đạt KCS ${currentStep.passedQty}/${currentStep.targetQty} SP</span>
+              </div>
+              <h3 class="text-lg font-extrabold text-slate-900">
+                ${currentStep.stageSequence}. ${currentStep.stageName}
+              </h3>
+              <p class="text-xs md:text-sm text-slate-600">
+                <strong>Tiêu chí:</strong> ${currentStep.inspectionCriteria}
+              </p>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <button type="button" onclick="openCompleteFgModal()" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-sm font-bold rounded-xl shadow-sm transition cursor-pointer flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                <span>Xác nhận Hoàn tất &amp; Nhập kho Thành phẩm</span>
+              </button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      // Case 5: Standard Highlighted Authorized Stage Card (IN_PROGRESS)
+      const isQcDone = currentStep.passedQty >= currentStep.targetQty;
+      const actionLabel = state.currentRole === "QC"
+        ? "Ghi nhận Kết quả KCS Công đoạn"
+        : isQcDone
+          ? "Xác nhận Hoàn thành & Chuyển bước S + 1"
+          : "Cập nhật Tiến độ & Xác nhận Công đoạn";
+
+      box.innerHTML = `
+        <div class="rounded-xl border-2 border-blue-500 bg-gradient-to-r from-blue-50/90 via-white to-indigo-50/40 p-5 md:p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div class="space-y-2 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2.5 py-0.5 text-[11px] font-extrabold uppercase rounded-md bg-blue-600 text-white shadow-2xs">
+                ⚡ CÔNG ĐOẠN ĐANG CHỜ BẠN XÁC NHẬN (${state.currentRole})
+              </span>
+              <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white text-blue-800 border border-blue-200 font-mono">
+                Bước ${currentStep.stageSequence}/${prod.steps.length} • ${currentStep.workstationCode} (${currentStep.workstationName})
+              </span>
+              ${isQcDone
+                ? `<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-emerald-100 text-emerald-800 border border-emerald-200">✓ Đã kiểm KCS ${currentStep.passedQty}/${currentStep.targetQty}</span>`
+                : `<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-amber-100 text-amber-800 border border-amber-200">Chờ KCS &amp; Chuyển bước (0/${currentStep.targetQty})</span>`}
+            </div>
+
+            <h3 class="text-lg md:text-xl font-extrabold text-slate-900">
+              ${currentStep.stageSequence}. ${currentStep.stageName}
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-600 pt-0.5">
+              <div><strong class="text-slate-800">Cổng kiểm tra:</strong> ${currentStep.qualityGateName} (<span class="font-mono">${currentStep.qualityGateCode}</span>)</div>
+              <div><strong class="text-slate-800">Mục tiêu sản lượng:</strong> ${currentStep.targetQty.toLocaleString("vi-VN")} sản phẩm</div>
+              <div class="md:col-span-2"><strong class="text-slate-800">Tiêu chí chất lượng:</strong> ${currentStep.inspectionCriteria}</div>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2.5 shrink-0">
+            <button type="button" onclick="openConfirmStepModal(${currentStep.stageSequence})" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-bold rounded-xl shadow-sm transition cursor-pointer flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>${actionLabel}</span>
+            </button>
+            <span class="text-[11px] text-slate-500 text-center lg:text-right">
+              Mở form nhập số lượng KCS &amp; ghi chú bàn giao
+            </span>
+          </div>
+        </div>`;
+    }
+
+    // Render Stages Table
+    function renderTable(prod, currentStep, isAuthorized) {
+      const steps = prod.steps;
+      const passed = steps.filter(s => s.stepStatus === "PASSED");
+      const current = steps.filter(s => s.stepStatus === "IN_PROGRESS" || s.stepStatus === "BLOCKED");
+      const waiting = steps.filter(s => s.stepStatus === "WAITING");
+
+      document.getElementById("count-ALL").textContent = steps.length;
+      document.getElementById("count-PASSED").textContent = passed.length;
+      document.getElementById("count-CURRENT").textContent = current.length;
+      document.getElementById("count-WAITING").textContent = waiting.length;
+
+      let filtered = steps;
+      if (state.stageFilter === "PASSED") filtered = passed;
+      if (state.stageFilter === "CURRENT") filtered = current;
+      if (state.stageFilter === "WAITING") filtered = waiting;
+
+      // Update Tab UI
+      ["ALL", "PASSED", "CURRENT", "WAITING"].forEach(tab => {
+        const el = document.getElementById(`tab-${tab}`);
+        if (tab === state.stageFilter) {
+          el.className = "px-3 py-1.5 text-xs font-bold rounded-md bg-white text-blue-700 shadow-2xs transition cursor-pointer";
+        } else {
+          el.className = "px-3 py-1.5 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900 transition cursor-pointer";
+        }
+      });
+
+      const tbody = document.getElementById("stages-table-body");
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-10 text-center text-sm text-slate-500">Không có công đoạn nào ở nhóm trạng thái này.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(step => {
+        const isPassed = step.stepStatus === "PASSED";
+        const isBlocked = step.stepStatus === "BLOCKED";
+        const isCurrent = currentStep && step.stageSequence === currentStep.stageSequence;
+        const lastReady = isLastStep(prod, step) && step.passedQty >= step.targetQty;
+
+        let rowClass = "hover:bg-slate-50 transition-colors";
+        if (isBlocked) rowClass = "bg-amber-50/40 hover:bg-amber-50/70 transition-colors";
+        else if (isCurrent) rowClass = "bg-blue-50/35 hover:bg-blue-50/60 transition-colors";
+
+        let statusBadge = "";
+        if (isPassed) {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Đã xong</span>`;
+        } else if (isBlocked) {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300">🔒 Khóa Hold Point</span>`;
+        } else if (isCurrent) {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-200"><span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>Đang thực hiện</span>`;
+        } else {
+          statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">Tương lai</span>`;
+        }
+
+        let actionHtml = "";
+        if (isPassed) {
+          actionHtml = `
+            <button type="button" onclick="openStepDetailModal(${step.stageSequence})" class="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition cursor-pointer">
+              Xem biên bản
+            </button>`;
+        } else if (isCurrent) {
+          if (!isAuthorized) {
+            actionHtml = `<span class="text-xs text-slate-400 italic">Chỉ người được ủy quyền</span>`;
+          } else if (isBlocked) {
+            actionHtml = `
+              <button type="button" onclick="unlockHoldPointNow()" class="px-3 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-2xs transition cursor-pointer">
+                Mở khóa Hold Point
+              </button>`;
+          } else if (lastReady) {
+            actionHtml = `
+              <button type="button" onclick="openCompleteFgModal()" class="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-2xs transition cursor-pointer">
+                Nhập kho TP
+              </button>`;
+          } else {
+            actionHtml = `
+              <button type="button" onclick="openConfirmStepModal(${step.stageSequence})" class="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs transition cursor-pointer">
+                Xác nhận hoàn thành
+              </button>`;
+          }
+        } else {
+          actionHtml = `<span class="text-xs text-slate-400">Chờ bước trước</span>`;
+        }
+
+        return `
+          <tr class="${rowClass}">
+            <td class="py-3.5 px-4 text-center">
+              <span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-extrabold ${
+                isPassed ? 'bg-emerald-100 text-emerald-800' :
+                isCurrent ? 'bg-blue-600 text-white' :
+                'bg-slate-100 text-slate-600'
+              }">
+                ${step.stageSequence}
+              </span>
+            </td>
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                <span>${step.stageName}</span>
+                ${step.isHoldPoint ? `<span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-rose-100 text-rose-700 border border-rose-200 shrink-0">Hold Point</span>` : ''}
+              </div>
+              <div class="text-xs text-slate-500 mt-0.5">
+                <span class="font-mono font-semibold text-slate-600">${step.workstationCode}</span> • ${step.workstationName}
+              </div>
+            </td>
+            <td class="py-3.5 px-4">
+              <div class="text-xs font-bold text-slate-800">${step.qualityGateName}</div>
+              <div class="text-[11px] text-slate-500 mt-0.5 line-clamp-2" title="${step.inspectionCriteria}">${step.inspectionCriteria}</div>
+            </td>
+            <td class="py-3.5 px-3 text-right font-mono">
+              <div class="text-xs font-bold text-slate-900">
+                <span class="${step.passedQty >= step.targetQty ? 'text-emerald-600' : 'text-slate-800'}">${step.passedQty}</span> / ${step.targetQty}
+              </div>
+              ${step.defectQty > 0
+                ? `<div class="text-[11px] font-bold text-rose-600">Lỗi: ${step.defectQty}</div>`
+                : `<div class="text-[11px] text-slate-400">Lỗi: 0</div>`}
+            </td>
+            <td class="py-3.5 px-4">
+              <span class="text-xs font-semibold text-slate-700">${step.roleDisplay}</span>
+            </td>
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+              ${statusBadge}
+            </td>
+            <td class="py-3.5 px-4">
+              ${step.completedAt ? `<div class="text-[11px] font-bold text-slate-700">${step.completedAt} • ${step.completedBy}</div>` : ''}
+              <div class="text-xs text-slate-600 line-clamp-2" title="${step.notes || ''}">
+                ${step.notes || '<span class="text-slate-400 italic">Chưa có ghi chú</span>'}
+              </div>
+            </td>
+            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+              ${actionHtml}
+            </td>
+          </tr>`;
+      }).join("");
+    }
+
+    // =========================================================================
+    // SWITCHERS & FILTERS
+    // =========================================================================
+    function switchProduct(key) {
+      state.currentProductKey = key;
+      state.stageFilter = "ALL";
+      renderAll();
+      const prod = getProduct();
+      showToast("info", `Đã chuyển sang ${prod.productName} (${prod.steps.length} công đoạn động).`);
+    }
+
+    function switchRole(role) {
+      state.currentRole = role;
+      renderAll();
+      showToast("info", `Đang mô phỏng tài khoản: ${ROLE_META[role].name} (${role}).`);
+    }
+
+    function setStageFilter(filter) {
+      state.stageFilter = filter;
+      renderAll();
+    }
+
+    function resetDemoData() {
+      state.products = cloneData(INITIAL_PRODUCTS);
+      state.stageFilter = "ALL";
+      renderAll();
+      showToast("success", "Đã khôi phục dữ liệu mẫu ban đầu.");
+    }
+
+    // =========================================================================
+    // MODAL 1: XÁC NHẬN HOÀN THÀNH & CẬP NHẬT TIẾN ĐỘ CÔNG ĐOẠN
+    // =========================================================================
+    let modalTargetStepSeq = null;
+
+    function openConfirmStepModal(stageSeq) {
+      const prod = getProduct();
+      const step = prod.steps.find(s => s.stageSequence === stageSeq);
+      if (!step) return;
+      modalTargetStepSeq = stageSeq;
+
+      document.getElementById("modal-step-badge").textContent = `Công đoạn #${step.stageSequence}/${prod.steps.length}`;
+      document.getElementById("modal-workstation-badge").textContent = step.workstationCode;
+      document.getElementById("modal-step-title").textContent = `${step.stageSequence}. ${step.stageName}`;
+      document.getElementById("modal-gate-name").textContent = `${step.qualityGateName} (${step.qualityGateCode})`;
+      document.getElementById("modal-criteria-text").textContent = step.inspectionCriteria;
+
+      const qty = step.targetQty;
+      document.getElementById("input-inspected-qty").value = qty;
+      document.getElementById("input-pass-qty").value = qty;
+      document.getElementById("input-fail-qty").value = 0;
+      document.getElementById("input-defect-name").value = "";
+      document.getElementById("input-step-notes").value =
+        `Hoàn thành 100% công đoạn ${step.stageSequence} (${step.stageName}), bàn giao ${qty} SP đạt chuẩn sang bước tiếp theo.`;
+
+      // Default mode based on role
+      const radios = document.getElementsByName("updateMode");
+      if (state.currentRole === "QC" && step.passedQty < step.targetQty) {
+        radios[1].checked = true; // QC_ONLY
+      } else {
+        radios[0].checked = true; // COMPLETE_AND_ADVANCE
+      }
+
+      onUpdateModeChange();
+      toggleDefectPanel();
+      updateJsonPreview();
+
+      const modal = document.getElementById("confirm-step-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeConfirmStepModal() {
+      const modal = document.getElementById("confirm-step-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      modalTargetStepSeq = null;
+    }
+
+    function syncQtyFromPass() {
+      const inspected = Number(document.getElementById("input-inspected-qty").value) || 0;
+      let pass = Number(document.getElementById("input-pass-qty").value) || 0;
+      if (pass < 0) pass = 0;
+      if (pass > inspected) pass = inspected;
+      document.getElementById("input-pass-qty").value = pass;
+      document.getElementById("input-fail-qty").value = inspected - pass;
+      toggleDefectPanel();
+      updateJsonPreview();
+    }
+
+    function syncQtyFromFail() {
+      const inspected = Number(document.getElementById("input-inspected-qty").value) || 0;
+      let fail = Number(document.getElementById("input-fail-qty").value) || 0;
+      if (fail < 0) fail = 0;
+      if (fail > inspected) fail = inspected;
+      document.getElementById("input-fail-qty").value = fail;
+      document.getElementById("input-pass-qty").value = inspected - fail;
+      toggleDefectPanel();
+      updateJsonPreview();
+    }
+
+    function toggleDefectPanel() {
+      const failQty = Number(document.getElementById("input-fail-qty").value) || 0;
+      const panel = document.getElementById("defect-fields-panel");
+      if (failQty > 0) {
+        panel.classList.remove("hidden");
+      } else {
+        panel.classList.add("hidden");
+      }
+    }
+
+    function onUpdateModeChange() {
+      const mode = document.querySelector('input[name="updateMode"]:checked')?.value;
+      const btnText = document.getElementById("modal-submit-btn-text");
+      const endpointLabel = document.getElementById("preview-endpoint-label");
+
+      if (mode === "QC_ONLY") {
+        btnText.textContent = "Lưu kết quả kiểm định KCS";
+        endpointLabel.textContent = "POST /api/v1/production-orders/batches/{batchId}/qc-inspect";
+      } else {
+        btnText.textContent = "Xác nhận Hoàn thành & Chuyển bước";
+        endpointLabel.textContent = "POST /qc-inspect  →  POST /advance-step";
+      }
+      updateJsonPreview();
+    }
+
+    function updateJsonPreview() {
+      const prod = getProduct();
+      const step = prod.steps.find(s => s.stageSequence === modalTargetStepSeq);
+      if (!step) return;
+
+      const mode = document.querySelector('input[name="updateMode"]:checked')?.value;
+      const inspectedQty = Number(document.getElementById("input-inspected-qty").value) || 0;
+      const passQty = Number(document.getElementById("input-pass-qty").value) || 0;
+      const failQty = Number(document.getElementById("input-fail-qty").value) || 0;
+      const notes = document.getElementById("input-step-notes").value.trim();
+
+      const qcPayload = {
+        batchStepId: step.batchStepId,
+        inspectedQty,
+        passQty,
+        failQty,
+        ...(failQty > 0 ? {
+          defectCode: document.getElementById("input-defect-code").value,
+          defectName: document.getElementById("input-defect-name").value || "Lỗi kỹ thuật phát hiện tại trạm KCS",
+          disposition: document.getElementById("input-disposition").value
+        } : {}),
+        notes
+      };
+
+      const previewObj = mode === "QC_ONLY"
+        ? qcPayload
+        : {
+            step1_RecordQcInspection: qcPayload,
+            step2_AdvanceStepRequest: {
+              targetStageSeq: step.stageSequence + 1,
+              notes
+            }
+          };
+
+      document.getElementById("json-payload-preview").textContent = JSON.stringify(previewObj, null, 2);
+    }
+
+    function submitConfirmStepModal(e) {
+      e.preventDefault();
+      const prod = getProduct();
+      const step = prod.steps.find(s => s.stageSequence === modalTargetStepSeq);
+      if (!step) return;
+
+      const mode = document.querySelector('input[name="updateMode"]:checked')?.value;
+      const inspectedQty = Number(document.getElementById("input-inspected-qty").value) || 0;
+      const passQty = Number(document.getElementById("input-pass-qty").value) || 0;
+      const failQty = Number(document.getElementById("input-fail-qty").value) || 0;
+      const notes = document.getElementById("input-step-notes").value.trim();
+
+      const nowStr = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+      const dateStr = `18/11/2026 ${nowStr}`;
+      const actor = `${ROLE_META[state.currentRole].name} (${state.currentRole})`;
+
+      // Nếu phát hiện lỗi > 0 -> kích hoạt tách nhánh 97-3 (KBN01)
+      if (failQty > 0) {
+        step.passedQty = passQty;
+        step.defectQty = failQty;
+        step.stepStatus = "PASSED";
+        step.completedAt = dateStr;
+        step.completedBy = actor;
+        step.notes = `[KCS Tách nhánh lỗi ${failQty} SP - ${document.getElementById("input-defect-code").value}] ${notes}`;
+
+        // Cập nhật targetQty các bước sau thành passQty (theo đúng ProductionOrderService.cs dòng 684)
+        prod.steps.forEach(s => {
+          if (s.stageSequence > step.stageSequence) {
+            s.targetQty = passQty;
+          }
+        });
+
+        const nextSeq = step.stageSequence + 1;
+        const nextStep = prod.steps.find(s => s.stageSequence === nextSeq);
+        if (nextStep) {
+          prod.currentStageSeq = nextSeq;
+          if (prod.isOverdriver && !prod.goodsIssuedUnlocked && prod.holdPointStageSeq && nextSeq >= prod.holdPointStageSeq) {
+            nextStep.stepStatus = "BLOCKED";
+            prod.batchStatus = "HOLD_POINT_BLOCKED";
+          } else {
+            nextStep.stepStatus = "IN_PROGRESS";
+          }
+        }
+
+        closeConfirmStepModal();
+        renderAll();
+        showToast("info", `Đã tách nhánh ${failQty} SP lỗi sang thẻ Rework. ${passQty} SP đạt chuẩn đã chuyển sang Bước ${nextSeq}!`);
+        return;
+      }
+
+      // Trường hợp đạt chuẩn 100%
+      step.passedQty = passQty;
+      step.defectQty = 0;
+      step.notes = notes;
+
+      if (mode === "QC_ONLY") {
+        step.stepStatus = "IN_PROGRESS"; // Vẫn chờ nút Advance Step
+        step.completedBy = actor;
+        closeConfirmStepModal();
+        renderAll();
+        showToast("success", `Đã lưu kết quả kiểm định KCS 100% (${passQty}/${inspectedQty} SP) cho Bước ${step.stageSequence}.`);
+        return;
+      }
+
+      // Chế độ COMPLETE_AND_ADVANCE
+      const maxSeq = Math.max(...prod.steps.map(s => s.stageSequence));
+      if (step.stageSequence < maxSeq) {
+        const nextSeq = step.stageSequence + 1;
+        const nextStep = prod.steps.find(s => s.stageSequence === nextSeq);
+
+        step.stepStatus = "PASSED";
+        step.completedAt = dateStr;
+        step.completedBy = actor;
+
+        if (prod.isOverdriver && !prod.goodsIssuedUnlocked && prod.holdPointStageSeq && nextSeq >= prod.holdPointStageSeq) {
+          // Chạm Hold Point Barrier!
+          if (nextStep) nextStep.stepStatus = "BLOCKED";
+          prod.currentStageSeq = nextSeq;
+          prod.batchStatus = "HOLD_POINT_BLOCKED";
+          closeConfirmStepModal();
+          renderAll();
+          showToast("error", `Bước ${step.stageSequence} đã xong, nhưng Bước ${nextSeq} tự động KHÓA HOLD POINT do chưa xuất đủ phụ kiện!`);
+          return;
+        }
+
+        prod.currentStageSeq = nextSeq;
+        if (nextStep) nextStep.stepStatus = "IN_PROGRESS";
+        closeConfirmStepModal();
+        renderAll();
+        showToast("success", `Hoàn thành Bước ${step.stageSequence}! Tiến độ đã chuyển sang Bước ${nextSeq}: ${nextStep?.stageName}`);
+      } else {
+        // Đã ở bước cuối cùng -> sẵn sàng nhập kho TP
+        step.completedBy = actor;
+        closeConfirmStepModal();
+        renderAll();
+        showToast("success", "Đã kiểm định xong công đoạn cuối! Bấm nút Nhập kho Thành phẩm để chốt hoàn tất.");
+      }
+    }
+
+    // Mở khóa Hold Point
+    function unlockHoldPointNow() {
+      const prod = getProduct();
+      const currentStep = getCurrentStep(prod);
+      if (!currentStep) return;
+
+      prod.goodsIssuedUnlocked = true;
+      prod.batchStatus = "IN_PROGRESS";
+      currentStep.stepStatus = "IN_PROGRESS";
+      currentStep.notes = `Thủ kho ${ROLE_META[state.currentRole].name} đã xác nhận xuất đủ phụ kiện và mở khóa Hold Point.`;
+      renderAll();
+      showToast("success", `Đã mở khóa trạm dừng Hold Point ở Bước ${currentStep.stageSequence}! Xưởng có thể tiếp tục gia công.`);
+    }
+
+    // =========================================================================
+    // MODAL 2: NHẬP KHO THÀNH PHẨM (BƯỚC CUỐI)
+    // =========================================================================
+    function openCompleteFgModal() {
+      const prod = getProduct();
+      const step = getCurrentStep(prod);
+      if (!step) return;
+      document.getElementById("fg-received-qty").value = step.passedQty || prod.batchQty;
+      document.getElementById("fg-handover-note").value =
+        `Hoàn tất đóng gói ${step.passedQty || prod.batchQty} sản phẩm ${prod.productSku}, bàn giao đủ tem FSC nhập kho thành phẩm.`;
+      updateFgJsonPreview();
+      const modal = document.getElementById("complete-fg-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeCompleteFgModal() {
+      const modal = document.getElementById("complete-fg-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function updateFgJsonPreview() {
+      const payload = {
+        receivedQty: Number(document.getElementById("fg-received-qty").value) || 0,
+        warehouseLocation: document.getElementById("fg-warehouse-loc").value,
+        handoverNote: document.getElementById("fg-handover-note").value
+      };
+      document.getElementById("fg-json-preview").textContent = JSON.stringify(payload, null, 2);
+    }
+
+    function submitCompleteFgModal(e) {
+      e.preventDefault();
+      const prod = getProduct();
+      const step = getCurrentStep(prod);
+      if (!step) return;
+
+      const receivedQty = Number(document.getElementById("fg-received-qty").value) || 0;
+      const loc = document.getElementById("fg-warehouse-loc").value.trim();
+      const note = document.getElementById("fg-handover-note").value.trim();
+      const nowStr = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+
+      step.passedQty = receivedQty;
+      step.stepStatus = "PASSED";
+      step.completedAt = `18/11/2026 ${nowStr}`;
+      step.completedBy = `${ROLE_META[state.currentRole].name} (${state.currentRole})`;
+      step.notes = `[Nhập kho: ${loc}] ${note}`;
+      prod.batchStatus = "DONE";
+
+      closeCompleteFgModal();
+      renderAll();
+      showToast("success", `Chúc mừng! Đã hoàn tất 100% quy trình và nhập kho ${receivedQty} thành phẩm.`);
+    }
+
+    // =========================================================================
+    // MODAL 3 & 4: XEM BIÊN BẢN & XEM DTO BACKEND
+    // =========================================================================
+    function openStepDetailModal(stageSeq) {
+      const prod = getProduct();
+      const step = prod.steps.find(s => s.stageSequence === stageSeq);
+      if (!step) return;
+      document.getElementById("detail-modal-title").textContent = `Biên bản hoàn thành — Bước ${step.stageSequence}: ${step.stageName}`;
+      document.getElementById("detail-modal-body").innerHTML = `
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
+          <div><span class="text-slate-500">Trạm máy:</span> <strong class="text-slate-900">${step.workstationCode} - ${step.workstationName}</strong></div>
+          <div><span class="text-slate-500">Cổng KCS:</span> <strong class="text-slate-900">${step.qualityGateName}</strong></div>
+          <div><span class="text-slate-500">Sản lượng đạt:</span> <strong class="text-emerald-700">${step.passedQty} / ${step.targetQty}</strong></div>
+          <div><span class="text-slate-500">Thời gian xong:</span> <strong class="text-slate-900">${step.completedAt || '—'}</strong></div>
+          <div class="col-span-2"><span class="text-slate-500">Người xác nhận:</span> <strong class="text-slate-900">${step.completedBy || '—'}</strong></div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-slate-600 uppercase mb-1">Ghi chú bàn giao &amp; Nhật ký công đoạn</div>
+          <div class="p-3.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs leading-relaxed">
+            ${step.notes || 'Không có ghi chú.'}
+          </div>
+        </div>
+      `;
+      const modal = document.getElementById("view-step-detail-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeDetailModal() {
+      const modal = document.getElementById("view-step-detail-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function openApiArchitectureModal() {
+      const modal = document.getElementById("api-arch-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeApiArchModal() {
+      const modal = document.getElementById("api-arch-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    // Toast Helper
+    function showToast(type, message) {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      const styles = {
+        success: "bg-emerald-600 text-white border-emerald-700",
+        error: "bg-rose-600 text-white border-rose-700",
+        info: "bg-slate-900 text-white border-slate-800"
+      };
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold flex items-center gap-2.5 transform transition-all duration-300 ${styles[type] || styles.info}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-8px)";
+        setTimeout(() => toast.remove(), 300);
+      }, 3800);
+    }
+
+    // Init
+    renderAll();
+  </script>
+</body>
+</html>

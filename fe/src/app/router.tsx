@@ -23,7 +23,12 @@ import OrderSpaceDetailPage from "../features/orders/pages/OrderSpaceDetailPage"
 import CatalogPage from "../features/catalog/pages/CatalogPage";
 import BomBuilderPage from "../features/bom/pages/BomBuilderPage";
 import PurchaseOrderManagementPage from "../features/purchasing/pages/PurchaseOrderManagementPage";
+import PurchaseRequestPage from "../features/purchasing/pages/PurchaseRequestPage";
+import GoodsReceiptPage from "../features/warehouse/pages/GoodsReceiptPage";
+import GoodsIssuePage from "../features/warehouse/pages/GoodsIssuePage";
 import InventoryStockPage from "../features/inventory/pages/InventoryStockPage";
+import InventoryReconciliationPage from "../features/inventory/pages/InventoryReconciliationPage";
+import ProductionProcessPage from "../features/production/pages/ProductionProcessPage";
 
 // Placeholder Page for Screens Under Development
 import UnderConstructionPage from "../components/common/UnderConstructionPage";
@@ -112,10 +117,22 @@ export const router = createBrowserRouter([
       },
 
       // ==========================================
-      // 2. Phân hệ Đơn hàng & Staging (SALES, OWNER, ADMIN)
+      // 2. Phân hệ Đơn hàng & Staging (Mọi vai trò sản xuất/kế hoạch/kinh doanh đều xem được đơn hàng & Space, trừ Purchasing)
       // ==========================================
       {
-        element: <ProtectedRoute allowedRoles={[ROLES.SALES, ROLES.OWNER, ROLES.ADMIN]} />,
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              ROLES.ADMIN,
+              ROLES.OWNER,
+              ROLES.SALES,
+              ROLES.PLANNER,
+              ROLES.LEADER,
+              ROLES.QC,
+              ROLES.WAREHOUSE,
+            ]}
+          />
+        ),
         children: [
           { path: "/orders", element: <SalesOrderListPage /> },
         ],
@@ -127,7 +144,19 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        element: <ProtectedRoute allowedRoles={[ROLES.SALES, ROLES.OWNER, ROLES.LEADER, ROLES.ADMIN]} />,
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              ROLES.ADMIN,
+              ROLES.OWNER,
+              ROLES.SALES,
+              ROLES.PLANNER,
+              ROLES.LEADER,
+              ROLES.QC,
+              ROLES.WAREHOUSE,
+            ]}
+          />
+        ),
         children: [
           { path: "/orders/spaces/:spaceKey", element: <OrderSpaceDetailPage /> },
         ],
@@ -216,25 +245,15 @@ export const router = createBrowserRouter([
               ROLES.OWNER,
               ROLES.PLANNER,
               ROLES.ADMIN,
+              ROLES.PURCHASING,
+              ROLES.WAREHOUSE,
             ]}
           />
         ),
         children: [
           {
             path: "/inventory/reconciliation",
-            element: (
-              <UnderConstructionPage
-                title="Đối chiếu tồn kho & phân bổ vật tư"
-                screenCode="SCR-INV-02"
-                moduleName="Tồn kho"
-                allowedRoles={[
-                  ROLES.SALES,
-                  ROLES.OWNER,
-                  ROLES.PLANNER,
-                  ROLES.ADMIN,
-                ]}
-              />
-            ),
+            element: <InventoryReconciliationPage />,
           },
         ],
       },
@@ -275,19 +294,7 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "/purchasing/requisitions",
-            element: (
-              <UnderConstructionPage
-                title="Yêu cầu mua hàng gộp theo ngày"
-                screenCode="SCR-PUR-01"
-                moduleName="Nghiệp vụ mua hàng"
-                allowedRoles={[
-                  ROLES.PURCHASING,
-                  ROLES.OWNER,
-                  ROLES.PLANNER,
-                  ROLES.ADMIN,
-                ]}
-              />
-            ),
+            element: <PurchaseRequestPage />,
           },
         ],
       },
@@ -300,25 +307,11 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "/warehouse/receipts",
-            element: (
-              <UnderConstructionPage
-                title="Màn hình nhập kho & xác nhận"
-                screenCode="SCR-WAR-01"
-                moduleName="Nghiệp vụ kho"
-                allowedRoles={[ROLES.WAREHOUSE, ROLES.ADMIN]}
-              />
-            ),
+            element: <GoodsReceiptPage />,
           },
           {
             path: "/warehouse/issues",
-            element: (
-              <UnderConstructionPage
-                title="Xuất kho & bàn giao xuống xưởng"
-                screenCode="SCR-WAR-02"
-                moduleName="Nghiệp vụ kho"
-                allowedRoles={[ROLES.WAREHOUSE, ROLES.ADMIN]}
-              />
-            ),
+            element: <GoodsIssuePage />,
           },
           {
             path: "/warehouse/finished-goods",
@@ -385,6 +378,7 @@ export const router = createBrowserRouter([
               ROLES.QC,
               ROLES.OWNER,
               ROLES.WAREHOUSE,
+              ROLES.PLANNER,
               ROLES.ADMIN,
             ]}
           />
@@ -392,36 +386,27 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "/production/kanban",
-            element: (
-              <UnderConstructionPage
-                title="Bảng Kanban sản xuất"
-                screenCode="SCR-PRD-01"
-                moduleName="Xưởng sản xuất"
-                allowedRoles={[
-                  ROLES.LEADER,
-                  ROLES.QC,
-                  ROLES.OWNER,
-                  ROLES.WAREHOUSE,
-                  ROLES.ADMIN,
-                ]}
-              />
-            ),
+            element: <ProductionProcessPage />,
           },
         ],
       },
       {
-        element: <ProtectedRoute allowedRoles={[ROLES.LEADER, ROLES.ADMIN]} />,
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              ROLES.LEADER,
+              ROLES.QC,
+              ROLES.OWNER,
+              ROLES.WAREHOUSE,
+              ROLES.PLANNER,
+              ROLES.ADMIN,
+            ]}
+          />
+        ),
         children: [
           {
             path: "/production/progress",
-            element: (
-              <UnderConstructionPage
-                title="Tiến độ công đoạn tại trạm"
-                screenCode="SCR-PRD-02"
-                moduleName="Xưởng sản xuất"
-                allowedRoles={[ROLES.LEADER, ROLES.ADMIN]}
-              />
-            ),
+            element: <ProductionProcessPage />,
           },
         ],
       },

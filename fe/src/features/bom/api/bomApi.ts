@@ -56,6 +56,23 @@ export const bomApi = {
     return res.data;
   },
 
+  /** Lấy cấu hình quy trình động hiện tại của sản phẩm (GET /api/v1/bom/routing/{productId}) */
+  getProductRouting: async (productId: number) => {
+    const res = await apiClient.get<{ success: boolean; data: RoutingStageDto[]; message?: string }>(
+      `/bom/routing/${productId}`,
+    );
+    return res.data;
+  },
+
+  /** Lưu cấu hình quy trình động cho sản phẩm (PUT /api/v1/bom/routing/{productId}) */
+  saveProductRouting: async (productId: number, stages: RoutingStageDto[]) => {
+    const res = await apiClient.put<{ success: boolean; data: RoutingStageDto[]; message?: string }>(
+      `/bom/routing/${productId}`,
+      { stages },
+    );
+    return res.data;
+  },
+
   /** Xem trước tính toán tổng nhu cầu nguyên vật liệu có hao hụt (POST /api/v1/bom/calculate-demand) */
   calculateDemand: async (payload: CalculateDemandRequestDto) => {
     const res = await apiClient.post<{

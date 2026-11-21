@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import { ApiError } from "../../../lib/api/apiError";
 import { bomApi } from "../api/bomApi";
 import type {
   BomDto,
@@ -112,12 +113,18 @@ export function useOrderItemBom(orderItemId: number) {
   return useQuery<BomDto | null>({
     queryKey: ["bom", "order-item", orderItemId],
     enabled: orderItemId > 0,
+    meta: {
+      skipGlobalErrorToast: true,
+    },
     queryFn: async () => {
       try {
         const res = await bomApi.getBomByOrderItemId(orderItemId);
         return res?.data ?? null;
-      } catch (err) {
-        if (isAxiosError(err) && err.response?.status === 404) {
+      } catch (err: unknown) {
+        if (
+          (err instanceof ApiError && err.status === 404) ||
+          (isAxiosError(err) && err.response?.status === 404)
+        ) {
           return null;
         }
         throw err;
@@ -141,6 +148,7 @@ export function useVisualCatalogForBom(category?: string) {
 
 export function useCalculateDemand() {
   return useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (payload: CalculateDemandRequestDto) => bomApi.calculateDemand(payload),
   });
 }
@@ -148,6 +156,7 @@ export function useCalculateDemand() {
 export function useSaveBomDraft() {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: async ({
       bomId,
       createPayload,
@@ -171,6 +180,7 @@ export function useSaveBomDraft() {
 export function useApproveBom() {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (bomId: number) => bomApi.approveBom(bomId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bom"] });
@@ -180,6 +190,7 @@ export function useApproveBom() {
 
 export function usePreviewBomStaging() {
   return useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: ({
       file,
       orderItemId,
@@ -195,6 +206,7 @@ export function usePreviewBomStaging() {
 export function useConfirmBomStaging() {
   const queryClient = useQueryClient();
   return useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (payload: ConfirmBomStagingRequestDto) => bomApi.confirmBomStaging(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bom"] });

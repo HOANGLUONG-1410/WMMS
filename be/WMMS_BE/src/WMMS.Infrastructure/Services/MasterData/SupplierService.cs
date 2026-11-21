@@ -54,7 +54,7 @@ public class SupplierService : ISupplierService
     {
         var code = dto.SupplierCode.Trim();
         if (await _context.Suppliers.AnyAsync(s => s.SupplierCode.ToLower() == code.ToLower(), cancellationToken))
-            throw AppException.Conflict($"Mã nhà cung cấp '{code}' đã tồn tại (BR-MDM-01).");
+            throw AppException.Conflict($"Mã nhà cung cấp '{code}' đã tồn tại trong hệ thống.");
 
         var now = DateTime.UtcNow;
         var s = new Supplier
@@ -111,7 +111,7 @@ public class SupplierService : ISupplierService
     {
         var code = dto.CustomerCode.Trim();
         if (await _context.Customers.AnyAsync(c => c.CustomerCode.ToLower() == code.ToLower(), cancellationToken))
-            throw AppException.Conflict($"Mã khách hàng '{code}' đã tồn tại (BR-MDM-01).");
+            throw AppException.Conflict($"Mã khách hàng '{code}' đã tồn tại trong hệ thống.");
 
         var now = DateTime.UtcNow;
         var c = new Customer

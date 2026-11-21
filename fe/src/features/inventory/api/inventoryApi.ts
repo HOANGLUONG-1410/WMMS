@@ -20,41 +20,17 @@ interface ApiResponse<T> {
 }
 
 /**
- * Gắn danh sách preview Order Space giữ chỗ cho từng dòng tồn kho
+ * Gắn danh sách preview Order Space giữ chỗ cho từng dòng tồn kho.
+ * Lưu ý: Với server live, chỉ giữ nguyên preview nếu backend trả về, KHÔNG tự ý chèn dữ liệu mẫu hardcode.
  */
 function enrichAllocationsPreview(item: InventoryStockDto): InventoryStockDto {
   if (item.activeAllocationsPreview && item.activeAllocationsPreview.length > 0) {
     return item;
   }
 
-  const matchedDefault = DEFAULT_INVENTORY_STOCKS.find(
-    (d) =>
-      d.materialCode.toUpperCase() === (item.materialCode || "").toUpperCase() ||
-      d.materialId === item.materialId,
-  );
-
-  if (matchedDefault?.activeAllocationsPreview && item.allocatedQty > 0) {
-    return {
-      ...item,
-      activeAllocationsPreview: matchedDefault.activeAllocationsPreview,
-    };
-  }
-
-  if (item.allocatedQty > 0) {
-    return {
-      ...item,
-      activeAllocationsPreview: [
-        {
-          spaceKey: "SPACE-880504",
-          reservedQty: item.allocatedQty,
-        },
-      ],
-    };
-  }
-
   return {
     ...item,
-    activeAllocationsPreview: [],
+    activeAllocationsPreview: item.activeAllocationsPreview || [],
   };
 }
 
@@ -201,8 +177,11 @@ export const inventoryApi = {
           isLiveServer: true,
         };
       }
-    } catch {
-      // Fallback sang dữ liệu chuẩn 14 vật tư trong WMMS_DB_Test_Iteration1.sql
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Fallback sang dữ liệu chuẩn 14 vật tư trong WMMS_DB_Test_Iteration1.sql khi offline hoặc 404
     }
 
     return {
@@ -223,8 +202,11 @@ export const inventoryApi = {
       if (res.data?.data) {
         return res.data.data;
       }
-    } catch {
-      // Fallback sang chi tiết chuẩn của vật tư
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Fallback sang chi tiết chuẩn của vật tư khi offline hoặc 404
     }
 
     const baseStock =
@@ -302,8 +284,11 @@ export const inventoryApi = {
           isLiveServer: true,
         };
       }
-    } catch {
-      // Fallback sang 14 giao dịch sổ kho đầu kỳ chuẩn từ WMMS_DB_Test_Iteration1.sql
+    } catch (err: any) {
+      if (err?.status && err.status !== 0 && err.status !== 404) {
+        throw err;
+      }
+      // Fallback sang 14 giao dịch sổ kho đầu kỳ chuẩn từ WMMS_DB_Test_Iteration1.sql khi offline hoặc 404
     }
 
     return {

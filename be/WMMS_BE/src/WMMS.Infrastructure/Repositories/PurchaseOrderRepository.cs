@@ -191,6 +191,15 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
             .ToDictionaryAsync(s => s.SupplierId, cancellationToken);
     }
 
+    public async Task<List<Supplier>> GetActiveSuppliersAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Suppliers
+            .AsNoTracking()
+            .Where(s => s.Status == "ACTIVE")
+            .OrderBy(s => s.SupplierId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(PurchaseOrder po, CancellationToken cancellationToken = default)
     {
         await _context.PurchaseOrders.AddAsync(po, cancellationToken);

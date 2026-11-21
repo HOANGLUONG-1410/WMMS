@@ -66,7 +66,7 @@ public class BomRoutingController : ControllerBase
         var bom = await _bomRoutingService.GetBomByOrderItemIdAsync(orderItemId);
         if (bom == null)
         {
-            return NotFound(ApiResponse<BomDto>.Fail($"OrderItem với ID {orderItemId} chưa có BOM."));
+            return NotFound(ApiResponse<BomDto>.Fail($"Dòng sản phẩm #{orderItemId} trong đơn hàng chưa được thiết lập định mức BOM."));
         }
         return Ok(ApiResponse<BomDto>.Ok(bom));
     }
@@ -112,7 +112,7 @@ public class BomRoutingController : ControllerBase
         {
             return NotFound(ApiResponse<RoutingDto>.Fail($"Sản phẩm với ID {productId} không tồn tại."));
         }
-        return Ok(ApiResponse<RoutingDto>.Ok(routing, "Lấy thông tin quy trình sản xuất thành công (UC-36)."));
+        return Ok(ApiResponse<RoutingDto>.Ok(routing, "Lấy thông tin quy trình sản xuất thành công."));
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public class BomRoutingController : ControllerBase
 
         long currentUserId = GetCurrentUserId();
         var result = await _bomRoutingService.SaveDynamicRoutingAsync(productId, request, currentUserId);
-        return Ok(ApiResponse<RoutingDto>.Ok(result, "Cấu hình quy trình sản xuất động thành công (UC-37, BR-007)."));
+        return Ok(ApiResponse<RoutingDto>.Ok(result, "Cấu hình quy trình công đoạn sản xuất thành công."));
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public class BomRoutingController : ControllerBase
     public ActionResult<ApiResponse<List<StandardWorkstationDto>>> GetWorkstations()
     {
         var workstations = _bomRoutingService.GetStandardWorkstations();
-        return Ok(ApiResponse<List<StandardWorkstationDto>>.Ok(workstations, "Lấy danh mục trạm gia công thành công (SC-18)."));
+        return Ok(ApiResponse<List<StandardWorkstationDto>>.Ok(workstations, "Lấy danh mục trạm gia công thành công."));
     }
 
     /// <summary>
@@ -152,7 +152,7 @@ public class BomRoutingController : ControllerBase
     public ActionResult<ApiResponse<List<StandardQualityGateDto>>> GetQualityGates()
     {
         var gates = _bomRoutingService.GetStandardQualityGates();
-        return Ok(ApiResponse<List<StandardQualityGateDto>>.Ok(gates, "Lấy danh mục cổng kiểm soát chất lượng thành công (SC-18)."));
+        return Ok(ApiResponse<List<StandardQualityGateDto>>.Ok(gates, "Lấy danh mục cổng kiểm soát chất lượng thành công."));
     }
 
     /// <summary>
@@ -186,7 +186,7 @@ public class BomRoutingController : ControllerBase
 
         long currentUserId = GetCurrentUserId();
         var result = await _bomRoutingService.CreateBomAsync(request, currentUserId);
-        return CreatedAtAction(nameof(GetById), new { bomId = result.BomId }, ApiResponse<BomDto>.Ok(result, "Tạo bản BOM ở trạng thái Draft thành công."));
+        return CreatedAtAction(nameof(GetById), new { bomId = result.BomId }, ApiResponse<BomDto>.Ok(result, "Đã khởi tạo bản nháp định mức BOM thành công."));
     }
 
     /// <summary>
@@ -203,7 +203,7 @@ public class BomRoutingController : ControllerBase
 
         long currentUserId = GetCurrentUserId();
         var result = await _bomRoutingService.UpdateBomAsync(bomId, request, currentUserId);
-        return Ok(ApiResponse<BomDto>.Ok(result, "Cập nhật BOM thành công."));
+        return Ok(ApiResponse<BomDto>.Ok(result, "Cập nhật định mức BOM thành công."));
     }
 
     /// <summary>
@@ -214,7 +214,7 @@ public class BomRoutingController : ControllerBase
     {
         long currentUserId = GetCurrentUserId();
         var result = await _bomRoutingService.ApproveBomAsync(bomId, currentUserId);
-        return Ok(ApiResponse<BomDto>.Ok(result, "Đã chốt và phê duyệt BOM sang trạng thái READY_FOR_PRODUCTION."));
+        return Ok(ApiResponse<BomDto>.Ok(result, "Đã chốt và phê duyệt định mức BOM sẵn sàng cho sản xuất."));
     }
 
     /// <summary>
@@ -240,7 +240,7 @@ public class BomRoutingController : ControllerBase
 
         using var stream = file.OpenReadStream();
         var preview = await _bomRoutingService.PreviewBomExcelStagingAsync(stream, file.FileName, orderItemId, productId);
-        return Ok(ApiResponse<BomStagingPreviewDto>.Ok(preview, preview.HasErrors ? "File có dòng chứa lỗi cần kiểm tra trên Staging Grid." : "Dữ liệu hợp lệ sẵn sàng Import."));
+        return Ok(ApiResponse<BomStagingPreviewDto>.Ok(preview, preview.HasErrors ? "Tệp Excel có dòng dữ liệu lỗi, vui lòng kiểm tra và chỉnh sửa trên bảng tạm." : "Dữ liệu hợp lệ, sẵn sàng xác nhận định mức BOM."));
     }
 
     /// <summary>
@@ -252,12 +252,12 @@ public class BomRoutingController : ControllerBase
         var validation = await _confirmStagingValidator.ValidateAsync(request);
         if (!validation.IsValid)
         {
-            return BadRequest(ApiResponse<BomDto>.Fail("Dữ liệu xác nhận Staging không hợp lệ.", validation.Errors.Select(e => e.ErrorMessage).ToList()));
+            return BadRequest(ApiResponse<BomDto>.Fail("Dữ liệu xác nhận định mức BOM không hợp lệ.", validation.Errors.Select(e => e.ErrorMessage).ToList()));
         }
 
         long currentUserId = GetCurrentUserId();
         var result = await _bomRoutingService.ConfirmBomStagingAsync(request, currentUserId);
-        return Ok(ApiResponse<BomDto>.Ok(result, "Import BOM thành công và chuyển trạng thái sang Draft."));
+        return Ok(ApiResponse<BomDto>.Ok(result, "Nhập định mức BOM thành công và đã lưu ở trạng thái bản nháp."));
     }
 
     private long GetCurrentUserId()

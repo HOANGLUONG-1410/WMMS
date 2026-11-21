@@ -15,7 +15,7 @@ public abstract class MasterDataControllerBase : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         if (!long.TryParse(sub, out var userId))
         {
-            throw AppException.Unauthorized("Thông tin định danh người dùng trong token không hợp lệ.");
+            throw AppException.Unauthorized("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.");
         }
         return userId;
     }

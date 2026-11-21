@@ -41,14 +41,14 @@ public class SuppliersController : MasterDataControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<SupplierDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSuppliersAsync([FromQuery] PartnerQueryFilterDto filter, CancellationToken ct)
-        => Ok(ApiResponse<PagedResult<SupplierDto>>.Ok(await _service.GetSuppliersAsync(filter, ct), "Lấy danh sách nhà cung cấp thành công (UC-26)."));
+        => Ok(ApiResponse<PagedResult<SupplierDto>>.Ok(await _service.GetSuppliersAsync(filter, ct), "Đã tải danh sách nhà cung cấp."));
 
     /// <summary>UC-27: Chi tiết nhà cung cấp.</summary>
     [HttpGet("{id:long}")]
     [ProducesResponseType(typeof(ApiResponse<SupplierDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSupplierByIdAsync([FromRoute] long id, CancellationToken ct)
-        => Ok(ApiResponse<SupplierDto>.Ok(await _service.GetSupplierByIdAsync(id, ct), "Lấy chi tiết nhà cung cấp thành công (UC-27)."));
+        => Ok(ApiResponse<SupplierDto>.Ok(await _service.GetSupplierByIdAsync(id, ct), "Đã tải thông tin chi tiết nhà cung cấp."));
 
     /// <summary>UC-28: Tạo nhà cung cấp (mã duy nhất, 409 MSG08 nếu trùng).</summary>
     [HttpPost]
@@ -59,7 +59,7 @@ public class SuppliersController : MasterDataControllerBase
     {
         await _createValidator.ValidateAndThrowAsync(dto, ct);
         var created = await _service.CreateSupplierAsync(dto, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return StatusCode(StatusCodes.Status201Created, ApiResponse<SupplierDto>.Ok(created, "Tạo mới nhà cung cấp thành công (UC-28)."));
+        return StatusCode(StatusCodes.Status201Created, ApiResponse<SupplierDto>.Ok(created, "Đã thêm nhà cung cấp mới thành công."));
     }
 
     /// <summary>UC-29: Cập nhật nhà cung cấp (mã bất biến).</summary>
@@ -71,7 +71,7 @@ public class SuppliersController : MasterDataControllerBase
     {
         await _updateValidator.ValidateAndThrowAsync(dto, ct);
         var updated = await _service.UpdateSupplierAsync(id, dto, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return Ok(ApiResponse<SupplierDto>.Ok(updated, "Cập nhật thông tin nhà cung cấp thành công (UC-29)."));
+        return Ok(ApiResponse<SupplierDto>.Ok(updated, "Đã cập nhật thông tin nhà cung cấp thành công."));
     }
 
     /// <summary>SC-06: Danh sách khách hàng phân trang.</summary>
@@ -79,7 +79,7 @@ public class SuppliersController : MasterDataControllerBase
     [Authorize(Roles = CustomerRoles)]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<CustomerDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCustomersAsync([FromQuery] PartnerQueryFilterDto filter, CancellationToken ct)
-        => Ok(ApiResponse<PagedResult<CustomerDto>>.Ok(await _service.GetCustomersAsync(filter, ct), "Lấy danh sách khách hàng thành công."));
+        => Ok(ApiResponse<PagedResult<CustomerDto>>.Ok(await _service.GetCustomersAsync(filter, ct), "Đã tải danh sách khách hàng."));
 
     /// <summary>SC-06: Tạo khách hàng (mã duy nhất, 409 MSG08 nếu trùng).</summary>
     [HttpPost("~/api/v1/customers")]
@@ -90,6 +90,6 @@ public class SuppliersController : MasterDataControllerBase
     {
         await _customerValidator.ValidateAndThrowAsync(dto, ct);
         var created = await _service.CreateCustomerAsync(dto, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return StatusCode(StatusCodes.Status201Created, ApiResponse<CustomerDto>.Ok(created, "Tạo mới khách hàng thành công."));
+        return StatusCode(StatusCodes.Status201Created, ApiResponse<CustomerDto>.Ok(created, "Đã thêm khách hàng mới thành công."));
     }
 }

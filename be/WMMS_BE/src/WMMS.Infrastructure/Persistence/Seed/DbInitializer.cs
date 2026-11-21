@@ -15,6 +15,15 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(WmmsDbContext context)
     {
+        if (context.Database.IsRelational())
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                IF COL_LENGTH('purchase_orders', 'terms') IS NULL
+                BEGIN
+                    ALTER TABLE [purchase_orders] ADD [terms] nvarchar(1000) NULL;
+                END");
+        }
+
         var now = DateTime.UtcNow;
 
         // 1. Seed Roles
@@ -523,6 +532,69 @@ public static class DbInitializer
                 });
             }
 
+            await context.SaveChangesAsync();
+        }
+
+        // 11. Tự động chuẩn hóa dữ liệu Tiếng Anh cũ sang Tiếng Việt chuẩn cho các DB đã khởi tạo trước đó (Idempotent Migration)
+        await NormalizeLegacyEnglishDataAsync(context);
+    }
+
+    /// <summary>
+    /// Tự động cập nhật các bản ghi Sản phẩm (WoodSpecies, FinishColor, CategoryName, PackingSpec)
+    /// và Nhật ký hệ thống (AuditLogs.Reason) còn lưu Tiếng Anh từ bản seed cũ sang Tiếng Việt chuẩn.
+    /// </summary>
+    private static async Task NormalizeLegacyEnglishDataAsync(WmmsDbContext context)
+    {
+        var hasChanges = false;
+
+        var allProducts = await context.Products.ToListAsync();
+        foreach (var p in allProducts)
+        {
+            var newWood = Services.MasterData.ProductService.NormalizeWoodSpecies(p.WoodSpecies);
+            var newFinish = Services.MasterData.ProductService.NormalizeFinishColor(p.FinishColor);
+            var newCat = Services.MasterData.ProductService.NormalizeCategoryName(p.CategoryName);
+            var newPacking = p.PackingSpec?.Trim() switch
+            {
+                "2 pcs / Master Carton" => "2 chiếc / Thùng Master",
+                "1 pc / 2 Cartons" => "1 chiếc / 2 Thùng carton",
+                "1 pc / Carton with foam protection" => "1 chiếc / Thùng kèm xốp bảo vệ",
+                "1 pc / Flat-pack Carton" => "1 chiếc / Thùng lắp ráp phẳng (Flat-pack)",
+                _ => p.PackingSpec
+            };
+
+            if (newWood != p.WoodSpecies || newFinish != p.FinishColor || newCat != p.CategoryName || newPacking != p.PackingSpec)
+            {
+                p.WoodSpecies = newWood;
+                p.FinishColor = newFinish;
+                p.CategoryName = newCat;
+                p.PackingSpec = newPacking;
+                hasChanges = true;
+            }
+        }
+
+        var legacyLogs = await context.AuditLogs
+            .Where(a => a.Reason != null && (
+                a.Reason.Contains("User logged in successfully") ||
+                a.Reason.Contains("User logged out") ||
+                a.Reason.Contains("Password changed") ||
+                a.Reason.Contains("Password reset") ||
+                a.Reason.Contains("(UC-") ||
+                a.Reason.Contains("(SC-") ||
+                a.Reason.Contains("(BR-")))
+            .ToListAsync();
+
+        foreach (var log in legacyLogs)
+        {
+            var updated = Security.AuditLogService.FormatAuditReasonForDisplay(log.Reason);
+            if (updated != log.Reason)
+            {
+                log.Reason = updated;
+                hasChanges = true;
+            }
+        }
+
+        if (hasChanges)
+        {
             await context.SaveChangesAsync();
         }
     }

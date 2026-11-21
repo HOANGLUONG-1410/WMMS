@@ -43,7 +43,7 @@ public class PurchaseOrdersController : MasterDataControllerBase
     public async Task<IActionResult> GetApprovedRequisitionsAsync(CancellationToken cancellationToken)
     {
         var result = await _purchaseOrderService.GetApprovedRequisitionsAsync(cancellationToken);
-        return Ok(ApiResponse<List<ApprovedRequisitionDto>>.Ok(result, "Fetched approved requisitions awaiting PO generation (UC-49)."));
+        return Ok(ApiResponse<List<ApprovedRequisitionDto>>.Ok(result, "Đã tải danh sách phiếu yêu cầu mua hàng chờ đặt hàng."));
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public class PurchaseOrdersController : MasterDataControllerBase
     {
         await _filterValidator.ValidateAndThrowAsync(filter, cancellationToken);
         var result = await _purchaseOrderService.GetPurchaseOrdersAsync(filter, cancellationToken);
-        return Ok(ApiResponse<PagedResult<PurchaseOrderListItemDto>>.Ok(result, "Fetched supplier purchase orders (UC-50)."));
+        return Ok(ApiResponse<PagedResult<PurchaseOrderListItemDto>>.Ok(result, "Đã tải danh sách đơn đặt hàng nhà cung cấp."));
     }
 
     /// <summary>Thẻ KPI SCR-19: số PO theo trạng thái, quá hạn và sắp đến hạn giao.</summary>
@@ -65,7 +65,7 @@ public class PurchaseOrdersController : MasterDataControllerBase
     public async Task<IActionResult> GetSummaryAsync(CancellationToken cancellationToken)
     {
         var result = await _purchaseOrderService.GetSummaryAsync(cancellationToken);
-        return Ok(ApiResponse<PurchaseOrderSummaryDto>.Ok(result, "Fetched purchase order ETA summary (SC-16)."));
+        return Ok(ApiResponse<PurchaseOrderSummaryDto>.Ok(result, "Đã tải báo cáo tổng hợp tiến độ đơn đặt hàng."));
     }
 
     /// <summary>UC-51: Chi tiết PO: dòng vật tư, đơn giá, tiến độ nhận hàng, tình trạng ETA và các phiếu nhập kho.</summary>
@@ -75,7 +75,7 @@ public class PurchaseOrdersController : MasterDataControllerBase
     public async Task<IActionResult> GetPurchaseOrderByIdAsync([FromRoute] long id, CancellationToken cancellationToken)
     {
         var result = await _purchaseOrderService.GetPurchaseOrderByIdAsync(id, cancellationToken);
-        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, "Fetched purchase order details (UC-51)."));
+        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, "Đã tải thông tin chi tiết đơn đặt hàng."));
     }
 
     /// <summary>
@@ -92,6 +92,15 @@ public class PurchaseOrdersController : MasterDataControllerBase
         [FromBody] CreatePurchaseOrdersRequestDto request,
         CancellationToken cancellationToken)
     {
+        if (request.PrId <= 0 && (request.Lines == null || request.Lines.Count == 0) && !string.IsNullOrWhiteSpace(request.SupplierName))
+        {
+            var batchCreated = await _purchaseOrderService.BatchIssuePurchaseOrdersAsync(
+                null, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
+            return StatusCode(
+                StatusCodes.Status201Created,
+                ApiResponse<List<PurchaseOrderDetailDto>>.Ok(batchCreated, $"Đã phát hành thành công {batchCreated.Count} đơn đặt hàng nhà cung cấp."));
+        }
+
         await _createValidator.ValidateAndThrowAsync(request, cancellationToken);
 
         var created = await _purchaseOrderService.CreatePurchaseOrdersAsync(
@@ -99,7 +108,26 @@ public class PurchaseOrdersController : MasterDataControllerBase
 
         return StatusCode(
             StatusCodes.Status201Created,
-            ApiResponse<List<PurchaseOrderDetailDto>>.Ok(created, $"Issued {created.Count} supplier purchase order(s) (UC-52)."));
+            ApiResponse<List<PurchaseOrderDetailDto>>.Ok(created, $"Đã phát hành thành công {created.Count} đơn đặt hàng nhà cung cấp."));
+    }
+
+    /// <summary>
+    /// Phát hành đồng loạt các Đơn đặt hàng nhà cung cấp (PO) từ một hoặc nhiều Phiếu yêu cầu mua hàng (PR) đã được Chủ xưởng phê duyệt.
+    /// </summary>
+    [HttpPost("batch-issue")]
+    [Authorize(Roles = WriteRoles)]
+    [ProducesResponseType(typeof(ApiResponse<List<PurchaseOrderDetailDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> BatchIssuePurchaseOrdersAsync(
+        [FromBody] BatchIssuePurchaseOrdersRequestDto? request = null,
+        CancellationToken cancellationToken = default)
+    {
+        var created = await _purchaseOrderService.BatchIssuePurchaseOrdersAsync(
+            request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
+
+        return Ok(ApiResponse<List<PurchaseOrderDetailDto>>.Ok(
+            created,
+            $"Đã phát hành đồng loạt thành công {created.Count} đơn đặt hàng tới các nhà cung cấp."));
     }
 
     /// <summary>UC-53: Cập nhật ngày hẹn giao và ghi chú vận chuyển; 409 nếu PO đã nhận đủ hoặc đã hủy.</summary>
@@ -119,7 +147,7 @@ public class PurchaseOrdersController : MasterDataControllerBase
         var result = await _purchaseOrderService.UpdateEtaAsync(
             id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Delivery schedule of PO {result.PoCode} updated (UC-53)."));
+        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Đã cập nhật lịch giao hàng dự kiến cho đơn đặt hàng {result.PoCode}."));
     }
 
     /// <summary>SC-16: Cập nhật điều khoản thanh toán &amp; tiến độ giao nhận cho PO.</summary>
@@ -135,13 +163,13 @@ public class PurchaseOrdersController : MasterDataControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Terms))
         {
-            return BadRequest(ApiResponse<object>.Fail("Điều khoản thanh toán & giao hàng không được để trống."));
+            return BadRequest(ApiResponse<object>.Fail("Vui lòng nhập điều khoản thanh toán và giao hàng."));
         }
 
         var result = await _purchaseOrderService.UpdateTermsAsync(
             id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Cập nhật điều khoản hợp đồng/thanh toán của PO {result.PoCode} thành công (SC-16)."));
+        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Đã cập nhật điều khoản hợp đồng và thanh toán cho đơn đặt hàng {result.PoCode}."));
     }
 
     /// <summary>SC-16: Cập nhật trạng thái vòng đời của PO (ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED).</summary>
@@ -158,6 +186,6 @@ public class PurchaseOrdersController : MasterDataControllerBase
         var result = await _purchaseOrderService.UpdateStatusAsync(
             id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Trạng thái của PO {result.PoCode} đã chuyển sang {result.PoStatus} (SC-16)."));
+        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Đã cập nhật trạng thái đơn đặt hàng {result.PoCode} sang '{result.FulfillmentStatus}'."));
     }
 }

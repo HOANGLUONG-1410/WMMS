@@ -292,7 +292,7 @@ public class ProductionOrderController : ControllerBase
     public ActionResult<ApiResponse<List<StandardWorkstationDto>>> GetWorkstations()
     {
         var workstations = _productionOrderService.GetStandardWorkstations();
-        return Ok(ApiResponse<List<StandardWorkstationDto>>.Ok(workstations, "Lấy danh mục trạm gia công thành công (SC-18)."));
+        return Ok(ApiResponse<List<StandardWorkstationDto>>.Ok(workstations, "Lấy danh mục trạm gia công thành công."));
     }
 
     /// <summary>
@@ -302,7 +302,7 @@ public class ProductionOrderController : ControllerBase
     public ActionResult<ApiResponse<List<StandardQualityGateDto>>> GetQualityGates()
     {
         var gates = _productionOrderService.GetStandardQualityGates();
-        return Ok(ApiResponse<List<StandardQualityGateDto>>.Ok(gates, "Lấy danh mục cổng kiểm soát chất lượng thành công (SC-18)."));
+        return Ok(ApiResponse<List<StandardQualityGateDto>>.Ok(gates, "Lấy danh mục cổng kiểm soát chất lượng thành công."));
     }
 
     private long GetCurrentUserId()

@@ -109,7 +109,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (restrictToApprovedOnly && !ApprovedVisibleStatuses.Contains(pr.PrStatus))
         {
             throw AppException.Forbidden(
-                "Nhân viên Thu mua chỉ được xem các Phiếu Yêu cầu Mua hàng (PR) đã được Chủ xưởng phê duyệt (BR-PUR-02).",
+                "Nhân viên Thu mua chỉ được xem các Phiếu Yêu cầu Mua hàng (PR) đã được Chủ xưởng phê duyệt.",
                 MessageCodes.Msg11ForbiddenRule);
         }
 
@@ -137,7 +137,7 @@ public class PurchaseRequestService : IPurchaseRequestService
             prId,
             PrStatusEnum.APPROVED,
             rejectionReason: null,
-            reasonForAudit: notes ?? $"Chủ xưởng đã phê duyệt Phiếu PR tổng hợp #{prId} (UC-47, BR-PUR-02).",
+            reasonForAudit: notes ?? $"Chủ xưởng đã phê duyệt Phiếu yêu cầu mua hàng tổng hợp #{prId}.",
             actionType: AuditActionConstants.ConsolidatedPrApproved,
             ownerUserId,
             ipAddress,
@@ -158,7 +158,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (request == null || string.IsNullOrWhiteSpace(request.Reason))
         {
             throw new AppException(
-                "Lý do từ chối là bắt buộc (UC048.E1).",
+                "Lý do từ chối là bắt buộc.",
                 400,
                 MessageCodes.Msg01RequiredField);
         }
@@ -208,7 +208,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         if (previousStatus != PrStatusEnum.PENDING_APPROVAL)
         {
             throw AppException.Conflict(
-                $"Phiếu PR {pr.PrCode} đã ở trạng thái {previousStatus} và không thể duyệt lại (UC047.E1).",
+                $"Phiếu PR {pr.PrCode} đã ở trạng thái {previousStatus} và không thể duyệt lại.",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -230,7 +230,7 @@ public class PurchaseRequestService : IPurchaseRequestService
             if (!transitioned)
             {
                 throw AppException.Conflict(
-                    $"Phiếu PR {pr.PrCode} đã được xử lý ở một phiên làm việc khác (UC047.E1).",
+                    $"Phiếu PR {pr.PrCode} đã được xử lý ở một phiên làm việc khác.",
                     MessageCodes.Msg08DuplicateConflict);
             }
 

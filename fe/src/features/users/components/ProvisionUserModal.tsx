@@ -26,6 +26,7 @@ export default function ProvisionUserModal({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const createMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: async (payload: {
       username: string;
       email: string;

@@ -113,7 +113,7 @@ public class FinishedGoodsService : IFinishedGoodsService
         if (batch.BatchStatus == BatchStatusEnum.LOCKED)
         {
             throw new AppException(
-                $"Lô sản xuất '{batch.BatchCode}' đang ở trạng thái khóa (LOCKED - chưa xuất kho nguyên vật liệu) nên không thể nhập kho thành phẩm.",
+                $"Lô sản xuất '{batch.BatchCode}' đang ở trạng thái khóa (chưa xuất kho nguyên vật liệu) nên không thể nhập kho thành phẩm.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -121,7 +121,7 @@ public class FinishedGoodsService : IFinishedGoodsService
         if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
         {
             throw new AppException(
-                $"Lô sản xuất '{batch.BatchCode}' đang bị chặn tại chốt kiểm soát Hold Point (HOLD_POINT_BLOCKED). Vui lòng xử lý lỗi QC hoặc chờ phê duyệt ghi đè trước khi hoàn tất lô.",
+                $"Lô sản xuất '{batch.BatchCode}' đang bị chặn tại trạm dừng kỹ thuật (Hold Point). Vui lòng xử lý lỗi chất lượng hoặc chờ Chủ xưởng phê duyệt mở khóa trước khi hoàn tất lô.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -133,7 +133,7 @@ public class FinishedGoodsService : IFinishedGoodsService
         if (orderedSteps.Count == 0)
         {
             throw new AppException(
-                $"Lô sản xuất '{batch.BatchCode}' chưa được khởi tạo danh sách bước công đoạn định tuyến (BatchRoutingSteps).",
+                $"Lô sản xuất '{batch.BatchCode}' chưa được khởi tạo danh sách bước công đoạn sản xuất.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -141,8 +141,17 @@ public class FinishedGoodsService : IFinishedGoodsService
         var incompleteStep = orderedSteps.FirstOrDefault(s => s.StepStatus != StepStatusEnum.PASSED);
         if (incompleteStep != null)
         {
+            var stepStatusVi = incompleteStep.StepStatus switch
+            {
+                StepStatusEnum.WAITING => "Chờ thực hiện",
+                StepStatusEnum.IN_PROGRESS => "Đang gia công",
+                StepStatusEnum.QC_PENDING => "Đang chờ kiểm định KCS",
+                StepStatusEnum.BLOCKED => "Đang bị khóa tại trạm dừng kỹ thuật",
+                _ => incompleteStep.StepStatus.ToString()
+            };
+
             throw new AppException(
-                $"Không thể nhập kho thành phẩm cho lô '{batch.BatchCode}' vì công đoạn '{incompleteStep.StageName}' (Thứ tự {incompleteStep.StageSequence}) đang ở trạng thái '{incompleteStep.StepStatus}' (yêu cầu đạt chuẩn QC PASSED).",
+                $"Không thể nhập kho thành phẩm cho lô '{batch.BatchCode}' vì công đoạn '{incompleteStep.StageName}' (Thứ tự {incompleteStep.StageSequence}) đang ở trạng thái '{stepStatusVi}' (yêu cầu hoàn tất kiểm định chất lượng đạt chuẩn 100%).",
                 400,
                 MessageCodes.Msg13ValidationError);
         }

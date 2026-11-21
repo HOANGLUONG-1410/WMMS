@@ -12,16 +12,16 @@ public class RequestHoldPointOverrideValidator : AbstractValidator<RequestHoldPo
     {
         RuleFor(x => x.BatchId)
             .GreaterThan(0)
-            .WithMessage("Mã lô sản xuất (BatchId) phải lớn hơn 0.");
+            .WithMessage("Vui lòng chọn lô sản xuất hợp lệ.");
 
         RuleFor(x => x.HoldPointStageSeq)
             .GreaterThan(0)
             .When(x => x.HoldPointStageSeq.HasValue)
-            .WithMessage("Số thứ tự công đoạn Hold Point phải lớn hơn 0 nếu được chỉ định.");
+            .WithMessage("Thứ tự công đoạn chốt kiểm soát phải lớn hơn 0.");
 
         RuleFor(x => x.Justification)
             .NotEmpty()
-            .WithMessage("Lý do giải trình là bắt buộc khi gửi yêu cầu mở khóa Hold Point Overdriver (KBN02).")
+            .WithMessage("Vui lòng nhập lý do giải trình khi xin phép chạy vượt chốt kiểm soát chờ vật tư.")
             .MinimumLength(5)
             .WithMessage("Lý do giải trình phải có ít nhất 5 ký tự.")
             .MaximumLength(500)
@@ -38,11 +38,11 @@ public class ApproveHoldPointOverrideValidator : AbstractValidator<ApproveHoldPo
     {
         RuleFor(x => x.Justification)
             .NotEmpty()
-            .WithMessage("Lý do phê duyệt là bắt buộc đối với Chủ xưởng khi mở khóa Hold Point Overdriver (GBR-05).")
+            .WithMessage("Vui lòng nhập ý kiến phê duyệt cho phép chạy vượt chốt kiểm soát.")
             .MinimumLength(5)
-            .WithMessage("Lý do phê duyệt phải có ít nhất 5 ký tự.")
+            .WithMessage("Ý kiến phê duyệt phải có ít nhất 5 ký tự.")
             .MaximumLength(500)
-            .WithMessage("Lý do phê duyệt không được vượt quá 500 ký tự.");
+            .WithMessage("Ý kiến phê duyệt không được vượt quá 500 ký tự.");
     }
 }
 
@@ -55,7 +55,7 @@ public class RejectHoldPointOverrideValidator : AbstractValidator<RejectHoldPoin
     {
         RuleFor(x => x.Reason)
             .NotEmpty()
-            .WithMessage("Lý do từ chối là bắt buộc khi không phê duyệt mở khóa Hold Point Overdriver (KBN02).")
+            .WithMessage("Vui lòng nhập lý do từ chối yêu cầu chạy vượt chốt kiểm soát.")
             .MinimumLength(5)
             .WithMessage("Lý do từ chối phải có ít nhất 5 ký tự.")
             .MaximumLength(500)
@@ -64,7 +64,7 @@ public class RejectHoldPointOverrideValidator : AbstractValidator<RejectHoldPoin
 }
 
 /// <summary>
-/// Validator cho DTO Chuyển công đoạn sản xuất (Advance Stage / Move Kanban Card).
+/// Validator cho DTO Chuyển công đoạn sản xuất tuần tự.
 /// </summary>
 public class AdvanceStageRequestValidator : AbstractValidator<AdvanceStageRequestDto>
 {

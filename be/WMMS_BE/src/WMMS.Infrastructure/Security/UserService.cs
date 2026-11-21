@@ -98,7 +98,7 @@ public class UserService : IUserService
 
         if (user is null)
         {
-            throw AppException.NotFound($"Không tìm thấy người dùng với ID {userId}.");
+            throw AppException.NotFound($"Không tìm thấy tài khoản người dùng với mã ID = {userId}.");
         }
 
         return MapToUserDto(user);
@@ -127,7 +127,7 @@ public class UserService : IUserService
         if (duplicateExists)
         {
             throw AppException.Conflict(
-                "Tên đăng nhập hoặc Email đã tồn tại trong hệ thống (HTTP 409 Conflict).",
+                "Tên đăng nhập hoặc địa chỉ Email đã tồn tại trong hệ thống.",
                 MessageCodes.Msg08DuplicateConflict);
         }
 
@@ -140,7 +140,7 @@ public class UserService : IUserService
 
         if (requestedRoleCodes.Count == 0)
         {
-            throw new AppException("Phải cung cấp ít nhất một mã vai trò hợp lệ (GBR-04).", 400, MessageCodes.Msg01RequiredField);
+            throw new AppException("Vui lòng chọn ít nhất một vai trò cho tài khoản nhân sự.", 400, MessageCodes.Msg01RequiredField);
         }
 
         var roles = await _context.Roles
@@ -152,7 +152,7 @@ public class UserService : IUserService
             var foundCodes = roles.Select(r => r.RoleCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var invalidCodes = requestedRoleCodes.Where(c => !foundCodes.Contains(c));
             throw new AppException(
-                $"Mã vai trò không hợp lệ: {string.Join(", ", invalidCodes)}. Các vai trò được phép: {string.Join(", ", RoleConstants.AllRoles)}.",
+                $"Mã vai trò không hợp lệ: {string.Join(", ", invalidCodes)}. Các vai trò được hỗ trợ: {string.Join(", ", RoleConstants.AllRoles)}.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -205,7 +205,7 @@ public class UserService : IUserService
                     Status = newUser.Status.ToString(),
                     Roles = requestedRoleCodes
                 }),
-                Reason = "Quản trị viên đã tạo mới tài khoản nhân sự kèm phân quyền đa vai trò (UC-08).",
+                Reason = "Quản trị viên tạo mới tài khoản nhân sự và phân quyền vai trò.",
                 IpAddress = ipAddress,
                 CreatedAt = now
             };
@@ -242,7 +242,7 @@ public class UserService : IUserService
 
         if (user is null)
         {
-            throw AppException.NotFound($"Không tìm thấy người dùng với ID {targetUserId}.");
+            throw AppException.NotFound($"Không tìm thấy tài khoản người dùng với mã ID = {targetUserId}.");
         }
 
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
@@ -252,7 +252,7 @@ public class UserService : IUserService
 
         if (emailConflict)
         {
-            throw AppException.Conflict("Địa chỉ Email đã được tài khoản khác sử dụng (MSG08).", MessageCodes.Msg08DuplicateConflict);
+            throw AppException.Conflict("Địa chỉ Email này đã được sử dụng bởi một tài khoản khác.", MessageCodes.Msg08DuplicateConflict);
         }
 
         var beforeSnapshot = JsonSerializer.Serialize(new
@@ -289,7 +289,7 @@ public class UserService : IUserService
             EntityId = user.UserId.ToString(),
             BeforeState = beforeSnapshot,
             AfterState = afterSnapshot,
-            Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Đã cập nhật hồ sơ người dùng và phân quyền vai trò (UC-09)." : dto.Reason.Trim(),
+            Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Cập nhật thông tin hồ sơ và vai trò của tài khoản." : dto.Reason.Trim(),
             IpAddress = ipAddress,
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);
@@ -317,7 +317,7 @@ public class UserService : IUserService
 
         if (user is null)
         {
-            throw AppException.NotFound($"Không tìm thấy người dùng với ID {targetUserId}.");
+            throw AppException.NotFound($"Không tìm thấy tài khoản người dùng với mã ID = {targetUserId}.");
         }
 
         var beforeRoles = user.UserRoles.Select(ur => ur.Role.RoleCode).ToList();
@@ -334,7 +334,7 @@ public class UserService : IUserService
             EntityId = user.UserId.ToString(),
             BeforeState = JsonSerializer.Serialize(new { Roles = beforeRoles }),
             AfterState = JsonSerializer.Serialize(new { Roles = afterRoles }),
-            Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Đã cập nhật danh sách đa vai trò cho nhân sự (UC-09, GBR-04)." : dto.Reason.Trim(),
+            Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Cập nhật phân quyền đa vai trò cho nhân sự." : dto.Reason.Trim(),
             IpAddress = ipAddress,
             CreatedAt = DateTime.UtcNow
         }, cancellationToken);
@@ -361,7 +361,7 @@ public class UserService : IUserService
         if (!Enum.TryParse<UserStatusEnum>(dto.Status.Trim(), ignoreCase: true, out var newStatus))
         {
             throw new AppException(
-                "Trạng thái tài khoản không hợp lệ. Các giá trị cho phép: ACTIVE, INACTIVE, BANNED, LOCKED.",
+                "Trạng thái tài khoản không hợp lệ. Chỉ chấp nhận: Đang hoạt động (ACTIVE), Ngừng kích hoạt (INACTIVE), Khóa vĩnh viễn (BANNED) hoặc Tạm khóa (LOCKED).",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -374,14 +374,14 @@ public class UserService : IUserService
 
         if (user is null)
         {
-            throw AppException.NotFound($"Không tìm thấy người dùng với ID {targetUserId}.");
+            throw AppException.NotFound($"Không tìm thấy tài khoản người dùng với mã ID = {targetUserId}.");
         }
 
         // BR-ADM-01: Quản trị viên không được tự khóa hoặc vô hiệu hóa tài khoản của chính mình
         if (targetUserId == adminUserId && newStatus != UserStatusEnum.ACTIVE)
         {
             throw AppException.Forbidden(
-                "Quản trị viên không thể tự khóa hoặc vô hiệu hóa tài khoản của chính mình (BR-ADM-01).",
+                "Quản trị viên không được phép tự khóa hoặc vô hiệu hóa tài khoản của chính mình.",
                 MessageCodes.Msg11ForbiddenRule);
         }
 
@@ -399,7 +399,7 @@ public class UserService : IUserService
             if (otherActiveAdminsCount == 0)
             {
                 throw AppException.Forbidden(
-                    "Không thể vô hiệu hóa hoặc khóa tài khoản Quản trị viên (ADMIN) hoạt động cuối cùng trong hệ thống (BR-ADM-02).",
+                    "Không thể khóa hoặc vô hiệu hóa tài khoản Quản trị viên đang hoạt động cuối cùng của hệ thống.",
                     MessageCodes.Msg11ForbiddenRule);
             }
         }
@@ -455,7 +455,7 @@ public class UserService : IUserService
 
         if (normalizedCodes.Count == 0)
         {
-            throw new AppException("Tài khoản người dùng phải được gán ít nhất một vai trò (GBR-04).", 400, MessageCodes.Msg01RequiredField);
+            throw new AppException("Tài khoản người dùng phải được gán ít nhất một vai trò.", 400, MessageCodes.Msg01RequiredField);
         }
 
         // BR-ADM-01: Admin không được tự gỡ quyền ADMIN của chính mình
@@ -464,7 +464,7 @@ public class UserService : IUserService
             !normalizedCodes.Contains(RoleConstants.Admin))
         {
             throw AppException.Forbidden(
-                "Quản trị viên không thể tự gỡ bỏ vai trò ADMIN khỏi tài khoản của chính mình (BR-ADM-01).",
+                "Quản trị viên không được phép tự gỡ vai trò Quản trị viên (ADMIN) khỏi tài khoản của chính mình.",
                 MessageCodes.Msg11ForbiddenRule);
         }
 
