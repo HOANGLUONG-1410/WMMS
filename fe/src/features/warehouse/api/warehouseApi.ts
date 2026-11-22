@@ -25,4 +25,14 @@ export const warehouseApi = {
 
   getOrderAllocations: async (orderId: number): Promise<OrderAllocation[]> =>
     (await apiClient.get(`/mrp/orders/${orderId}/allocations`)).data.data,
+
+  issueOrderAllocations: async (
+    orderId: number,
+    reason?: string
+  ): Promise<import("../types").IssueOrderAllocationsResult> =>
+    (
+      await apiClient.post(`/warehouse/orders/${orderId}/issue`, {
+        reason: reason || undefined,
+      })
+    ).data.data,
 };
