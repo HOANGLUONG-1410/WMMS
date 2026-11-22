@@ -453,6 +453,31 @@ public class PurchaseOrderService : IPurchaseOrderService
                 results.AddRange(createdForPr);
             }
 
+            // Tự động gửi email biểu mẫu ĐƠN ĐẶT HÀNG tới từng nhà cung cấp đã được chọn
+            if (request.AutoSendEmail)
+            {
+                foreach (var createdPo in results)
+                {
+                    try
+                    {
+                        await SendPurchaseOrderEmailAsync(
+                            createdPo.PoId,
+                            new SendPurchaseOrderEmailDto
+                            {
+                                SupplierId = createdPo.SupplierId,
+                                DeliveryAddress = request.DeliveryAddress
+                            },
+                            purchasingUserId,
+                            ipAddress,
+                            cancellationToken);
+                    }
+                    catch
+                    {
+                        // Không làm gián đoạn hoặc rollback các đơn đặt hàng đã phát hành nếu một nhà cung cấp chưa có email
+                    }
+                }
+            }
+
             return results;
         }
 
@@ -1178,6 +1203,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 MaterialId = d.MaterialId,
                 MaterialCode = d.Material?.MaterialCode ?? string.Empty,
                 MaterialName = d.Material?.MaterialName ?? string.Empty,
+                MaterialGroup = d.Material?.MaterialGroup.ToString() ?? string.Empty,
                 UnitOfMeasure = d.Material?.UnitOfMeasure ?? string.Empty,
                 OrderedQty = d.OrderedQty,
                 ReceivedQty = d.ReceivedQty,
