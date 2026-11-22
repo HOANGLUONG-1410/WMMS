@@ -99,6 +99,7 @@ public class PurchaseOrderLineDto
     public long MaterialId { get; set; }
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
+    public string MaterialGroup { get; set; } = string.Empty;
     public string UnitOfMeasure { get; set; } = string.Empty;
     public decimal OrderedQty { get; set; }
     public decimal ReceivedQty { get; set; }
@@ -200,6 +201,12 @@ public class BatchIssuePurchaseOrdersRequestDto
     public List<long> PrIds { get; set; } = new();
     public List<BatchIssuePoLineDto> Lines { get; set; } = new();
     public List<CreatePoSupplierTermsDto> SupplierTerms { get; set; } = new();
+
+    /// <summary>Tự động gửi email biểu mẫu ĐƠN ĐẶT HÀNG tới các nhà cung cấp vừa được chọn ngay sau khi phát hành.</summary>
+    public bool AutoSendEmail { get; set; }
+
+    /// <summary>Địa điểm giao hàng tùy chọn ghi trên biểu mẫu email ĐƠN ĐẶT HÀNG.</summary>
+    public string? DeliveryAddress { get; set; }
 }
 
 /// <summary>Cập nhật lịch giao hàng của NCC (UC-53).</summary>

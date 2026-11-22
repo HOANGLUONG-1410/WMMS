@@ -8,14 +8,11 @@ import type { SupplierPurchaseOrderDto } from "../types";
 import { fulfillmentStatusLabel } from "../types";
 import GeneratePoModal from "../components/GeneratePoModal";
 import UpdateEtaModal from "../components/UpdateEtaModal";
-import SendPoEmailModal from "../components/SendPoEmailModal";
 
 export default function PurchaseOrderManagementPage() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showGeneratePoModal, setShowGeneratePoModal] = useState(false);
   const [selectedPoForEta, setSelectedPoForEta] =
-    useState<SupplierPurchaseOrderDto | null>(null);
-  const [selectedPoForEmail, setSelectedPoForEmail] =
     useState<SupplierPurchaseOrderDto | null>(null);
   const [toastBanner, setToastBanner] = useState<{
     type: "success" | "error";
@@ -30,11 +27,24 @@ export default function PurchaseOrderManagementPage() {
 
   // Field #3: Batch Issue POs
   const handleBatchIssue = async () => {
-    await batchIssueMutation.mutateAsync();
-    setToastBanner({
-      type: "success",
-      text: "Tất cả đơn đặt hàng nhà cung cấp đã được duyệt đã được phát hành hàng loạt và gửi tới nhà cung cấp!",
-    });
+    setToastBanner(null);
+    try {
+      const created = await batchIssueMutation.mutateAsync();
+      setToastBanner({
+        type: "success",
+        text: `Đã phát hành hàng loạt thành công ${created.length} đơn đặt hàng tới các nhà cung cấp!`,
+      });
+    } catch (err: unknown) {
+      const errMsg =
+        (err as { message?: string; response?: { data?: { message?: string } } })
+          ?.response?.data?.message ||
+        (err as { message?: string })?.message ||
+        "Không có yêu cầu mua hàng đã duyệt nào đang chờ phát hành đơn đặt hàng.";
+      setToastBanner({
+        type: "error",
+        text: errMsg,
+      });
+    }
   };
 
   // Màu sắc huy hiệu Fulfillment Status
@@ -155,31 +165,30 @@ export default function PurchaseOrderManagementPage() {
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Tìm mã đơn mua, nhà cung cấp..."
+                placeholder="Tìm mã đơn mua, vật tư..."
                 className="w-full pl-9 pr-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
               />
             </div>
           </div>
 
           {/* Active Supplier Purchase Orders Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
+          <div className="overflow-auto max-h-[65vh]">
+            <table className="w-full min-w-[820px] text-left border-collapse">
+              <thead className="sticky top-0 z-10 bg-[#F8FAFC] shadow-2xs">
                 <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
-                  <th className="py-3.5 px-6">Mã đơn mua</th>
-                  <th className="py-3.5 px-4">Nhà cung cấp</th>
-                  <th className="py-3.5 px-4">Nhóm vật tư</th>
-                  <th className="py-3.5 px-4">Tóm tắt hàng đặt</th>
-                  <th className="py-3.5 px-4">Ngày phát hành</th>
-                  <th className="py-3.5 px-4">Ngày giao cam kết</th>
-                  <th className="py-3.5 px-4">Trạng thái thực hiện</th>
-                  <th className="py-3.5 px-6 text-right">Thao tác</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Mã đơn mua</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap">Nhóm vật tư</th>
+                  <th className="py-3.5 px-3 min-w-[210px]">Tóm tắt hàng đặt</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap">Ngày phát hành</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap">Ngày giao cam kết</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap">Trạng thái thực hiện</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-sm">
                 {isLoading && (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center text-slate-400 text-sm">
+                    <td colSpan={7} className="py-10 text-center text-slate-400 text-sm">
                       Đang tải đơn đặt hàng nhà cung cấp...
                     </td>
                   </tr>
@@ -187,7 +196,7 @@ export default function PurchaseOrderManagementPage() {
 
                 {!isLoading && purchaseOrders.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center text-slate-500 text-sm">
+                    <td colSpan={7} className="py-10 text-center text-slate-500 text-sm">
                       Không có đơn đặt hàng nào khớp với tìm kiếm.
                     </td>
                   </tr>
@@ -207,18 +216,17 @@ export default function PurchaseOrderManagementPage() {
                         key={po.poId}
                         className="hover:bg-slate-50/80 transition-colors"
                       >
-                        <td className="py-4 px-6 font-mono text-sm font-bold text-slate-900 whitespace-nowrap">
+                        <td className="py-3.5 px-4 font-mono text-xs md:text-sm font-bold text-slate-900 whitespace-nowrap">
                           {po.poCode}
                         </td>
-                        <td className="py-4 px-4 font-semibold text-slate-900 whitespace-nowrap">
-                          {po.supplierName}
-                        </td>
-                        <td className="py-4 px-4 text-slate-600 whitespace-nowrap">
+                        <td className="py-3.5 px-3 text-slate-600 whitespace-nowrap">
                           {po.materialCategory}
                         </td>
-                        <td className="py-4 px-4 text-slate-800">{po.orderItemsSummary}</td>
-                        <td className="py-4 px-4 text-slate-600 whitespace-nowrap">{po.issueDate}</td>
-                        <td className="py-4 px-4 whitespace-nowrap">
+                        <td className="py-3.5 px-3 text-slate-800 min-w-[210px] max-w-[260px] leading-snug">
+                          {po.orderItemsSummary}
+                        </td>
+                        <td className="py-3.5 px-3 text-slate-600 whitespace-nowrap">{po.issueDate}</td>
+                        <td className="py-3.5 px-3 whitespace-nowrap">
                           {po.etaDaysLabel && !isCompleted ? (
                             <span className="font-bold text-blue-600">
                               {po.promisedEtaDate} ({po.etaDaysLabel})
@@ -227,7 +235,7 @@ export default function PurchaseOrderManagementPage() {
                             <span className="text-slate-600">{po.promisedEtaDate}</span>
                           )}
                         </td>
-                        <td className="py-4 px-4 whitespace-nowrap">
+                        <td className="py-3.5 px-3 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full border ${getFulfillmentBadgeClass(
                               po.fulfillmentStatus,
@@ -241,51 +249,28 @@ export default function PurchaseOrderManagementPage() {
                             {fulfillmentStatusLabel(po.fulfillmentStatus)}
                           </span>
                         </td>
-                        <td className="py-4 px-6 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end gap-2">
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          {isCompleted ? (
+                            <span className="inline-block px-3.5 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 text-xs font-semibold rounded-lg select-none">
+                              Hoàn tất
+                            </span>
+                          ) : isConfirmed ? (
                             <button
                               type="button"
-                              onClick={() => setSelectedPoForEmail(po)}
-                              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-lg shadow-2xs transition inline-flex items-center gap-1.5"
+                              onClick={() => setSelectedPoForEta(po)}
+                              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
                             >
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.2"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                />
-                              </svg>
-                              <span>Gửi email</span>
+                              Cập nhật ngày giao
                             </button>
-
-                            {isCompleted ? (
-                              <span className="inline-block px-3.5 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 text-xs font-semibold rounded-lg select-none">
-                                Hoàn tất
-                              </span>
-                            ) : isConfirmed ? (
-                              <button
-                                type="button"
-                                onClick={() => setSelectedPoForEta(po)}
-                                className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
-                              >
-                                Cập nhật ngày giao
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setSelectedPoForEta(po)}
-                                className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
-                              >
-                                Theo dõi hàng về →
-                              </button>
-                            )}
-                          </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPoForEta(po)}
+                              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
+                            >
+                              Theo dõi hàng về →
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -307,13 +292,6 @@ export default function PurchaseOrderManagementPage() {
       <UpdateEtaModal
         purchaseOrder={selectedPoForEta}
         onClose={() => setSelectedPoForEta(null)}
-        onSuccess={(msg) => setToastBanner({ type: "success", text: msg })}
-      />
-
-      {/* Modal Gửi email Đơn đặt hàng (ĐƠN ĐẶT HÀNG theo mẫu hành chính Việt Nam) */}
-      <SendPoEmailModal
-        purchaseOrder={selectedPoForEmail}
-        onClose={() => setSelectedPoForEmail(null)}
         onSuccess={(msg) => setToastBanner({ type: "success", text: msg })}
       />
     </WmmsAppShell>
