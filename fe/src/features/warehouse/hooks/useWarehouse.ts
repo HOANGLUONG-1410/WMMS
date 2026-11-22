@@ -46,3 +46,18 @@ export function useOrderAllocations(orderId: number | null) {
     enabled: orderId !== null,
   });
 }
+
+/** Xác nhận xuất kho cấp phát vật tư bàn giao xuống xưởng; sau đó tải lại dữ liệu phân bổ, tồn kho và tiến độ. */
+export function useIssueOrderAllocations() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, reason }: { orderId: number; reason?: string }) =>
+      warehouseApi.issueOrderAllocations(orderId, reason),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["warehouse", "order-allocations", variables.orderId] });
+      qc.invalidateQueries({ queryKey: ["warehouse", "issue-orders"] });
+      qc.invalidateQueries({ queryKey: ["inventory"] });
+      qc.invalidateQueries({ queryKey: ["production"] });
+    },
+  });
+}

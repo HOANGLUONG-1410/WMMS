@@ -81,6 +81,17 @@ public interface IMrpAllocationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Xác nhận xuất kho cấp phát vật tư (Goods Issue) cho một Đơn hàng.
+    /// Trừ tồn kho vật lý (PhysicalQty), trừ tồn phân bổ (AllocatedQty), cập nhật trạng thái phân bổ sang ISSUED_TO_SHOP,
+    /// ghi nhận bút toán sổ kho điện tử OUT_ISSUE và tự động mở khóa chốt chặn Hold Point cho các Thẻ lô sản xuất liên quan.
+    /// </summary>
+    Task<IssueOrderAllocationsResultDto> IssueOrderAllocationsAsync(
+        long orderId,
+        string? reason,
+        long currentUserId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lấy danh sách chi tiết các bản ghi giữ chỗ vật tư (<c>material_allocations</c>) của một Đơn hàng.
     /// </summary>
     Task<List<MaterialOrderAllocationDto>> GetAllocationsByOrderIdAsync(

@@ -7,6 +7,7 @@ using WMMS.Domain.Entities.CatalogBom;
 using WMMS.Domain.Entities.Identity;
 using WMMS.Domain.Entities.InventoryPr;
 using WMMS.Domain.Entities.Orders;
+using WMMS.Domain.Entities.WarehousePo;
 using WMMS.Domain.Enums;
 using WMMS.Domain.Exceptions;
 
@@ -406,6 +407,130 @@ public class MrpAllocationService : IMrpAllocationService
             await _unitOfWork.CommitTransactionAsync();
 
             return releasedDtos;
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<IssueOrderAllocationsResultDto> IssueOrderAllocationsAsync(
+        long orderId,
+        string? reason,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var order = await _orderItemRepository.GetOrderByIdAsync(orderId, cancellationToken)
+            ?? throw AppException.NotFound("Không tìm thấy đơn hàng được yêu cầu.");
+
+        var allocations = await _materialAllocationRepository.GetByOrderIdAsync(orderId, cancellationToken);
+        var activeReserved = allocations
+            .Where(a => a.AllocationStatus == AllocationStatusEnum.RESERVED && a.ReservedQty > 0m)
+            .ToList();
+
+        if (activeReserved.Count == 0)
+        {
+            throw new AppException("Đơn hàng này không có vật tư nào đang ở trạng thái giữ chỗ (RESERVED) để thực hiện xuất kho.", 400);
+        }
+
+        var materialIds = activeReserved.Select(a => a.MaterialId).Distinct().ToList();
+        var stockMap = await _materialStockRepository.GetByMaterialIdsAsync(materialIds, cancellationToken);
+        var now = DateTime.UtcNow;
+        var issuedDtos = new List<MaterialOrderAllocationDto>();
+        var transactions = new List<InventoryTransaction>();
+        decimal totalIssuedQty = 0m;
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            foreach (var alloc in activeReserved)
+            {
+                var qtyToIssue = alloc.ReservedQty;
+
+                if (stockMap.TryGetValue(alloc.MaterialId, out var stock))
+                {
+                    stock.IssueAllocatedStock(qtyToIssue);
+                    await _materialStockRepository.UpdateAsync(stock);
+                }
+
+                alloc.IssuedQty = Math.Round(alloc.IssuedQty + qtyToIssue, 4);
+                alloc.ReservedQty = 0m;
+                alloc.AllocationStatus = AllocationStatusEnum.ISSUED_TO_SHOP;
+                await _materialAllocationRepository.UpdateAsync(alloc);
+
+                transactions.Add(new InventoryTransaction
+                {
+                    MaterialId = alloc.MaterialId,
+                    TxType = InventoryTransactionTypeEnum.OUT_ISSUE,
+                    Quantity = qtyToIssue,
+                    ReferenceCode = order.PoNumber ?? $"ORDER-{orderId}",
+                    CreatedAt = now
+                });
+
+                totalIssuedQty += qtyToIssue;
+                issuedDtos.Add(MapAllocationDto(alloc, alloc.OrderItem));
+            }
+
+            if (transactions.Count > 0)
+            {
+                await _materialStockRepository.AddTransactionsRangeAsync(transactions, cancellationToken);
+            }
+
+            // Tự động mở khóa chốt chặn Hold Point cho các lô Kanban của đơn hàng (nếu đã phát hành lệnh sản xuất)
+            var batches = await _unitOfWork.ProductionBatches.GetByOrderIdAsync(orderId, cancellationToken);
+            foreach (var batch in batches)
+            {
+                batch.GoodsIssuedUnlocked = true;
+                if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
+                {
+                    batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
+                    var currentStep = batch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == batch.CurrentStageSeq);
+                    if (currentStep != null && currentStep.StepStatus == StepStatusEnum.BLOCKED)
+                    {
+                        currentStep.StepStatus = StepStatusEnum.IN_PROGRESS;
+                        await _unitOfWork.ProductionBatches.UpdateStepAsync(currentStep);
+                    }
+                }
+                batch.UpdatedAt = now;
+                await _unitOfWork.ProductionBatches.UpdateAsync(batch);
+            }
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId > 0 ? currentUserId : 1,
+                ActionType = AuditActionConstants.InventoryAllocationIssued,
+                EntityName = "CustomerOrder",
+                EntityId = orderId.ToString(),
+                BeforeState = $"ReservedAllocationsCount_{activeReserved.Count}",
+                AfterState = JsonSerializer.Serialize(new
+                {
+                    OrderId = orderId,
+                    PoNumber = order.PoNumber,
+                    IssuedAllocationsCount = issuedDtos.Count,
+                    TotalQuantityIssued = totalIssuedQty,
+                    BatchesUnlockedCount = batches.Count
+                }),
+                Reason = string.IsNullOrWhiteSpace(reason)
+                    ? $"Xác nhận xuất kho cấp phát {totalIssuedQty} đơn vị vật tư cho đơn hàng {order.PoNumber} bàn giao xuống xưởng."
+                    : reason,
+                CreatedAt = now
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return new IssueOrderAllocationsResultDto
+            {
+                OrderId = orderId,
+                PoNumber = order.PoNumber ?? string.Empty,
+                IssuedAt = now,
+                IssuedAllocationsCount = issuedDtos.Count,
+                TotalQuantityIssued = totalIssuedQty,
+                Message = $"Xác nhận xuất kho cấp phát vật tư cho đơn hàng {order.PoNumber} thành công ({issuedDtos.Count} dòng vật tư, tổng {totalIssuedQty}).",
+                Allocations = issuedDtos
+            };
         }
         catch
         {

@@ -105,6 +105,7 @@ public static class AuditActionConstants
     public const string InventoryAutoAllocated = "INVENTORY_AUTO_ALLOCATED";
     public const string InventoryReallocatedByEtd = "INVENTORY_REALLOCATED_BY_ETD";
     public const string InventoryAllocationReleased = "INVENTORY_ALLOCATION_RELEASED";
+    public const string InventoryAllocationIssued = "INVENTORY_ALLOCATION_ISSUED";
     public const string ConsolidatedPrGenerated = "CONSOLIDATED_PR_GENERATED";
     public const string ConsolidatedPrApproved = "CONSOLIDATED_PR_APPROVED";
     public const string ConsolidatedPrRejected = "CONSOLIDATED_PR_REJECTED";
