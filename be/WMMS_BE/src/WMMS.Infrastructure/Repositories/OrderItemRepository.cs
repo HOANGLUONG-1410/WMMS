@@ -152,6 +152,7 @@ public class OrderItemRepository : IOrderItemRepository
             .Include(oi => oi.CustomerOrder)
                 .ThenInclude(co => co.OrderSpace)
             .Include(oi => oi.Product)
+            // [LẤY DỮ LIỆU TỪ BOM]: Nạp định mức BOM, danh sách chi tiết vật tư và tồn kho thực tế phục vụ kiểm tra điều kiện phát hành lệnh SX
             .Include(oi => oi.BomHeader)
                 .ThenInclude(bh => bh!.BomDetails)
                     .ThenInclude(bd => bd.Material)

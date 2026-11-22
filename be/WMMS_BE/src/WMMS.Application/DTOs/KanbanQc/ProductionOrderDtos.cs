@@ -11,7 +11,8 @@ public class GenerateBatchesRequestDto
 
     /// <summary>
     /// Công suất trạm tối đa / Kích thước lô định mức (ví dụ: 50, 100 sản phẩm/lô).
-    /// Nếu không truyền hoặc &lt;= 0, hệ thống sử dụng công suất trạm chuẩn là 100 SP/lô.
+    /// • Phương thức 1 (Gộp 1 lô duy nhất): MaxBatchSize = remainingQty (bằng số lượng còn lại).
+    /// • Phương thức 2 (BatchSize chung): MaxBatchSize = công suất trạm tối đa (mặc định 100 SP/lô).
     /// </summary>
     public int? MaxBatchSize { get; set; } = 100;
 

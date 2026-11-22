@@ -88,6 +88,9 @@ public class BomRoutingService : IBomRoutingService
         return dto;
     }
 
+    /// <summary>
+    /// QT-02: Kiểm tra và kế thừa định mức BOM sẵn có của sản phẩm trong CSDL để tự động điền sẵn vật tư và quy trình mẫu lên giao diện.
+    /// </summary>
     public async Task<InheritedBomDto> CheckExistingProductBomAsync(long productId)
     {
         var existingBom = await _bomRepository.GetLatestActiveBomByProductIdAsync(productId);
@@ -271,6 +274,9 @@ public class BomRoutingService : IBomRoutingService
         }
     }
 
+    /// <summary>
+    /// QT-02 &amp; BR-002: Tính toán tổng nhu cầu vật tư (có hao hụt) và đối chiếu tồn kho khả dụng để hiển thị nhãn "Đủ tồn / Thiếu hụt".
+    /// </summary>
     public async Task<CalculateDemandResponseDto> CalculateGrossDemandAsync(CalculateDemandRequestDto request)
     {
         await ValidateScrapRateAsync(request.ScrapRatePercent);
@@ -287,12 +293,18 @@ public class BomRoutingService : IBomRoutingService
         foreach (var item in request.Items)
         {
             materials.TryGetValue(item.MaterialId, out var mat);
+
+            // [1] Tính Tổng nhu cầu vật tư (BR-002): (Định mức 1 SP * Số lượng đặt) * (1 + Tỷ lệ hao hụt %)
+            // Ví dụ: (0.025 M3 * 300 cái) * (1 + 3.5%) = 7.7625 M3
             var grossDemand = CalculateGrossDemand(item.NetQtyPerUnit, request.OrderedQty, request.ScrapRatePercent);
 
-            // QT-03: Loại trừ phần tồn kho đã giữ chỗ của đơn khác ngay từ đầu, chỉ lấy AvailableStock để đối chiếu
+            // [2] QT-03: Lấy Tồn kho khả dụng (AvailableStock = Tồn thực tế - Đã giữ chỗ cho đơn khác)
+            // Ví dụ: Khả dụng = 9,651,529.1781 M3
             var physicalStock = mat?.MaterialStock?.PhysicalQty ?? 0m;
             var allocatedStock = mat?.MaterialStock?.AllocatedQty ?? 0m;
             var availableStock = mat?.MaterialStock?.AvailableQty ?? Math.Max(0m, physicalStock - allocatedStock);
+
+            // [3] Xác định thiếu hụt: Nếu Nhu cầu > Tồn khả dụng -> Thiếu (IsShortage = true). Ngược lại -> Đủ tồn (IsShortage = false)
             var netDemand = Math.Max(0m, Math.Round(grossDemand - availableStock, 4));
 
             results.Add(new CalculateDemandItemResultDto
@@ -303,12 +315,12 @@ public class BomRoutingService : IBomRoutingService
                 MaterialGroup = mat?.MaterialGroup.ToString() ?? string.Empty,
                 UnitOfMeasure = mat?.UnitOfMeasure ?? "PCS",
                 NetQtyPerUnit = item.NetQtyPerUnit,
-                GrossTotalDemand = grossDemand,
+                GrossTotalDemand = grossDemand,       // -> Hiển thị "7.7625 M3"
                 PhysicalStock = physicalStock,
                 AllocatedStock = allocatedStock,
-                AvailableStock = availableStock,
+                AvailableStock = availableStock,       // -> Hiển thị "Khả dụng: 9651529.1781"
                 NetDemand = netDemand,
-                IsShortage = netDemand > 0m
+                IsShortage = netDemand > 0m            // -> Quyết định nhãn xanh "Đủ tồn" (false) hay đỏ "Thiếu hụt" (true)
             });
         }
 
@@ -786,9 +798,13 @@ public class BomRoutingService : IBomRoutingService
         }
     }
 
+    /// <summary>
+    /// BR-002: Công thức tính Tổng nhu cầu vật tư có tính hao hụt tự nhiên (gỗ 3% - 15%).
+    /// Công thức: GrossTotalDemand = (NetQtyPerUnit * OrderedQty) * (1 + ScrapRatePercent / 100)
+    /// Ví dụ: (0.025 M3 * 300 cái) * (1 + 3.5%) = 7.7625 M3
+    /// </summary>
     private static decimal CalculateGrossDemand(decimal netQtyPerUnit, int orderedQty, decimal scrapRatePercent)
     {
-        // Công thức BR-002: GrossTotalDemand = (NetQtyPerUnit * OrderedQty) * (1 + ScrapRatePercent / 100)
         var total = (netQtyPerUnit * orderedQty) * (1m + (scrapRatePercent / 100m));
         return Math.Round(total, 4);
     }

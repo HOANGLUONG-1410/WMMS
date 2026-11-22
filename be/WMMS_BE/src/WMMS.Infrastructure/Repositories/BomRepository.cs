@@ -19,6 +19,9 @@ public class BomRepository : IBomRepository
         _context = context;
     }
 
+    /// <summary>
+    /// Lấy chi tiết BOM theo bomId kèm thông tin vật tư và tồn kho.
+    /// </summary>
     public async Task<BomHeader?> GetByIdAsync(long bomId)
     {
         return await _context.BomHeaders
@@ -31,6 +34,9 @@ public class BomRepository : IBomRepository
             .FirstOrDefaultAsync(b => b.BomId == bomId);
     }
 
+    /// <summary>
+    /// Lấy BOM riêng của dòng sản phẩm đơn hàng (OrderItemId).
+    /// </summary>
     public async Task<BomHeader?> GetByOrderItemIdAsync(long orderItemId)
     {
         return await _context.BomHeaders
@@ -43,6 +49,9 @@ public class BomRepository : IBomRepository
             .FirstOrDefaultAsync(b => b.OrderItemId == orderItemId);
     }
 
+    /// <summary>
+    /// QT-02: Lấy BOM mẫu sẵn có gần nhất của sản phẩm (ProductId) để tự động kế thừa và điền sẵn dữ liệu.
+    /// </summary>
     public async Task<BomHeader?> GetLatestActiveBomByProductIdAsync(long productId)
     {
         return await _context.BomHeaders
@@ -56,6 +65,9 @@ public class BomRepository : IBomRepository
             .FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// BR-001: Kiểm tra dòng đơn hàng đã có BOM chưa để chống tạo trùng lặp.
+    /// </summary>
     public async Task<bool> HasBomForOrderItemAsync(long orderItemId)
     {
         return await _context.BomHeaders.AnyAsync(b => b.OrderItemId == orderItemId);

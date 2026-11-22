@@ -142,16 +142,17 @@ public class ProductionOrderService : IProductionOrderService
         var spaceKey = customerOrder?.OrderSpace?.SpaceKey ?? $"SPACE-PO-{orderItem.OrderId}";
 
         // [SC-19 CORE]: Bước 1 - Kiểm tra điều kiện tiên quyết về BOM (PRE-1, BR-001)
-        // Lệnh sản xuất yêu cầu BOM phải được bóc tách và phê duyệt trước (READY_FOR_PRODUCTION / APPROVED)
-        // Ngoại lệ: Nếu kích hoạt Overdrive giải trình kỹ thuật thì cho phép xử lý trước
+        // [1. LẤY DỮ LIỆU TỪ BOM]: Lấy BomHeader từ orderItem đã được nạp qua Eager Loading
         var bomHeader = orderItem.BomHeader;
         if (bomHeader == null)
         {
+            // Chặn cứng nếu sản phẩm chưa có định mức BOM (hiển thị nhãn đỏ "X Chưa có BOM" trên giao diện)
             throw new DomainException(
                 $"Sản phẩm '{product.ProductName}' (SKU: {product.ProductSku}) chưa có cấu hình định mức BOM. Vui lòng bóc tách BOM trước khi phát hành lệnh sản xuất.",
                 "BOM_NOT_CONFIGURED");
         }
 
+        // Kiểm tra trạng thái BOM: Chỉ cho phép phát hành khi BOM đã được phê duyệt (READY_FOR_PRODUCTION / APPROVED)
         bool isBomReady = bomHeader.BomStatus == BomStatusEnum.READY_FOR_PRODUCTION ||
                           bomHeader.BomStatus == BomStatusEnum.APPROVED;
 
@@ -198,6 +199,9 @@ public class ProductionOrderService : IProductionOrderService
         }
         else
         {
+            // [2. PHƯƠNG THỨC PHÂN BỔ KÍCH THƯỚC LÔ (BATCH SIZE STRATEGY)]:
+            // • Phương thức 1 ("Gộp 1 lô duy nhất"): MaxBatchSize = remainingQty -> vòng lặp chạy đúng 1 lần tạo 1 lô duy nhất.
+            // • Phương thức 2 ("BatchSize chung"): MaxBatchSize = công suất trạm (vd 100 SP/lô) -> tự động chia đều các lô N = ceil(Q / C).
             splits = new List<int>();
             int temp = remainingQty;
             while (temp > 0)
@@ -219,13 +223,8 @@ public class ProductionOrderService : IProductionOrderService
         var holdPointStage = routingStages.FirstOrDefault(s => s.IsHoldPoint);
         int? holdPointSeq = holdPointStage?.StageSequence ?? (routingStages.Count >= 5 ? 5 : null);
 
-        // [BR-008 & QT-06]: Bước 5 - Đánh giá chốt chặn 100% vật tư đã xuất kho & Cơ chế Overdrive giải trình kỹ thuật
-        // - Trường hợp A: Đủ 100% vật tư đã xuất kho (ISSUED_TO_SHOP / RELEASED):
-        //   -> Thẻ lô sinh ra ở trạng thái IN_PROGRESS sẵn sàng gia công tại Trạm 1.
-        // - Trường hợp B: Chưa đủ vật tư nhưng có giải trình Overdrive:
-        //   -> Thẻ sinh ra IN_PROGRESS, được phép sơ chế gỗ thô trước điểm dừng Hold Point (Trạm 1..4), tự động khóa tại Trạm 5.
-        // - Trường hợp C: Chưa đủ vật tư và không có Overdrive:
-        //   -> Thẻ lô bị KHÓA CỨNG (LOCKED - BR-008), chờ Thủ kho bấm xuất kho cấp phát vật tư mới được mở khóa vào sản xuất.
+        // [SC-19 CORE & BR-008]: Bước 5 - ĐIỀU KIỆN VẬT TƯ & XUẤT KHO (Kiểm tra 100% NVL đã xuất kho ra xưởng)
+        // Kiểm tra xem tất cả dòng vật tư đã chuyển sang trạng thái ISSUED_TO_SHOP hoặc RELEASED chưa
         bool isIssuedToShop = orderItem.MaterialAllocations.Any() &&
                               orderItem.MaterialAllocations.All(a =>
                                   a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP ||
