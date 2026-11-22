@@ -945,7 +945,15 @@ public class ProductionOrderService : IProductionOrderService
                 }
 
                 // 2. Sinh thẻ nhánh phụ viền cam (Sub-Card) để sửa chữa
-                string subBatchCode = $"SUB-{batch.BatchCode}-R{step.StageSequence}";
+                string baseSubBatchCode = $"SUB-{batch.BatchCode}-R{step.StageSequence}";
+                string subBatchCode = baseSubBatchCode;
+                int subBatchCounter = 1;
+                while (await _batchRepository.GetByCodeAsync(subBatchCode, cancellationToken) != null)
+                {
+                    subBatchCounter++;
+                    subBatchCode = $"{baseSubBatchCode}-{subBatchCounter}";
+                }
+
                 var subBatch = new ProductionBatch
                 {
                     BatchCode = subBatchCode,
@@ -978,16 +986,53 @@ public class ProductionOrderService : IProductionOrderService
 
                 await _batchRepository.AddStepsRangeAsync(subSteps, cancellationToken);
 
-                // 3. Ghi nhận DefectLog
+                // 3. Ghi nhận DefectLog & Đảm bảo DefectCatalog tồn tại trong CSDL để tránh vi phạm khóa ngoại (Foreign Key)
+                string rawDefectCode = string.IsNullOrWhiteSpace(request.DefectCode)
+                    ? (step.StageSequence == 1 || step.StageSequence == 2 ? DefectCodeConstants.CutErr01
+                       : step.StageSequence == 3 ? DefectCodeConstants.SurfErr02
+                       : step.StageSequence == 4 || step.StageSequence == 5 ? DefectCodeConstants.AssyErr03
+                       : step.StageSequence == 6 ? DefectCodeConstants.PaintErr04
+                       : DefectCodeConstants.WoodErr01)
+                    : request.DefectCode.Trim();
+
+                if (rawDefectCode.Length > 50) rawDefectCode = rawDefectCode.Substring(0, 50);
+
+                var catalog = await _unitOfWork.QcInspections.GetDefectCatalogByCodeAsync(rawDefectCode, cancellationToken);
+                DefectCatalog? newlyCreatedCatalog = null;
+                if (catalog == null)
+                {
+                    string defName = string.IsNullOrWhiteSpace(request.DefectName)
+                        ? $"Lỗi kỹ thuật tại công đoạn {step.StageName}"
+                        : request.DefectName.Trim();
+                    if (defName.Length > 255) defName = defName.Substring(0, 255);
+
+                    newlyCreatedCatalog = new DefectCatalog
+                    {
+                        DefectCode = rawDefectCode,
+                        DefectName = defName,
+                        StandardStage = step.StageName,
+                        RootCause = "Phát hiện trong quá trình kiểm định KCS tại phân xưởng",
+                        RecommendedAction = "Phân loại tách lô sửa chữa (Rework) hoặc cấp bù phôi mới"
+                    };
+                    catalog = newlyCreatedCatalog;
+                }
+
                 var defectLog = new DefectLog
                 {
                     QcInspection = inspection,
-                    DefectCode = request.DefectCode ?? "DEF-ERR-01",
-                    DefectName = request.DefectName ?? "Lỗi gia công chi tiết cần sửa chữa rework",
+                    DefectCode = catalog.DefectCode,
+                    DefectName = string.IsNullOrWhiteSpace(request.DefectName)
+                        ? catalog.DefectName
+                        : (request.DefectName.Length > 255 ? request.DefectName.Substring(0, 255) : request.DefectName.Trim()),
                     DefectQty = request.FailQty,
                     Disposition = disposition,
                     SpawnedSubBatch = subBatch
                 };
+
+                if (newlyCreatedCatalog != null)
+                {
+                    defectLog.DefectCatalog = newlyCreatedCatalog;
+                }
 
                 await _unitOfWork.QcInspections.AddDefectLogsRangeAsync(new[] { defectLog }, cancellationToken);
 
