@@ -436,10 +436,10 @@ public static class DbInitializer
             var matMap = await context.Materials.ToDictionaryAsync(m => m.MaterialCode, m => m.MaterialId);
             var stockSeeds = new (string Code, decimal Physical, decimal Allocated, decimal Available)[]
             {
-                ("WOOD_OAK_01", 60.0000m, 13.0000m, 47.0000m),
-                ("WOOD_ASH_02", 45.0000m, 0.0000m, 45.0000m),
-                ("WOOD_RUBBER_03", 80.0000m, 0.0000m, 80.0000m),
-                ("WOOD_PLY_04", 50.0000m, 0.0000m, 50.0000m),
+                ("WOOD_OAK_01", 14.5000m, 13.0000m, 1.5000m),
+                ("WOOD_ASH_02", 1.5000m, 0.0000m, 1.5000m),
+                ("WOOD_RUBBER_03", 1.5000m, 0.0000m, 1.5000m),
+                ("WOOD_PLY_04", 1.5000m, 0.0000m, 1.5000m),
                 ("HW_SCREW_M4", 50000.0000m, 6240.0000m, 43760.0000m),
                 ("HW_SCREW_M5", 30000.0000m, 8694.0000m, 21306.0000m),
                 ("HW_HINGE_01", 5000.0000m, 0.0000m, 5000.0000m),

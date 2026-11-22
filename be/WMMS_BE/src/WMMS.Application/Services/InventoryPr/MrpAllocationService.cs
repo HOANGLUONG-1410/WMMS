@@ -432,7 +432,10 @@ public class MrpAllocationService : IMrpAllocationService
 
         if (activeReserved.Count == 0)
         {
-            throw new AppException("Đơn hàng này không có vật tư nào đang ở trạng thái giữ chỗ (RESERVED) để thực hiện xuất kho.", 400);
+            throw new AppException(
+                "Đơn hàng này không có vật tư nào đang ở trạng thái giữ chỗ để thực hiện xuất kho.",
+                400,
+                MessageCodes.Msg13ValidationError);
         }
 
         var materialIds = activeReserved.Select(a => a.MaterialId).Distinct().ToList();

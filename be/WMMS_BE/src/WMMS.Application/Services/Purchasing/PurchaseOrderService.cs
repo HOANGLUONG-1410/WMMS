@@ -787,7 +787,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 if (supplier == null)
                 {
                     throw new AppException(
-                        $"Không tìm thấy nhà cung cấp với mã ID = {group.Key}.",
+                        "Không tìm thấy nhà cung cấp đã chọn trong danh mục.",
                         400,
                         MessageCodes.Msg13ValidationError);
                 }
