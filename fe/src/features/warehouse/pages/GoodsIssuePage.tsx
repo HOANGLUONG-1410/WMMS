@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useSession } from "../../auth/store/SessionContext";
 import { ROLES } from "../../../constants/roles";
 import { allocationStatusLabel } from "../../../lib/statusLabels";
-import { useOrderAllocations, useOrdersForIssue } from "../hooks/useWarehouse";
+import { useIssueOrderAllocations, useOrderAllocations, useOrdersForIssue } from "../hooks/useWarehouse";
 
 const fmtNum = (n?: number | null) => (n ?? 0).toLocaleString("vi-VN");
 const fmtDate = (v?: string | null) => {
@@ -19,16 +20,37 @@ export default function GoodsIssuePage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-  const [notice, setNotice] = useState(false);
 
   const { data: orders = [], isLoading, isError } = useOrdersForIssue(search);
   const { data: allocations = [], isLoading: loadingAlloc, isError: allocError } =
     useOrderAllocations(selectedOrderId);
+  const issueMutation = useIssueOrderAllocations();
 
   const selectedOrder = orders.find((o) => o.orderId === selectedOrderId) ?? null;
   const totalReserved = allocations.reduce((s, a) => s + a.reservedQty, 0);
   const totalIssued = allocations.reduce((s, a) => s + a.issuedQty, 0);
   const totalShortage = allocations.reduce((s, a) => s + a.shortageQty, 0);
+
+  const handleConfirmIssue = () => {
+    if (!selectedOrderId) return;
+    if (totalReserved <= 0) {
+      toast.error("Đơn hàng này không còn vật tư ở trạng thái giữ chỗ (cần xuất) để thực hiện xuất kho.");
+      return;
+    }
+
+    issueMutation.mutate(
+      { orderId: selectedOrderId },
+      {
+        onSuccess: (res) => {
+          toast.success(res.message || `Đã xuất kho cấp phát vật tư thành công cho đơn hàng!`);
+        },
+        onError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || "Không thể thực hiện xuất kho.";
+          toast.error(msg);
+        },
+      }
+    );
+  };
 
   return (
     <WmmsAppShell mode="warehouse">
@@ -45,17 +67,6 @@ export default function GoodsIssuePage() {
         {readOnly && (
           <div className="px-4 py-3 rounded-xl border bg-slate-50 border-slate-200 text-slate-700 text-sm font-semibold">
             Chế độ chỉ xem: tài khoản Quản trị không được thực hiện xuất kho.
-          </div>
-        )}
-
-        {notice && (
-          <div className="px-4 py-3 rounded-xl border bg-amber-50 border-amber-200 text-amber-800 text-sm font-semibold flex items-center justify-between">
-            <span>
-              Chức năng xác nhận xuất kho chưa được hỗ trợ ở hệ thống phía sau. Hiện chỉ xem được thông tin cấp phát.
-            </span>
-            <button type="button" onClick={() => setNotice(false)} className="ml-3 font-bold text-slate-400 hover:text-slate-600">
-              ✕
-            </button>
           </div>
         )}
 
@@ -198,10 +209,15 @@ export default function GoodsIssuePage() {
                 <div className="px-6 py-4 border-t border-slate-200 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setNotice(true)}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-xs transition"
+                    onClick={handleConfirmIssue}
+                    disabled={issueMutation.isPending || totalReserved <= 0}
+                    className={`px-5 py-2.5 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 ${
+                      issueMutation.isPending || totalReserved <= 0
+                        ? "bg-slate-400 cursor-not-allowed opacity-70"
+                        : "bg-emerald-600 hover:bg-emerald-700"
+                    }`}
                   >
-                    Xác nhận xuất kho
+                    {issueMutation.isPending ? "Đang xử lý xuất kho..." : "Xác nhận xuất kho"}
                   </button>
                 </div>
                 )}

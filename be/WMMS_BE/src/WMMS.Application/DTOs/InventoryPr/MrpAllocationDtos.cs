@@ -181,3 +181,27 @@ public class ReleaseOrderAllocationsRequestDto
 {
     public string Reason { get; set; } = "Giải phóng vật tư giữ chỗ theo yêu cầu điều độ kế hoạch.";
 }
+
+/// <summary>
+/// Yêu cầu xác nhận xuất kho cấp phát vật tư cho một đơn hàng (Goods Issue to Shopfloor).
+/// Chuyển trạng thái phân bổ từ RESERVED sang ISSUED_TO_SHOP, trừ tồn kho vật lý và ghi sổ kho OUT_ISSUE.
+/// </summary>
+public class IssueOrderAllocationsRequestDto
+{
+    /// <summary>Ghi chú hoặc lý do xuất kho bàn giao xuống xưởng.</summary>
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Kết quả sau khi xác nhận xuất kho cấp phát vật tư cho một đơn hàng.
+/// </summary>
+public class IssueOrderAllocationsResultDto
+{
+    public long OrderId { get; set; }
+    public string PoNumber { get; set; } = string.Empty;
+    public DateTime IssuedAt { get; set; } = DateTime.UtcNow;
+    public int IssuedAllocationsCount { get; set; }
+    public decimal TotalQuantityIssued { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public List<MaterialOrderAllocationDto> Allocations { get; set; } = new();
+}

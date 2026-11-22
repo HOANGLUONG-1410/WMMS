@@ -98,3 +98,14 @@ export interface OrderAllocation {
   etdDate: string;
   allocatedAt: string;
 }
+
+/** Kết quả xác nhận xuất kho cấp phát vật tư cho đơn hàng. */
+export interface IssueOrderAllocationsResult {
+  orderId: number;
+  poNumber: string;
+  issuedAt: string;
+  issuedAllocationsCount: number;
+  totalQuantityIssued: number;
+  message: string;
+  allocations: OrderAllocation[];
+}
