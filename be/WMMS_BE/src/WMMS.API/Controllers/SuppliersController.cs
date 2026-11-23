@@ -19,9 +19,10 @@ namespace WMMS.API.Controllers;
 /// </para>
 /// </summary>
 [Route("api/v1/suppliers")]
-[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Purchasing},{RoleConstants.Planner},{RoleConstants.Warehouse}")]
+[Authorize]
 public class SuppliersController : MasterDataControllerBase
 {
+    private const string SupplierReadRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Purchasing},{RoleConstants.Planner},{RoleConstants.Warehouse}";
     private const string WriteRoles = $"{RoleConstants.Admin},{RoleConstants.Purchasing}";
     private const string CustomerRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Sales}";
     private const string CustomerWriteRoles = $"{RoleConstants.Admin},{RoleConstants.Sales}";
@@ -45,12 +46,14 @@ public class SuppliersController : MasterDataControllerBase
 
     /// <summary>UC-26: Danh sách nhà cung cấp phân trang.</summary>
     [HttpGet]
+    [Authorize(Roles = SupplierReadRoles)]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<SupplierDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSuppliersAsync([FromQuery] PartnerQueryFilterDto filter, CancellationToken ct)
         => Ok(ApiResponse<PagedResult<SupplierDto>>.Ok(await _service.GetSuppliersAsync(filter, ct), "Đã tải danh sách nhà cung cấp."));
 
     /// <summary>UC-27: Chi tiết nhà cung cấp.</summary>
     [HttpGet("{id:long}")]
+    [Authorize(Roles = SupplierReadRoles)]
     [ProducesResponseType(typeof(ApiResponse<SupplierDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSupplierByIdAsync([FromRoute] long id, CancellationToken ct)

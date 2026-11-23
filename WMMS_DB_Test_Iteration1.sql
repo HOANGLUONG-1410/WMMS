@@ -771,10 +771,18 @@ SET IDENTITY_INSERT [system_configs] ON;
 INSERT INTO [system_configs] ([config_id], [config_key], [config_value], [data_type], [description], [updated_at])
 VALUES
 (1, N'DEFAULT_SCRAP_MIN', N'3.00', N'DECIMAL', N'Tỷ lệ hao hụt mặc định tối thiểu cho tính toán BOM và MRP (3%)', GETUTCDATE()),
-(2, N'DEFAULT_SCRAP_MAX', N'5.00', N'DECIMAL', N'Tỷ lệ hao hụt mặc định tối đa cho tính toán BOM và MRP (5%)', GETUTCDATE()),
+(2, N'DEFAULT_SCRAP_MAX', N'15.00', N'DECIMAL', N'Tỷ lệ hao hụt mặc định tối đa cho tính toán BOM và MRP (15%)', GETUTCDATE()),
 (3, N'ETD_WARNING_DAYS', N'7', N'INT', N'Ngưỡng cảnh báo trước hạn giao hàng ETD tính theo số ngày (7 ngày)', GETUTCDATE()),
 (4, N'ORDER_STAGING_BATCH_SIZE', N'100', N'INT', N'Kích thước tối đa mỗi lô bóc tách đơn hàng trong vùng Staging Area', GETUTCDATE());
 SET IDENTITY_INSERT [system_configs] OFF;
+GO
+
+-- Đồng bộ nâng ngưỡng hao hụt tối đa DEFAULT_SCRAP_MAX lên 15% (BR-002 / BR-BOM-01) cho trường hợp chạy lẻ trên DB có sẵn
+UPDATE [system_configs]
+SET [config_value] = N'15.00',
+    [description] = N'Tỷ lệ hao hụt mặc định tối đa cho tính toán BOM và MRP (15%)',
+    [updated_at] = GETUTCDATE()
+WHERE [config_key] = N'DEFAULT_SCRAP_MAX';
 GO
 
 -- 6. NẠP DEFECT CATALOGS (Danh mục lỗi chuẩn hóa)

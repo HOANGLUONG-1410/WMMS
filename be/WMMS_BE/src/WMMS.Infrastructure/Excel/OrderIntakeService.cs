@@ -801,7 +801,7 @@ public class OrderIntakeService : IOrderIntakeService
             ? "Đã khóa đủ vật tư"
             : allAllocations.Count > 0
                 ? "Tạm giữ một phần / Chờ mua"
-                : bomReadyPct == 100 ? "Đã khóa đủ vật tư" : "Chưa phân bổ";
+                : "Chưa phân bổ";
         var materialAllocationSubtitle = materialAllocationTitle == "Đã khóa đủ vật tư"
             ? "Kho đã giữ chỗ đủ tồn kho vật tư cho đơn hàng"
             : "Đang chờ đối chiếu tồn kho và phân bổ vật tư";

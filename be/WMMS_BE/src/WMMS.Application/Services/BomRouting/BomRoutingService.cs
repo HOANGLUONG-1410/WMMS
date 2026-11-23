@@ -788,7 +788,7 @@ public class BomRoutingService : IBomRoutingService
     private async Task ValidateScrapRateAsync(decimal scrapRate)
     {
         var minScrap = await _systemConfigRepository.GetDecimalConfigAsync(SystemConfigKeys.DefaultScrapMin, 3.00m);
-        var maxScrap = await _systemConfigRepository.GetDecimalConfigAsync(SystemConfigKeys.DefaultScrapMax, 5.00m);
+        var maxScrap = await _systemConfigRepository.GetDecimalConfigAsync(SystemConfigKeys.DefaultScrapMax, 15.00m);
 
         // Đối chiếu chính xác với ngưỡng [DEFAULT_SCRAP_MIN .. DEFAULT_SCRAP_MAX] cấu hình trong system_configs (BR-002, UC-15)
         if (scrapRate < minScrap || scrapRate > maxScrap)

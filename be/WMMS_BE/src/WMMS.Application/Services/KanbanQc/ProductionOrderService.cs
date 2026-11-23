@@ -1313,15 +1313,33 @@ public class ProductionOrderService : IProductionOrderService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var previousStatus = batch.BatchStatus;
             batch.GoodsIssuedUnlocked = true;
-            if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
+
+            if (batch.BatchStatus == BatchStatusEnum.LOCKED)
             {
+                // UC-59 / BR-PRD-01: Mở khóa thẻ lô từ LOCKED sang IN_PROGRESS và kích hoạt công đoạn hiện tại
                 batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
                 var currentStep = batch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == batch.CurrentStageSeq);
-                if (currentStep != null && currentStep.StepStatus == StepStatusEnum.BLOCKED)
+                if (currentStep != null && (currentStep.StepStatus == StepStatusEnum.WAITING || currentStep.StepStatus == StepStatusEnum.BLOCKED))
                 {
                     currentStep.StepStatus = StepStatusEnum.IN_PROGRESS;
                     await _batchRepository.UpdateStepAsync(currentStep);
+                }
+            }
+            else if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
+            {
+                // UC-16 / BR-006: Mở khóa chốt chặn Hold Point và giải phóng toàn bộ công đoạn đang bị BLOCKED
+                batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
+                var blockedSteps = batch.BatchRoutingSteps
+                    .Where(s => s.StepStatus == StepStatusEnum.BLOCKED)
+                    .ToList();
+                foreach (var blockedStep in blockedSteps)
+                {
+                    blockedStep.StepStatus = blockedStep.StageSequence == batch.CurrentStageSeq
+                        ? StepStatusEnum.IN_PROGRESS
+                        : StepStatusEnum.WAITING;
+                    await _batchRepository.UpdateStepAsync(blockedStep);
                 }
             }
 
@@ -1335,9 +1353,11 @@ public class ProductionOrderService : IProductionOrderService
                 ActionType = AuditActionConstants.KanbanGoodsIssuedUnlocked,
                 EntityName = "ProductionBatch",
                 EntityId = batch.BatchCode,
-                BeforeState = "HOLD_POINT_BLOCKED",
-                AfterState = "IN_PROGRESS",
-                Reason = $"Mở khóa trạm dừng kỹ thuật (Hold Point) cho lô {batch.BatchCode} sau khi Thủ kho xác nhận xuất kho phụ kiện bổ sung.",
+                BeforeState = previousStatus.ToString(),
+                AfterState = batch.BatchStatus.ToString(),
+                Reason = previousStatus == BatchStatusEnum.LOCKED
+                    ? $"Mở khóa lô sản xuất {batch.BatchCode} (LOCKED -> IN_PROGRESS) sau khi Thủ kho xác nhận xuất kho cấp phát vật tư."
+                    : $"Mở khóa trạm dừng kỹ thuật (Hold Point) cho lô {batch.BatchCode} sau khi Thủ kho xác nhận xuất kho phụ kiện bổ sung.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -1767,7 +1787,8 @@ public class ProductionOrderService : IProductionOrderService
             }
             await _batchRepository.UpdateAsync(mainBatch);
 
-            // 2. Đóng thẻ phụ (Chuyển sang trạng thái DONE và ghi nhận đã tái hòa nhập)
+            // 2. Đóng thẻ phụ (Đưa BatchQty về 0 trước khi chuyển DONE để tránh đếm đúp sản lượng khi tổng hợp tiến độ/nhập kho TP)
+            subBatch.BatchQty = 0;
             subBatch.BatchStatus = BatchStatusEnum.DONE;
             foreach (var step in subBatch.BatchRoutingSteps.Where(s => s.StageSequence > subBatch.CurrentStageSeq))
             {

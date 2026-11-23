@@ -278,7 +278,7 @@ public class GoodsReceiptService : IGoodsReceiptService
             .ToListAsync(ct);
 
         var coveredItemIds = (await _context.MaterialAllocations
-                .Where(a => a.MaterialId == materialId)
+                .Where(a => a.MaterialId == materialId && a.AllocationStatus != AllocationStatusEnum.RELEASED)
                 .Select(a => a.OrderItemId)
                 .ToListAsync(ct))
             .ToHashSet();
@@ -408,11 +408,11 @@ public class GoodsReceiptService : IGoodsReceiptService
         foreach (var bom in boms)
         {
             var allocations = await _context.MaterialAllocations
-                .Where(a => a.OrderItemId == bom.OrderItemId)
+                .Where(a => a.OrderItemId == bom.OrderItemId && a.AllocationStatus != AllocationStatusEnum.RELEASED)
                 .ToListAsync(ct);
 
             var fullyCovered = bom.BomDetails.Count > 0 && bom.BomDetails.All(bd =>
-                allocations.Any(a => a.MaterialId == bd.MaterialId && a.ReservedQty >= bd.GrossTotalDemand));
+                allocations.Any(a => a.MaterialId == bd.MaterialId && (a.ReservedQty + a.IssuedQty) >= bd.GrossTotalDemand));
 
             if (!fullyCovered) continue;
 

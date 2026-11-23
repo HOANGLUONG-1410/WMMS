@@ -481,19 +481,33 @@ public class MrpAllocationService : IMrpAllocationService
                 await _materialStockRepository.AddTransactionsRangeAsync(transactions, cancellationToken);
             }
 
-            // Tự động mở khóa chốt chặn Hold Point cho các lô Kanban của đơn hàng (nếu đã phát hành lệnh sản xuất)
+            // Tự động mở khóa lô LOCKED và chốt chặn Hold Point cho các lô sản xuất của đơn hàng sau khi Thủ kho xác nhận Xuất kho (UC-59, BR-PRD-01)
             var batches = await _unitOfWork.ProductionBatches.GetByOrderIdAsync(orderId, cancellationToken);
             foreach (var batch in batches)
             {
                 batch.GoodsIssuedUnlocked = true;
-                if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
+                if (batch.BatchStatus == BatchStatusEnum.LOCKED)
                 {
                     batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
                     var currentStep = batch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == batch.CurrentStageSeq);
-                    if (currentStep != null && currentStep.StepStatus == StepStatusEnum.BLOCKED)
+                    if (currentStep != null && (currentStep.StepStatus == StepStatusEnum.WAITING || currentStep.StepStatus == StepStatusEnum.BLOCKED))
                     {
                         currentStep.StepStatus = StepStatusEnum.IN_PROGRESS;
                         await _unitOfWork.ProductionBatches.UpdateStepAsync(currentStep);
+                    }
+                }
+                else if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
+                {
+                    batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
+                    var blockedSteps = batch.BatchRoutingSteps
+                        .Where(s => s.StepStatus == StepStatusEnum.BLOCKED)
+                        .ToList();
+                    foreach (var blockedStep in blockedSteps)
+                    {
+                        blockedStep.StepStatus = blockedStep.StageSequence == batch.CurrentStageSeq
+                            ? StepStatusEnum.IN_PROGRESS
+                            : StepStatusEnum.WAITING;
+                        await _unitOfWork.ProductionBatches.UpdateStepAsync(blockedStep);
                     }
                 }
                 batch.UpdatedAt = now;
@@ -864,10 +878,12 @@ public class MrpAllocationService : IMrpAllocationService
             }
             else
             {
-                // Cập nhật số lượng thiếu hụt tổng hợp mới nhất
-                existingItem.TotalShortageQty = Math.Max(existingItem.TotalShortageQty, line.NetShortageQty);
-                existingItem.SuggestedOrderQty = Math.Max(existingItem.SuggestedOrderQty, line.SuggestedPrOrderQty);
-                existingItem.SourceOrderIdsJson = MergeSourceOrderJson(existingItem.SourceOrderIdsJson, sourceJson);
+                // BR-PUR-01 / UC-44: Hợp nhất danh sách đơn nguồn theo từng OrderItemId rồi cộng tổng thiếu hụt thực tế (không cộng trùng)
+                var mergedJson = MergeSourceOrderJson(existingItem.SourceOrderIdsJson, sourceJson);
+                var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, line.NetShortageQty);
+                existingItem.SourceOrderIdsJson = mergedJson;
+                existingItem.TotalShortageQty = aggregatedShortage;
+                existingItem.SuggestedOrderQty = aggregatedShortage;
             }
         }
 
@@ -875,6 +891,34 @@ public class MrpAllocationService : IMrpAllocationService
         await _purchaseRequestRepository.UpdateAsync(dailyPr);
 
         return (dailyPr.PrId, dailyPr.PrCode, shortageLines.Count);
+    }
+
+    /// <summary>
+    /// Tính tổng lượng thiếu hụt (<c>ShortageQty</c>) từ danh sách đơn hàng nguồn đã hợp nhất và khử trùng theo <c>OrderItemId</c> (BR-PUR-01).
+    /// </summary>
+    private static decimal SumShortageFromSourceOrderJson(string mergedJson, decimal fallbackQty)
+    {
+        if (string.IsNullOrWhiteSpace(mergedJson)) return fallbackQty;
+        try
+        {
+            using var doc = JsonDocument.Parse(mergedJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return fallbackQty;
+
+            decimal total = 0m;
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.TryGetProperty("ShortageQty", out var prop) && prop.TryGetDecimal(out var qty) && qty > 0m)
+                {
+                    total += qty;
+                }
+            }
+
+            return total > 0m ? Math.Round(total, 4) : fallbackQty;
+        }
+        catch
+        {
+            return fallbackQty;
+        }
     }
 
     private static string MergeSourceOrderJson(string? existingJson, string newJson)
@@ -1142,6 +1186,10 @@ public class MrpAllocationService : IMrpAllocationService
             OrderItemId = item.OrderItemId,
             ProductSku = item.Product?.ProductSku ?? string.Empty,
             ProductName = item.Product?.ProductName ?? string.Empty,
+            MaterialId = a.MaterialId,
+            MaterialCode = a.Material?.MaterialCode ?? string.Empty,
+            MaterialName = a.Material?.MaterialName ?? string.Empty,
+            UnitOfMeasure = a.Material?.UnitOfMeasure ?? string.Empty,
             RequiredQty = a.RequiredQty,
             ReservedQty = a.ReservedQty,
             IssuedQty = a.IssuedQty,

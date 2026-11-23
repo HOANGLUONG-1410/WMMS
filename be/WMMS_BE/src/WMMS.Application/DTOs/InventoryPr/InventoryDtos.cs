@@ -51,7 +51,7 @@ public class InventoryStockDto
 }
 
 /// <summary>
-/// Thông tin một đơn hàng đang giữ chỗ (Soft-Allocated / Reserved) vật tư trong kho (SC-12 Detail).
+/// Thông tin một đơn hàng đang giữ chỗ (Soft-Allocated / Reserved) hoặc đã xuất kho vật tư (SC-12 Detail, SC-18 Goods Issue).
 /// </summary>
 public class MaterialOrderAllocationDto
 {
@@ -63,6 +63,19 @@ public class MaterialOrderAllocationDto
     public long OrderItemId { get; set; }
     public string ProductSku { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
+
+    /// <summary>Mã định danh nguyên vật liệu được phân bổ/xuất kho.</summary>
+    public long MaterialId { get; set; }
+
+    /// <summary>Mã nguyên vật liệu chuẩn (VD: WOOD_OAK_01).</summary>
+    public string MaterialCode { get; set; } = string.Empty;
+
+    /// <summary>Tên mô tả nguyên vật liệu.</summary>
+    public string MaterialName { get; set; } = string.Empty;
+
+    /// <summary>Đơn vị tính của nguyên vật liệu (VD: M3, PCS, LITER).</summary>
+    public string UnitOfMeasure { get; set; } = string.Empty;
+
     public decimal RequiredQty { get; set; }
     public decimal ReservedQty { get; set; }
     public decimal IssuedQty { get; set; }

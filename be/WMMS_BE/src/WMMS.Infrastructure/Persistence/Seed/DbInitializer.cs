@@ -187,9 +187,9 @@ public static class DbInitializer
                 new()
                 {
                     ConfigKey = SystemConfigKeys.DefaultScrapMax,
-                    ConfigValue = "5.00",
+                    ConfigValue = "15.00",
                     DataType = "DECIMAL",
-                    Description = "Tỷ lệ hao hụt tự nhiên mặc định tối đa (5%)",
+                    Description = "Tỷ lệ hao hụt tự nhiên mặc định tối đa (15%)",
                     UpdatedAt = now
                 },
                 new()
