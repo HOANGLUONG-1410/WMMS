@@ -139,6 +139,7 @@ export default function SendPoEmailModal({
       stt: idx + 1,
       materialCode: line.materialCode,
       materialName: line.materialName,
+      materialGroup: line.materialGroup || "",
       fullName: line.materialCode
         ? `${line.materialName} (${line.materialCode})`
         : line.materialName,
@@ -284,6 +285,16 @@ export default function SendPoEmailModal({
               {computedLines.map((item) => {
                 const isUnselected = item.chosenSupplierId <= 0;
                 const showUnselectedError = hasSubmitted && isUnselected;
+                const matchingSuppliers = item.materialGroup
+                  ? suppliers.filter(
+                      (s) =>
+                        String(s.supplyCategory || "").toUpperCase() ===
+                        String(item.materialGroup || "").toUpperCase(),
+                    )
+                  : [];
+                const dropdownSuppliers =
+                  matchingSuppliers.length > 0 ? matchingSuppliers : suppliers;
+
                 return (
                   <div
                     key={item.poDetailId}
@@ -336,7 +347,7 @@ export default function SendPoEmailModal({
                         }`}
                       >
                         <option value={0}>-- Chọn nhà cung cấp --</option>
-                        {suppliers.map((s) => (
+                        {dropdownSuppliers.map((s) => (
                           <option key={s.supplierId} value={s.supplierId}>
                             {s.supplierName} —{" "}
                             {formatSupplyCategoryLabel(s.supplyCategory)}

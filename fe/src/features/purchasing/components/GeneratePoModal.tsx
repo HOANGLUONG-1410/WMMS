@@ -61,9 +61,9 @@ export default function GeneratePoModal({
   const [selectedSuppliersByItem, setSelectedSuppliersByItem] = useState<
     Record<number, number>
   >({});
-  const [sortByGroup, setSortByGroup] = useState(false);
+  const [etaByItem, setEtaByItem] = useState<Record<number, string>>({});
+  const [deadlineEtaDate, setDeadlineEtaDate] = useState(getDefaultFutureDate(7));
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [promisedEtaDate, setPromisedEtaDate] = useState(getDefaultFutureDate(5));
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
@@ -73,9 +73,9 @@ export default function GeneratePoModal({
     setIsLoading(true);
     setErrorMsg("");
     setHasSubmitted(false);
-    setSortByGroup(false);
     setSelectedSuppliersByItem({});
-    setPromisedEtaDate(getDefaultFutureDate(5));
+    setEtaByItem({});
+    setDeadlineEtaDate(getDefaultFutureDate(7));
 
     Promise.all([
       purchasingApi.getApprovedRequisitions(),
@@ -136,14 +136,8 @@ export default function GeneratePoModal({
       }
     }
 
-    if (sortByGroup) {
-      return [...list].sort((a, b) =>
-        a.materialGroup.localeCompare(b.materialGroup),
-      );
-    }
-
     return list;
-  }, [requisitions, sortByGroup]);
+  }, [requisitions]);
 
   if (!isOpen) return null;
 
@@ -155,27 +149,16 @@ export default function GeneratePoModal({
     setErrorMsg("");
   };
 
-  /** Nút sắp xếp & phân phối nguyên liệu cần mua cho nhà cung cấp tương ứng theo nhóm vật tư */
-  const handleSortAndDistributeByGroup = () => {
-    setSortByGroup(true);
-    const nextMap: Record<number, number> = { ...selectedSuppliersByItem };
-
-    for (const item of materialItems) {
-      const matchedSupplier =
-        suppliers.find(
-          (s) =>
-            String(s.supplyCategory || "").toUpperCase() ===
-            String(item.materialGroup || "").toUpperCase(),
-        ) || suppliers[0];
-
-      if (matchedSupplier) {
-        nextMap[item.prItemId] = matchedSupplier.supplierId;
-      }
-    }
-
-    setSelectedSuppliersByItem(nextMap);
+  const handleEtaChangeForItem = (prItemId: number, etaDate: string) => {
+    setEtaByItem((prev) => ({
+      ...prev,
+      [prItemId]: etaDate,
+    }));
     setErrorMsg("");
   };
+
+  const defaultEta = getDefaultFutureDate(5);
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const unselectedCount = materialItems.filter(
     (it) => (selectedSuppliersByItem[it.prItemId] || 0) <= 0,
@@ -217,21 +200,44 @@ export default function GeneratePoModal({
       return;
     }
 
-    if (!promisedEtaDate) {
-      setErrorMsg("Vui lòng chọn ngày nhà cung cấp cam kết giao hàng.");
+    if (!deadlineEtaDate || deadlineEtaDate < todayStr) {
+      setErrorMsg("Hạn chót giao hàng chung không được bỏ trống hoặc nằm trong quá khứ.");
+      return;
+    }
+
+    const invalidEtaItem = materialItems.find((it) => {
+      const d = etaByItem[it.prItemId] || defaultEta;
+      return !d || d < todayStr;
+    });
+    if (invalidEtaItem) {
+      setErrorMsg(
+        `Ngày giao hàng của vật liệu "${invalidEtaItem.materialName}" không hợp lệ hoặc nằm trong quá khứ.`,
+      );
+      return;
+    }
+
+    const lateEtaItem = materialItems.find((it) => {
+      const d = etaByItem[it.prItemId] || defaultEta;
+      return d >= deadlineEtaDate;
+    });
+    if (lateEtaItem) {
+      setErrorMsg(
+        `Ngày sớm nhất nhà phân phối giao được của vật liệu "${lateEtaItem.materialName}" phải sớm hơn hạn chót giao hàng chung (${deadlineEtaDate}).`,
+      );
       return;
     }
 
     setIsSubmitting(true);
     try {
       const createdOrders = await purchasingApi.distributeMaterialsToSuppliers({
-        promisedEtaDate,
+        promisedEtaDate: deadlineEtaDate,
         lines: materialItems.map((it) => ({
           prId: it.prId,
           prItemId: it.prItemId,
           supplierId: selectedSuppliersByItem[it.prItemId],
           orderedQty: it.remainingQty,
           unitPrice: it.unitPrice,
+          expectedArrivalDate: etaByItem[it.prItemId] || defaultEta,
           materialName: it.materialName,
           materialCode: it.materialCode,
           materialGroup: formatMaterialGroupLabel(it.materialGroup),
@@ -242,7 +248,7 @@ export default function GeneratePoModal({
       await queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
 
       onSuccess(
-        `Đã phân phối nguyên liệu và phát hành thành công ${createdOrders.length || distributedGroups.length} đơn đặt hàng cho các nhà cung cấp tương ứng!`,
+        `Đã phát hành và tự động gửi email thành công ${createdOrders.length || distributedGroups.length} đơn đặt hàng tới các nhà cung cấp tương ứng!`,
       );
       onClose();
     } catch (err: unknown) {
@@ -265,7 +271,7 @@ export default function GeneratePoModal({
               Lập đơn mua nguyên liệu & phân phối nhà cung cấp
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Chọn nhà cung cấp ở thanh thả xuống bên cạnh từng loại vật liệu hoặc bấm nút sắp xếp & phân phối theo nhóm vật tư.
+              Vui lòng chọn nhà cung cấp tương ứng ở thanh thả xuống bên cạnh từng loại nguyên vật liệu để lập đơn và gửi email.
             </p>
           </div>
           <button
@@ -287,32 +293,9 @@ export default function GeneratePoModal({
             </div>
           )}
 
-          {/* Thanh công cụ Sắp xếp & phân phối nguyên liệu */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/70 border border-blue-200 rounded-xl px-4 py-3">
-            <div className="text-xs md:text-sm text-slate-700">
-              Danh sách gồm <strong>{materialItems.length}</strong> loại nguyên vật liệu cần mua từ yêu cầu mua hàng đã duyệt.
-            </div>
-            <button
-              type="button"
-              onClick={handleSortAndDistributeByGroup}
-              disabled={isLoading || materialItems.length === 0}
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs transition shrink-0 inline-flex items-center gap-1.5 disabled:opacity-60"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
-                />
-              </svg>
-              <span>Sắp xếp & phân phối theo nhóm vật tư</span>
-            </button>
+          {/* Thông tin tổng số nguyên vật liệu cần mua */}
+          <div className="bg-blue-50/70 border border-blue-200 rounded-xl px-4 py-3 text-xs md:text-sm text-slate-700">
+            Danh sách gồm <strong>{materialItems.length}</strong> loại nguyên vật liệu cần mua từ yêu cầu mua hàng đã duyệt.
           </div>
 
           {/* Danh sách từng loại nguyên liệu kèm thanh dropdown chọn nhà cung cấp bên cạnh */}
@@ -320,6 +303,17 @@ export default function GeneratePoModal({
             {isLoading ? (
               <div className="py-10 text-center text-slate-400 text-sm">
                 Đang tải danh sách nguyên vật liệu cần mua...
+              </div>
+            ) : materialItems.length === 0 ? (
+              <div className="py-10 px-6 text-center bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+                <div className="text-sm font-bold text-amber-900">
+                  Hiện chưa có yêu cầu mua hàng nào đã được Chủ xưởng duyệt đang chờ lập đơn mua.
+                </div>
+                <p className="text-xs text-amber-800">
+                  Vui lòng nhờ Chủ xưởng (tài khoản <strong>owner</strong>) vào mục{" "}
+                  <strong>Yêu cầu mua hàng</strong> để duyệt phiếu đang chờ (ví dụ{" "}
+                  <strong>PR-20261104-001</strong>), sau đó quay lại đây để chọn nhà cung cấp và phát hành đơn đặt hàng.
+                </p>
               </div>
             ) : (
               materialItems.map((item, idx) => {
@@ -330,6 +324,13 @@ export default function GeneratePoModal({
                 const chosenSupplier = suppliers.find(
                   (s) => s.supplierId === chosenSupplierId,
                 );
+                const matchingSuppliers = suppliers.filter(
+                  (s) =>
+                    String(s.supplyCategory || "").toUpperCase() ===
+                    String(item.materialGroup || "").toUpperCase(),
+                );
+                const dropdownSuppliers =
+                  matchingSuppliers.length > 0 ? matchingSuppliers : suppliers;
 
                 return (
                   <div
@@ -380,7 +381,7 @@ export default function GeneratePoModal({
                         }`}
                       >
                         <option value={0}>-- Chọn nhà cung cấp --</option>
-                        {suppliers.map((s) => (
+                        {dropdownSuppliers.map((s) => (
                           <option key={s.supplierId} value={s.supplierId}>
                             {s.supplierName} —{" "}
                             {formatMaterialGroupLabel(s.supplyCategory)}
@@ -401,6 +402,43 @@ export default function GeneratePoModal({
                           </strong>
                         </p>
                       )}
+
+                      {(() => {
+                        const itemEta = etaByItem[item.prItemId] || defaultEta;
+                        const isLaterThanDeadline = Boolean(
+                          deadlineEtaDate && itemEta >= deadlineEtaDate,
+                        );
+                        return (
+                          <div className="mt-2.5 space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+                                Ngày sớm nhất NCC giao được:
+                              </label>
+                              <input
+                                type="date"
+                                min={todayStr}
+                                value={itemEta}
+                                onChange={(e) =>
+                                  handleEtaChangeForItem(
+                                    item.prItemId,
+                                    e.target.value,
+                                  )
+                                }
+                                className={`px-2.5 py-1.5 text-xs rounded-lg focus:outline-none text-slate-900 ${
+                                  isLaterThanDeadline
+                                    ? "border-2 border-rose-500 bg-rose-50/40 focus:ring-2 focus:ring-rose-500"
+                                    : "border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500"
+                                }`}
+                              />
+                            </div>
+                            {isLaterThanDeadline && (
+                              <p className="text-[11px] font-bold text-rose-600 text-right">
+                                Phải sớm hơn hạn chót giao hàng chung ({deadlineEtaDate})
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -412,7 +450,7 @@ export default function GeneratePoModal({
           {distributedGroups.length > 0 && (
             <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 space-y-2.5">
               <div className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                Kết quả phân phối ({distributedGroups.length} đơn đặt hàng sẽ được tạo riêng theo nhà cung cấp)
+                Kết quả phân phối ({distributedGroups.length} đơn đặt hàng sẽ được tạo riêng &amp; tự động gửi email tới nhà cung cấp)
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {distributedGroups.map((grp) => (
@@ -423,13 +461,19 @@ export default function GeneratePoModal({
                     <div className="font-bold text-slate-900">
                       {grp.supplier.supplierName}
                     </div>
+                    <div className="text-[11px] text-blue-700 font-medium">
+                      Email tự động nhận đơn: {grp.supplier.contactEmail || "Chưa có email"}
+                    </div>
                     <ul className="text-slate-600 list-disc list-inside space-y-0.5">
                       {grp.items.map((it) => (
                         <li key={it.prItemId}>
                           {it.materialName}:{" "}
                           <strong>
                             {it.remainingQty} {it.unitOfMeasure}
-                          </strong>
+                          </strong>{" "}
+                          <span className="text-slate-500">
+                            (Giao: {etaByItem[it.prItemId] || defaultEta})
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -439,18 +483,33 @@ export default function GeneratePoModal({
             </div>
           )}
 
-          {/* Ngày giao cam kết */}
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Ngày nhà cung cấp cam kết giao hàng
-            </label>
+          {/* Hạn chót giao hàng chung */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <label className="block text-sm font-bold text-slate-800">
+                Hạn chót giao hàng chung
+              </label>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Ngày sớm nhất từng nhà phân phối giao được phải luôn sớm hơn mốc hạn chót này.
+              </p>
+            </div>
             <input
               type="date"
-              value={promisedEtaDate}
-              onChange={(e) => setPromisedEtaDate(e.target.value)}
-              className="w-full sm:w-64 px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              min={todayStr}
+              value={deadlineEtaDate}
+              onChange={(e) => {
+                setDeadlineEtaDate(e.target.value);
+                setErrorMsg("");
+              }}
+              className="w-full sm:w-52 px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-900 shrink-0"
             />
           </div>
+
+          {errorMsg && (
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold">
+              {errorMsg}
+            </div>
+          )}
 
           <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
             <button
@@ -462,7 +521,7 @@ export default function GeneratePoModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isLoading}
+              disabled={isSubmitting || isLoading || materialItems.length === 0}
               className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition disabled:opacity-60"
             >
               {isSubmitting ? "Đang phát hành..." : "Phát hành đơn mua hàng"}

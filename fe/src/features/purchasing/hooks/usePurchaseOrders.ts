@@ -30,6 +30,7 @@ export function useBatchIssuePurchaseOrders() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => purchasingApi.batchIssuePurchaseOrders(),
+    meta: { skipGlobalErrorToast: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
     },

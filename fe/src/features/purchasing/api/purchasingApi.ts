@@ -62,6 +62,7 @@ export interface PoLineItemDto {
   materialId: number;
   materialCode: string;
   materialName: string;
+  materialGroup?: string;
   unitOfMeasure: string;
   orderedQty: number;
   receivedQty: number;
@@ -121,6 +122,7 @@ export interface DistributeMaterialLinePayloadDto {
   supplierId: number;
   orderedQty: number;
   unitPrice: number;
+  expectedArrivalDate?: string;
   materialName?: string;
   materialCode?: string;
   materialGroup?: string;
@@ -331,77 +333,17 @@ export const purchasingApi = {
 
   /** UC-49: Lấy danh sách nguyên vật liệu cần mua từ các Yêu cầu mua hàng đã được Chủ xưởng duyệt */
   getApprovedRequisitions: async (): Promise<ApprovedRequisitionViewDto[]> => {
-    try {
-      const res = await apiClient.get<{
-        success: boolean;
-        data: ApprovedRequisitionViewDto[];
-      }>("/purchase-orders/approved-requisitions");
+    const res = await apiClient.get<{
+      success: boolean;
+      data: ApprovedRequisitionViewDto[];
+    }>("/purchase-orders/approved-requisitions");
 
-      if (Array.isArray(res.data?.data) && res.data.data.length > 0) {
-        return res.data.data;
-      }
-    } catch {
-      // Fallback nếu chưa có PR ở trạng thái APPROVED
-    }
-
-    return [
-      {
-        prId: 0,
-        prCode: "PR-20261121-001",
-        aggregationDate: new Date().toISOString().slice(0, 10),
-        lines: [
-          {
-            prItemId: 101,
-            materialId: 1,
-            materialCode: "WOOD_OAK_01",
-            materialName: "Gỗ sồi Bắc Mỹ xẻ sấy FAS (Oak Timber)",
-            materialGroup: "LUMBER",
-            unitOfMeasure: "M3",
-            suggestedOrderQty: 7.4,
-            orderedQty: 0,
-            remainingQty: 7.4,
-          },
-          {
-            prItemId: 102,
-            materialId: 2,
-            materialCode: "HW_HINGE_02",
-            materialName: "Bản lề giảm chấn & Ke góc thép chịu lực",
-            materialGroup: "HARDWARE",
-            unitOfMeasure: "BO",
-            suggestedOrderQty: 300,
-            orderedQty: 0,
-            remainingQty: 300,
-          },
-          {
-            prItemId: 103,
-            materialId: 3,
-            materialCode: "PAINT_PU_03",
-            materialName: "Sơn lót & Sơn phủ PU 2 thành phần",
-            materialGroup: "FINISH_PAINT",
-            unitOfMeasure: "KG",
-            suggestedOrderQty: 150,
-            orderedQty: 0,
-            remainingQty: 150,
-          },
-          {
-            prItemId: 104,
-            materialId: 4,
-            materialCode: "PACK_CARTON_04",
-            materialName: "Thùng Carton 5 lớp sóng BC đóng gói xuất khẩu",
-            materialGroup: "PACKAGING",
-            unitOfMeasure: "THUNG",
-            suggestedOrderQty: 600,
-            orderedQty: 0,
-            remainingQty: 600,
-          },
-        ],
-      },
-    ];
+    return Array.isArray(res.data?.data) ? res.data.data : [];
   },
 
   /** UC-52: Phân phối danh sách nguyên liệu cần mua cho các nhà cung cấp đã chọn và tách thành các đơn đặt hàng tương ứng */
   distributeMaterialsToSuppliers: async (payload: {
-    promisedEtaDate: string;
+    promisedEtaDate?: string;
     terms?: string;
     lines: DistributeMaterialLinePayloadDto[];
   }): Promise<SupplierPurchaseOrderDto[]> => {
@@ -414,6 +356,7 @@ export const purchasingApi = {
         success: boolean;
         data: SupplierPurchaseOrderDto[];
       }>("/purchase-orders/batch-issue", {
+        autoSendEmail: true,
         lines: realLines.map((l) => ({
           prId: l.prId,
           prItemId: l.prItemId,
@@ -421,13 +364,22 @@ export const purchasingApi = {
           orderedQty: l.orderedQty,
           unitPrice: l.unitPrice,
         })),
-        supplierTerms: uniqueSupplierIds.map((supplierId) => ({
-          supplierId,
-          expectedArrivalDate: payload.promisedEtaDate,
-          terms:
-            payload.terms ||
-            "Thanh toán trước 50% giá trị hợp đồng, 50% còn lại thanh toán sau khi giao hàng.",
-        })),
+        supplierTerms: uniqueSupplierIds.map((supplierId) => {
+          const supplierLineEta = realLines
+            .filter((l) => l.supplierId === supplierId && l.expectedArrivalDate)
+            .map((l) => l.expectedArrivalDate as string)
+            .sort()[0];
+          return {
+            supplierId,
+            expectedArrivalDate:
+              supplierLineEta ||
+              payload.promisedEtaDate ||
+              new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+            terms:
+              payload.terms ||
+              "Thanh toán trước 50% giá trị hợp đồng, 50% còn lại thanh toán sau khi giao hàng.",
+          };
+        }),
       });
 
       if (Array.isArray(res.data?.data)) {
@@ -457,7 +409,10 @@ export const purchasingApi = {
         supplierName: sup?.supplierName || `Nhà cung cấp #${supplierId}`,
         materialCategory: groupLines[0]?.materialGroup || "Vật tư sản xuất",
         orderItemsSummary: summary,
-        promisedEtaDate: payload.promisedEtaDate,
+        promisedEtaDate:
+          groupLines[0]?.expectedArrivalDate ||
+          payload.promisedEtaDate ||
+          new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
         sourcePrCode: "PR-20261121-001",
       });
       createdList.push(created);
