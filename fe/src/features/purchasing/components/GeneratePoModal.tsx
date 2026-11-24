@@ -245,7 +245,10 @@ export default function GeneratePoModal({
         })),
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["purchase-orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["approved-requisitions"] }),
+      ]);
 
       onSuccess(
         `Đã phát hành và tự động gửi email thành công ${createdOrders.length || distributedGroups.length} đơn đặt hàng tới các nhà cung cấp tương ứng!`,

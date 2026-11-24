@@ -14,4 +14,7 @@ public class PurchaseOrderDetail
     public decimal OrderedQty { get; set; }
     public decimal ReceivedQty { get; set; } = 0;
     public decimal? UnitPrice { get; set; }
+
+    /// <summary>Ngày sớm nhất nhà cung cấp có thể giao riêng cho dòng vật tư này.</summary>
+    public DateTime? ExpectedDeliveryDate { get; set; }
 }

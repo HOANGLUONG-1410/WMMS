@@ -16,6 +16,16 @@ export function usePurchaseOrders(params: PurchaseOrderQueryParams = {}) {
   });
 }
 
+export function useApprovedRequisitions() {
+  return useQuery({
+    queryKey: ["approved-requisitions"],
+    queryFn: () => purchasingApi.getApprovedRequisitions(),
+    staleTime: 1000 * 15,
+    refetchOnWindowFocus: true,
+    meta: { skipGlobalErrorToast: true },
+  });
+}
+
 export function useCreatePurchaseOrder() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -43,6 +53,19 @@ export function useUpdatePoEta() {
     mutationFn: (payload: UpdatePoEtaDto) => purchasingApi.updatePoEta(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+  });
+}
+
+export function useCancelPurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { poId: number; reason?: string }) =>
+      purchasingApi.cancelPurchaseOrder(payload.poId, payload.reason),
+    meta: { skipGlobalErrorToast: true },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["approved-requisitions"] });
     },
   });
 }
