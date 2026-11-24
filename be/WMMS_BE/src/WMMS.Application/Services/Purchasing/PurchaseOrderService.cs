@@ -328,7 +328,8 @@ public class PurchaseOrderService : IPurchaseOrderService
                         MaterialId = itemsById[line.PrItemId].MaterialId,
                         OrderedQty = Math.Round(line.OrderedQty, 4),
                         ReceivedQty = 0m,
-                        UnitPrice = Math.Round(line.UnitPrice, 2)
+                        UnitPrice = Math.Round(line.UnitPrice, 2),
+                        ExpectedDeliveryDate = line.ExpectedDeliveryDate?.Date
                     });
                 }
 
@@ -444,7 +445,8 @@ public class PurchaseOrderService : IPurchaseOrderService
                         PrItemId = l.PrItemId,
                         SupplierId = l.SupplierId,
                         OrderedQty = l.OrderedQty,
-                        UnitPrice = l.UnitPrice
+                        UnitPrice = l.UnitPrice,
+                        ExpectedDeliveryDate = l.ExpectedDeliveryDate
                     }).ToList(),
                     SupplierTerms = termsForGroup
                 };
@@ -701,13 +703,69 @@ public class PurchaseOrderService : IPurchaseOrderService
         }
 
         var oldStatus = po.PoStatus;
+        if (newStatus == PoStatusEnum.CANCELLED)
+        {
+            if (oldStatus == PoStatusEnum.CANCELLED)
+            {
+                throw AppException.Conflict(
+                    $"Đơn đặt hàng {po.PoCode} đã được hủy trước đó.",
+                    MessageCodes.Msg08DuplicateConflict);
+            }
+
+            if (oldStatus != PoStatusEnum.ISSUED || po.Details.Any(d => d.ReceivedQty > 0m) || po.GoodsReceipts.Count > 0)
+            {
+                throw AppException.Conflict(
+                    $"Không thể hủy đơn đặt hàng {po.PoCode} vì đơn đã bắt đầu giao hoặc đã có phiếu nhập kho.",
+                    MessageCodes.Msg08DuplicateConflict);
+            }
+        }
+
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var now = DateTime.UtcNow;
             po.PoStatus = newStatus;
-            po.UpdatedAt = DateTime.UtcNow;
+            po.UpdatedAt = now;
 
             await _purchaseOrderRepository.UpdateAsync(po);
+
+            string? replacementPrCode = null;
+            if (newStatus == PoStatusEnum.CANCELLED && po.Details.Count > 0)
+            {
+                var originalPr = po.PurchaseRequest ?? await _purchaseRequestRepository.GetByIdAsync(po.PrId, cancellationToken);
+                var today = now.Date;
+                var seq = await _purchaseRequestRepository.CountByDateAsync(today, cancellationToken) + 1;
+                var candidateCode = $"PR-{today:yyyyMMdd}-{seq:D3}";
+                while (await _purchaseRequestRepository.GetByCodeAsync(candidateCode, cancellationToken) != null)
+                {
+                    seq++;
+                    candidateCode = $"PR-{today:yyyyMMdd}-{seq:D3}";
+                }
+
+                var reorderedPr = new PurchaseRequest
+                {
+                    PrCode = candidateCode,
+                    AggregationDate = today,
+                    CreatedBy = purchasingUserId > 0 ? purchasingUserId : po.CreatedBy,
+                    PrStatus = PrStatusEnum.PENDING_APPROVAL,
+                    CreatedAt = now
+                };
+
+                foreach (var detail in po.Details.OrderBy(d => d.PoDetailId))
+                {
+                    var sourceItem = originalPr?.Items.FirstOrDefault(i => i.MaterialId == detail.MaterialId);
+                    reorderedPr.Items.Add(new PurchaseRequestItem
+                    {
+                        MaterialId = detail.MaterialId,
+                        TotalShortageQty = detail.OrderedQty,
+                        SuggestedOrderQty = detail.OrderedQty,
+                        SourceOrderIdsJson = sourceItem?.SourceOrderIdsJson
+                    });
+                }
+
+                await _purchaseRequestRepository.AddAsync(reorderedPr, cancellationToken);
+                replacementPrCode = candidateCode;
+            }
 
             await _bomRepository.AddAuditLogAsync(new AuditLog
             {
@@ -716,10 +774,12 @@ public class PurchaseOrderService : IPurchaseOrderService
                 EntityName = nameof(PurchaseOrder),
                 EntityId = po.PoCode,
                 BeforeState = JsonSerializer.Serialize(new { Status = oldStatus.ToString() }),
-                AfterState = JsonSerializer.Serialize(new { Status = newStatus.ToString(), Reason = request.Reason }),
-                Reason = request.Reason ?? $"Cập nhật trạng thái đơn mua hàng {po.PoCode} sang {FormatPoStatusLabel(newStatus)}.",
+                AfterState = JsonSerializer.Serialize(new { Status = newStatus.ToString(), Reason = request.Reason, ReplacementPrCode = replacementPrCode }),
+                Reason = newStatus == PoStatusEnum.CANCELLED && replacementPrCode != null
+                    ? $"{(string.IsNullOrWhiteSpace(request.Reason) ? $"Hủy đơn mua hàng {po.PoCode}" : request.Reason.Trim())} — tự động tạo phiếu yêu cầu mới {replacementPrCode} chờ Chủ xưởng duyệt lại."
+                    : (request.Reason ?? $"Cập nhật trạng thái đơn mua hàng {po.PoCode} sang {FormatPoStatusLabel(newStatus)}."),
                 IpAddress = ipAddress,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = now
             });
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -1127,7 +1187,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             ? null
             : (dto.EtaDaysRemaining < 0
                 ? $"Trễ {Math.Abs(dto.EtaDaysRemaining)} ngày"
-                : (dto.EtaDaysRemaining == 0 ? "Giao hôm nay" : $"{dto.EtaDaysRemaining} ngày"));
+                : (dto.EtaDaysRemaining == 0 ? "Giao hôm nay" : $"Còn {dto.EtaDaysRemaining} ngày"));
 
         var detailList = po.Details.OrderBy(d => d.PoDetailId).ToList();
         if (detailList.Count == 0)
@@ -1144,6 +1204,16 @@ public class PurchaseOrderService : IPurchaseOrderService
             var first = detailList[0];
             dto.OrderItemsSummary = $"{first.OrderedQty:0.##} {first.Material?.UnitOfMeasure ?? "đơn vị"} {first.Material?.MaterialName ?? "vật tư"} (+{detailList.Count - 1} mặt hàng khác)";
         }
+
+        dto.MaterialSchedules = detailList
+            .Select(d => new MaterialDeliveryScheduleDto
+            {
+                MaterialId = d.MaterialId,
+                MaterialCode = d.Material?.MaterialCode ?? string.Empty,
+                MaterialName = d.Material?.MaterialName ?? $"Vật tư #{d.MaterialId}",
+                ExpectedDeliveryDate = (d.ExpectedDeliveryDate ?? po.ExpectedArrivalDate).ToString("yyyy-MM-dd")
+            })
+            .ToList();
     }
 
     private static string FormatMaterialCategory(string? category) =>
@@ -1209,7 +1279,8 @@ public class PurchaseOrderService : IPurchaseOrderService
                 ReceivedQty = d.ReceivedQty,
                 RemainingQty = Math.Max(0m, Math.Round(d.OrderedQty - d.ReceivedQty, 4)),
                 UnitPrice = d.UnitPrice,
-                LineAmount = d.UnitPrice.HasValue ? Math.Round(d.OrderedQty * d.UnitPrice.Value, 2) : null
+                LineAmount = d.UnitPrice.HasValue ? Math.Round(d.OrderedQty * d.UnitPrice.Value, 2) : null,
+                ExpectedDeliveryDate = d.ExpectedDeliveryDate ?? po.ExpectedArrivalDate
             })
             .ToList();
 
