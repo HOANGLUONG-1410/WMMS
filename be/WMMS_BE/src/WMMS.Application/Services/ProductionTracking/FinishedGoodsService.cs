@@ -43,6 +43,7 @@ public class FinishedGoodsService : IFinishedGoodsService
             var isReadyForReceipt = batch.BatchStatus != BatchStatusEnum.DONE &&
                                     batch.BatchStatus != BatchStatusEnum.LOCKED &&
                                     batch.BatchStatus != BatchStatusEnum.HOLD_POINT_BLOCKED &&
+                                    batch.BatchQty > 0 &&
                                     isAllStepsPassed;
 
             if (onlyReadyForReceipt && !isReadyForReceipt)

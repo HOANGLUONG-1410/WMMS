@@ -24,7 +24,7 @@ public class SuppliersController : MasterDataControllerBase
 {
     private const string SupplierReadRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Purchasing},{RoleConstants.Planner},{RoleConstants.Warehouse}";
     private const string WriteRoles = $"{RoleConstants.Admin},{RoleConstants.Purchasing}";
-    private const string CustomerRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Sales}";
+    private const string CustomerRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Sales},{RoleConstants.Planner},{RoleConstants.Purchasing}";
     private const string CustomerWriteRoles = $"{RoleConstants.Admin},{RoleConstants.Sales}";
 
     private readonly ISupplierService _service;

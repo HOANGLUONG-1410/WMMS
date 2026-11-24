@@ -49,6 +49,7 @@ public class HoldPointController : MasterDataControllerBase
     /// SC-20: Tổ trưởng SX (LEADER), ADMIN hoặc PLANNER gửi yêu cầu ghi đè / phá khóa điểm dừng Hold Point (KBN02).
     /// </summary>
     [HttpPost("override-requests")]
+    [Obsolete("Khuyến nghị sử dụng endpoint hợp nhất trên ProductionOrderController: POST /api/v1/production-orders/batches/{batchId}/overdrive/request")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Leader},{RoleConstants.Planner}")]
     [ProducesResponseType(typeof(ApiResponse<HoldPointOverrideResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
@@ -72,6 +73,7 @@ public class HoldPointController : MasterDataControllerBase
     /// SC-20: Chủ xưởng (OWNER) hoặc ADMIN phê duyệt ghi đè điểm dừng Hold Point (KBN02, GBR-05).
     /// </summary>
     [HttpPost("override-requests/{batchId:long}/approve")]
+    [Obsolete("Khuyến nghị sử dụng endpoint hợp nhất trên ProductionOrderController: POST /api/v1/production-orders/batches/{batchId}/overdrive/approve")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner}")]
     [ProducesResponseType(typeof(ApiResponse<HoldPointOverrideResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
@@ -98,6 +100,7 @@ public class HoldPointController : MasterDataControllerBase
     /// SC-20: Chủ xưởng (OWNER) hoặc ADMIN từ chối yêu cầu ghi đè điểm dừng Hold Point (KBN02).
     /// </summary>
     [HttpPost("override-requests/{batchId:long}/reject")]
+    [Obsolete("Khuyến nghị sử dụng endpoint hợp nhất trên ProductionOrderController: POST /api/v1/production-orders/batches/{batchId}/overdrive/approve với Approved=false")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner}")]
     [ProducesResponseType(typeof(ApiResponse<HoldPointOverrideResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
@@ -125,6 +128,7 @@ public class HoldPointController : MasterDataControllerBase
     /// Kiểm soát chặt chẽ: 100% QC Pass và chặn dừng tự động tại các trạm kiểm soát Hold Point nếu thiếu vật tư.
     /// </summary>
     [HttpPost("batches/{batchId:long}/advance")]
+    [Obsolete("Khuyến nghị sử dụng endpoint hợp nhất trên ProductionOrderController: POST /api/v1/production-orders/batches/{batchId}/advance-step")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Leader}")]
     [ProducesResponseType(typeof(ApiResponse<AdvanceStageResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]

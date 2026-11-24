@@ -518,20 +518,11 @@ public class ProductionDashboardService : IProductionDashboardService
                 .ToList();
         }
 
-        var allBatches = activeFilter.OrderId.HasValue
-            ? await _unitOfWork.ProductionBatches.GetByOrderIdAsync(activeFilter.OrderId.Value, cancellationToken)
-            : await _unitOfWork.ProductionBatches.GetAllActiveBatchesAsync(null, cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(activeFilter.WoodType))
-        {
-            var woodKeyword = activeFilter.WoodType.Trim();
-            allBatches = allBatches
-                .Where(b => ResolveOrderItemWoodType(b.OrderItem)
-                    .Contains(woodKeyword, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        var totalSystemBatchesCount = allBatches.Count;
+        // Đếm trực tiếp bằng truy vấn nhẹ AsNoTracking để tránh kéo đồ thị 16 bảng gây nghẽn RESOURCE_SEMAPHORE trên SQL Server
+        var totalSystemBatchesCount = await _unitOfWork.ProductionBatches.CountBatchesForAnalyticsAsync(
+            activeFilter.OrderId,
+            activeFilter.WoodType,
+            cancellationToken);
         // Chỉ đếm các lô thực sự có bản ghi phê duyệt phá khóa trong overdrive_logs (không đếm nhầm lô bị từ chối / chưa duyệt)
         var totalOverdrivenBatchesCount = overdriveLogs
             .Select(ol => ol.BatchId)
@@ -923,9 +914,10 @@ public class ProductionDashboardService : IProductionDashboardService
         QualityAnalyticsFilterDto activeFilter,
         CancellationToken cancellationToken)
     {
-        var batches = activeFilter.OrderId.HasValue
-            ? await _unitOfWork.ProductionBatches.GetByOrderIdAsync(activeFilter.OrderId.Value, cancellationToken)
-            : await _unitOfWork.ProductionBatches.GetAllActiveBatchesAsync(null, cancellationToken);
+        var batches = await _unitOfWork.ProductionBatches.GetBatchesForDispatchExportAsync(
+            activeFilter.OrderId,
+            includeBomDetails: !string.IsNullOrWhiteSpace(activeFilter.WoodType),
+            cancellationToken);
 
         if (activeFilter.FromDate.HasValue)
         {

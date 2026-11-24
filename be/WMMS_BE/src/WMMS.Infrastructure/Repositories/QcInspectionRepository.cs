@@ -78,6 +78,11 @@ public class QcInspectionRepository : IQcInspectionRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Lấy danh sách nhật ký lỗi chất lượng (<c>defect_logs</c>) kèm thông tin công đoạn, KCS, vật tư gỗ và đơn hàng
+    /// phục vụ báo cáo Defect Analytics &amp; xuất Excel Iter 3 (<c>BR-QC-02</c>, <c>GBR-05</c>).
+    /// Áp dụng <c>AsSplitQuery()</c> để tách truy vấn nhiều tập hợp con, tránh tích Đề-các trên SQL Server.
+    /// </summary>
     public async Task<List<DefectLog>> GetAllDefectLogsWithAnalyticsGraphAsync(
         DateTime? fromDate = null,
         DateTime? toDate = null,
@@ -86,6 +91,7 @@ public class QcInspectionRepository : IQcInspectionRepository
     {
         var query = _context.DefectLogs
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(dl => dl.DefectCatalog)
             .Include(dl => dl.SpawnedSubBatch)
             .Include(dl => dl.QcInspection)
@@ -131,6 +137,11 @@ public class QcInspectionRepository : IQcInspectionRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Lấy danh sách nhật ký phá khóa ngoại lệ Hold Point (<c>overdrive_logs</c>) kèm thông tin người duyệt, công đoạn và vật tư gỗ
+    /// phục vụ báo cáo Overdrive Analytics &amp; xuất Excel Iter 3 (<c>SC-20</c>, <c>BR-EXC-01</c>).
+    /// Áp dụng <c>AsSplitQuery()</c> để tránh tích Đề-các nhiều nhánh <c>BatchRoutingSteps</c> và <c>BomDetails</c>.
+    /// </summary>
     public async Task<List<OverdriveLog>> GetAllOverdriveLogsWithAnalyticsGraphAsync(
         DateTime? fromDate = null,
         DateTime? toDate = null,
@@ -139,6 +150,7 @@ public class QcInspectionRepository : IQcInspectionRepository
     {
         var query = _context.OverdriveLogs
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(ol => ol.Requester)
             .Include(ol => ol.Approver)
             .Include(ol => ol.ProductionBatch)
@@ -178,6 +190,11 @@ public class QcInspectionRepository : IQcInspectionRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Lấy danh sách toàn bộ phiếu kiểm định KCS (<c>qc_inspections</c>) kèm danh sách lỗi, thẻ phụ và định mức gỗ
+    /// phục vụ báo cáo Chất lượng Tổng hợp &amp; xuất Workbook Excel Iter 3 (<c>UC-64</c>, <c>BR-008</c>).
+    /// Áp dụng <c>AsSplitQuery()</c> để tránh tích Đề-các giữa <c>DefectLogs</c> và <c>BomDetails</c>.
+    /// </summary>
     public async Task<List<QcInspection>> GetAllInspectionsWithFullGraphAsync(
         DateTime? fromDate = null,
         DateTime? toDate = null,
@@ -186,6 +203,7 @@ public class QcInspectionRepository : IQcInspectionRepository
     {
         var query = _context.QcInspections
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(qi => qi.Inspector)
             .Include(qi => qi.DefectLogs)
                 .ThenInclude(dl => dl.DefectCatalog)

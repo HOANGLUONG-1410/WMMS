@@ -488,7 +488,7 @@ public class MrpAllocationService : IMrpAllocationService
                 batch.GoodsIssuedUnlocked = true;
                 if (batch.BatchStatus == BatchStatusEnum.LOCKED)
                 {
-                    batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
+                    batch.UnlockForProduction();
                     var currentStep = batch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == batch.CurrentStageSeq);
                     if (currentStep != null && (currentStep.StepStatus == StepStatusEnum.WAITING || currentStep.StepStatus == StepStatusEnum.BLOCKED))
                     {
@@ -501,7 +501,15 @@ public class MrpAllocationService : IMrpAllocationService
                     batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
                     var blockedSteps = batch.BatchRoutingSteps
                         .Where(s => s.StepStatus == StepStatusEnum.BLOCKED)
+                        .OrderBy(s => s.StageSequence)
                         .ToList();
+
+                    var firstBlockedStep = blockedSteps.FirstOrDefault();
+                    if (firstBlockedStep != null)
+                    {
+                        batch.CurrentStageSeq = firstBlockedStep.StageSequence;
+                    }
+
                     foreach (var blockedStep in blockedSteps)
                     {
                         blockedStep.StepStatus = blockedStep.StageSequence == batch.CurrentStageSeq

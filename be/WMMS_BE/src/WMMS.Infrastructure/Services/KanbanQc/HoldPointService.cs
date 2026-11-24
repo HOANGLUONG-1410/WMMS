@@ -203,15 +203,10 @@ public class HoldPointService : IHoldPointService
             batch.GoodsIssuedUnlocked
         });
 
-        // Cập nhật trạng thái Thẻ Lô: bật Overdriver và gắn trạm Hold Point
+        // Cập nhật trạng thái Thẻ Lô: bật Overdriver và gắn trạm Hold Point (giữ nguyên BatchStatus cho tới khi Chủ xưởng phê duyệt)
         batch.IsOverdriver = true;
         batch.HoldPointStageSeq = targetHoldPointSeq;
         batch.UpdatedAt = DateTime.UtcNow;
-
-        if (batch.BatchStatus == BatchStatusEnum.LOCKED)
-        {
-            batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
-        }
 
         var afterState = JsonSerializer.Serialize(new
         {

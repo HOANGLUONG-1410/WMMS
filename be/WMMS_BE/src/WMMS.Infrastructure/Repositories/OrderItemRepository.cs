@@ -144,6 +144,10 @@ public class OrderItemRepository : IOrderItemRepository
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Xây dựng truy vấn nạp đồ thị MRP đầy đủ cho <see cref="OrderItem"/> kèm BOM vật tư, phân bổ và thẻ sản xuất.
+    /// Áp dụng <c>AsSplitQuery()</c> để tránh bùng nổ tích Đề-các đa collection (<c>Query[20504]</c>).
+    /// </summary>
     private IQueryable<OrderItem> BuildFullMrpQuery()
     {
         return _context.OrderItems
@@ -158,9 +162,14 @@ public class OrderItemRepository : IOrderItemRepository
                     .ThenInclude(bd => bd.Material)
                         .ThenInclude(m => m.MaterialStock)
             .Include(oi => oi.MaterialAllocations)
-            .Include(oi => oi.ProductionBatches);
+            .Include(oi => oi.ProductionBatches)
+            .AsSplitQuery();
     }
 
+    /// <summary>
+    /// Xây dựng truy vấn nạp đồ thị tiến độ tổng thể của <see cref="CustomerOrder"/> phục vụ Dashboard và báo cáo Iter 3.
+    /// Áp dụng <c>AsSplitQuery()</c> để loại bỏ cảnh báo đa collection (<c>Query[20504]</c>) và tối ưu Memory Grant trên SQL Server.
+    /// </summary>
     private IQueryable<CustomerOrder> BuildOrderWithProgressGraphQuery()
     {
         return _context.CustomerOrders
@@ -178,6 +187,7 @@ public class OrderItemRepository : IOrderItemRepository
                 .ThenInclude(oi => oi.ProductionBatches)
                     .ThenInclude(pb => pb.BatchRoutingSteps)
                         .ThenInclude(brs => brs.QcInspections)
-                            .ThenInclude(qc => qc.DefectLogs);
+                            .ThenInclude(qc => qc.DefectLogs)
+            .AsSplitQuery();
     }
 }

@@ -67,20 +67,122 @@ public class ProductionBatchRepository : IProductionBatchRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Lấy danh sách các thẻ sản xuất Kanban đang hoạt động (tùy chọn lọc theo trạng thái).
+    /// Sắp xếp trong SQL theo khóa chính <c>BatchId</c> và sắp xếp theo <c>EtdDate</c> trên bộ nhớ ứng dụng
+    /// để tránh toán tử Sort chiếm Memory Grant lớn (<c>RESOURCE_SEMAPHORE</c>) trên SQL Server.
+    /// </summary>
     public async Task<List<ProductionBatch>> GetAllActiveBatchesAsync(
         BatchStatusEnum? status = null,
         CancellationToken cancellationToken = default)
     {
-        var query = BuildFullBatchQuery();
+        var query = BuildFullBatchQuery(includeBomDetails: false);
         if (status.HasValue)
         {
             query = query.Where(pb => pb.BatchStatus == status.Value);
         }
 
-        return await query
-            .OrderBy(pb => pb.OrderItem.CustomerOrder.EtdDate)
-            .ThenBy(pb => pb.BatchId)
+        var batches = await query
+            .OrderBy(pb => pb.BatchId)
             .ToListAsync(cancellationToken);
+
+        return batches
+            .OrderBy(pb => pb.OrderItem?.CustomerOrder?.EtdDate ?? DateTime.MaxValue)
+            .ThenBy(pb => pb.BatchId)
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountBatchesForAnalyticsAsync(
+        long? orderId = null,
+        string? woodType = null,
+        CancellationToken cancellationToken = default)
+    {
+        var baseQuery = _context.ProductionBatches.AsNoTracking();
+        if (orderId.HasValue)
+        {
+            baseQuery = baseQuery.Where(pb => pb.OrderItem.OrderId == orderId.Value);
+        }
+
+        if (string.IsNullOrWhiteSpace(woodType))
+        {
+            return await baseQuery.CountAsync(cancellationToken);
+        }
+
+        var keyword = woodType.Trim();
+        var batchRows = await baseQuery
+            .Select(pb => new
+            {
+                pb.OrderItemId,
+                WoodSpecies = pb.OrderItem != null && pb.OrderItem.Product != null
+                    ? pb.OrderItem.Product.WoodSpecies
+                    : null
+            })
+            .ToListAsync(cancellationToken);
+
+        var orderItemIdsNeedingBomFallback = batchRows
+            .Where(r => string.IsNullOrWhiteSpace(r.WoodSpecies))
+            .Select(r => r.OrderItemId)
+            .Distinct()
+            .ToList();
+
+        var lumberByOrderItemId = new Dictionary<long, string>();
+        if (orderItemIdsNeedingBomFallback.Count > 0)
+        {
+            var bomLumberRows = await _context.BomHeaders
+                .AsNoTracking()
+                .Where(bh => orderItemIdsNeedingBomFallback.Contains(bh.OrderItemId))
+                .SelectMany(bh => bh.BomDetails
+                    .Where(bd => bd.Material.MaterialGroup == MaterialGroupEnum.LUMBER)
+                    .Select(bd => new
+                    {
+                        bh.OrderItemId,
+                        bd.Material.MaterialName
+                    }))
+                .ToListAsync(cancellationToken);
+
+            foreach (var row in bomLumberRows)
+            {
+                if (!string.IsNullOrWhiteSpace(row.MaterialName) &&
+                    !lumberByOrderItemId.ContainsKey(row.OrderItemId))
+                {
+                    lumberByOrderItemId[row.OrderItemId] = row.MaterialName.Trim();
+                }
+            }
+        }
+
+        return batchRows.Count(r =>
+        {
+            var resolvedWoodType = !string.IsNullOrWhiteSpace(r.WoodSpecies)
+                ? r.WoodSpecies!.Trim()
+                : (lumberByOrderItemId.TryGetValue(r.OrderItemId, out var lumberName)
+                    ? lumberName
+                    : "Gỗ tự nhiên tiêu chuẩn");
+
+            return resolvedWoodType.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    /// <inheritdoc />
+    public async Task<List<ProductionBatch>> GetBatchesForDispatchExportAsync(
+        long? orderId = null,
+        bool includeBomDetails = false,
+        CancellationToken cancellationToken = default)
+    {
+        var query = BuildFullBatchQuery(includeBomDetails).AsNoTracking();
+        if (orderId.HasValue)
+        {
+            query = query.Where(pb => pb.OrderItem.OrderId == orderId.Value);
+        }
+
+        var batches = await query
+            .OrderBy(pb => pb.BatchId)
+            .ToListAsync(cancellationToken);
+
+        return batches
+            .OrderBy(pb => pb.OrderItem?.CustomerOrder?.EtdDate ?? DateTime.MaxValue)
+            .ThenBy(pb => pb.BatchId)
+            .ToList();
     }
 
     public async Task<BatchRoutingStep?> GetStepByIdAsync(long batchStepId, CancellationToken cancellationToken = default)
@@ -116,15 +218,17 @@ public class ProductionBatchRepository : IProductionBatchRepository
         return Task.CompletedTask;
     }
 
-    private IQueryable<ProductionBatch> BuildFullBatchQuery()
+    /// <summary>
+    /// Xây dựng truy vấn nạp đồ thị Thẻ Sản xuất Kanban (<c>production_batches</c>), sản phẩm, đơn hàng,
+    /// công đoạn, kiểm định KCS và nhật ký ngoại lệ Overdrive phục vụ SC-20, SC-20b và Iter 3 (<c>UC-64</c>, <c>BR-PRD-01</c>).
+    /// Chỉ nối nhánh <c>BomHeader -&gt; BomDetails -&gt; Material</c> khi <paramref name="includeBomDetails"/> là <c>true</c>
+    /// để tránh cấp phát Memory Grant thừa trên SQL Server, đồng thời áp dụng <c>AsSplitQuery()</c>.
+    /// </summary>
+    private IQueryable<ProductionBatch> BuildFullBatchQuery(bool includeBomDetails = false)
     {
-        return _context.ProductionBatches
+        IQueryable<ProductionBatch> query = _context.ProductionBatches
             .Include(pb => pb.OrderItem)
                 .ThenInclude(oi => oi.Product)
-            .Include(pb => pb.OrderItem)
-                .ThenInclude(oi => oi.BomHeader)
-                    .ThenInclude(bh => bh!.BomDetails)
-                        .ThenInclude(bd => bd.Material)
             .Include(pb => pb.OrderItem)
                 .ThenInclude(oi => oi.CustomerOrder)
                     .ThenInclude(co => co.Customer)
@@ -138,5 +242,16 @@ public class ProductionBatchRepository : IProductionBatchRepository
                     .ThenInclude(qi => qi.DefectLogs)
             .Include(pb => pb.OverdriveLogs)
                 .ThenInclude(ol => ol.Approver);
+
+        if (includeBomDetails)
+        {
+            query = query
+                .Include(pb => pb.OrderItem)
+                    .ThenInclude(oi => oi.BomHeader)
+                        .ThenInclude(bh => bh!.BomDetails)
+                            .ThenInclude(bd => bd.Material);
+        }
+
+        return query.AsSplitQuery();
     }
 }

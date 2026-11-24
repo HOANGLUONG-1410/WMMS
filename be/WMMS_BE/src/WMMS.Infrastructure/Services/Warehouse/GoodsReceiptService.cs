@@ -239,9 +239,11 @@ public class GoodsReceiptService : IGoodsReceiptService
                 PoStatus = po.PoStatus.ToString(),
                 GrnStatus = grn.Status.ToString(),
                 Lines = lineResults.Select(l => new { l.MaterialCode, l.ReceivedQty }),
-                AllocatedOrders = allocationResults.Count
+                AllocatedOrders = allocationResults.Count,
+                Note = request.Note
             },
-            ipAddress);
+            ipAddress,
+            request.Note);
         await _context.SaveChangesAsync(ct);
 
         return new GoodsReceiptResultDto
@@ -272,13 +274,13 @@ public class GoodsReceiptService : IGoodsReceiptService
         var waiting = await _context.MaterialAllocations
             .Include(a => a.OrderItem).ThenInclude(oi => oi.CustomerOrder).ThenInclude(co => co.OrderSpace)
             .Where(a => a.MaterialId == materialId
-                        && a.AllocationStatus == AllocationStatusEnum.RESERVED
-                        && a.RequiredQty > a.ReservedQty
+                        && (a.AllocationStatus == AllocationStatusEnum.RESERVED || a.AllocationStatus == AllocationStatusEnum.RELEASED)
+                        && a.RequiredQty > (a.ReservedQty + a.IssuedQty)
                         && a.OrderItem.CustomerOrder.Status != OrderStatusEnum.CANCELLED)
             .ToListAsync(ct);
 
         var coveredItemIds = (await _context.MaterialAllocations
-                .Where(a => a.MaterialId == materialId && a.AllocationStatus != AllocationStatusEnum.RELEASED)
+                .Where(a => a.MaterialId == materialId)
                 .Select(a => a.OrderItemId)
                 .ToListAsync(ct))
             .ToHashSet();
@@ -357,11 +359,12 @@ public class GoodsReceiptService : IGoodsReceiptService
         {
             if (available <= 0m) break;
 
-            var shortage = alloc.RequiredQty - alloc.ReservedQty;
+            var shortage = alloc.RequiredQty - (alloc.ReservedQty + alloc.IssuedQty);
             var give = Math.Min(available, shortage);
             if (give <= 0m) continue;
 
             alloc.ReservedQty += give;
+            alloc.AllocationStatus = AllocationStatusEnum.RESERVED;
             alloc.AllocatedAt = now;
             available -= give;
             stock.AllocatedQty += give;

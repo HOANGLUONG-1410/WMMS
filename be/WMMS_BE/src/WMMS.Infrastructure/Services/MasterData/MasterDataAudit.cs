@@ -28,7 +28,7 @@ internal static class MasterDataAudit
     public const string CustomerCreated = "CUSTOMER_CREATED";
 
     /// <summary>Thêm bản ghi AuditLog vào context (chưa SaveChanges để cùng giao dịch với nghiệp vụ).</summary>
-    public static void Add(WmmsDbContext ctx, long userId, string action, string entity, string entityId, object? before, object? after, string? ip)
+    public static void Add(WmmsDbContext ctx, long userId, string action, string entity, string entityId, object? before, object? after, string? ip, string? reason = null)
     {
         ctx.AuditLogs.Add(new AuditLog
         {
@@ -38,6 +38,7 @@ internal static class MasterDataAudit
             EntityId = entityId,
             BeforeState = before == null ? null : JsonSerializer.Serialize(before),
             AfterState = after == null ? null : JsonSerializer.Serialize(after),
+            Reason = reason,
             IpAddress = ip,
             CreatedAt = DateTime.UtcNow
         });
