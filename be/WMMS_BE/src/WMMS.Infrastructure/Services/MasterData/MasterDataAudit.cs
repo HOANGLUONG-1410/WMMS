@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using WMMS.Application.Common.Models;
 using WMMS.Application.DTOs.MasterData;
@@ -26,6 +26,8 @@ internal static class MasterDataAudit
     public const string SupplierCreated = "SUPPLIER_CREATED";
     public const string SupplierUpdated = "SUPPLIER_UPDATED";
     public const string CustomerCreated = "CUSTOMER_CREATED";
+    public const string CustomerUpdated = "CUSTOMER_UPDATED";
+    public const string CustomerDeleted = "CUSTOMER_DELETED";
 
     /// <summary>Thêm bản ghi AuditLog vào context (chưa SaveChanges để cùng giao dịch với nghiệp vụ).</summary>
     public static void Add(WmmsDbContext ctx, long userId, string action, string entity, string entityId, object? before, object? after, string? ip, string? reason = null)

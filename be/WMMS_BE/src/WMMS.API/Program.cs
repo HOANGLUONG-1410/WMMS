@@ -85,6 +85,7 @@ builder.Services.AddScoped<IProductionOrderService, ProductionOrderService>();
 builder.Services.AddScoped<IMaterialService, WMMS.Infrastructure.Services.MasterData.MaterialService>();
 builder.Services.AddScoped<IProductService, WMMS.Infrastructure.Services.MasterData.ProductService>();
 builder.Services.AddScoped<ISupplierService, WMMS.Infrastructure.Services.MasterData.SupplierService>();
+builder.Services.AddScoped<ICustomerService, WMMS.Infrastructure.Services.MasterData.CustomerService>();
 builder.Services.AddScoped<IInventoryService, WMMS.Infrastructure.Services.Inventory.InventoryService>();
 builder.Services.AddScoped<IMrpAllocationService, MrpAllocationService>();
 // SC-15: Quản lý PR gộp & luồng phê duyệt của Chủ xưởng (UC-45..UC-48, BR-PUR-02)

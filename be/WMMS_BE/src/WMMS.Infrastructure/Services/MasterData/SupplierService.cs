@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using WMMS.Application.Common.Models;
 using WMMS.Application.DTOs.MasterData;
@@ -145,6 +145,7 @@ public class SupplierService : ISupplierService
     private static CustomerDto ToDto(Customer c) => new()
     {
         CustomerId = c.CustomerId, CustomerCode = c.CustomerCode, CompanyName = c.CompanyName,
-        ContactPerson = c.ContactPerson, Email = c.Email, Country = c.Country
+        ContactPerson = c.ContactPerson, Email = c.Email, Country = c.Country,
+        TotalOrdersCount = c.SalesOrders?.Count ?? 0, CreatedAt = c.CreatedAt, UpdatedAt = c.UpdatedAt
     };
 }

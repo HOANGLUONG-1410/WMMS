@@ -202,12 +202,24 @@ public class CustomerDto
     public string? ContactPerson { get; set; }
     public string? Email { get; set; }
     public string? Country { get; set; }
+    public int TotalOrdersCount { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }
 
 /// <summary>Yêu cầu tạo khách hàng (BR-MDM-01).</summary>
 public class CreateCustomerDto
 {
     public string CustomerCode { get; set; } = string.Empty;
+    public string CompanyName { get; set; } = string.Empty;
+    public string? ContactPerson { get; set; }
+    public string? Email { get; set; }
+    public string? Country { get; set; }
+}
+
+/// <summary>Yêu cầu cập nhật khách hàng (BR-MDM-01).</summary>
+public class UpdateCustomerDto
+{
     public string CompanyName { get; set; } = string.Empty;
     public string? ContactPerson { get; set; }
     public string? Email { get; set; }

@@ -171,5 +171,26 @@ public class CreateCustomerValidator : AbstractValidator<CreateCustomerDto>
             .EmailAddress().WithMessage("Định dạng email khách hàng không hợp lệ.")
             .MaximumLength(255).WithMessage("Email khách hàng không được vượt quá 255 ký tự.")
             .When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.Country)
+            .MaximumLength(100).WithMessage("Tên quốc gia không được vượt quá 100 ký tự.");
+    }
+}
+
+/// <summary>Cập nhật khách hàng (BR-MDM-01).</summary>
+public class UpdateCustomerValidator : AbstractValidator<UpdateCustomerDto>
+{
+    public UpdateCustomerValidator()
+    {
+        RuleFor(x => x.CompanyName)
+            .NotEmpty().WithMessage("Tên công ty khách hàng không được để trống.")
+            .MaximumLength(255).WithMessage("Tên công ty khách hàng không được vượt quá 255 ký tự.");
+        RuleFor(x => x.ContactPerson)
+            .MaximumLength(255).WithMessage("Tên người liên hệ không được vượt quá 255 ký tự.");
+        RuleFor(x => x.Email)
+            .EmailAddress().WithMessage("Định dạng email khách hàng không hợp lệ.")
+            .MaximumLength(255).WithMessage("Email khách hàng không được vượt quá 255 ký tự.")
+            .When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.Country)
+            .MaximumLength(100).WithMessage("Tên quốc gia không được vượt quá 100 ký tự.");
     }
 }

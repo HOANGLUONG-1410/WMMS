@@ -24,24 +24,19 @@ public class SuppliersController : MasterDataControllerBase
 {
     private const string SupplierReadRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Purchasing},{RoleConstants.Planner},{RoleConstants.Warehouse}";
     private const string WriteRoles = $"{RoleConstants.Admin},{RoleConstants.Purchasing}";
-    private const string CustomerRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Sales},{RoleConstants.Planner},{RoleConstants.Purchasing}";
-    private const string CustomerWriteRoles = $"{RoleConstants.Admin},{RoleConstants.Sales}";
 
     private readonly ISupplierService _service;
     private readonly IValidator<CreateSupplierDto> _createValidator;
     private readonly IValidator<UpdateSupplierDto> _updateValidator;
-    private readonly IValidator<CreateCustomerDto> _customerValidator;
 
     public SuppliersController(
         ISupplierService service,
         IValidator<CreateSupplierDto> createValidator,
-        IValidator<UpdateSupplierDto> updateValidator,
-        IValidator<CreateCustomerDto> customerValidator)
+        IValidator<UpdateSupplierDto> updateValidator)
     {
         _service = service;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
-        _customerValidator = customerValidator;
     }
 
     /// <summary>UC-26: Danh sách nhà cung cấp phân trang.</summary>
@@ -81,24 +76,5 @@ public class SuppliersController : MasterDataControllerBase
         await _updateValidator.ValidateAndThrowAsync(dto, ct);
         var updated = await _service.UpdateSupplierAsync(id, dto, GetCurrentUserId(), GetClientIpAddress(), ct);
         return Ok(ApiResponse<SupplierDto>.Ok(updated, "Đã cập nhật thông tin nhà cung cấp thành công."));
-    }
-
-    /// <summary>SC-06: Danh sách khách hàng phân trang.</summary>
-    [HttpGet("~/api/v1/customers")]
-    [Authorize(Roles = CustomerRoles)]
-    [ProducesResponseType(typeof(ApiResponse<PagedResult<CustomerDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetCustomersAsync([FromQuery] PartnerQueryFilterDto filter, CancellationToken ct)
-        => Ok(ApiResponse<PagedResult<CustomerDto>>.Ok(await _service.GetCustomersAsync(filter, ct), "Đã tải danh sách khách hàng."));
-
-    /// <summary>SC-06: Tạo khách hàng (mã duy nhất, 409 MSG08 nếu trùng).</summary>
-    [HttpPost("~/api/v1/customers")]
-    [Authorize(Roles = CustomerWriteRoles)]
-    [ProducesResponseType(typeof(ApiResponse<CustomerDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> CreateCustomerAsync([FromBody] CreateCustomerDto dto, CancellationToken ct)
-    {
-        await _customerValidator.ValidateAndThrowAsync(dto, ct);
-        var created = await _service.CreateCustomerAsync(dto, GetCurrentUserId(), GetClientIpAddress(), ct);
-        return StatusCode(StatusCodes.Status201Created, ApiResponse<CustomerDto>.Ok(created, "Đã thêm khách hàng mới thành công."));
     }
 }

@@ -62,3 +62,27 @@ public interface ISupplierService
     /// <summary>Tạo khách hàng. Ném Conflict (MSG08) nếu trùng mã.</summary>
     Task<CustomerDto> CreateCustomerAsync(CreateCustomerDto dto, long userId, string? ipAddress, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Dịch vụ quản lý Danh mục Khách hàng B2B (Master Data Customers - SC-06, SCR-CUST-01, UC-26..UC-29).
+/// </summary>
+public interface ICustomerService
+{
+    /// <summary>Danh sách khách hàng phân trang, lọc theo từ khóa (Mã, Tên, Người liên hệ, Email, Quốc gia).</summary>
+    Task<PagedResult<CustomerDto>> GetCustomersAsync(PartnerQueryFilterDto filter, CancellationToken cancellationToken = default);
+
+    /// <summary>Chi tiết khách hàng theo ID. Ném NotFound nếu không tồn tại.</summary>
+    Task<CustomerDto> GetCustomerByIdAsync(long customerId, CancellationToken cancellationToken = default);
+
+    /// <summary>Tra cứu khách hàng theo mã CustomerCode. Ném NotFound nếu không tồn tại.</summary>
+    Task<CustomerDto> GetCustomerByCodeAsync(string customerCode, CancellationToken cancellationToken = default);
+
+    /// <summary>Thêm mới khách hàng. Ném Conflict nếu trùng mã (BR-MDM-01).</summary>
+    Task<CustomerDto> CreateCustomerAsync(CreateCustomerDto dto, long userId, string? ipAddress, CancellationToken cancellationToken = default);
+
+    /// <summary>Cập nhật thông tin khách hàng và ghi vết kiểm toán (GBR-05).</summary>
+    Task<CustomerDto> UpdateCustomerAsync(long customerId, UpdateCustomerDto dto, long userId, string? ipAddress, CancellationToken cancellationToken = default);
+
+    /// <summary>Xóa khách hàng. Ném Conflict nếu đã phát sinh đơn hàng trong sales_orders.</summary>
+    Task DeleteCustomerAsync(long customerId, long userId, string? ipAddress, CancellationToken cancellationToken = default);
+}
