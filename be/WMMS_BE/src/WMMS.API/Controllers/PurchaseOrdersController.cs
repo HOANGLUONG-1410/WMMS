@@ -172,21 +172,41 @@ public class PurchaseOrdersController : MasterDataControllerBase
         return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Đã cập nhật điều khoản hợp đồng và thanh toán cho đơn đặt hàng {result.PoCode}."));
     }
 
-    /// <summary>SC-16: Cập nhật trạng thái vòng đời của PO (ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED).</summary>
+    /// <summary>SC-16: Cập nhật trạng thái vòng đời của PO (ISSUED, PARTIALLY_RECEIVED, FULFILLED, CANCELLED). Chỉ Chủ xưởng (OWNER) mới có quyền hủy đơn (CANCELLED).</summary>
     [HttpPut("{id:long}/status")]
-    [Authorize(Roles = WriteRoles)]
+    [Authorize(Roles = $"{RoleConstants.Owner},{RoleConstants.Admin},{RoleConstants.Purchasing}")]
     [ProducesResponseType(typeof(ApiResponse<PurchaseOrderDetailDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateStatusAsync(
         [FromRoute] long id,
         [FromBody] UpdatePoStatusDto request,
         CancellationToken cancellationToken)
     {
+        var isCancelling = string.Equals(request.Status?.Trim(), "CANCELLED", StringComparison.OrdinalIgnoreCase);
+        if (isCancelling && !User.IsInRole(RoleConstants.Owner))
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                ApiResponse<object>.Fail("Chỉ Chủ xưởng mới có quyền hủy đơn đặt hàng.", MessageCodes.Msg11ForbiddenRule));
+        }
+
+        if (!isCancelling && !User.IsInRole(RoleConstants.Admin) && !User.IsInRole(RoleConstants.Purchasing))
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                ApiResponse<object>.Fail("Bạn không có quyền cập nhật trạng thái thực hiện của đơn đặt hàng.", MessageCodes.Msg11ForbiddenRule));
+        }
+
         var result = await _purchaseOrderService.UpdateStatusAsync(
             id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
 
-        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, $"Đã cập nhật trạng thái đơn đặt hàng {result.PoCode} sang '{result.FulfillmentStatus}'."));
+        var message = isCancelling
+            ? $"Đã hủy đơn đặt hàng {result.PoCode} và tự động tạo phiếu yêu cầu mua hàng mới chờ Chủ xưởng duyệt lại."
+            : $"Đã cập nhật trạng thái đơn đặt hàng {result.PoCode} sang '{result.FulfillmentStatus}'.";
+
+        return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, message));
     }
 
     /// <summary>

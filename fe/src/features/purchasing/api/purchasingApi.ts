@@ -363,18 +363,19 @@ export const purchasingApi = {
           supplierId: l.supplierId,
           orderedQty: l.orderedQty,
           unitPrice: l.unitPrice,
+          expectedDeliveryDate: l.expectedArrivalDate,
         })),
         supplierTerms: uniqueSupplierIds.map((supplierId) => {
-          const supplierLineEta = realLines
+          const fallbackLineEta = realLines
             .filter((l) => l.supplierId === supplierId && l.expectedArrivalDate)
             .map((l) => l.expectedArrivalDate as string)
             .sort()[0];
           return {
             supplierId,
             expectedArrivalDate:
-              supplierLineEta ||
               payload.promisedEtaDate ||
-              new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+              fallbackLineEta ||
+              new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
             terms:
               payload.terms ||
               "Thanh toán trước 50% giá trị hợp đồng, 50% còn lại thanh toán sau khi giao hàng.",
@@ -507,6 +508,26 @@ export const purchasingApi = {
         : po,
     );
     return [...inMemoryPurchaseOrders];
+  },
+
+  /** UC-53: Hủy đơn đặt hàng trước khi giao (chỉ áp dụng khi đơn chưa nhận hàng) */
+  cancelPurchaseOrder: async (
+    poId: number,
+    reason?: string,
+  ): Promise<{ message: string; data: SupplierPurchaseOrderDto }> => {
+    const res = await apiClient.put<{
+      success: boolean;
+      message: string;
+      data: SupplierPurchaseOrderDto;
+    }>(`/purchase-orders/${poId}/status`, {
+      status: "CANCELLED",
+      reason: reason?.trim() || "Hủy đơn đặt hàng trước khi giao theo yêu cầu bộ phận Thu mua.",
+    });
+
+    return {
+      message: res.data?.message || "Đã hủy đơn đặt hàng thành công.",
+      data: res.data?.data,
+    };
   },
 
   /** UC-53: Cập nhật lịch giao hàng dự kiến (Promised ETA Date) */

@@ -21,6 +21,10 @@ public static class DbInitializer
                 IF COL_LENGTH('purchase_orders', 'terms') IS NULL
                 BEGIN
                     ALTER TABLE [purchase_orders] ADD [terms] nvarchar(1000) NULL;
+                END
+                IF COL_LENGTH('purchase_order_details', 'expected_delivery_date') IS NULL
+                BEGIN
+                    ALTER TABLE [purchase_order_details] ADD [expected_delivery_date] datetime2 NULL;
                 END");
         }
 
