@@ -104,4 +104,14 @@ public interface IMrpAllocationService
     Task<List<MaterialOrderAllocationDto>> GetAllocationsBySpaceIdAsync(
         long spaceId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// SC-14b: Xử lý Yêu cầu Cấp bù Nguyên vật liệu do Phế phẩm KCS (Scrap Replenishment Request).
+    /// Tự động tính toán định mức phát sinh cho ScrappedQty, kiểm tra tồn khả dụng trong kho để giữ chỗ (RESERVED)
+    /// và tự động sinh Phiếu yêu cầu mua hàng (PR) nếu kho thiếu hụt (BR-002, BR-PUR-01).
+    /// </summary>
+    Task<ScrapReplenishmentResultDto> RequestScrapReplenishmentAsync(
+        ScrapReplenishmentRequestDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default);
 }

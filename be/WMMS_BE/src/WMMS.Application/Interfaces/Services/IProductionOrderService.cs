@@ -132,5 +132,14 @@ public interface IProductionOrderService
         ContinueSubBatchIndependentlyDto request,
         long currentUserId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// SC-19b: Phê duyệt &amp; Phát hành Lô sản xuất bù (REPLENISH_LOT - BR-005, UC-62) cho các sản phẩm bị hỏng không thể sửa chữa.
+    /// Khởi tạo lệnh sản xuất bù phôi hủy bắt đầu chạy từ Trạm 1 (Pha phôi thô) đến Trạm 7 (KCS Đóng gói) với số lượng ReplenishQty.
+    /// </summary>
+    Task<ProductionBatchDto> IssueReplenishLotAsync(
+        IssueReplenishLotRequestDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default);
 }
 

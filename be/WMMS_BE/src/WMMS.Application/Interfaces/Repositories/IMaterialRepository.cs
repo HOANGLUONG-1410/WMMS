@@ -27,4 +27,9 @@ public interface IMaterialRepository
     /// Tra cứu hàng loạt nguyên vật liệu theo tập hợp mã nguyên vật liệu.
     /// </summary>
     Task<Dictionary<string, Material>> GetByCodesAsync(IEnumerable<string> materialCodes);
+
+    /// <summary>
+    /// Thêm mới nguyên vật liệu vào danh mục Master Data.
+    /// </summary>
+    Task AddAsync(Material material);
 }

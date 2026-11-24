@@ -4,6 +4,13 @@ export type PoFulfillmentStatus =
   | "RECEIVED & COMMITTED"
   | string;
 
+export interface MaterialDeliveryScheduleDto {
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  expectedDeliveryDate: string;
+}
+
 export interface SupplierPurchaseOrderDto {
   poId: number;
   poCode: string;
@@ -15,6 +22,7 @@ export interface SupplierPurchaseOrderDto {
   etaDaysLabel?: string | null;
   fulfillmentStatus: PoFulfillmentStatus;
   sourcePrCode?: string;
+  materialSchedules?: MaterialDeliveryScheduleDto[];
 }
 
 export interface CreateSupplierPoDto {

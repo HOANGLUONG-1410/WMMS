@@ -944,47 +944,53 @@ public class ProductionOrderService : IProductionOrderService
                     await _batchRepository.UpdateStepAsync(downstreamStep);
                 }
 
-                // 2. Sinh thẻ nhánh phụ viền cam (Sub-Card) để sửa chữa
-                string baseSubBatchCode = $"SUB-{batch.BatchCode}-R{step.StageSequence}";
-                string subBatchCode = baseSubBatchCode;
-                int subBatchCounter = 1;
-                while (await _batchRepository.GetByCodeAsync(subBatchCode, cancellationToken) != null)
+                // 2. Xử lý phân nhánh lỗi: REWORK_SUB_CARD vs SCRAP_REPLENISH (P0-04, KBN01)
+                ProductionBatch? subBatch = null;
+
+                if (disposition == DefectDispositionEnum.REWORK_SUB_CARD)
                 {
-                    subBatchCounter++;
-                    subBatchCode = $"{baseSubBatchCode}-{subBatchCounter}";
+                    // Trường hợp sửa chữa: Sinh thẻ nhánh phụ viền cam (Sub-Card) để sửa chữa tại công đoạn này
+                    string baseSubBatchCode = $"SUB-{batch.BatchCode}-R{step.StageSequence}";
+                    string subBatchCode = baseSubBatchCode;
+                    int subBatchCounter = 1;
+                    while (await _batchRepository.GetByCodeAsync(subBatchCode, cancellationToken) != null)
+                    {
+                        subBatchCounter++;
+                        subBatchCode = $"{baseSubBatchCode}-{subBatchCounter}";
+                    }
+
+                    subBatch = new ProductionBatch
+                    {
+                        BatchCode = subBatchCode,
+                        OrderItemId = batch.OrderItemId,
+                        ParentBatchId = batch.BatchId,
+                        BatchType = BatchTypeEnum.REWORK_SUB_CARD,
+                        BatchQty = request.FailQty,
+                        CurrentStageSeq = step.StageSequence,
+                        IsOverdriver = batch.IsOverdriver,
+                        HoldPointStageSeq = batch.HoldPointStageSeq,
+                        GoodsIssuedUnlocked = batch.GoodsIssuedUnlocked,
+                        BatchStatus = BatchStatusEnum.IN_PROGRESS,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _batchRepository.AddAsync(subBatch, cancellationToken);
+
+                    // Sinh các routing steps cho thẻ phụ (tại công đoạn lỗi và các công đoạn sau)
+                    var subSteps = steps.Where(s => s.StageSequence >= step.StageSequence).Select(s => new BatchRoutingStep
+                    {
+                        ProductionBatch = subBatch,
+                        StageSequence = s.StageSequence,
+                        StageName = s.StageName,
+                        IsHoldPoint = s.IsHoldPoint,
+                        TargetQty = request.FailQty,
+                        PassedQty = 0,
+                        DefectQty = 0,
+                        StepStatus = s.StageSequence == step.StageSequence ? StepStatusEnum.IN_PROGRESS : StepStatusEnum.WAITING
+                    }).ToList();
+
+                    await _batchRepository.AddStepsRangeAsync(subSteps, cancellationToken);
                 }
-
-                var subBatch = new ProductionBatch
-                {
-                    BatchCode = subBatchCode,
-                    OrderItemId = batch.OrderItemId,
-                    ParentBatchId = batch.BatchId,
-                    BatchType = BatchTypeEnum.REWORK_SUB_CARD,
-                    BatchQty = request.FailQty,
-                    CurrentStageSeq = step.StageSequence,
-                    IsOverdriver = batch.IsOverdriver,
-                    HoldPointStageSeq = batch.HoldPointStageSeq,
-                    GoodsIssuedUnlocked = batch.GoodsIssuedUnlocked,
-                    BatchStatus = BatchStatusEnum.IN_PROGRESS,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _batchRepository.AddAsync(subBatch, cancellationToken);
-
-                // Sinh các routing steps cho thẻ phụ (tại công đoạn lỗi và các công đoạn sau)
-                var subSteps = steps.Where(s => s.StageSequence >= step.StageSequence).Select(s => new BatchRoutingStep
-                {
-                    ProductionBatch = subBatch,
-                    StageSequence = s.StageSequence,
-                    StageName = s.StageName,
-                    IsHoldPoint = s.IsHoldPoint,
-                    TargetQty = request.FailQty,
-                    PassedQty = 0,
-                    DefectQty = 0,
-                    StepStatus = s.StageSequence == step.StageSequence ? StepStatusEnum.IN_PROGRESS : StepStatusEnum.WAITING
-                }).ToList();
-
-                await _batchRepository.AddStepsRangeAsync(subSteps, cancellationToken);
 
                 // 3. Ghi nhận DefectLog & Đảm bảo DefectCatalog tồn tại trong CSDL để tránh vi phạm khóa ngoại (Foreign Key)
                 string rawDefectCode = string.IsNullOrWhiteSpace(request.DefectCode)
@@ -1036,20 +1042,55 @@ public class ProductionOrderService : IProductionOrderService
 
                 await _unitOfWork.QcInspections.AddDefectLogsRangeAsync(new[] { defectLog }, cancellationToken);
 
-                await _bomRepository.AddAuditLogAsync(new AuditLog
+                if (disposition == DefectDispositionEnum.REWORK_SUB_CARD && subBatch != null)
                 {
-                    UserId = currentUserId,
-                    ActionType = AuditActionConstants.KanbanSubBatchSpawned,
-                    EntityName = "ProductionBatch",
-                    EntityId = subBatch.BatchCode,
-                    BeforeState = $"MainCard_{batch.BatchCode}_Qty_{request.InspectedQty}",
-                    AfterState = $"MainCard_{request.PassQty}_SubCard_{subBatch.BatchCode}_{request.FailQty}",
-                    Reason = $"Thực hiện tách nhánh xử lý lỗi: Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} sản phẩm đạt chuẩn, đồng thời tách lô phụ {subBatch.BatchCode} ({request.FailQty} sản phẩm) để sửa chữa.",
-                    CreatedAt = DateTime.UtcNow
-                });
+                    await _bomRepository.AddAuditLogAsync(new AuditLog
+                    {
+                        UserId = currentUserId,
+                        ActionType = AuditActionConstants.KanbanSubBatchSpawned,
+                        EntityName = "ProductionBatch",
+                        EntityId = subBatch.BatchCode,
+                        BeforeState = $"MainCard_{batch.BatchCode}_Qty_{request.InspectedQty}",
+                        AfterState = $"MainCard_{request.PassQty}_SubCard_{subBatch.BatchCode}_{request.FailQty}",
+                        Reason = $"Thực hiện tách nhánh xử lý lỗi: Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} sản phẩm đạt chuẩn, đồng thời tách lô phụ {subBatch.BatchCode} ({request.FailQty} sản phẩm) để sửa chữa.",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+                else
+                {
+                    await _bomRepository.AddAuditLogAsync(new AuditLog
+                    {
+                        UserId = currentUserId,
+                        ActionType = "QC_SCRAP_REPLENISH_LOGGED",
+                        EntityName = "ProductionBatch",
+                        EntityId = batch.BatchCode,
+                        BeforeState = $"MainCard_{batch.BatchCode}_Qty_{request.InspectedQty}",
+                        AfterState = $"MainCard_{batch.BatchCode}_PassQty_{request.PassQty}_ScrappedQty_{request.FailQty}",
+                        Reason = $"Ghi nhận {request.FailQty} sản phẩm phế phẩm không thể sửa chữa (Scrap). Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} sản phẩm đạt chuẩn. Cần yêu cầu cấp bù vật tư và phát hành Lô sản xuất bù (REPLENISH_LOT).",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync();
+
+                if (disposition == DefectDispositionEnum.SCRAP_REPLENISH)
+                {
+                    return new QcInspectionResultDto
+                    {
+                        QcId = inspection.QcId,
+                        BatchStepId = step.BatchStepId,
+                        BatchId = batch.BatchId,
+                        InspectedQty = request.InspectedQty,
+                        PassQty = request.PassQty,
+                        FailQty = request.FailQty,
+                        IsBranched = false,
+                        RequiresScrapReplenishment = true,
+                        SpawnedSubBatchId = null,
+                        SpawnedSubBatchCode = null,
+                        Message = $"Ghi nhận hủy {request.FailQty} sản phẩm phế phẩm thành công! Thẻ chính {batch.BatchCode} tiếp tục với {request.PassQty} SP đạt chuẩn. Cần yêu cầu cấp bù vật tư và phát hành Lô sản xuất bù (REPLENISH_LOT) để bù đủ 100% sản lượng."
+                    };
+                }
 
                 return new QcInspectionResultDto
                 {
@@ -1060,9 +1101,10 @@ public class ProductionOrderService : IProductionOrderService
                     PassQty = request.PassQty,
                     FailQty = request.FailQty,
                     IsBranched = true,
-                    SpawnedSubBatchId = subBatch.BatchId,
-                    SpawnedSubBatchCode = subBatch.BatchCode,
-                    Message = $"Kích hoạt tách nhánh 97%-3% thành công! Thẻ chính {batch.BatchCode} cập nhật còn {request.PassQty} SP đạt chuẩn để tiếp tục; đã sinh thẻ nhánh phụ {subBatch.BatchCode} ({request.FailQty} SP) để sửa chữa tại {step.StageName}."
+                    RequiresScrapReplenishment = false,
+                    SpawnedSubBatchId = subBatch?.BatchId,
+                    SpawnedSubBatchCode = subBatch?.BatchCode,
+                    Message = $"Kích hoạt tách nhánh 97%-3% thành công! Thẻ chính {batch.BatchCode} cập nhật còn {request.PassQty} SP đạt chuẩn để tiếp tục; đã sinh thẻ nhánh phụ {subBatch?.BatchCode} ({request.FailQty} SP) để sửa chữa tại {step.StageName}."
                 };
             }
         }
@@ -1373,6 +1415,194 @@ public class ProductionOrderService : IProductionOrderService
                 BatchStatus = batch.BatchStatus.ToString(),
                 Message = $"Đã mở khóa chốt chặn Hold Point cho thẻ lô {batch.BatchCode} thành công. Dây chuyền tiếp tục lắp ráp và hoàn thiện."
             };
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Phát hành Lô sản xuất bù (REPLENISH_LOT) cho số lượng sản phẩm phế phẩm đã hủy (P0-04, UC-62).
+    /// Lô sản xuất bù chạy độc lập đầy đủ từ Trạm 1 (Pha phôi thô) đến Trạm 7 (Đóng gói) để bù đủ số lượng đơn hàng.
+    /// </summary>
+    /// <param name="request">DTO chứa OrderItemId, ReplenishQty, Reason, AllowOverdrive, OverdriveJustification.</param>
+    /// <param name="currentUserId">ID người dùng đang thao tác (Chủ xưởng / Quản đốc).</param>
+    /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
+    /// <returns>DTO thông tin Lô sản xuất bù kèm tiến trình 7 công đoạn.</returns>
+    public async Task<ProductionBatchDto> IssueReplenishLotAsync(
+        IssueReplenishLotRequestDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.ReplenishQty <= 0)
+        {
+            throw new DomainException("Số lượng sản xuất bù (ReplenishQty) phải lớn hơn 0.", "INVALID_REPLENISH_QTY");
+        }
+
+        var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(request.OrderItemId, cancellationToken);
+        if (orderItem == null)
+        {
+            throw new NotFoundException($"Không tìm thấy dòng đơn hàng với ID #{request.OrderItemId}.");
+        }
+
+        var product = orderItem.Product;
+        if (product == null)
+        {
+            throw new DomainException($"Không tìm thấy thông tin sản phẩm liên kết với dòng đơn hàng #{orderItem.OrderItemId}.", "PRODUCT_NOT_FOUND");
+        }
+
+        var customerOrder = orderItem.CustomerOrder;
+        string poNumber = customerOrder?.PoNumber ?? "PO-DEFAULT";
+
+        // Lấy quy trình công nghệ động (Routing) hoặc mặc định 7 công đoạn tiêu chuẩn
+        var routing = await _routingRepository.GetActiveRoutingByProductIdAsync(product.ProductId);
+        var routingStages = (routing?.RoutingStages != null && routing.RoutingStages.Any())
+            ? routing.RoutingStages.OrderBy(s => s.StageSequence).ToList()
+            : GetStandardWoodworkingStages();
+
+        var holdPointStage = routingStages.FirstOrDefault(s => s.IsHoldPoint);
+        int? holdPointSeq = holdPointStage?.StageSequence ?? (routingStages.Count >= 5 ? 5 : null);
+
+        // Kiểm tra điều kiện xuất kho vật tư bù
+        bool isIssuedToShop = orderItem.MaterialAllocations.Any() &&
+                              orderItem.MaterialAllocations.All(a =>
+                                  a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP ||
+                                  a.AllocationStatus == AllocationStatusEnum.RELEASED);
+
+        bool isOverdriver = false;
+        bool goodsIssuedUnlocked = false;
+        BatchStatusEnum initialBatchStatus;
+
+        if (isIssuedToShop)
+        {
+            isOverdriver = false;
+            goodsIssuedUnlocked = true;
+            initialBatchStatus = BatchStatusEnum.IN_PROGRESS;
+        }
+        else
+        {
+            if (request.AllowOverdrive)
+            {
+                if (string.IsNullOrWhiteSpace(request.OverdriveJustification))
+                {
+                    throw new DomainException(
+                        "Khi kích hoạt chế độ chạy trước (Overdrive) cho lô bù, bắt buộc phải cung cấp lý do giải trình kỹ thuật.",
+                        "OVERDRIVE_JUSTIFICATION_REQUIRED");
+                }
+                isOverdriver = true;
+                goodsIssuedUnlocked = false;
+                initialBatchStatus = BatchStatusEnum.IN_PROGRESS;
+            }
+            else
+            {
+                isOverdriver = false;
+                goodsIssuedUnlocked = false;
+                initialBatchStatus = BatchStatusEnum.LOCKED;
+            }
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            string poClean = Regex.Replace(poNumber, @"[^A-Za-z0-9]", "").ToUpperInvariant();
+            string baseRepCode = $"REP-LOT-{poClean}-{orderItem.OrderItemId:D2}";
+            string batchCode = $"{baseRepCode}-01";
+            int counter = 1;
+            while (await _batchRepository.GetByCodeAsync(batchCode, cancellationToken) != null)
+            {
+                counter++;
+                batchCode = $"{baseRepCode}-{counter:D2}";
+            }
+
+            var replenishBatch = new ProductionBatch
+            {
+                BatchCode = batchCode,
+                OrderItemId = orderItem.OrderItemId,
+                BatchType = BatchTypeEnum.REPLENISH_LOT,
+                BatchQty = request.ReplenishQty,
+                CurrentStageSeq = 1,
+                IsOverdriver = isOverdriver,
+                HoldPointStageSeq = holdPointSeq,
+                GoodsIssuedUnlocked = goodsIssuedUnlocked,
+                BatchStatus = initialBatchStatus,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _batchRepository.AddAsync(replenishBatch, cancellationToken);
+
+            var steps = routingStages.Select(stg => new BatchRoutingStep
+            {
+                ProductionBatch = replenishBatch,
+                StageSequence = stg.StageSequence,
+                StageName = stg.StageName,
+                IsHoldPoint = stg.IsHoldPoint,
+                TargetQty = request.ReplenishQty,
+                PassedQty = 0,
+                DefectQty = 0,
+                StepStatus = (stg.StageSequence == 1 && initialBatchStatus == BatchStatusEnum.IN_PROGRESS)
+                    ? StepStatusEnum.IN_PROGRESS
+                    : StepStatusEnum.WAITING
+            }).ToList();
+
+            await _batchRepository.AddStepsRangeAsync(steps, cancellationToken);
+
+            if (isOverdriver && holdPointSeq.HasValue)
+            {
+                replenishBatch.OverdriveLogs.Add(new OverdriveLog
+                {
+                    ProductionBatch = replenishBatch,
+                    RequestedBy = currentUserId,
+                    ApprovedBy = currentUserId,
+                    Justification = request.OverdriveJustification?.Trim() ?? "Chạy trước Overdrive cho lô sản xuất bù để kịp tiến độ giao hàng.",
+                    HoldPointStageSeq = holdPointSeq.Value,
+                    ApprovedAt = DateTime.UtcNow
+                });
+            }
+
+            // Ghi nhật ký kiểm toán bất biến GBR-05
+            var auditPayload = JsonSerializer.Serialize(new
+            {
+                replenishBatch.BatchId,
+                replenishBatch.BatchCode,
+                replenishBatch.BatchQty,
+                replenishBatch.BatchType,
+                replenishBatch.BatchStatus,
+                OrderItemId = orderItem.OrderItemId,
+                ProductSku = product.ProductSku,
+                IsOverdriver = isOverdriver,
+                Reason = request.Reason
+            });
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId,
+                ActionType = "REPLENISH_LOT_ISSUED",
+                EntityName = "ProductionBatch",
+                EntityId = replenishBatch.BatchCode,
+                BeforeState = null,
+                AfterState = auditPayload,
+                Reason = $"Phát hành Lô sản xuất bù {replenishBatch.BatchCode} ({request.ReplenishQty} sản phẩm) cho dòng hàng #{orderItem.OrderItemId} (SKU: {product.ProductSku}). Lý do: {request.Reason ?? "Bù sản lượng phế phẩm"}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            if (_notificationHubService != null)
+            {
+                await _notificationHubService.NotifyProductionOrderReleasedAsync(
+                    orderItem.OrderItemId,
+                    poNumber,
+                    product.ProductSku,
+                    1,
+                    request.ReplenishQty,
+                    isOverdriver,
+                    cancellationToken);
+            }
+
+            return MapBatchToDto(replenishBatch, routingStages);
         }
         catch
         {

@@ -75,6 +75,7 @@ public class PurchaseOrderDetailConfiguration : IEntityTypeConfiguration<Purchas
         builder.Property(pod => pod.OrderedQty).HasColumnName("ordered_qty").HasPrecision(18, 4).IsRequired();
         builder.Property(pod => pod.ReceivedQty).HasColumnName("received_qty").HasPrecision(18, 4).HasDefaultValue(0);
         builder.Property(pod => pod.UnitPrice).HasColumnName("unit_price").HasPrecision(18, 2);
+        builder.Property(pod => pod.ExpectedDeliveryDate).HasColumnName("expected_delivery_date");
 
         builder.HasOne(pod => pod.PurchaseOrder)
             .WithMany(po => po.Details)

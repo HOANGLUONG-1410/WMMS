@@ -223,3 +223,38 @@ public class ContinueSubBatchValidator : AbstractValidator<ContinueSubBatchIndep
     }
 }
 
+/// <summary>
+/// Bộ kiểm tra hợp lệ cho yêu cầu phát hành Lô sản xuất bù (P0-04, SC-18, UC-62).
+/// </summary>
+public class IssueReplenishLotRequestValidator : AbstractValidator<IssueReplenishLotRequestDto>
+{
+    public IssueReplenishLotRequestValidator()
+    {
+        RuleFor(x => x.OrderItemId)
+            .GreaterThan(0)
+            .WithMessage("Mã dòng đơn hàng (OrderItemId) phải lớn hơn 0.");
+
+        RuleFor(x => x.ReplenishQty)
+            .GreaterThan(0)
+            .WithMessage("Số lượng sản xuất bù (ReplenishQty) phải lớn hơn 0.")
+            .LessThanOrEqualTo(10000)
+            .WithMessage("Số lượng lô sản xuất bù tối đa không vượt quá 10,000 sản phẩm.");
+
+        When(x => !string.IsNullOrWhiteSpace(x.Reason), () =>
+        {
+            RuleFor(x => x.Reason)
+                .MaximumLength(500)
+                .WithMessage("Lý do sản xuất bù không được vượt quá 500 ký tự.");
+        });
+
+        When(x => x.AllowOverdrive, () =>
+        {
+            RuleFor(x => x.OverdriveJustification)
+                .NotEmpty()
+                .WithMessage("Khi kích hoạt chế độ chạy trước (Overdrive) cho lô bù, bắt buộc phải cung cấp lý do giải trình kỹ thuật.")
+                .MaximumLength(500)
+                .WithMessage("Lý do giải trình chạy trước không vượt quá 500 ký tự.");
+        });
+    }
+}
+

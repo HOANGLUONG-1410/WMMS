@@ -90,6 +90,16 @@ public class PurchaseOrderListItemDto
     public string OrderItemsSummary { get; set; } = string.Empty;
     public string FulfillmentStatus { get; set; } = string.Empty;
     public string? SourcePrCode => PrCode;
+    public List<MaterialDeliveryScheduleDto> MaterialSchedules { get; set; } = new();
+}
+
+/// <summary>Lịch giao sớm nhất của từng nguyên vật liệu trong đơn đặt hàng.</summary>
+public class MaterialDeliveryScheduleDto
+{
+    public long MaterialId { get; set; }
+    public string MaterialCode { get; set; } = string.Empty;
+    public string MaterialName { get; set; } = string.Empty;
+    public string ExpectedDeliveryDate { get; set; } = string.Empty;
 }
 
 /// <summary>Dòng vật tư của PO (UC-51).</summary>
@@ -106,6 +116,7 @@ public class PurchaseOrderLineDto
     public decimal RemainingQty { get; set; }
     public decimal? UnitPrice { get; set; }
     public decimal? LineAmount { get; set; }
+    public DateTime? ExpectedDeliveryDate { get; set; }
 }
 
 /// <summary>Phiếu nhập kho liên quan tới PO (UC-51).</summary>
@@ -152,6 +163,7 @@ public class CreatePoLineDto
     public long SupplierId { get; set; }
     public decimal OrderedQty { get; set; }
     public decimal UnitPrice { get; set; }
+    public DateTime? ExpectedDeliveryDate { get; set; }
 }
 
 /// <summary>Ngày hẹn giao và điều khoản của từng Nhà cung cấp (mỗi NCC một PO).</summary>
@@ -189,6 +201,7 @@ public class BatchIssuePoLineDto
     public long SupplierId { get; set; }
     public decimal OrderedQty { get; set; }
     public decimal UnitPrice { get; set; }
+    public DateTime? ExpectedDeliveryDate { get; set; }
 }
 
 /// <summary>
