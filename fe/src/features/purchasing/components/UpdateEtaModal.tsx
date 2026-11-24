@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useUpdatePoEta } from "../hooks/usePurchaseOrders";
-import type { PoFulfillmentStatus, SupplierPurchaseOrderDto } from "../types";
+import type { SupplierPurchaseOrderDto } from "../types";
 
 interface UpdateEtaModalProps {
   purchaseOrder: SupplierPurchaseOrderDto | null;
@@ -15,32 +15,46 @@ export default function UpdateEtaModal({
 }: UpdateEtaModalProps) {
   const updateEtaMutation = useUpdatePoEta();
   const [promisedEtaDate, setPromisedEtaDate] = useState("");
-  const [fulfillmentStatus, setFulfillmentStatus] =
-    useState<PoFulfillmentStatus>("PO ISSUED / IN TRANSIT");
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     if (purchaseOrder) {
       setPromisedEtaDate(purchaseOrder.promisedEtaDate);
-      setFulfillmentStatus(purchaseOrder.fulfillmentStatus);
+      setErrorMsg("");
     }
   }, [purchaseOrder]);
 
   if (!purchaseOrder) return null;
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!promisedEtaDate) return;
+    setErrorMsg("");
 
-    await updateEtaMutation.mutateAsync({
-      poId: purchaseOrder.poId,
-      promisedEtaDate,
-      fulfillmentStatus,
-    });
+    if (!promisedEtaDate || promisedEtaDate < todayStr) {
+      setErrorMsg("Ngày giao dự kiến không được bỏ trống hoặc nằm trong quá khứ.");
+      return;
+    }
 
-    onSuccess(
-      `Đã cập nhật lịch giao hàng và ETA (${promisedEtaDate}) cho ${purchaseOrder.poCode}.`,
-    );
-    onClose();
+    try {
+      await updateEtaMutation.mutateAsync({
+        poId: purchaseOrder.poId,
+        promisedEtaDate,
+      });
+
+      onSuccess(
+        `Đã cập nhật ngày giao dự kiến (${promisedEtaDate}) cho đơn mua ${purchaseOrder.poCode}.`,
+      );
+      onClose();
+    } catch (err: unknown) {
+      const msg =
+        (err as { message?: string; response?: { data?: { message?: string } } })
+          ?.response?.data?.message ||
+        (err as { message?: string })?.message ||
+        "Không thể cập nhật ngày giao dự kiến.";
+      setErrorMsg(msg);
+    }
   };
 
   return (
@@ -48,7 +62,7 @@ export default function UpdateEtaModal({
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-900">
-            Theo dõi lô hàng &amp; cập nhật ETA của NCC
+            Cập nhật ngày giao dự kiến
           </h2>
           <button
             type="button"
@@ -60,9 +74,15 @@ export default function UpdateEtaModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {errorMsg && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
+              {errorMsg}
+            </div>
+          )}
+
           <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm space-y-1.5">
             <div>
-              <span className="text-slate-500">Mã PO:</span>{" "}
+              <span className="text-slate-500">Mã đơn mua:</span>{" "}
               <strong className="font-mono text-slate-900">{purchaseOrder.poCode}</strong>
             </div>
             <div>
@@ -77,29 +97,18 @@ export default function UpdateEtaModal({
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Ngày giao cam kết (ETA)
+              Ngày giao dự kiến mới
             </label>
             <input
               type="date"
+              min={todayStr}
               value={promisedEtaDate}
-              onChange={(e) => setPromisedEtaDate(e.target.value)}
+              onChange={(e) => {
+                setPromisedEtaDate(e.target.value);
+                setErrorMsg("");
+              }}
               className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Trạng thái thực hiện
-            </label>
-            <select
-              value={fulfillmentStatus}
-              onChange={(e) => setFulfillmentStatus(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="SUPPLIER CONFIRMED">NCC ĐÃ XÁC NHẬN</option>
-              <option value="PO ISSUED / IN TRANSIT">ĐÃ PHÁT HÀNH PO / ĐANG VẬN CHUYỂN</option>
-              <option value="RECEIVED & COMMITTED">ĐÃ NHẬN &amp; XÁC NHẬN NHẬP KHO</option>
-            </select>
           </div>
 
           <div className="pt-2 flex items-center justify-end gap-2.5">
@@ -115,7 +124,7 @@ export default function UpdateEtaModal({
               disabled={updateEtaMutation.isPending}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition disabled:opacity-60"
             >
-              {updateEtaMutation.isPending ? "Đang lưu..." : "Lưu cập nhật lịch giao"}
+              {updateEtaMutation.isPending ? "Đang lưu..." : "Lưu ngày giao mới"}
             </button>
           </div>
         </form>
@@ -123,4 +132,3 @@ export default function UpdateEtaModal({
     </div>
   );
 }
-

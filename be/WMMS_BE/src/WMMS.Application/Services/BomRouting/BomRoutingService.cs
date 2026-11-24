@@ -8,6 +8,7 @@ using WMMS.Application.Interfaces.Services;
 using WMMS.Domain.Constants;
 using WMMS.Domain.Entities.CatalogBom;
 using WMMS.Domain.Entities.Identity;
+using WMMS.Domain.Entities.InventoryPr;
 using WMMS.Domain.Enums;
 using WMMS.Domain.Exceptions;
 
@@ -649,8 +650,23 @@ public class BomRoutingService : IBomRoutingService
             }
             else if (resolvedMaterial == null)
             {
-                row.IsValid = false;
-                row.Errors.Add($"Mã nguyên vật liệu '{row.MaterialCode}' không tồn tại trong danh mục Master Data.");
+                // [P0 Master Data Auto-Creation]: Khi mã NVL chưa có trong Master Data, tự động chấp nhận và đánh dấu sẽ tạo mới khi xác nhận BOM
+                var inferredGroup = InferMaterialGroup(row.MaterialCode, row.MaterialGroup);
+                row.IsValid = true;
+                row.MaterialGroup = inferredGroup.ToString();
+                if (string.IsNullOrWhiteSpace(row.MaterialName))
+                {
+                    row.MaterialName = $"Vật tư {row.MaterialCode.Trim()}";
+                }
+                if (string.IsNullOrWhiteSpace(row.UnitOfMeasure))
+                {
+                    row.UnitOfMeasure = inferredGroup == MaterialGroupEnum.PACKAGING ? "Cuộn" 
+                        : (inferredGroup == MaterialGroupEnum.LUMBER ? "m3" : "Cái");
+                }
+                row.AvailableStock = 0m;
+                row.Notes = string.IsNullOrWhiteSpace(row.Notes)
+                    ? "Vật tư mới (sẽ tự động thêm vào Master Data)"
+                    : $"{row.Notes} - Vật tư mới (sẽ tự động thêm vào Master Data)";
             }
             else
             {
@@ -700,7 +716,29 @@ public class BomRoutingService : IBomRoutingService
                 var mat = await _materialRepository.GetByCodeAsync(row.MaterialCode.Trim());
                 if (mat == null)
                 {
-                    throw new StagingValidationException($"Không tìm thấy thông tin cho mã nguyên vật liệu '{row.MaterialCode}'.");
+                    // [P0 Master Data Auto-Creation]: Tự động thêm vật tư mới vào Master Data & khởi tạo tồn kho ban đầu = 0
+                    var group = InferMaterialGroup(row.MaterialCode, row.MaterialGroup);
+                    mat = new Material
+                    {
+                        MaterialCode = row.MaterialCode.Trim().ToUpperInvariant(),
+                        MaterialName = string.IsNullOrWhiteSpace(row.MaterialName) ? $"Vật tư {row.MaterialCode.Trim()}" : row.MaterialName.Trim(),
+                        MaterialGroup = group,
+                        UnitOfMeasure = string.IsNullOrWhiteSpace(row.UnitOfMeasure) ? "Cái" : row.UnitOfMeasure.Trim(),
+                        SafetyStockQty = 0m,
+                        Status = "ACTIVE",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    mat.MaterialStock = new MaterialStock
+                    {
+                        Material = mat,
+                        PhysicalQty = 0m,
+                        AllocatedQty = 0m,
+                        AvailableQty = 0m,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await _materialRepository.AddAsync(mat);
+                    await _unitOfWork.SaveChangesAsync();
                 }
                 materialId = mat.MaterialId;
             }
@@ -969,5 +1007,33 @@ public class BomRoutingService : IBomRoutingService
             new() { StageSequence = 6, StageName = "6. Phun sơn lót PU & Sơn phủ hoàn thiện", IsHoldPoint = false, WorkstationCode = "WC-05-PAINT", QualityGateName = "In-Process Self-Check" },
             new() { StageSequence = 7, StageName = "7. Kiểm tra xuất xưởng KCS & Đóng thùng carton", IsHoldPoint = false, WorkstationCode = "WC-06-PACK", QualityGateName = "Final Packing QC Gate" }
         };
+    }
+
+    private static MaterialGroupEnum InferMaterialGroup(string? code, string? groupStr)
+    {
+        if (!string.IsNullOrWhiteSpace(groupStr) && Enum.TryParse<MaterialGroupEnum>(groupStr.Trim(), true, out var parsedGroup))
+        {
+            return parsedGroup;
+        }
+
+        var codeUpper = (code ?? string.Empty).Trim().ToUpperInvariant();
+        if (codeUpper.StartsWith("WOOD") || codeUpper.StartsWith("LUMBER") || codeUpper.Contains("OAK") || codeUpper.Contains("ASH") || codeUpper.Contains("WALNUT"))
+        {
+            return MaterialGroupEnum.LUMBER;
+        }
+        if (codeUpper.StartsWith("HW") || codeUpper.StartsWith("SCREW") || codeUpper.StartsWith("BOLT") || codeUpper.StartsWith("HINGE"))
+        {
+            return MaterialGroupEnum.HARDWARE;
+        }
+        if (codeUpper.StartsWith("PAINT") || codeUpper.StartsWith("PU") || codeUpper.StartsWith("STAIN") || codeUpper.StartsWith("VARNISH"))
+        {
+            return MaterialGroupEnum.FINISH_PAINT;
+        }
+        if (codeUpper.StartsWith("PACK") || codeUpper.StartsWith("FOAM") || codeUpper.StartsWith("BOX") || codeUpper.StartsWith("CARTON") || codeUpper.StartsWith("TAPE"))
+        {
+            return MaterialGroupEnum.PACKAGING;
+        }
+
+        return MaterialGroupEnum.PACKAGING;
     }
 }

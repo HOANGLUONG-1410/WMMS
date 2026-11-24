@@ -180,6 +180,8 @@ public class QcInspectionResultDto
     public bool IsBranched { get; set; }
     public long? SpawnedSubBatchId { get; set; }
     public string? SpawnedSubBatchCode { get; set; }
+    /// <summary>Cờ đánh dấu phát sinh phế phẩm cần kích hoạt quy trình cấp bù nguyên vật liệu (SCRAP_REPLENISH).</summary>
+    public bool RequiresScrapReplenishment { get; set; }
     public string Message { get; set; } = string.Empty;
 }
 
@@ -307,5 +309,27 @@ public class ContinueSubBatchResultDto
     public int BatchQty { get; set; }
     public string BatchStatus { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// DTO Yêu cầu Phê duyệt &amp; Phát hành Lô sản xuất bù phế phẩm (REPLENISH_LOT - SC-19b, BR-005, UC-62).
+/// Khởi tạo lệnh sản xuất bù phôi hủy chạy từ Trạm 1 (Pha phôi thô) đến Trạm 7 (KCS Đóng gói).
+/// </summary>
+public class IssueReplenishLotRequestDto
+{
+    /// <summary>Mã định danh dòng sản phẩm đơn hàng.</summary>
+    public long OrderItemId { get; set; }
+
+    /// <summary>Số lượng sản phẩm làm bù (VD: 50 SP).</summary>
+    public int ReplenishQty { get; set; }
+
+    /// <summary>Lý do phát hành lô bù và thông tin phế phẩm KCS.</summary>
+    public string? Reason { get; set; }
+
+    /// <summary>Cho phép chạy trước các công đoạn đầu (Overdrive) nếu phụ kiện chưa xuất kho.</summary>
+    public bool AllowOverdrive { get; set; } = false;
+
+    /// <summary>Lý do giải trình kỹ thuật nếu kích hoạt Overdrive.</summary>
+    public string? OverdriveJustification { get; set; }
 }
 
