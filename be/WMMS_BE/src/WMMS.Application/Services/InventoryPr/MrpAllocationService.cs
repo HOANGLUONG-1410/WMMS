@@ -574,6 +574,212 @@ public class MrpAllocationService : IMrpAllocationService
         return allocations.Select(a => MapAllocationDto(a, a.OrderItem)).ToList();
     }
 
+    /// <inheritdoc />
+    public async Task<ScrapReplenishmentResultDto> RequestScrapReplenishmentAsync(
+        ScrapReplenishmentRequestDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.ScrappedQty <= 0)
+        {
+            throw new DomainException("Số lượng sản phẩm phế phẩm cần cấp bù phải lớn hơn 0.", "INVALID_SCRAPPED_QTY");
+        }
+
+        var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(request.OrderItemId, cancellationToken);
+        if (orderItem == null)
+        {
+            throw new NotFoundException($"Không tìm thấy dòng sản phẩm đơn hàng với ID #{request.OrderItemId}.");
+        }
+
+        var bom = orderItem.BomHeader;
+        if (bom == null)
+        {
+            throw new DomainException($"Sản phẩm '{orderItem.Product?.ProductName}' chưa được thiết lập định mức BOM.", "BOM_NOT_CONFIGURED");
+        }
+
+        var customerOrder = orderItem.CustomerOrder;
+        var poNumber = customerOrder?.PoNumber ?? $"PO-{orderItem.OrderId}";
+        var now = DateTime.UtcNow;
+        var today = now.Date;
+
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var bomDetails = bom.BomDetails.ToList();
+            var detailsDtoList = new List<ScrapMaterialAllocationDetailDto>();
+            decimal totalAllocated = 0m;
+            decimal totalShortage = 0m;
+            var shortageLinesForPr = new List<(long MaterialId, decimal ShortageQty)>();
+
+            foreach (var detail in bomDetails)
+            {
+                var grossRequired = ResolveGrossDemand(detail, request.ScrappedQty, bom.ScrapRatePercent);
+                var stock = await _materialStockRepository.GetOrCreateByMaterialIdAsync(detail.MaterialId, cancellationToken);
+
+                decimal available = Math.Max(0m, stock.AvailableQty);
+                decimal allocated = Math.Min(available, grossRequired);
+                decimal shortage = Math.Max(0m, grossRequired - allocated);
+
+                if (allocated > 0m)
+                {
+                    stock.AllocatedQty += allocated;
+                    stock.AvailableQty = Math.Max(0m, stock.PhysicalQty - stock.AllocatedQty);
+                    stock.UpdatedAt = now;
+                    await _materialStockRepository.UpdateAsync(stock);
+                }
+
+                var allocation = new MaterialAllocation
+                {
+                    OrderItemId = orderItem.OrderItemId,
+                    MaterialId = detail.MaterialId,
+                    RequiredQty = grossRequired,
+                    ReservedQty = allocated,
+                    AllocationStatus = AllocationStatusEnum.RESERVED,
+                    AllocatedAt = now
+                };
+                await _materialAllocationRepository.AddAsync(allocation, cancellationToken);
+
+                totalAllocated += allocated;
+                totalShortage += shortage;
+
+                if (shortage > 0m)
+                {
+                    shortageLinesForPr.Add((detail.MaterialId, shortage));
+                }
+
+                detailsDtoList.Add(new ScrapMaterialAllocationDetailDto
+                {
+                    MaterialId = detail.MaterialId,
+                    MaterialCode = detail.Material?.MaterialCode ?? string.Empty,
+                    MaterialName = detail.Material?.MaterialName ?? string.Empty,
+                    MaterialGroup = detail.Material?.MaterialGroup.ToString() ?? string.Empty,
+                    UnitOfMeasure = detail.Material?.UnitOfMeasure ?? string.Empty,
+                    GrossRequiredQty = grossRequired,
+                    AllocatedFromStockQty = allocated,
+                    ShortageQty = shortage,
+                    AllocationStatus = allocation.AllocationStatus.ToString()
+                });
+            }
+
+            // Tự động gom thiếu hụt vào PR nếu có thiếu kho và autoCreatePrIfShortage = true
+            long? createdPrId = null;
+            string? createdPrCode = null;
+            if (totalShortage > 0m && request.AutoCreatePrIfShortage)
+            {
+                var dailyPr = await _purchaseRequestRepository.GetPendingPrByDateAsync(today, cancellationToken);
+                if (dailyPr == null)
+                {
+                    var countToday = await _purchaseRequestRepository.CountByDateAsync(today, cancellationToken);
+                    string prCode = $"PR-{now:yyyyMMdd}-{countToday + 1:D3}";
+                    dailyPr = new PurchaseRequest
+                    {
+                        PrCode = prCode,
+                        AggregationDate = today,
+                        CreatedBy = currentUserId > 0 ? currentUserId : 1,
+                        PrStatus = PrStatusEnum.PENDING_APPROVAL,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+                    await _purchaseRequestRepository.AddAsync(dailyPr, cancellationToken);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
+
+                foreach (var item in shortageLinesForPr)
+                {
+                    var existingItem = dailyPr.Items.FirstOrDefault(i => i.MaterialId == item.MaterialId);
+                    var sourceOrders = new[]
+                    {
+                        new
+                        {
+                            orderItem.OrderId,
+                            PoNumber = poNumber,
+                            SpaceKey = customerOrder?.OrderSpace?.SpaceKey ?? string.Empty,
+                            orderItem.OrderItemId,
+                            ProductSku = orderItem.Product?.ProductSku ?? string.Empty,
+                            EtdDate = customerOrder?.EtdDate.ToString("yyyy-MM-dd") ?? string.Empty,
+                            ShortageQty = item.ShortageQty
+                        }
+                    };
+                    var sourceJson = JsonSerializer.Serialize(sourceOrders);
+
+                    if (existingItem == null)
+                    {
+                        var newItem = new PurchaseRequestItem
+                        {
+                            PrId = dailyPr.PrId,
+                            MaterialId = item.MaterialId,
+                            TotalShortageQty = item.ShortageQty,
+                            SuggestedOrderQty = item.ShortageQty,
+                            SourceOrderIdsJson = sourceJson
+                        };
+                        dailyPr.Items.Add(newItem);
+                        await _purchaseRequestRepository.AddItemAsync(newItem, cancellationToken);
+                    }
+                    else
+                    {
+                        var mergedJson = MergeSourceOrderJson(existingItem.SourceOrderIdsJson, sourceJson);
+                        var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, existingItem.TotalShortageQty + item.ShortageQty);
+                        existingItem.SourceOrderIdsJson = mergedJson;
+                        existingItem.TotalShortageQty = aggregatedShortage;
+                        existingItem.SuggestedOrderQty = aggregatedShortage;
+                    }
+                }
+
+                dailyPr.UpdatedAt = now;
+                await _purchaseRequestRepository.UpdateAsync(dailyPr);
+                createdPrId = dailyPr.PrId;
+                createdPrCode = dailyPr.PrCode;
+            }
+
+            await _bomRepository.AddAuditLogAsync(new AuditLog
+            {
+                UserId = currentUserId > 0 ? currentUserId : 1,
+                ActionType = "SCRAP_REPLENISHMENT_REQUESTED",
+                EntityName = "OrderItem",
+                EntityId = orderItem.OrderItemId.ToString(),
+                BeforeState = $"ScrappedQty_{request.ScrappedQty}",
+                AfterState = JsonSerializer.Serialize(new
+                {
+                    ScrappedQty = request.ScrappedQty,
+                    TotalAllocated = totalAllocated,
+                    TotalShortage = totalShortage,
+                    CreatedPrId = createdPrId
+                }),
+                Reason = $"Yêu cầu cấp bù vật tư cho {request.ScrappedQty} SP phế phẩm của đơn {poNumber}.",
+                CreatedAt = now
+            });
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            bool isFullyCovered = totalShortage == 0m;
+            string msg = isFullyCovered
+                ? $"Đã giữ chỗ đủ 100% vật tư từ kho cho {request.ScrappedQty} sản phẩm sản xuất bù ({totalAllocated} đơn vị vật tư)."
+                : $"Đã giữ chỗ {totalAllocated} đơn vị vật tư từ kho; phần thiếu hụt ({totalShortage} đơn vị) đã tự động tạo Phiếu yêu cầu mua hàng {createdPrCode} trình Chủ xưởng duyệt.";
+
+            return new ScrapReplenishmentResultDto
+            {
+                OrderItemId = orderItem.OrderItemId,
+                PoNumber = poNumber,
+                ProductSku = orderItem.Product?.ProductSku ?? string.Empty,
+                ProductName = orderItem.Product?.ProductName ?? string.Empty,
+                ScrappedQty = request.ScrappedQty,
+                IsFullyCoveredByStock = isFullyCovered,
+                CreatedPurchaseRequestId = createdPrId,
+                PurchaseRequestCode = createdPrCode,
+                TotalAllocatedFromStock = totalAllocated,
+                TotalShortageQty = totalShortage,
+                Message = msg,
+                Allocations = detailsDtoList
+            };
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
     // =========================================================================
     // PRIVATE CORE ENGINE METHODS (MRP & AUTO-ALLOCATION & DAILY PR QUEUEING)
     // =========================================================================

@@ -44,4 +44,9 @@ public class MaterialRepository : IMaterialRepository
 
         return list.ToDictionary(m => m.MaterialCode, m => m, StringComparer.OrdinalIgnoreCase);
     }
+
+    public async Task AddAsync(Material material)
+    {
+        await _context.Materials.AddAsync(material);
+    }
 }

@@ -26,6 +26,7 @@ public class ProductionOrderController : ControllerBase
     private readonly IValidator<ReinspectSubBatchDto> _reinspectSubBatchValidator;
     private readonly IValidator<MergeSubBatchDto> _mergeSubBatchValidator;
     private readonly IValidator<ContinueSubBatchIndependentlyDto> _continueSubBatchValidator;
+    private readonly IValidator<IssueReplenishLotRequestDto> _issueReplenishLotValidator;
 
     public ProductionOrderController(
         IProductionOrderService productionOrderService,
@@ -36,7 +37,8 @@ public class ProductionOrderController : ControllerBase
         IValidator<ApproveOverdriveDto> approveOverdriveValidator,
         IValidator<ReinspectSubBatchDto> reinspectSubBatchValidator,
         IValidator<MergeSubBatchDto> mergeSubBatchValidator,
-        IValidator<ContinueSubBatchIndependentlyDto> continueSubBatchValidator)
+        IValidator<ContinueSubBatchIndependentlyDto> continueSubBatchValidator,
+        IValidator<IssueReplenishLotRequestDto> issueReplenishLotValidator)
     {
         _productionOrderService = productionOrderService;
         _generateBatchesValidator = generateBatchesValidator;
@@ -47,6 +49,7 @@ public class ProductionOrderController : ControllerBase
         _reinspectSubBatchValidator = reinspectSubBatchValidator;
         _mergeSubBatchValidator = mergeSubBatchValidator;
         _continueSubBatchValidator = continueSubBatchValidator;
+        _issueReplenishLotValidator = issueReplenishLotValidator;
     }
 
     /// <summary>
@@ -328,6 +331,35 @@ public class ProductionOrderController : ControllerBase
     {
         var gates = _productionOrderService.GetStandardQualityGates();
         return Ok(ApiResponse<List<StandardQualityGateDto>>.Ok(gates, "Lấy danh mục cổng kiểm soát chất lượng thành công."));
+    }
+
+    /// <summary>
+    /// [P0-04, SC-18 &amp; UC-62]: Phê duyệt &amp; Phát hành Lô sản xuất bù (REPLENISH_LOT) cho số lượng sản phẩm phế phẩm đã hủy.
+    /// Lô sản xuất bù sẽ chạy độc lập đầy đủ từ Trạm 1 (Pha phôi thô) đến Trạm 7 (Đóng gói) để bù đủ 100% sản lượng cho đơn hàng.
+    /// </summary>
+    /// <param name="request">DTO chứa OrderItemId, ReplenishQty, Reason, AllowOverdrive, OverdriveJustification.</param>
+    /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
+    /// <returns>Thông tin Lô sản xuất bù kèm tiến trình 7 công đoạn trên Bảng Kanban.</returns>
+    [HttpPost("batches/issue-replenish-lot")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Leader},{RoleConstants.Planner}")]
+    [ProducesResponseType(typeof(ApiResponse<ProductionBatchDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> IssueReplenishLotAsync(
+        [FromBody] IssueReplenishLotRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var validation = await _issueReplenishLotValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(ApiResponse<ProductionBatchDto>.Fail(
+                "Dữ liệu yêu cầu phát hành Lô sản xuất bù không hợp lệ.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList()));
+        }
+
+        var userId = GetCurrentUserId();
+        var result = await _productionOrderService.IssueReplenishLotAsync(request, userId, cancellationToken);
+        return Ok(ApiResponse<ProductionBatchDto>.Ok(result, $"Phát hành Lô sản xuất bù {result.BatchCode} ({result.BatchQty} sản phẩm) thành công."));
     }
 
     private long GetCurrentUserId()

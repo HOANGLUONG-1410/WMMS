@@ -205,3 +205,57 @@ public class IssueOrderAllocationsResultDto
     public string Message { get; set; } = string.Empty;
     public List<MaterialOrderAllocationDto> Allocations { get; set; } = new();
 }
+
+/// <summary>
+/// DTO Yêu cầu Cấp bù Nguyên vật liệu do Phế phẩm KCS (SC-14b, BR-002, BR-PUR-01).
+/// Nhận vào OrderItemId và ScrappedQty (số lượng sản phẩm hỏng hủy không thể sửa chữa).
+/// </summary>
+public class ScrapReplenishmentRequestDto
+{
+    /// <summary>Mã định danh dòng sản phẩm đơn hàng cần bù phế phẩm.</summary>
+    public long OrderItemId { get; set; }
+
+    /// <summary>Số lượng sản phẩm bị hỏng hủy cần sản xuất bù (VD: 50 SP).</summary>
+    public int ScrappedQty { get; set; }
+
+    /// <summary>Lý do yêu cầu cấp bù phế phẩm.</summary>
+    public string? Reason { get; set; }
+
+    /// <summary>Tự động tạo hoặc gom phần thiếu hụt kho vào Phiếu PR tổng hợp trong ngày (mặc định: true).</summary>
+    public bool AutoCreatePrIfShortage { get; set; } = true;
+}
+
+/// <summary>
+/// DTO Kết quả thực hiện Cấp bù Nguyên vật liệu do Phế phẩm KCS.
+/// </summary>
+public class ScrapReplenishmentResultDto
+{
+    public long OrderItemId { get; set; }
+    public string PoNumber { get; set; } = string.Empty;
+    public string ProductSku { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public int ScrappedQty { get; set; }
+    public bool IsFullyCoveredByStock { get; set; }
+    public long? CreatedPurchaseRequestId { get; set; }
+    public string? PurchaseRequestCode { get; set; }
+    public decimal TotalAllocatedFromStock { get; set; }
+    public decimal TotalShortageQty { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public List<ScrapMaterialAllocationDetailDto> Allocations { get; set; } = new();
+}
+
+/// <summary>
+/// DTO Chi tiết phân bổ / thiếu hụt từng loại vật tư trong đợt cấp bù phế phẩm.
+/// </summary>
+public class ScrapMaterialAllocationDetailDto
+{
+    public long MaterialId { get; set; }
+    public string MaterialCode { get; set; } = string.Empty;
+    public string MaterialName { get; set; } = string.Empty;
+    public string MaterialGroup { get; set; } = string.Empty;
+    public string UnitOfMeasure { get; set; } = string.Empty;
+    public decimal GrossRequiredQty { get; set; }
+    public decimal AllocatedFromStockQty { get; set; }
+    public decimal ShortageQty { get; set; }
+    public string AllocationStatus { get; set; } = string.Empty;
+}

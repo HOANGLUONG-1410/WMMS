@@ -43,3 +43,29 @@ public class PurchaseRequestFilterValidator : AbstractValidator<PurchaseRequestF
             .WithMessage("Từ ngày không được lớn hơn Đến ngày.");
     }
 }
+
+/// <summary>
+/// Kiểm tra dữ liệu yêu cầu cấp bù nguyên vật liệu phế phẩm (P0-04, UC-14).
+/// </summary>
+public class ScrapReplenishmentRequestValidator : AbstractValidator<ScrapReplenishmentRequestDto>
+{
+    public ScrapReplenishmentRequestValidator()
+    {
+        RuleFor(x => x.OrderItemId)
+            .GreaterThan(0)
+            .WithMessage("Mã dòng đơn hàng (OrderItemId) phải lớn hơn 0.");
+
+        RuleFor(x => x.ScrappedQty)
+            .GreaterThan(0)
+            .WithMessage("Số lượng phế phẩm yêu cầu cấp bù (ScrappedQty) phải lớn hơn 0.")
+            .LessThanOrEqualTo(10000)
+            .WithMessage("Số lượng cấp bù tối đa không vượt quá 10,000 sản phẩm.");
+
+        When(x => !string.IsNullOrWhiteSpace(x.Reason), () =>
+        {
+            RuleFor(x => x.Reason)
+                .MaximumLength(500)
+                .WithMessage("Lý do cấp bù không được vượt quá 500 ký tự.");
+        });
+    }
+}

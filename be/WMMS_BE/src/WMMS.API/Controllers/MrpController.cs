@@ -179,4 +179,26 @@ public class MrpController : MasterDataControllerBase
         var result = await _mrpAllocationService.GetAllocationsBySpaceIdAsync(spaceId, cancellationToken);
         return Ok(ApiResponse<List<MaterialOrderAllocationDto>>.Ok(result, "Lấy danh sách phân bổ vật tư của không gian đơn hàng thành công."));
     }
+
+    /// <summary>
+    /// [P0-04 &amp; UC-14]: Yêu cầu cấp bù nguyên vật liệu cho số lượng sản phẩm phế phẩm bị hủy (Scrap Replenishment Request).
+    /// Tự động nhân định mức BOM theo số lượng phế phẩm, đối soát tồn kho khả dụng để khóa giữ chỗ (RESERVED),
+    /// hoặc tự động sinh phiếu Yêu cầu mua hàng (PR) gửi Chủ xưởng phê duyệt mua thêm nếu kho không đủ.
+    /// </summary>
+    /// <param name="request">DTO chứa OrderItemId, ScrappedQty, Reason, AutoCreatePrIfShortage.</param>
+    /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
+    /// <returns>Kết quả cấp bù vật tư phế phẩm và mã phiếu PR sinh tự động (nếu có).</returns>
+    [HttpPost("scrap-replenishment-request")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Warehouse}")]
+    [ProducesResponseType(typeof(ApiResponse<ScrapReplenishmentResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RequestScrapReplenishmentAsync(
+        [FromBody] ScrapReplenishmentRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _mrpAllocationService.RequestScrapReplenishmentAsync(request, userId, cancellationToken);
+        return Ok(ApiResponse<ScrapReplenishmentResultDto>.Ok(result, result.Message));
+    }
 }
