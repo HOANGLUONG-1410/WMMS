@@ -114,4 +114,14 @@ public interface IMrpAllocationService
         ScrapReplenishmentRequestDto request,
         long currentUserId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// [P0-04, SC-14b]: Xem trước và tính toán nhu cầu nguyên vật liệu cấp bù cho số lượng sản phẩm phế phẩm.
+    /// Tự động quét số lượng phế phẩm đã ghi nhận hoặc nhận vào số lượng chỉ định,
+    /// nhân định mức BOM và đối soát tồn kho khả dụng để trả về chi tiết xem kho có đủ cấp phát hay cần mua thêm.
+    /// </summary>
+    Task<ScrapReplenishmentPreviewDto> GetScrapReplenishmentPreviewAsync(
+        long orderItemId,
+        int? overrideScrappedQty = null,
+        CancellationToken cancellationToken = default);
 }

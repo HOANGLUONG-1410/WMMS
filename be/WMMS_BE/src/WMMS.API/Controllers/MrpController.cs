@@ -201,4 +201,25 @@ public class MrpController : MasterDataControllerBase
         var result = await _mrpAllocationService.RequestScrapReplenishmentAsync(request, userId, cancellationToken);
         return Ok(ApiResponse<ScrapReplenishmentResultDto>.Ok(result, result.Message));
     }
+
+    /// <summary>
+    /// [P0-04, SC-14b]: Xem trước &amp; Tính toán Nhu cầu Nguyên vật liệu cấp bù phế phẩm (Scrap Replenishment Preview).
+    /// Cho phép Tổ trưởng / Quản đốc (Leader) và Kế hoạch (Planner) đối soát tồn kho, kiểm tra xem kho có đủ vật tư để cấp phát lại không,
+    /// hoặc có cần gửi Yêu cầu mua hàng (PR) bổ sung hay không trước khi bấm xác nhận cấp bù.
+    /// </summary>
+    /// <param name="orderItemId">ID dòng sản phẩm đơn hàng.</param>
+    /// <param name="scrappedQty">Số lượng phế phẩm muốn tính toán (nếu để trống, hệ thống tự động quét từ số lượng lỗi đã hủy).</param>
+    /// <param name="cancellationToken">Token hủy tác vụ.</param>
+    [HttpGet("order-items/{orderItemId:long}/scrap-replenishment-preview")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Warehouse}")]
+    [ProducesResponseType(typeof(ApiResponse<ScrapReplenishmentPreviewDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetScrapReplenishmentPreviewAsync(
+        [FromRoute] long orderItemId,
+        [FromQuery] int? scrappedQty,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mrpAllocationService.GetScrapReplenishmentPreviewAsync(orderItemId, scrappedQty, cancellationToken);
+        return Ok(ApiResponse<ScrapReplenishmentPreviewDto>.Ok(result, "Tính toán định mức và đối soát tồn kho cấp bù phế phẩm thành công."));
+    }
 }

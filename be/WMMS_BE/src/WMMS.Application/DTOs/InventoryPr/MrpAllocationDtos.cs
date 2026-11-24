@@ -265,3 +265,25 @@ public class ScrapMaterialAllocationDetailDto
     public decimal ShortageQty { get; set; }
     public string AllocationStatus { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// DTO Xem trước &amp; Tính toán Nhu cầu Nguyên vật liệu cấp bù phế phẩm (Scrap Replenishment Preview).
+/// Dành cho Tổ trưởng / Quản đốc (Leader) và Kế hoạch (Planner) đối soát tồn kho trước khi gửi yêu cầu cấp bù.
+/// </summary>
+public class ScrapReplenishmentPreviewDto
+{
+    public long OrderItemId { get; set; }
+    public string PoNumber { get; set; } = string.Empty;
+    public string ProductSku { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public int OrderedQty { get; set; }
+    public int ActiveBatchQty { get; set; }
+    public int ScrappedQty { get; set; }
+    public bool HasReplenishLotIssued { get; set; }
+    public List<string> ReplenishLotBatchCodes { get; set; } = new();
+    public bool IsFullyCoveredByStock { get; set; }
+    public decimal TotalAllocatedFromStock { get; set; }
+    public decimal TotalShortageQty { get; set; }
+    public string Recommendation { get; set; } = string.Empty;
+    public List<ScrapMaterialAllocationDetailDto> MaterialRequirements { get; set; } = new();
+}

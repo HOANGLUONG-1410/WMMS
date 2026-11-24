@@ -788,6 +788,102 @@ public class MrpAllocationService : IMrpAllocationService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<ScrapReplenishmentPreviewDto> GetScrapReplenishmentPreviewAsync(
+        long orderItemId,
+        int? overrideScrappedQty = null,
+        CancellationToken cancellationToken = default)
+    {
+        var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(orderItemId, cancellationToken);
+        if (orderItem == null)
+        {
+            throw new NotFoundException($"Không tìm thấy dòng đơn hàng với ID #{orderItemId}.");
+        }
+
+        var product = orderItem.Product;
+        var order = orderItem.CustomerOrder;
+        string poNumber = order?.PoNumber ?? "PO-DEFAULT";
+
+        var bom = orderItem.BomHeader ?? await _bomRepository.GetByOrderItemIdAsync(orderItemId);
+        if (bom == null)
+        {
+            throw new DomainException(
+                $"Dòng sản phẩm #{orderItemId} ({product?.ProductSku}) chưa có Bảng định mức nguyên vật liệu (BOM).",
+                "BOM_NOT_FOUND");
+        }
+
+        var batches = orderItem.ProductionBatches.ToList();
+        var replenishBatches = batches.Where(b => b.BatchType == BatchTypeEnum.REPLENISH_LOT).ToList();
+        var mainBatches = batches.Where(b => b.BatchType != BatchTypeEnum.REPLENISH_LOT).ToList();
+
+        int activeMainQty = mainBatches.Sum(b => b.BatchQty);
+        int autoDetectedScrap = Math.Max(0, orderItem.OrderedQty - activeMainQty);
+
+        int scrappedQty = (overrideScrappedQty.HasValue && overrideScrappedQty.Value > 0)
+            ? overrideScrappedQty.Value
+            : autoDetectedScrap;
+
+        var result = new ScrapReplenishmentPreviewDto
+        {
+            OrderItemId = orderItem.OrderItemId,
+            PoNumber = poNumber,
+            ProductSku = product?.ProductSku ?? string.Empty,
+            ProductName = product?.ProductName ?? string.Empty,
+            OrderedQty = orderItem.OrderedQty,
+            ActiveBatchQty = activeMainQty,
+            ScrappedQty = scrappedQty,
+            HasReplenishLotIssued = replenishBatches.Any(),
+            ReplenishLotBatchCodes = replenishBatches.Select(b => b.BatchCode).ToList()
+        };
+
+        if (scrappedQty <= 0)
+        {
+            result.IsFullyCoveredByStock = true;
+            result.Recommendation = "Dòng đơn hàng hiện đủ sản lượng theo kế hoạch, không có phế phẩm cần cấp bù.";
+            return result;
+        }
+
+        var bomDetails = bom.BomDetails.ToList();
+        decimal totalAllocated = 0m;
+        decimal totalShortage = 0m;
+
+        foreach (var detail in bomDetails)
+        {
+            var grossRequired = ResolveGrossDemand(detail, scrappedQty, bom.ScrapRatePercent);
+            var stock = await _materialStockRepository.GetOrCreateByMaterialIdAsync(detail.MaterialId, cancellationToken);
+
+            decimal available = Math.Max(0m, stock.AvailableQty);
+            decimal allocated = Math.Min(available, grossRequired);
+            decimal shortage = Math.Max(0m, grossRequired - allocated);
+
+            totalAllocated += allocated;
+            totalShortage += shortage;
+
+            result.MaterialRequirements.Add(new ScrapMaterialAllocationDetailDto
+            {
+                MaterialId = detail.MaterialId,
+                MaterialCode = detail.Material?.MaterialCode ?? string.Empty,
+                MaterialName = detail.Material?.MaterialName ?? string.Empty,
+                MaterialGroup = detail.Material?.MaterialGroup.ToString() ?? string.Empty,
+                UnitOfMeasure = detail.Material?.UnitOfMeasure ?? string.Empty,
+                GrossRequiredQty = grossRequired,
+                AllocatedFromStockQty = allocated,
+                ShortageQty = shortage,
+                AllocationStatus = shortage > 0 ? "SHORTAGE" : "STOCK_AVAILABLE"
+            });
+        }
+
+        result.TotalAllocatedFromStock = totalAllocated;
+        result.TotalShortageQty = totalShortage;
+        result.IsFullyCoveredByStock = totalShortage == 0m;
+
+        result.Recommendation = result.IsFullyCoveredByStock
+            ? $"Tồn kho khả dụng ĐỦ để cấp phát bù cho {scrappedQty} sản phẩm ngay từ kho xưởng. Quản đốc có thể gửi yêu cầu xuất phôi bù và phát hành Lô sản xuất bù (REPLENISH_LOT)."
+            : $"Tồn kho KHÔNG ĐỦ vật tư để bù {scrappedQty} sản phẩm (thiếu hụt vật tư). Cần lập Phiếu Yêu cầu mua hàng (PR) gửi Chủ xưởng phê duyệt mua thêm trước khi sản xuất bù.";
+
+        return result;
+    }
+
     // =========================================================================
     // PRIVATE CORE ENGINE METHODS (MRP & AUTO-ALLOCATION & DAILY PR QUEUEING)
     // =========================================================================
