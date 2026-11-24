@@ -1075,9 +1075,14 @@ public class MrpAllocationService : IMrpAllocationService
                 ? Math.Round(netShortage + safetyDeficit, 4)
                 : 0m;
 
-            string supplyStatus = netShortage <= 0m
-                ? "SUFFICIENT"
-                : (alreadyReservedForTarget + allocatableNow > 0m ? "PARTIAL_SHORTAGE" : "CRITICAL_SHORTAGE");
+            var (supplyStatus, supplyStatusLabel) =
+                totalGrossDemand > 0m && alreadyReservedForTarget >= totalGrossDemand
+                    ? ("RESERVED", "Đã giữ chỗ")
+                    : netShortage <= 0m
+                        ? ("SUFFICIENT", "Đủ tồn kho")
+                        : alreadyReservedForTarget + allocatableNow > 0m
+                            ? ("PARTIAL_SHORTAGE", "Chưa đủ nguyên liệu")
+                            : ("CRITICAL_SHORTAGE", "Chưa đủ nguyên liệu");
 
             materialLines.Add(new MrpMaterialRequirementLineDto
             {
@@ -1099,6 +1104,7 @@ public class MrpAllocationService : IMrpAllocationService
                 NetShortageQty = netShortage,
                 SuggestedPrOrderQty = suggestedPrOrderQty,
                 SupplyStatus = supplyStatus,
+                SupplyStatusLabel = supplyStatusLabel,
                 ItemBreakdowns = breakdowns
             });
         }

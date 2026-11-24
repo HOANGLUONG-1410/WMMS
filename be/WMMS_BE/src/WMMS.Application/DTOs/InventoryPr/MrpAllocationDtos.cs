@@ -73,8 +73,14 @@ public class MrpMaterialRequirementLineDto
 
     public bool IsShortage => NetShortageQty > 0m;
 
-    /// <summary>Trạng thái đáp ứng vật tư: SUFFICIENT | PARTIAL_SHORTAGE | CRITICAL_SHORTAGE.</summary>
+    /// <summary>
+    /// Mã trạng thái đáp ứng vật tư (phân cấp màu &amp; sắp xếp ở FE):
+    /// RESERVED (Đã giữ chỗ - xanh lá) | SUFFICIENT (Đủ tồn kho - xanh dương) | PARTIAL_SHORTAGE (Thiếu ít - cam) | CRITICAL_SHORTAGE (Thiếu hết - đỏ).
+    /// </summary>
     public string SupplyStatus { get; set; } = "SUFFICIENT";
+
+    /// <summary>Nhãn tiếng Việt chuẩn hóa để FE hiển thị trực tiếp: Đã giữ chỗ | Đủ tồn kho | Chưa đủ nguyên liệu.</summary>
+    public string SupplyStatusLabel { get; set; } = "Đủ tồn kho";
 
     public List<MrpOrderItemBreakdownDto> ItemBreakdowns { get; set; } = new();
 }
