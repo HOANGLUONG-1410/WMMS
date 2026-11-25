@@ -137,7 +137,7 @@ public class HoldPointController : MasterDataControllerBase
     /// </summary>
     [HttpPost("batches/{batchId:long}/advance")]
     [Obsolete("Khuyến nghị sử dụng endpoint hợp nhất trên ProductionOrderController: POST /api/v1/production-orders/batches/{batchId}/advance-step")]
-    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Leader}")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Leader}")]
     [ProducesResponseType(typeof(ApiResponse<ProductionBatchDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]

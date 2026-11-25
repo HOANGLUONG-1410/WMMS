@@ -784,7 +784,7 @@ public class ProductionOrderService : IProductionOrderService
         // Chốt chặn 1: Thẻ đã hoàn tất sản xuất (DONE) -> Không thể ghi nhận KCS bổ sung
         if (batch.BatchStatus == BatchStatusEnum.DONE)
         {
-            throw new DomainException("Thẻ lô đã hoàn tất sản xuất, không thể ghi nhận KCS bổ sung.", "BATCH_DONE");
+            throw new DomainException("Lô sản xuất đã hoàn thành, không thể ghi nhận kiểm định KCS bổ sung.", "BATCH_DONE");
         }
 
         // Chốt chặn 2: Thẻ đang bị khóa chờ vật tư (LOCKED - BR-008) -> Phải xuất kho trước khi KCS
@@ -891,7 +891,7 @@ public class ProductionOrderService : IProductionOrderService
                     PassQty = request.PassQty,
                     FailQty = 0,
                     IsBranched = false,
-                    Message = $"Ghi nhận kiểm định đạt chuẩn 100% ({request.PassQty} SP). Thẻ chính {batch.BatchCode} đủ điều kiện chuyển sang công đoạn tiếp theo."
+                    Message = $"Ghi nhận kiểm định đạt chuẩn 100% ({request.PassQty} SP). Lô sản xuất {batch.BatchCode} đủ điều kiện chuyển sang công đoạn tiếp theo."
                 };
             }
             else
@@ -1169,7 +1169,7 @@ public class ProductionOrderService : IProductionOrderService
                 IsOverdriver = batch.IsOverdriver,
                 HoldPointStageSeq = holdPointSeq,
                 BatchStatus = batch.BatchStatus.ToString(),
-                Message = $"Đã gửi yêu cầu chạy Overdrive cho lô {batch.BatchCode} tới Chủ xưởng phê duyệt (Hold Point công đoạn {holdPointSeq})."
+                Message = $"Đã gửi yêu cầu chạy trước (Overdrive) cho lô {batch.BatchCode} tới Chủ xưởng phê duyệt (chốt kiểm soát công đoạn {holdPointSeq})."
             };
         }
         catch
@@ -1240,7 +1240,7 @@ public class ProductionOrderService : IProductionOrderService
                     IsOverdriver = false,
                     HoldPointStageSeq = batch.HoldPointStageSeq,
                     BatchStatus = batch.BatchStatus.ToString(),
-                    Message = $"Chủ xưởng đã TỪ CHỐI yêu cầu Overdrive của lô {batch.BatchCode}. Thẻ lô giữ nguyên trạng thái bị khóa."
+                    Message = $"Chủ xưởng đã từ chối yêu cầu chạy trước (Overdrive) của lô {batch.BatchCode}. Lô sản xuất giữ nguyên trạng thái tạm khóa."
                 };
             }
             catch
@@ -1743,7 +1743,7 @@ public class ProductionOrderService : IProductionOrderService
         var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
         if (subBatch == null)
         {
-            throw new NotFoundException("Không tìm thấy thẻ lô phụ được yêu cầu.");
+            throw new NotFoundException("Không tìm thấy lô phụ được yêu cầu.");
         }
 
         if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
@@ -1976,7 +1976,7 @@ public class ProductionOrderService : IProductionOrderService
         var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
         if (subBatch == null)
         {
-            throw new NotFoundException("Không tìm thấy thẻ lô phụ được yêu cầu.");
+            throw new NotFoundException("Không tìm thấy lô phụ được yêu cầu.");
         }
 
         if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
@@ -1986,35 +1986,35 @@ public class ProductionOrderService : IProductionOrderService
 
         if (subBatch.BatchStatus == BatchStatusEnum.DONE)
         {
-            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất hoặc đã được gộp trước đó.", "SUB_BATCH_ALREADY_MERGED");
+            throw new DomainException("Lô phụ này đã hoàn thành hoặc đã được gộp trước đó.", "SUB_BATCH_ALREADY_MERGED");
         }
 
         if (subBatch.BatchQty <= 0)
         {
-            throw new DomainException("Thẻ nhánh phụ không còn số lượng đạt chuẩn để gộp lô.", "EMPTY_SUB_BATCH_QTY");
+            throw new DomainException("Lô phụ không còn số lượng đạt chuẩn để gộp lô.", "EMPTY_SUB_BATCH_QTY");
         }
 
         if (!subBatch.ParentBatchId.HasValue)
         {
-            throw new DomainException("Thẻ nhánh phụ không có thông tin liên kết với thẻ lô chính.", "MISSING_PARENT_BATCH");
+            throw new DomainException("Lô phụ không có thông tin liên kết với lô sản xuất chính.", "MISSING_PARENT_BATCH");
         }
 
         var mainBatch = await _batchRepository.GetByIdAsync(subBatch.ParentBatchId.Value, cancellationToken);
         if (mainBatch == null)
         {
-            throw new NotFoundException("Không tìm thấy thẻ lô chính tương ứng để gộp lô.");
+            throw new NotFoundException("Không tìm thấy lô sản xuất chính tương ứng để gộp lô.");
         }
 
         if (mainBatch.BatchStatus == BatchStatusEnum.DONE)
         {
-            throw new DomainException($"Thẻ chính {mainBatch.BatchCode} đã hoàn tất sản xuất. Vui lòng cho thẻ phụ chuyển tiếp độc lập.", "MAIN_BATCH_ALREADY_DONE");
+            throw new DomainException($"Lô chính {mainBatch.BatchCode} đã hoàn thành sản xuất. Vui lòng cho lô phụ chuyển tiếp độc lập.", "MAIN_BATCH_ALREADY_DONE");
         }
 
         // Quy tắc nghiệp vụ SC-20b: Chỉ cho phép gộp khi cả hai thẻ đang ở CÙNG công đoạn
         if (mainBatch.CurrentStageSeq != subBatch.CurrentStageSeq)
         {
             throw new DomainException(
-                $"Không thể gộp lô vì hai thẻ đang ở hai công đoạn khác nhau! Thẻ chính đang ở công đoạn thứ {mainBatch.CurrentStageSeq}, thẻ phụ đang ở công đoạn thứ {subBatch.CurrentStageSeq}. Hãy cho thẻ phụ chuyển tiếp độc lập.",
+                $"Không thể gộp lô vì hai lô đang ở hai công đoạn khác nhau (lô chính ở công đoạn {mainBatch.CurrentStageSeq}, lô phụ ở công đoạn {subBatch.CurrentStageSeq}). Hãy cho lô phụ chuyển tiếp độc lập.",
                 "STAGE_MISMATCH_FOR_MERGE");
         }
 
@@ -2022,7 +2022,7 @@ public class ProductionOrderService : IProductionOrderService
         var subCurrentStep = subBatch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == subBatch.CurrentStageSeq);
         if (subCurrentStep == null || subCurrentStep.StepStatus != StepStatusEnum.PASSED)
         {
-            throw new DomainException("Thẻ nhánh phụ chưa được nghiệm thu đạt chuẩn tại công đoạn hiện tại nên không thể gộp lô.", "SUB_BATCH_NOT_PASSED");
+            throw new DomainException("Lô phụ chưa được nghiệm thu đạt chuẩn tại công đoạn hiện tại nên không thể gộp lô.", "SUB_BATCH_NOT_PASSED");
         }
 
         await _unitOfWork.BeginTransactionAsync();
@@ -2118,7 +2118,7 @@ public class ProductionOrderService : IProductionOrderService
         var subBatch = await _batchRepository.GetByIdAsync(subBatchId, cancellationToken);
         if (subBatch == null)
         {
-            throw new NotFoundException("Không tìm thấy thẻ lô phụ được yêu cầu.");
+            throw new NotFoundException("Không tìm thấy lô phụ được yêu cầu.");
         }
 
         if (subBatch.BatchType != BatchTypeEnum.REWORK_SUB_CARD && subBatch.BatchType != BatchTypeEnum.REPLENISH_LOT)
@@ -2128,7 +2128,7 @@ public class ProductionOrderService : IProductionOrderService
 
         if (subBatch.BatchStatus == BatchStatusEnum.DONE)
         {
-            throw new DomainException("Thẻ nhánh phụ này đã hoàn tất sản xuất, không thể chuyển tiếp thêm.", "SUB_BATCH_ALREADY_DONE");
+            throw new DomainException("Lô phụ này đã hoàn thành sản xuất, không thể chuyển tiếp thêm.", "SUB_BATCH_ALREADY_DONE");
         }
 
         if (subBatch.BatchStatus == BatchStatusEnum.LOCKED)
