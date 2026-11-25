@@ -18,7 +18,7 @@ namespace WMMS.API.Controllers;
 /// </para>
 /// </summary>
 [Route("api/v1/inventory")]
-[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Purchasing},{RoleConstants.Warehouse},{RoleConstants.Sales}")]
+[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Purchasing},{RoleConstants.Warehouse}")]
 public class InventoryController : MasterDataControllerBase
 {
     private readonly IInventoryService _inventoryService;

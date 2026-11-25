@@ -14,7 +14,7 @@ namespace WMMS.API.Controllers;
 /// và tự động phân bổ lại vật tư mới nhập kho theo độ ưu tiên hạn giao hàng ETD sớm nhất (FIFO by ETD).
 /// </summary>
 [Route("api/v1/mrp")]
-[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Purchasing},{RoleConstants.Warehouse},{RoleConstants.Sales}")]
+[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Purchasing},{RoleConstants.Warehouse}")]
 public class MrpController : MasterDataControllerBase
 {
     private readonly IMrpAllocationService _mrpAllocationService;

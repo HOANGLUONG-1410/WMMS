@@ -15,7 +15,7 @@ namespace WMMS.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/bom")]
-[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Purchasing},{RoleConstants.Warehouse},{RoleConstants.Sales}")]
+[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Purchasing},{RoleConstants.Warehouse}")]
 public class BomRoutingController : ControllerBase
 {
     private const string BomWriteRoles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner}";
