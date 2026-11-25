@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.KanbanQc;
 
 /// <summary>
@@ -15,7 +17,9 @@ public class HoldPointStatusDto
     public int CurrentStageSeq { get; set; }
     public string CurrentStageName { get; set; } = string.Empty;
     public string BatchStatus { get; set; } = string.Empty;
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public string BatchType { get; set; } = string.Empty;
+    public string BatchTypeLabel => WmmsStatusLabelHelper.ToBatchTypeLabel(BatchType);
 
     /// <summary>Cờ Overdriver cho phép chạy trước các công đoạn đầu khi thiếu phụ kiện/sơn ở trạm sau (KBN02).</summary>
     public bool IsOverdriver { get; set; }
@@ -52,6 +56,7 @@ public class HoldPointStepDto
     public int PassedQty { get; set; }
     public int DefectQty { get; set; }
     public string StepStatus { get; set; } = string.Empty;
+    public string StepStatusLabel => WmmsStatusLabelHelper.ToStepStatusLabel(StepStatus);
     public DateTime? CompletedAt { get; set; }
 }
 
@@ -99,6 +104,7 @@ public class HoldPointOverrideResultDto
     public string StageName { get; set; } = string.Empty;
     public bool IsOverdriver { get; set; }
     public string BatchStatus { get; set; } = string.Empty;
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public bool GoodsIssuedUnlocked { get; set; }
     public long RequestedBy { get; set; }
     public string RequesterName { get; set; } = string.Empty;
@@ -146,6 +152,7 @@ public class AdvanceStageResultDto
     public int NewStageSeq { get; set; }
     public string NewStageName { get; set; } = string.Empty;
     public string BatchStatus { get; set; } = string.Empty;
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public bool IsCompleted { get; set; }
     public DateTime AdvancedAt { get; set; }
 }

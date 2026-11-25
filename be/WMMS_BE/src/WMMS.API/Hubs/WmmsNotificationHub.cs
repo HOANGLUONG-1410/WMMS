@@ -188,7 +188,7 @@ public class SignalRNotificationHubService : INotificationHubService
             HoldPointStageSeq = holdPointStageSeq,
             RequesterName = requesterName,
             Justification = justification,
-            Message = $"Quản đốc {requesterName} vừa gửi yêu cầu mở khóa ngoại lệ trạm dừng kỹ thuật cho lô {batchCode} (Công đoạn #{holdPointStageSeq}). Lý do: {justification}.",
+            Message = $"Quản đốc {requesterName} vừa gửi yêu cầu mở khóa ngoại lệ trạm dừng kỹ thuật cho lô {batchCode} (Công đoạn {holdPointStageSeq}). Lý do: {justification}.",
             TimestampUtc = DateTime.UtcNow
         };
 
@@ -213,7 +213,7 @@ public class SignalRNotificationHubService : INotificationHubService
             IsApproved = isApproved,
             ApproverName = approverName,
             Justification = justification,
-            Message = $"Yêu cầu mở khóa ngoại lệ trạm dừng kỹ thuật cho lô {batchCode} (Công đoạn #{holdPointStageSeq}) đã được Chủ xưởng {approverName} {actionText}. Ghi chú: {justification}.",
+            Message = $"Yêu cầu mở khóa ngoại lệ trạm dừng kỹ thuật cho lô {batchCode} (Công đoạn {holdPointStageSeq}) đã được Chủ xưởng {approverName} {actionText}. Ghi chú: {justification}.",
             TimestampUtc = DateTime.UtcNow
         };
 

@@ -276,7 +276,7 @@ public class ProductionOrderController : ControllerBase
     public async Task<ActionResult<ApiResponse<List<ProductionBatchDto>>>> GetBatchesByOrderItem(long orderItemId)
     {
         var batches = await _productionOrderService.GetBatchesByOrderItemIdAsync(orderItemId);
-        return Ok(ApiResponse<List<ProductionBatchDto>>.Ok(batches, $"Lấy danh sách {batches.Count} thẻ lô của sản phẩm đơn hàng #{orderItemId} thành công."));
+        return Ok(ApiResponse<List<ProductionBatchDto>>.Ok(batches, $"Đã tải danh sách {batches.Count} lô sản xuất của sản phẩm thành công."));
     }
 
     /// <summary>
@@ -286,7 +286,7 @@ public class ProductionOrderController : ControllerBase
     public async Task<ActionResult<ApiResponse<List<ProductionBatchDto>>>> GetBatchesByOrder(long orderId)
     {
         var batches = await _productionOrderService.GetBatchesByOrderIdAsync(orderId);
-        return Ok(ApiResponse<List<ProductionBatchDto>>.Ok(batches, $"Lấy danh sách {batches.Count} thẻ lô của đơn hàng #{orderId} thành công."));
+        return Ok(ApiResponse<List<ProductionBatchDto>>.Ok(batches, $"Đã tải danh sách {batches.Count} lô sản xuất của đơn hàng thành công."));
     }
 
     /// <summary>

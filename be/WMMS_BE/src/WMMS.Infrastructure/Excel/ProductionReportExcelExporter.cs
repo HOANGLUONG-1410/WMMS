@@ -679,34 +679,34 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
 
     private static string FormatBatchTypeVi(string batchType) => batchType switch
     {
-        "MAIN_CARD" => "Thẻ chính",
-        "REWORK_SUB_CARD" => "Thẻ sửa chữa (3%)",
-        "REPLENISH_LOT" => "Lô bù phôi hủy",
+        "MAIN_CARD" => "Lô chính",
+        "REWORK_SUB_CARD" => "Lô sửa chữa",
+        "REPLENISH_LOT" => "Lô bù phế phẩm",
         _ => batchType
     };
 
     private static string FormatQcResultVi(string resultStatus) => resultStatus switch
     {
         "FULL_PASS_100" => "Đạt chuẩn 100%",
-        "BRANCHED_PARTIAL" => "Tách nhánh lỗi (97-3)",
+        "BRANCHED_PARTIAL" => "Tách nhánh lỗi",
         "FULL_REJECT" => "Không đạt toàn bộ",
         _ => resultStatus
     };
 
     private static string FormatDispositionVi(string disposition) => disposition switch
     {
-        "REWORK_SUB_CARD" => "Sửa chữa (Rework)",
-        "SCRAP_REPLENISH" => "Hủy & Bù phôi mới",
+        "REWORK_SUB_CARD" => "Sửa chữa tại trạm",
+        "SCRAP_REPLENISH" => "Hủy & làm bù phôi mới",
         _ => disposition
     };
 
     private static string FormatBatchStatusVi(string batchStatus) => batchStatus switch
     {
-        "LOCKED" => "Khóa chờ vật tư",
+        "LOCKED" => "Tạm khóa chờ vật tư",
         "IN_PROGRESS" => "Đang gia công",
         "QC_PENDING" => "Chờ kiểm định KCS",
-        "HOLD_POINT_BLOCKED" => "Khóa cứng Hold Point",
-        "DONE" => "Hoàn tất (DONE)",
+        "HOLD_POINT_BLOCKED" => "Tạm dừng tại chốt kiểm soát",
+        "DONE" => "Hoàn thành",
         _ => batchStatus
     };
 

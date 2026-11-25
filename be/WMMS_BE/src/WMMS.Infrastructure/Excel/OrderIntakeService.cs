@@ -809,9 +809,9 @@ public class OrderIntakeService : IOrderIntakeService
         var lifecycleBadge = DetermineLifecycleBadge(order);
         var floorProgressPct = space.OverallProgressPct;
         var floorSubtitle = floorProgressPct >= 100
-            ? "Công đoạn 6: Hoàn tất đóng gói thành phẩm"
+            ? "Đã hoàn tất toàn bộ công đoạn và đóng gói thành phẩm"
             : floorProgressPct > 0
-                ? "Công đoạn 4: Đang lắp ráp kết cấu tại xưởng"
+                ? $"Đang gia công tại xưởng ({floorProgressPct:0.#}% khối lượng hoàn thành)"
                 : "Đang chờ phát lệnh sản xuất xuống xưởng";
 
         // Xây dựng dòng thời gian hoạt động Recent Space Activity & Milestones (SCR-ORD-03)

@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.KanbanQc;
 
 /// <summary>
@@ -63,6 +65,7 @@ public class ProductionBatchDto
     public long OrderItemId { get; set; }
     public long? ParentBatchId { get; set; }
     public string BatchType { get; set; } = "MAIN_CARD";
+    public string BatchTypeLabel => WmmsStatusLabelHelper.ToBatchTypeLabel(BatchType);
     public int BatchQty { get; set; }
     public int CurrentStageSeq { get; set; } = 1;
     public string CurrentStageName { get; set; } = string.Empty;
@@ -71,7 +74,8 @@ public class ProductionBatchDto
     public int? HoldPointStageSeq { get; set; }
     public bool GoodsIssuedUnlocked { get; set; }
     public string BatchStatus { get; set; } = "LOCKED";
-    public string BatchStatusText => BatchStatus;
+    public string BatchStatusText => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public DateTime CreatedAt { get; set; }
     public List<BatchRoutingStepDto> Steps { get; set; } = new();
 }
@@ -95,7 +99,8 @@ public class BatchRoutingStepDto
     public int PassedQty { get; set; }
     public int DefectQty { get; set; }
     public string StepStatus { get; set; } = "WAITING";
-    public string StepStatusText => StepStatus;
+    public string StepStatusText => WmmsStatusLabelHelper.ToStepStatusLabel(StepStatus);
+    public string StepStatusLabel => WmmsStatusLabelHelper.ToStepStatusLabel(StepStatus);
     public DateTime? CompletedAt { get; set; }
 }
 
@@ -222,6 +227,7 @@ public class OverdriveOperationResultDto
     public bool IsOverdriver { get; set; }
     public int? HoldPointStageSeq { get; set; }
     public string BatchStatus { get; set; } = string.Empty;
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public string Message { get; set; } = string.Empty;
 }
 
@@ -259,6 +265,7 @@ public class ReinspectSubBatchResultDto
     public int FailQty { get; set; }
     public bool IsFullyPassed { get; set; }
     public string SubBatchStatus { get; set; } = string.Empty;
+    public string SubBatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(SubBatchStatus);
     public string Message { get; set; } = string.Empty;
 }
 
@@ -284,7 +291,9 @@ public class MergeSubBatchResultDto
     public int MainBatchNewQty { get; set; }
     public int CurrentStageSeq { get; set; }
     public string MainBatchStatus { get; set; } = string.Empty;
+    public string MainBatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(MainBatchStatus);
     public string SubBatchStatus { get; set; } = string.Empty;
+    public string SubBatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(SubBatchStatus);
     public string Message { get; set; } = string.Empty;
 }
 
@@ -308,6 +317,7 @@ public class ContinueSubBatchResultDto
     public string NextStageName { get; set; } = string.Empty;
     public int BatchQty { get; set; }
     public string BatchStatus { get; set; } = string.Empty;
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public string Message { get; set; } = string.Empty;
 }
 

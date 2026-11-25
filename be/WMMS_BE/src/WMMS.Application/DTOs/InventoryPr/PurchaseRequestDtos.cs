@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.InventoryPr;
 
 /// <summary>
@@ -28,6 +30,7 @@ public class PurchaseRequestListItemDto
     public string PrCode { get; set; } = string.Empty;
     public DateTime AggregationDate { get; set; }
     public string PrStatus { get; set; } = string.Empty;
+    public string PrStatusLabel => WmmsStatusLabelHelper.ToPrStatusLabel(PrStatus);
     public int ItemsCount { get; set; }
     public decimal TotalShortageQty { get; set; }
     public decimal TotalSuggestedOrderQty { get; set; }

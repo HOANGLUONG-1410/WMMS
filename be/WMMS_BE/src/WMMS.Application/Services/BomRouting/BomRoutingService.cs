@@ -526,7 +526,7 @@ public class BomRoutingService : IBomRoutingService
                 EntityId = bomHeader.BomId.ToString(),
                 BeforeState = beforeStateJson,
                 AfterState = afterStateJson,
-                Reason = $"Cập nhật định mức vật tư cho BOM #{bomId} và tính lại tổng nhu cầu với tỷ lệ hao hụt {request.ScrapRatePercent:0.##}%.",
+                Reason = $"Cập nhật định mức vật tư (tỷ lệ hao hụt {request.ScrapRatePercent:0.##}%) và tính lại tổng nhu cầu nguyên vật liệu.",
                 CreatedAt = now
             });
 

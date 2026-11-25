@@ -219,7 +219,7 @@ public class AuditLogService : IAuditLogService
 
         if (log is null)
         {
-            throw AppException.NotFound($"Không tìm thấy bản ghi nhật ký hoạt động #{logId}.");
+            throw AppException.NotFound("Không tìm thấy bản ghi nhật ký hoạt động được yêu cầu.");
         }
 
         return new AuditLogDto

@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.Auth;
 
 /// <summary>
@@ -60,6 +62,7 @@ public class CurrentUserProfileDto
     public string FullName { get; set; } = string.Empty;
     public string? Phone { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string StatusLabel => WmmsStatusLabelHelper.ToUserStatusLabel(Status);
     public DateTime? LastLoginAt { get; set; }
 
     /// <summary>Danh sách mã vai trò (ví dụ: ["ADMIN", "PLANNER"]) phục vụ Global Role Workspace Switcher trên Screen Flow.</summary>

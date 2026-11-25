@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.Warehouse;
 
 // =============================================================================
@@ -66,7 +68,9 @@ public class GoodsReceiptResultDto
     public long PoId { get; set; }
     public string PoCode { get; set; } = string.Empty;
     public string PoStatus { get; set; } = string.Empty;
+    public string PoStatusLabel => WmmsStatusLabelHelper.ToPoStatusLabel(PoStatus);
     public string GrnStatus { get; set; } = string.Empty;
+    public string GrnStatusLabel => WmmsStatusLabelHelper.ToGrnStatusLabel(GrnStatus);
     public DateTime CommittedAt { get; set; }
     public List<GoodsReceiptLineResultDto> Lines { get; set; } = new();
     public List<AutoAllocationResultDto> Allocations { get; set; } = new();
@@ -97,6 +101,7 @@ public class OpenPurchaseOrderDto
     public string PoCode { get; set; } = string.Empty;
     public string SupplierName { get; set; } = string.Empty;
     public string PoStatus { get; set; } = string.Empty;
+    public string PoStatusLabel => WmmsStatusLabelHelper.ToPoStatusLabel(PoStatus);
     public DateTime IssueDate { get; set; }
     public DateTime ExpectedArrivalDate { get; set; }
     public List<OpenPurchaseOrderLineDto> Lines { get; set; } = new();

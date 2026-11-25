@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.BomRouting;
 
 public class BomStagingRowDto
@@ -6,6 +8,7 @@ public class BomStagingRowDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public decimal NetQtyPerUnit { get; set; }
 

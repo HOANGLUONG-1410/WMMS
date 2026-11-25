@@ -66,7 +66,7 @@ public class BomRoutingController : ControllerBase
         var bom = await _bomRoutingService.GetBomByOrderItemIdAsync(orderItemId);
         if (bom == null)
         {
-            return NotFound(ApiResponse<BomDto>.Fail($"Dòng sản phẩm #{orderItemId} trong đơn hàng chưa được thiết lập định mức BOM."));
+            return NotFound(ApiResponse<BomDto>.Fail("Sản phẩm này trong đơn hàng chưa được thiết lập định mức vật tư (BOM)."));
         }
         return Ok(ApiResponse<BomDto>.Ok(bom));
     }

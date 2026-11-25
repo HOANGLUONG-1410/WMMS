@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.ProductionTracking;
 
 // ============================================================================
@@ -27,7 +29,9 @@ public class FinishedGoodsReceiptResultDto
     public long BatchId { get; set; }
     public string BatchCode { get; set; } = string.Empty;
     public string BatchType { get; set; } = string.Empty;
+    public string BatchTypeLabel => WmmsStatusLabelHelper.ToBatchTypeLabel(BatchType);
     public string BatchStatus { get; set; } = string.Empty;
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public int CompletedBatchQty { get; set; }
     public long OrderItemId { get; set; }
     public long OrderId { get; set; }
@@ -39,7 +43,9 @@ public class FinishedGoodsReceiptResultDto
     public int RemainingQtyForOrderItem { get; set; }
     public decimal OrderItemCompletionPercent { get; set; }
     public string OrderItemStatus { get; set; } = string.Empty;
+    public string OrderItemStatusLabel => WmmsStatusLabelHelper.ToOrderItemAndBomLabel(OrderItemStatus);
     public string SalesOrderStatus { get; set; } = string.Empty;
+    public string SalesOrderStatusLabel => WmmsStatusLabelHelper.ToOrderStatusLabel(SalesOrderStatus);
     public bool IsOrderItemFullyCompleted { get; set; }
     public bool IsSalesOrderFullyCompleted { get; set; }
     public string? WarehouseLocation { get; set; }
@@ -56,7 +62,9 @@ public class FinishedGoodsBatchSummaryDto
     public long BatchId { get; set; }
     public string BatchCode { get; set; } = string.Empty;
     public string BatchType { get; set; } = string.Empty;
+    public string BatchTypeLabel => WmmsStatusLabelHelper.ToBatchTypeLabel(BatchType);
     public string BatchStatus { get; set; } = string.Empty;
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public long OrderItemId { get; set; }
     public long OrderId { get; set; }
     public string PoNumber { get; set; } = string.Empty;
@@ -87,10 +95,12 @@ public class OrderProductionProgressDto
     public string CustomerName { get; set; } = string.Empty;
     public long? SpaceId { get; set; }
     public string OrderStatus { get; set; } = string.Empty;
+    public string OrderStatusLabel => WmmsStatusLabelHelper.ToOrderStatusLabel(OrderStatus);
     public DateTime OrderDate { get; set; }
     public DateTime EtdDate { get; set; }
     public int DaysUntilEtd { get; set; }
     public string EtdRiskLevel { get; set; } = string.Empty; // ON_TRACK, WARNING, OVERDUE, COMPLETED
+    public string EtdRiskLevelLabel => WmmsStatusLabelHelper.ToEtdRiskLevelLabel(EtdRiskLevel);
     public int TotalOrderedUnits { get; set; }
     public int TotalCompletedUnits { get; set; }
     public int TotalInProgressUnits { get; set; }
@@ -116,6 +126,7 @@ public class OrderItemProgressDto
     public int RemainingQty { get; set; }
     public decimal CompletionPercent { get; set; }
     public string ItemStatus { get; set; } = string.Empty;
+    public string ItemStatusLabel => WmmsStatusLabelHelper.ToOrderItemAndBomLabel(ItemStatus);
     public int TotalBatches { get; set; }
     public int DoneBatches { get; set; }
     public int BlockedBatches { get; set; }
@@ -130,7 +141,9 @@ public class BatchStageProgressDto
     public long BatchId { get; set; }
     public string BatchCode { get; set; } = string.Empty;
     public string BatchType { get; set; } = string.Empty;
+    public string BatchTypeLabel => WmmsStatusLabelHelper.ToBatchTypeLabel(BatchType);
     public string BatchStatus { get; set; } = string.Empty;
+    public string BatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(BatchStatus);
     public int InitialQty { get; set; }
     public int CurrentQty { get; set; }
     public string CurrentStageCode { get; set; } = string.Empty;

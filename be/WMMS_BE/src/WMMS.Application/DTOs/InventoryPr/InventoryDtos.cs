@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.InventoryPr;
 
 // =============================================================================
@@ -38,6 +40,7 @@ public class InventoryStockDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public string? DimensionSpec { get; set; }
     public bool FscCertified { get; set; }
@@ -47,6 +50,7 @@ public class InventoryStockDto
     public decimal AvailableQty { get; set; }
     public bool IsBelowSafetyStock => AvailableQty < SafetyStockQty;
     public string Status { get; set; } = "ACTIVE";
+    public string StatusLabel => WmmsStatusLabelHelper.ToMasterStatusLabel(Status);
     public DateTime UpdatedAt { get; set; }
 }
 
@@ -81,6 +85,7 @@ public class MaterialOrderAllocationDto
     public decimal IssuedQty { get; set; }
     public decimal ShortageQty { get; set; }
     public string AllocationStatus { get; set; } = string.Empty;
+    public string AllocationStatusLabel => WmmsStatusLabelHelper.ToAllocationStatusLabel(AllocationStatus);
     public DateTime EtdDate { get; set; }
     public DateTime AllocatedAt { get; set; }
 }
@@ -128,8 +133,10 @@ public class InventoryTransactionDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public string TxType { get; set; } = string.Empty;
+    public string TxTypeLabel => WmmsStatusLabelHelper.ToTxTypeLabel(TxType);
     public decimal Quantity { get; set; }
     public string? ReferenceCode { get; set; }
     public DateTime CreatedAt { get; set; }

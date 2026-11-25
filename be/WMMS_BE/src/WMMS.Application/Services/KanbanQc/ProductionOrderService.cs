@@ -566,7 +566,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
+            throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
         // Chốt chặn 1: Thẻ bị khóa do chưa xuất kho vật tư đầu vào (BR-008)
@@ -797,7 +797,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
+            throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
         // Chốt chặn 1: Thẻ đã hoàn tất sản xuất (DONE) -> Không thể ghi nhận KCS bổ sung
@@ -833,14 +833,14 @@ public class ProductionOrderService : IProductionOrderService
         if (step.StageSequence != batch.CurrentStageSeq)
         {
             throw new DomainException(
-                $"Không thể kiểm định KCS cho công đoạn #{step.StageSequence} ({step.StageName}) vì thẻ lô hiện đang ở công đoạn #{batch.CurrentStageSeq}.",
+                $"Không thể kiểm định KCS cho công đoạn {step.StageSequence} ({step.StageName}) vì lô sản xuất hiện đang ở công đoạn {batch.CurrentStageSeq}.",
                 "INVALID_QC_STAGE");
         }
 
         if (step.StepStatus == StepStatusEnum.PASSED)
         {
             throw new DomainException(
-                $"Công đoạn #{step.StageSequence} ({step.StageName}) đã được nghiệm thu đạt chuẩn (PASSED), không thể nghiệm thu lại.",
+                $"Công đoạn {step.StageSequence} ({step.StageName}) đã được nghiệm thu đạt chuẩn, không thể nghiệm thu lại.",
                 "QC_STEP_ALREADY_PASSED");
         }
 
@@ -1067,7 +1067,7 @@ public class ProductionOrderService : IProductionOrderService
                         EntityId = batch.BatchCode,
                         BeforeState = $"MainCard_{batch.BatchCode}_Qty_{request.InspectedQty}",
                         AfterState = $"MainCard_{batch.BatchCode}_PassQty_{request.PassQty}_ScrappedQty_{request.FailQty}",
-                        Reason = $"Ghi nhận {request.FailQty} sản phẩm phế phẩm không thể sửa chữa (Scrap). Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} sản phẩm đạt chuẩn. Cần yêu cầu cấp bù vật tư và phát hành Lô sản xuất bù (REPLENISH_LOT).",
+                        Reason = $"Ghi nhận {request.FailQty} sản phẩm phế phẩm không thể sửa chữa. Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} sản phẩm đạt chuẩn. Cần yêu cầu cấp bù vật tư và phát hành lô sản xuất bù.",
                         CreatedAt = DateTime.UtcNow
                     });
                 }
@@ -1089,7 +1089,7 @@ public class ProductionOrderService : IProductionOrderService
                         RequiresScrapReplenishment = true,
                         SpawnedSubBatchId = null,
                         SpawnedSubBatchCode = null,
-                        Message = $"Ghi nhận hủy {request.FailQty} sản phẩm phế phẩm thành công! Thẻ chính {batch.BatchCode} tiếp tục với {request.PassQty} SP đạt chuẩn. Cần yêu cầu cấp bù vật tư và phát hành Lô sản xuất bù (REPLENISH_LOT) để bù đủ 100% sản lượng."
+                        Message = $"Ghi nhận hủy {request.FailQty} sản phẩm phế phẩm thành công! Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} SP đạt chuẩn. Cần yêu cầu cấp bù vật tư và phát hành lô sản xuất bù để bù đủ 100% sản lượng."
                     };
                 }
 
@@ -1105,7 +1105,7 @@ public class ProductionOrderService : IProductionOrderService
                     RequiresScrapReplenishment = false,
                     SpawnedSubBatchId = subBatch?.BatchId,
                     SpawnedSubBatchCode = subBatch?.BatchCode,
-                    Message = $"Kích hoạt tách nhánh 97%-3% thành công! Thẻ chính {batch.BatchCode} cập nhật còn {request.PassQty} SP đạt chuẩn để tiếp tục; đã sinh thẻ nhánh phụ {subBatch?.BatchCode} ({request.FailQty} SP) để sửa chữa tại {step.StageName}."
+                    Message = $"Đã tách lô xử lý lỗi thành công! Lô chính {batch.BatchCode} cập nhật còn {request.PassQty} SP đạt chuẩn để tiếp tục; đã tạo lô phụ sửa chữa {subBatch?.BatchCode} ({request.FailQty} SP) tại {step.StageName}."
                 };
             }
         }
@@ -1140,7 +1140,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
+            throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
         // Bắt buộc phải có lý do giải trình kỹ thuật và rủi ro ETD (UC-63)
@@ -1214,7 +1214,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
+            throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
         // Trường hợp 1: Chủ xưởng TỪ CHỐI yêu cầu Overdrive
@@ -1343,7 +1343,7 @@ public class ProductionOrderService : IProductionOrderService
         var batch = await _batchRepository.GetByIdAsync(batchId, cancellationToken);
         if (batch == null)
         {
-            throw new NotFoundException($"Không tìm thấy thẻ lô sản xuất với ID #{batchId}.");
+            throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
         await _unitOfWork.BeginTransactionAsync();
@@ -1440,19 +1440,19 @@ public class ProductionOrderService : IProductionOrderService
     {
         if (request.ReplenishQty <= 0)
         {
-            throw new DomainException("Số lượng sản xuất bù (ReplenishQty) phải lớn hơn 0.", "INVALID_REPLENISH_QTY");
+            throw new DomainException("Số lượng sản xuất bù phải lớn hơn 0.", "INVALID_REPLENISH_QTY");
         }
 
         var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(request.OrderItemId, cancellationToken);
         if (orderItem == null)
         {
-            throw new NotFoundException($"Không tìm thấy dòng đơn hàng với ID #{request.OrderItemId}.");
+            throw new NotFoundException("Không tìm thấy sản phẩm tương ứng trong đơn hàng.");
         }
 
         var product = orderItem.Product;
         if (product == null)
         {
-            throw new DomainException($"Không tìm thấy thông tin sản phẩm liên kết với dòng đơn hàng #{orderItem.OrderItemId}.", "PRODUCT_NOT_FOUND");
+            throw new DomainException("Không tìm thấy thông tin sản phẩm trong danh mục.", "PRODUCT_NOT_FOUND");
         }
 
         var customerOrder = orderItem.CustomerOrder;
@@ -1585,7 +1585,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = replenishBatch.BatchCode,
                 BeforeState = null,
                 AfterState = auditPayload,
-                Reason = $"Phát hành Lô sản xuất bù {replenishBatch.BatchCode} ({request.ReplenishQty} sản phẩm) cho dòng hàng #{orderItem.OrderItemId} (SKU: {product.ProductSku}). Lý do: {request.Reason ?? "Bù sản lượng phế phẩm"}.",
+                Reason = $"Phát hành lô sản xuất bù {replenishBatch.BatchCode} ({request.ReplenishQty} sản phẩm) cho mã hàng {product.ProductSku} ({product.ProductName}). Lý do: {request.Reason ?? "Bù sản lượng phế phẩm"}.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -1749,7 +1749,7 @@ public class ProductionOrderService : IProductionOrderService
         if (step.StageSequence != subBatch.CurrentStageSeq)
         {
             throw new DomainException(
-                $"Công đoạn nghiệm thu lại (#{step.StageSequence} - {step.StageName}) không khớp với công đoạn hiện tại (#{subBatch.CurrentStageSeq}) của thẻ nhánh phụ {subBatch.BatchCode}.",
+                $"Công đoạn nghiệm thu lại (Công đoạn {step.StageSequence} - {step.StageName}) không khớp với công đoạn hiện tại (Công đoạn {subBatch.CurrentStageSeq}) của lô phụ {subBatch.BatchCode}.",
                 "INVALID_REINSPECT_STAGE");
         }
 
@@ -1842,7 +1842,7 @@ public class ProductionOrderService : IProductionOrderService
                 IsFullyPassed = request.FailQty == 0,
                 SubBatchStatus = subBatch.BatchStatus.ToString(),
                 Message = request.PassQty > 0
-                    ? $"Nghiệm thu lại thành công! Thẻ phụ {subBatch.BatchCode} có {request.PassQty} SP đạt chuẩn, sẵn sàng gộp vào thẻ chính (Merge Lot) hoặc chuyển tiếp độc lập."
+                    ? $"Nghiệm thu lại thành công! Lô phụ {subBatch.BatchCode} có {request.PassQty} SP đạt chuẩn, sẵn sàng gộp vào lô chính hoặc chuyển tiếp độc lập."
                     : $"Nghiệm thu lại không đạt: toàn bộ {request.FailQty} SP không thể sửa chữa và phải hủy bỏ."
             };
         }
@@ -2038,7 +2038,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = mainBatch.BatchCode,
                 BeforeState = $"Main_{mainBatch.BatchCode}_Qty_{oldMainQty};Sub_{subBatch.BatchCode}_Qty_{mergeQty}",
                 AfterState = $"Main_{mainBatch.BatchCode}_MergedNewQty_{newMainQty};Sub_{subBatch.BatchCode}_DONE",
-                Reason = $"Tái hòa nhập / Gộp lô (Merge Lot) {mergeQty} SP từ thẻ phụ {subBatch.BatchCode} vào thẻ chính {mainBatch.BatchCode} tại công đoạn #{mainBatch.CurrentStageSeq}. Lý do: {request?.Reason ?? "Hoàn thành sửa chữa KCS"}.",
+                Reason = $"Gộp lô {mergeQty} SP từ lô phụ {subBatch.BatchCode} vào lô chính {mainBatch.BatchCode} tại công đoạn {mainBatch.CurrentStageSeq}. Lý do: {request?.Reason ?? "Hoàn thành sửa chữa KCS"}.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -2056,7 +2056,7 @@ public class ProductionOrderService : IProductionOrderService
                 CurrentStageSeq = mainBatch.CurrentStageSeq,
                 MainBatchStatus = mainBatch.BatchStatus.ToString(),
                 SubBatchStatus = subBatch.BatchStatus.ToString(),
-                Message = $"Gộp lô (Merge Lot) thành công! Đã hòa nhập {mergeQty} SP từ {subBatch.BatchCode} vào thẻ chính {mainBatch.BatchCode}. Tổng số lượng thẻ chính hiện tại: {newMainQty} SP."
+                Message = $"Gộp lô thành công! Đã hòa nhập {mergeQty} SP từ {subBatch.BatchCode} vào lô chính {mainBatch.BatchCode}. Tổng số lượng lô chính hiện tại: {newMainQty} SP."
             };
         }
         catch
@@ -2107,7 +2107,7 @@ public class ProductionOrderService : IProductionOrderService
         if (subBatch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
         {
             throw new DomainException(
-                $"Thẻ nhánh phụ {subBatch.BatchCode} đang bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn #{subBatch.HoldPointStageSeq ?? subBatch.CurrentStageSeq} do chưa xuất kho đủ phụ kiện/vật tư bổ sung.",
+                $"Lô phụ {subBatch.BatchCode} đang bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn {subBatch.HoldPointStageSeq ?? subBatch.CurrentStageSeq} do chưa xuất kho đủ phụ kiện/vật tư bổ sung.",
                 "HOLD_POINT_BLOCKED");
         }
 
@@ -2115,12 +2115,12 @@ public class ProductionOrderService : IProductionOrderService
         var currentStep = steps.FirstOrDefault(s => s.StageSequence == subBatch.CurrentStageSeq);
         if (currentStep == null)
         {
-            throw new DomainException($"Không tìm thấy công đoạn #{subBatch.CurrentStageSeq} trong quy trình của thẻ phụ.", "STAGE_NOT_FOUND");
+            throw new DomainException($"Không tìm thấy công đoạn {subBatch.CurrentStageSeq} trong quy trình của lô phụ.", "STAGE_NOT_FOUND");
         }
 
         if (currentStep.StepStatus != StepStatusEnum.PASSED)
         {
-            throw new DomainException($"Công đoạn hiện tại ({currentStep.StageName}) chưa được nghiệm thu đạt chuẩn (PASSED). Không được chuyển tiếp độc lập.", "STEP_NOT_PASSED");
+            throw new DomainException($"Công đoạn hiện tại ({currentStep.StageName}) chưa được nghiệm thu đạt chuẩn. Không được chuyển tiếp độc lập.", "STEP_NOT_PASSED");
         }
 
         var nextStep = steps.FirstOrDefault(s => s.StageSequence > subBatch.CurrentStageSeq);
@@ -2148,7 +2148,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = subBatch.BatchCode,
                     BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{currentStep.StageSequence}",
                     AfterState = $"SubCard_{subBatch.BatchCode}_Stage_{nextStep.StageSequence}_HOLD_POINT_BLOCKED",
-                    Reason = $"Thẻ nhánh phụ {subBatch.BatchCode} tự động bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn #{nextStep.StageSequence} ({nextStep.StageName}) do chưa xuất kho phụ kiện.",
+                    Reason = $"Lô phụ {subBatch.BatchCode} tự động bị khóa tại trạm dừng kỹ thuật (Hold Point) công đoạn {nextStep.StageSequence} ({nextStep.StageName}) do chưa xuất kho phụ kiện.",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -2162,7 +2162,7 @@ public class ProductionOrderService : IProductionOrderService
             }
 
             throw new DomainException(
-                $"Thẻ nhánh phụ {subBatch.BatchCode} không thể chuyển tiếp sang công đoạn #{nextStep.StageSequence} ({nextStep.StageName}) vì đây là trạm dừng kỹ thuật (Hold Point) và kho chưa mở khóa cấp phát vật tư/phụ kiện.",
+                $"Lô phụ {subBatch.BatchCode} không thể chuyển tiếp sang công đoạn {nextStep.StageSequence} ({nextStep.StageName}) vì đây là trạm dừng kỹ thuật (Hold Point) và kho chưa mở khóa cấp phát vật tư/phụ kiện.",
                 "HOLD_POINT_BLOCKED");
         }
 
@@ -2222,7 +2222,7 @@ public class ProductionOrderService : IProductionOrderService
                     NextStageName = currentStep.StageName,
                     BatchQty = subBatch.BatchQty,
                     BatchStatus = subBatch.BatchStatus.ToString(),
-                    Message = $"Thẻ nhánh phụ {subBatch.BatchCode} đã hoàn tất công đoạn cuối cùng thành công (DONE)."
+                    Message = $"Lô phụ {subBatch.BatchCode} đã hoàn tất công đoạn cuối cùng thành công."
                 };
             }
 
@@ -2240,7 +2240,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = subBatch.BatchCode,
                 BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{currentStep.StageSequence}",
                 AfterState = $"SubCard_{subBatch.BatchCode}_Stage_{nextStep.StageSequence}_IN_PROGRESS",
-                Reason = $"Thẻ nhánh phụ {subBatch.BatchCode} chuyển tiếp độc lập sang {nextStep.StageName}. Ghi chú: {request?.Notes ?? "Điều độ phân xưởng"}.",
+                Reason = $"Lô phụ {subBatch.BatchCode} chuyển tiếp độc lập sang {nextStep.StageName}. Ghi chú: {request?.Notes ?? "Điều độ phân xưởng"}.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -2255,7 +2255,7 @@ public class ProductionOrderService : IProductionOrderService
                 NextStageName = nextStep.StageName,
                 BatchQty = subBatch.BatchQty,
                 BatchStatus = subBatch.BatchStatus.ToString(),
-                Message = $"Thẻ nhánh phụ {subBatch.BatchCode} đã chuyển tiếp độc lập sang công đoạn #{nextStep.StageSequence} ({nextStep.StageName}) thành công."
+                Message = $"Lô phụ {subBatch.BatchCode} đã chuyển tiếp độc lập sang công đoạn {nextStep.StageSequence} ({nextStep.StageName}) thành công."
             };
         }
         catch

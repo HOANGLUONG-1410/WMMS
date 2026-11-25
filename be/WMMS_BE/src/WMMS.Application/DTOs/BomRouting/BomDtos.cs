@@ -1,3 +1,4 @@
+using WMMS.Application.Common.Helpers;
 using WMMS.Domain.Enums;
 
 namespace WMMS.Application.DTOs.BomRouting;
@@ -15,6 +16,7 @@ public class BomDto
     public decimal ScrapRatePercent { get; set; }
     public BomStatusEnum BomStatus { get; set; }
     public string BomStatusText => BomStatus.ToString();
+    public string BomStatusLabel => WmmsStatusLabelHelper.ToOrderItemAndBomLabel(BomStatus.ToString());
     public long CreatedBy { get; set; }
     public string? CreatorName { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -38,6 +40,7 @@ public class BomDetailDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public string? DimensionSpec { get; set; }
     public bool FscCertified { get; set; }
@@ -112,6 +115,7 @@ public class CalculateDemandItemResultDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public decimal NetQtyPerUnit { get; set; }
     public decimal GrossTotalDemand { get; set; }
@@ -133,6 +137,7 @@ public class CalculateDemandItemResultDto
 
     /// <summary>Trạng thái đối chiếu tồn kho của dòng vật tư (<c>SUFFICIENT</c> hoặc <c>SHORTAGE</c>).</summary>
     public string StockCoverageStatus => IsShortage ? "SHORTAGE" : "SUFFICIENT";
+    public string StockCoverageStatusLabel => WmmsStatusLabelHelper.ToAllocationStatusLabel(StockCoverageStatus);
 }
 
 public class CalculateDemandResponseDto
@@ -142,6 +147,7 @@ public class CalculateDemandResponseDto
     public bool HasAnyShortage => CalculatedItems.Any(i => i.IsShortage);
     public int ShortageItemsCount => CalculatedItems.Count(i => i.IsShortage);
     public string RecommendedBomState => HasAnyShortage ? "WAITING_FOR_MATERIALS" : "READY_FOR_PRODUCTION";
+    public string RecommendedBomStateLabel => WmmsStatusLabelHelper.ToOrderItemAndBomLabel(RecommendedBomState);
     public List<CalculateDemandItemResultDto> CalculatedItems { get; set; } = new();
 }
 

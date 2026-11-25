@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.Orders;
 
 /// <summary>
@@ -193,7 +195,9 @@ public class SalesOrderListItemDto
     public int TotalOrderedUnits { get; set; }
     public string LineItemsVolumeSummary { get; set; } = string.Empty;
     public string OrderStatus { get; set; } = string.Empty;
+    public string OrderStatusLabel => WmmsStatusLabelHelper.ToOrderStatusLabel(OrderStatus);
     public string LifecycleStatusBadge { get; set; } = string.Empty;
+    public string LifecycleStatusLabel => WmmsStatusLabelHelper.ToOrderStatusLabel(LifecycleStatusBadge);
     public decimal OverallProgressPct { get; set; }
 }
 
@@ -217,7 +221,9 @@ public class OrderSpaceLineItemDto
     public long? BomId { get; set; }
     public decimal? ScrapRatePct { get; set; }
     public string ItemStatus { get; set; } = string.Empty;
+    public string ItemStatusLabel => WmmsStatusLabelHelper.ToOrderItemAndBomLabel(ItemStatus);
     public string BomLifecycleBadge { get; set; } = string.Empty;
+    public string BomLifecycleLabel => WmmsStatusLabelHelper.ToOrderItemAndBomLabel(BomLifecycleBadge);
 }
 
 /// <summary>
@@ -250,7 +256,9 @@ public class OrderSpaceDetailDto
     public int DaysRemaining { get; set; }
     public bool IsUrgentEtd { get; set; }
     public string OrderStatus { get; set; } = string.Empty;
+    public string OrderStatusLabel => WmmsStatusLabelHelper.ToOrderStatusLabel(OrderStatus);
     public string LifecycleStatusBadge { get; set; } = string.Empty;
+    public string LifecycleStatusLabel => WmmsStatusLabelHelper.ToOrderStatusLabel(LifecycleStatusBadge);
     public bool FscCertified100 { get; set; }
     public string? DrawingFolderUrl { get; set; }
 

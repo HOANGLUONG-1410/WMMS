@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.Users;
 
 /// <summary>
@@ -29,6 +31,7 @@ public class UserDto
     public string FullName { get; set; } = string.Empty;
     public string? Phone { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string StatusLabel => WmmsStatusLabelHelper.ToUserStatusLabel(Status);
     public int FailedLoginCount { get; set; }
     public DateTime? LockedUntil { get; set; }
     public DateTime? LastLoginAt { get; set; }

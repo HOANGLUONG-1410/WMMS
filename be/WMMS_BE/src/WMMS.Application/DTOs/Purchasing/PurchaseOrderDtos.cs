@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.Purchasing;
 
 // =============================================================================
@@ -13,6 +15,7 @@ public class ApprovedRequisitionLineDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
 
     /// <summary>Lượng đề xuất mua trong PR (SuggestedOrderQty).</summary>
@@ -69,6 +72,7 @@ public class PurchaseOrderListItemDto
     public DateTime IssueDate { get; set; }
     public DateTime ExpectedArrivalDate { get; set; }
     public string PoStatus { get; set; } = string.Empty;
+    public string PoStatusLabel => WmmsStatusLabelHelper.ToPoStatusLabel(PoStatus);
     public decimal? TotalAmount { get; set; }
     public int LinesCount { get; set; }
     public decimal TotalOrderedQty { get; set; }
@@ -110,6 +114,7 @@ public class PurchaseOrderLineDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public decimal OrderedQty { get; set; }
     public decimal ReceivedQty { get; set; }
@@ -127,6 +132,7 @@ public class PurchaseOrderReceiptDto
     public DateTime CommittedAt { get; set; }
     public string? WarehouseKeeperName { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string StatusLabel => WmmsStatusLabelHelper.ToGrnStatusLabel(Status);
 }
 
 /// <summary>Chi tiết PO đầy đủ (UC-51).</summary>

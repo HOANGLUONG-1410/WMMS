@@ -1061,7 +1061,7 @@ public class ProductionDashboardService : IProductionDashboardService
             return stepName.Trim();
         }
 
-        return $"Trạm Hold Point #{holdPointSeq}";
+        return $"Trạm dừng kiểm soát (Công đoạn {holdPointSeq})";
     }
 
     private static int GetInitialBatchQty(ProductionBatch batch)
@@ -1084,7 +1084,7 @@ public class ProductionDashboardService : IProductionDashboardService
             return currentStep.StageName;
         }
 
-        return $"Công đoạn #{batch.CurrentStageSeq}";
+        return $"Công đoạn {batch.CurrentStageSeq}";
     }
 
     private async Task<int> GetEtdWarningDaysAsync()

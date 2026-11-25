@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.InventoryPr;
 
 // =============================================================================
@@ -28,6 +30,7 @@ public class MrpOrderItemBreakdownDto
     public decimal UnfulfilledDemandQty { get; set; }
     public DateTime EtdDate { get; set; }
     public string OrderItemStatus { get; set; } = string.Empty;
+    public string OrderItemStatusLabel => WmmsStatusLabelHelper.ToOrderItemAndBomLabel(OrderItemStatus);
 }
 
 /// <summary>
@@ -39,6 +42,7 @@ public class MrpMaterialRequirementLineDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public string? DimensionSpec { get; set; }
     public bool FscCertified { get; set; }
@@ -110,6 +114,7 @@ public class MrpAnalysisResultDto
 
     /// <summary>READY_TO_PRODUCE (Đủ 100% vật tư) hoặc WAITING_FOR_MATERIAL (Thiếu vật tư cần gom PR).</summary>
     public string OverallReadinessStatus { get; set; } = "WAITING_FOR_MATERIAL";
+    public string OverallReadinessStatusLabel => WmmsStatusLabelHelper.ToOverallReadinessLabel(OverallReadinessStatus);
 
     public List<MrpMaterialRequirementLineDto> MaterialRequirements { get; set; } = new();
 }
@@ -139,6 +144,7 @@ public class AutoAllocationResultDto
 
     /// <summary>READY_TO_PRODUCE (100% đủ vật tư) hoặc WAITING_FOR_MATERIAL (Còn thiếu vật tư).</summary>
     public string OverallReadinessStatus { get; set; } = string.Empty;
+    public string OverallReadinessStatusLabel => WmmsStatusLabelHelper.ToOverallReadinessLabel(OverallReadinessStatus);
 
     public int TotalOrderItemsProcessed { get; set; }
     public int FullyAllocatedItemsCount { get; set; }
@@ -259,11 +265,13 @@ public class ScrapMaterialAllocationDetailDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public decimal GrossRequiredQty { get; set; }
     public decimal AllocatedFromStockQty { get; set; }
     public decimal ShortageQty { get; set; }
     public string AllocationStatus { get; set; } = string.Empty;
+    public string AllocationStatusLabel => WmmsStatusLabelHelper.ToAllocationStatusLabel(AllocationStatus);
 }
 
 /// <summary>

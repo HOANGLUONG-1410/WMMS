@@ -1,3 +1,5 @@
+using WMMS.Application.Common.Helpers;
+
 namespace WMMS.Application.DTOs.MasterData;
 
 // =============================================================================
@@ -30,10 +32,12 @@ public class MaterialDto
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string MaterialGroup { get; set; } = string.Empty;
+    public string MaterialGroupLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(MaterialGroup);
     public string UnitOfMeasure { get; set; } = string.Empty;
     public bool FscCertified { get; set; }
     public decimal SafetyStockQty { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string StatusLabel => WmmsStatusLabelHelper.ToMasterStatusLabel(Status);
 }
 
 /// <summary>Chi tiết vật tư kèm tồn kho (UC-18).</summary>
@@ -100,6 +104,7 @@ public class ProductDto
     public string? ImageUrl { get; set; }
     public string? CadDrawingUrl { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string StatusLabel => WmmsStatusLabelHelper.ToMasterStatusLabel(Status);
 }
 
 /// <summary>Công đoạn trong mẫu định tuyến mặc định.</summary>
@@ -165,10 +170,12 @@ public class SupplierDto
     public string SupplierCode { get; set; } = string.Empty;
     public string SupplierName { get; set; } = string.Empty;
     public string SupplyCategory { get; set; } = string.Empty;
+    public string SupplyCategoryLabel => WmmsStatusLabelHelper.ToMaterialGroupLabel(SupplyCategory);
     public string? ContactEmail { get; set; }
     public string? Phone { get; set; }
     public int LeadTimeDays { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string StatusLabel => WmmsStatusLabelHelper.ToMasterStatusLabel(Status);
 }
 
 /// <summary>Yêu cầu tạo nhà cung cấp (UC-28, BR-MDM-01).</summary>

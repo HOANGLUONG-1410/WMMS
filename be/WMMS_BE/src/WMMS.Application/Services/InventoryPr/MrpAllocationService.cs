@@ -596,7 +596,7 @@ public class MrpAllocationService : IMrpAllocationService
         var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(request.OrderItemId, cancellationToken);
         if (orderItem == null)
         {
-            throw new NotFoundException($"Không tìm thấy dòng sản phẩm đơn hàng với ID #{request.OrderItemId}.");
+            throw new NotFoundException("Không tìm thấy sản phẩm tương ứng trong đơn hàng.");
         }
 
         var bom = orderItem.BomHeader;
@@ -797,7 +797,7 @@ public class MrpAllocationService : IMrpAllocationService
         var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(orderItemId, cancellationToken);
         if (orderItem == null)
         {
-            throw new NotFoundException($"Không tìm thấy dòng đơn hàng với ID #{orderItemId}.");
+            throw new NotFoundException("Không tìm thấy sản phẩm tương ứng trong đơn hàng.");
         }
 
         var product = orderItem.Product;
@@ -808,7 +808,7 @@ public class MrpAllocationService : IMrpAllocationService
         if (bom == null)
         {
             throw new DomainException(
-                $"Dòng sản phẩm #{orderItemId} ({product?.ProductSku}) chưa có Bảng định mức nguyên vật liệu (BOM).",
+                $"Sản phẩm {product?.ProductName} ({product?.ProductSku}) trong đơn hàng chưa được thiết lập định mức nguyên vật liệu (BOM).",
                 "BOM_NOT_FOUND");
         }
 
@@ -878,7 +878,7 @@ public class MrpAllocationService : IMrpAllocationService
         result.IsFullyCoveredByStock = totalShortage == 0m;
 
         result.Recommendation = result.IsFullyCoveredByStock
-            ? $"Tồn kho khả dụng ĐỦ để cấp phát bù cho {scrappedQty} sản phẩm ngay từ kho xưởng. Quản đốc có thể gửi yêu cầu xuất phôi bù và phát hành Lô sản xuất bù (REPLENISH_LOT)."
+            ? $"Tồn kho khả dụng ĐỦ để cấp phát bù cho {scrappedQty} sản phẩm ngay từ kho xưởng. Quản đốc có thể gửi yêu cầu xuất phôi bù và phát hành lô sản xuất bù."
             : $"Tồn kho KHÔNG ĐỦ vật tư để bù {scrappedQty} sản phẩm (thiếu hụt vật tư). Cần lập Phiếu Yêu cầu mua hàng (PR) gửi Chủ xưởng phê duyệt mua thêm trước khi sản xuất bù.";
 
         return result;
