@@ -10,60 +10,75 @@ const pick = (map: Record<string, string>, code?: string | null, fallback = ""):
 };
 
 const USER_STATUS: Record<string, string> = {
-  ACTIVE: "Hoạt động",
+  ACTIVE: "Đang hoạt động",
   INACTIVE: "Ngừng hoạt động",
-  BANNED: "Bị cấm",
-  LOCKED: "Bị khóa",
-  SUSPENDED: "Tạm khóa",
+  BANNED: "Đã khóa vĩnh viễn",
+  LOCKED: "Tạm khóa đăng nhập",
+  SUSPENDED: "Tạm khóa đăng nhập",
 };
 
 const ORDER_LIFECYCLE: Record<string, string> = {
-  NEWLY_RECEIVED: "Mới nhận",
-  BOM_SETTING: "Đang lập BOM",
+  NEWLY_RECEIVED: "Mới tiếp nhận",
+  BOM_SETTING: "Đang thiết lập định mức",
+  WAITING_FOR_MATERIAL: "Đang chờ vật tư",
+  READY_FOR_PRODUCTION: "Sẵn sàng sản xuất",
   IN_PRODUCTION: "Đang sản xuất",
-  COMPLETED: "Hoàn thành",
+  COMPLETED: "Đã hoàn thành",
   CANCELLED: "Đã hủy",
   CONFIRMED: "Đã xác nhận",
   IN_PLANNING: "Đang lập kế hoạch",
 };
 
 const BOM_STATUS: Record<string, string> = {
-  PENDING_BOM: "Chờ lập BOM",
-  BOM_DRAFT: "BOM nháp",
-  DRAFT: "Nháp",
-  WAITING_MAT: "Chờ vật tư",
-  WAITING_FOR_MATERIALS: "Chờ vật tư",
-  READY_PROD: "Sẵn sàng sản xuất",
-  READY_FOR_PRODUCTION: "Sẵn sàng sản xuất",
+  PENDING_BOM: "Chờ thiết lập định mức",
+  BOM_DRAFT: "Bản nháp định mức",
+  DRAFT: "Bản nháp định mức",
+  PENDING_APPROVAL: "Chờ phê duyệt định mức",
+  APPROVED: "Đã duyệt định mức",
+  WAITING_MAT: "Chưa đủ nguyên liệu",
+  WAITING_FOR_MATERIALS: "Chưa đủ nguyên liệu",
+  WAITING_FOR_MATERIAL: "Chưa đủ nguyên liệu",
+  READY_PROD: "Đủ vật tư - Sẵn sàng SX",
+  READY_FOR_PRODUCTION: "Đủ vật tư - Sẵn sàng SX",
   IN_PROD: "Đang sản xuất",
-  DONE: "Hoàn tất",
+  IN_PRODUCTION: "Đang sản xuất",
+  DONE: "Đã hoàn thành",
+  COMPLETED: "Đã hoàn thành",
 };
 
 const PR_STATUS: Record<string, string> = {
-  PENDING_APPROVAL: "Chờ duyệt",
-  APPROVED: "Đã duyệt",
-  REJECTED: "Đã từ chối",
+  PENDING_APPROVAL: "Chờ Chủ xưởng phê duyệt",
+  APPROVED: "Đã phê duyệt",
+  REJECTED: "Từ chối",
   PO_ISSUED: "Đã lập đơn mua",
 };
 
 const PO_STATUS: Record<string, string> = {
   ISSUED: "Đã phát hành",
-  PARTIALLY_RECEIVED: "Nhận một phần",
-  RECEIVED: "Đã nhận đủ",
-  COMPLETED: "Hoàn tất",
+  PARTIALLY_RECEIVED: "Đã nhận một phần",
+  RECEIVED: "Đã nhận đủ hàng",
+  FULFILLED: "Đã nhận đủ hàng",
+  COMPLETED: "Đã nhận đủ hàng",
   CANCELLED: "Đã hủy",
 };
 
 const ALLOCATION_STATUS: Record<string, string> = {
-  FULL: "Đủ vật tư",
-  FULLY_ALLOCATED: "Đủ vật tư",
-  PARTIAL: "Giữ chỗ một phần",
-  PARTIALLY_ALLOCATED: "Giữ chỗ một phần",
-  WAITING: "Chờ vật tư",
-  WAITING_MATERIAL: "Chờ vật tư",
+  RESERVED: "Đã giữ chỗ",
+  SUFFICIENT: "Đủ tồn kho",
+  FULL: "Đã giữ chỗ",
+  FULLY_ALLOCATED: "Đã giữ chỗ",
+  PARTIAL: "Chưa đủ nguyên liệu",
+  PARTIALLY_ALLOCATED: "Chưa đủ nguyên liệu",
+  PARTIALLY_RESERVED: "Chưa đủ nguyên liệu",
+  PARTIAL_SHORTAGE: "Chưa đủ nguyên liệu",
+  CRITICAL_SHORTAGE: "Chưa đủ nguyên liệu",
+  SHORTAGE: "Chưa đủ nguyên liệu",
+  WAITING: "Chưa đủ nguyên liệu",
+  WAITING_MATERIAL: "Chưa đủ nguyên liệu",
   PENDING: "Chờ phân bổ",
-  ISSUED: "Đã xuất kho",
-  RELEASED: "Đã giải phóng",
+  ISSUED: "Đã xuất kho sản xuất",
+  ISSUED_TO_SHOP: "Đã xuất kho sản xuất",
+  RELEASED: "Đã giải phóng giữ chỗ",
 };
 
 const AUDIT_ACTION: Record<string, string> = {

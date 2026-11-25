@@ -172,7 +172,7 @@ export default function MaterialCatalogTab() {
                             mat.materialGroup,
                           )}`}
                         >
-                          {mat.materialGroup}
+                          {(mat as { materialGroupLabel?: string }).materialGroupLabel || mat.materialGroup}
                         </span>
                       </td>
 

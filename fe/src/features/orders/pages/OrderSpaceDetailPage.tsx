@@ -305,11 +305,12 @@ export default function OrderSpaceDetailPage() {
               </h1>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                {lifecycleStatusLabel(
-                  spaceDetail?.lifecycleStatusBadge ||
-                    fallbackSpace?.lifecycleStatusBadge ||
-                    'BOM_SETTING'
-                )}
+                {(spaceDetail as { lifecycleStatusLabel?: string })?.lifecycleStatusLabel ||
+                  lifecycleStatusLabel(
+                    spaceDetail?.lifecycleStatusBadge ||
+                      fallbackSpace?.lifecycleStatusBadge ||
+                      'BOM_SETTING'
+                  )}
               </span>
               {(spaceDetail?.fscCertified100 ?? true) && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
@@ -550,7 +551,9 @@ export default function OrderSpaceDetailPage() {
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full border whitespace-nowrap ${badgeStyle.badge}`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${badgeStyle.dot}`} />
-                            {bomStatusLabel(statusText)}
+                            {(item as { bomLifecycleLabel?: string; itemStatusLabel?: string }).bomLifecycleLabel ||
+                              (item as { itemStatusLabel?: string }).itemStatusLabel ||
+                              bomStatusLabel(statusText)}
                           </span>
                         </td>
                         <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">

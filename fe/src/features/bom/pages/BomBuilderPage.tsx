@@ -388,11 +388,13 @@ export default function BomBuilderPage() {
                                     : "bg-slate-400"
                               }`}
                             />
-                            {isReady
-                              ? "SẴN SÀNG SX"
-                              : hasDraft
-                                ? `BOM #${li.bomId} NHÁP`
-                                : "CHƯA CÓ BOM"}
+                            {(li as { bomLifecycleLabel?: string; itemStatusLabel?: string }).bomLifecycleLabel ||
+                              (li as { itemStatusLabel?: string }).itemStatusLabel ||
+                              (isReady
+                                ? "Đủ vật tư - Sẵn sàng SX"
+                                : hasDraft
+                                  ? `Bản nháp định mức (#${li.bomId})`
+                                  : "Chờ thiết lập định mức")}
                           </span>
                         </td>
                         <td className="py-4 px-6 text-right whitespace-nowrap">
