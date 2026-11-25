@@ -611,7 +611,7 @@ export default function ProductBomModal({
                                 item.materialGroup,
                               )}`}
                             >
-                              {item.materialGroup}
+                              {(item as { materialGroupLabel?: string }).materialGroupLabel || item.materialGroup}
                             </span>
                           </td>
                           <td className="py-3.5 px-4">

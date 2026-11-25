@@ -1,8 +1,9 @@
-import { type ReactNode } from "react";
+import { startTransition, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../../features/auth/store/SessionContext";
 import { useLogout } from "../../features/auth/hooks/useLogout";
 import { ROLE_CONFIG } from "../../constants/wmmsConstants";
+import { getDefaultRouteForRole } from "./WmmsAppShell";
 
 export type RoleCode = keyof typeof ROLE_CONFIG;
 
@@ -63,30 +64,12 @@ export default function WmmsHeader({
     roleTitle: roleMeta.roleTitle,
   };
 
-  const getDefaultRouteForRole = (role: RoleCode): string => {
-    switch (role) {
-      case ROLES.ADMIN:
-        return "/admin/users";
-      case ROLES.OWNER:
-      case ROLES.SALES:
-        return "/orders/sales";
-      case ROLES.PLANNER:
-        return "/bom";
-      case ROLES.PURCHASING:
-        return "/purchasing/orders";
-      case ROLES.WAREHOUSE:
-        return "/inventory/stock";
-      case ROLES.LEADER:
-      case ROLES.QC:
-        return "/production/kanban";
-      default:
-        return "/dashboard";
-    }
-  };
-
   const handleRoleSwitch = (targetRole: RoleCode) => {
-    switchActiveRole(targetRole);
-    navigate(getDefaultRouteForRole(targetRole));
+    const targetRoute = getDefaultRouteForRole(targetRole);
+    startTransition(() => {
+      switchActiveRole(targetRole);
+      navigate(targetRoute, { replace: true });
+    });
   };
 
   const handleLogout = async () => {

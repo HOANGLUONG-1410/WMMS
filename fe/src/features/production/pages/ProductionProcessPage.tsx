@@ -1576,7 +1576,7 @@ export default function ProductionProcessPage() {
                             isSelected ? "bg-amber-800 text-amber-100" : "bg-amber-200 text-amber-900"
                           }`}
                         >
-                          Lô phụ 3%
+                          {(b as { batchTypeLabel?: string }).batchTypeLabel || "Lô phụ"}
                         </span>
                       )}
                       <span className="font-mono">{b.batchCode}</span>
@@ -1609,12 +1609,21 @@ export default function ProductionProcessPage() {
               )}
             </div>
 
-            {/* Banner thông tin riêng cho Lô phụ tách nhánh 97%-3% */}
+            {/* Banner thông tin riêng cho Lô phụ tách nhánh theo số lượng sản phẩm thực tế */}
             {isSubBatch && (
               <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <div className="font-extrabold uppercase tracking-wide flex items-center gap-2">
-                    <span>⚠️ Thẻ nhánh phụ xử lý lỗi 97%-3% ({activeBatch.batchType})</span>
+                    <span>
+                      ⚠️ Thẻ nhánh phụ xử lý lỗi —{" "}
+                      {(activeBatch as { batchTypeLabel?: string }).batchTypeLabel ||
+                        (activeBatch.batchType === "REWORK"
+                          ? "Lô sửa chữa"
+                          : activeBatch.batchType === "SCRAP_REPLACEMENT"
+                            ? "Lô bù phế phẩm"
+                            : activeBatch.batchType)}{" "}
+                      ({fmtNum(activeBatch.batchQty)} sản phẩm)
+                    </span>
                   </div>
                   <div>
                     Tách từ Lô chính:{" "}
@@ -1622,7 +1631,7 @@ export default function ProductionProcessPage() {
                       {parentMainBatch?.batchCode || `#${activeBatch.parentBatchId}`}
                     </strong>{" "}
                     {parentMainBatch &&
-                      `(Lô chính đang ở công đoạn S-${parentMainBatch.currentStageSeq} • Trạng thái: ${getBatchStatusMeta(parentMainBatch.batchStatus).label})`}
+                      `(${fmtNum(parentMainBatch.batchQty)} sản phẩm đạt • Đang ở công đoạn S-${parentMainBatch.currentStageSeq} • Trạng thái: ${(parentMainBatch as { batchStatusLabel?: string }).batchStatusLabel || getBatchStatusMeta(parentMainBatch.batchStatus).label})`}
                   </div>
                 </div>
                 {parentMainBatch && (
@@ -2627,7 +2636,7 @@ export default function ProductionProcessPage() {
                 {qcForm.failQty > 0 && (
                   <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg space-y-3">
                     <div className="text-xs font-bold text-rose-800">
-                      Thông tin lỗi &amp; Tách nhánh 97%-3% ({fmtNum(qcForm.failQty)} SP lỗi):
+                      Thông tin lỗi &amp; tách lô xử lý ({fmtNum(qcForm.failQty)} / {fmtNum(qcForm.inspectedQty)} sản phẩm lỗi):
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -2655,8 +2664,12 @@ export default function ProductionProcessPage() {
                           }
                           className="w-full px-3 py-1.5 border border-slate-300 bg-white rounded-lg text-xs font-semibold"
                         >
-                          <option value="REWORK_SUB_CARD">Tách lô sửa chữa (Rework 3%)</option>
-                          <option value="SCRAP_REPLENISH">Hủy &amp; Phát hành lô bù (Scrap)</option>
+                          <option value="REWORK_SUB_CARD">
+                            Tách lô phụ sửa chữa ({fmtNum(qcForm.failQty)} sản phẩm)
+                          </option>
+                          <option value="SCRAP_REPLENISH">
+                            Hủy phế phẩm &amp; phát hành lô sản xuất bù ({fmtNum(qcForm.failQty)} sản phẩm)
+                          </option>
                         </select>
                       </div>
                     </div>

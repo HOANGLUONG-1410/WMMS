@@ -525,15 +525,20 @@ export default function UserManagementPage() {
                           {isActive ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                              ĐANG HOẠT ĐỘNG
+                              {(user as { statusLabel?: string }).statusLabel || "ĐANG HOẠT ĐỘNG"}
+                            </span>
+                          ) : user.status === "LOCKED" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                              {(user as { statusLabel?: string }).statusLabel || "Tạm khóa đăng nhập"}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
                               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-                              {user.status === "BANNED" ||
-                              user.status === "SUSPENDED"
-                                ? "ĐÃ TẠM KHÓA"
-                                : userStatusLabel(user.status)}
+                              {(user as { statusLabel?: string }).statusLabel ||
+                                (user.status === "BANNED" || user.status === "SUSPENDED"
+                                  ? "Đã khóa vĩnh viễn"
+                                  : userStatusLabel(user.status))}
                             </span>
                           )}
                         </td>

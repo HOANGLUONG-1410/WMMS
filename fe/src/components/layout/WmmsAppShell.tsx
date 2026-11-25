@@ -24,9 +24,8 @@ export const getDefaultRouteForRole = (role: RoleCode): string => {
     case ROLES.WAREHOUSE:
       return "/inventory/stock";
     case ROLES.LEADER:
-      return "/production/kanban";
     case ROLES.QC:
-      return "/qc/inspection";
+      return "/production/kanban";
     default:
       return "/orders";
   }
