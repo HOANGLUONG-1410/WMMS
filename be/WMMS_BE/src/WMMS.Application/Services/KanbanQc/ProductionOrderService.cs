@@ -227,11 +227,14 @@ public class ProductionOrderService : IProductionOrderService
         int? holdPointSeq = holdPointStage?.StageSequence ?? (routingStages.Count >= 5 ? 5 : null);
 
         // [SC-19 CORE & BR-008]: Bước 5 - ĐIỀU KIỆN VẬT TƯ & XUẤT KHO (Kiểm tra 100% NVL đã xuất kho ra xưởng)
-        // Kiểm tra xem tất cả dòng vật tư đã chuyển sang trạng thái ISSUED_TO_SHOP hoặc RELEASED chưa
-        bool isIssuedToShop = orderItem.MaterialAllocations.Any() &&
-                              orderItem.MaterialAllocations.All(a =>
-                                  a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP ||
-                                  a.AllocationStatus == AllocationStatusEnum.RELEASED);
+        // Bỏ RELEASED (hủy giữ chỗ không phải đã xuất kho) và yêu cầu IssuedQty >= RequiredQty
+        var activeAllocations = orderItem.MaterialAllocations
+            .Where(a => a.AllocationStatus != AllocationStatusEnum.RELEASED)
+            .ToList();
+        bool isIssuedToShop = activeAllocations.Any() &&
+                              activeAllocations.All(a =>
+                                  a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP &&
+                                  a.IssuedQty >= a.RequiredQty);
 
         bool isOverdriver = false;
         bool goodsIssuedUnlocked = false;
@@ -677,6 +680,14 @@ public class ProductionOrderService : IProductionOrderService
                 "HOLD_POINT_BARRIER_BLOCKED");
         }
 
+        int maxSeq = steps.Max(s => s.StageSequence);
+        if (targetSeq > maxSeq)
+        {
+            throw new DomainException(
+                "Lô sản xuất đã đạt chuẩn KCS ở công đoạn cuối. Vui lòng thực hiện bước Xác nhận Hoàn tất & Nhập kho Thành phẩm.",
+                "USE_FINISHED_GOODS_RECEIPT");
+        }
+
         // Chốt chặn 7: Chuyển bước hợp lệ sang S + 1
         await _unitOfWork.BeginTransactionAsync();
         try
@@ -686,43 +697,13 @@ public class ProductionOrderService : IProductionOrderService
             currentStep.CompletedAt = DateTime.UtcNow;
             await _batchRepository.UpdateStepAsync(currentStep);
 
-            int maxSeq = steps.Max(s => s.StageSequence);
-            if (targetSeq <= maxSeq)
+            // Mở công đoạn kế tiếp (IN_PROGRESS)
+            batch.CurrentStageSeq = targetSeq;
+            var nextStep = steps.FirstOrDefault(s => s.StageSequence == targetSeq);
+            if (nextStep != null)
             {
-                // Mở công đoạn kế tiếp (IN_PROGRESS)
-                batch.CurrentStageSeq = targetSeq;
-                var nextStep = steps.FirstOrDefault(s => s.StageSequence == targetSeq);
-                if (nextStep != null)
-                {
-                    nextStep.StepStatus = StepStatusEnum.IN_PROGRESS;
-                    await _batchRepository.UpdateStepAsync(nextStep);
-                }
-            }
-            else
-            {
-                // Đã vượt qua công đoạn cuối cùng (Đóng gói xuất xưởng) -> Lô hoàn tất toàn diện (DONE)
-                batch.BatchStatus = BatchStatusEnum.DONE;
-                batch.UpdatedAt = DateTime.UtcNow;
-
-                // Kiểm tra xem tất cả các lô khác của OrderItem đã xong chưa -> Tự động cập nhật OrderItem và CustomerOrder
-                var allBatches = await _batchRepository.GetByOrderItemIdAsync(batch.OrderItemId, cancellationToken);
-                bool allDone = allBatches.Where(b => b.BatchId != batch.BatchId).All(b => b.BatchStatus == BatchStatusEnum.DONE);
-                if (allDone)
-                {
-                    var orderItem = await _orderItemRepository.GetByIdAsync(batch.OrderItemId);
-                    if (orderItem != null)
-                    {
-                        orderItem.Status = OrderItemStatusEnum.DONE;
-                        await _orderItemRepository.UpdateAsync(orderItem);
-
-                        var customerOrder = await _orderItemRepository.GetOrderByIdAsync(orderItem.OrderId, cancellationToken);
-                        if (customerOrder != null && customerOrder.OrderItems.All(oi => oi.Status == OrderItemStatusEnum.DONE))
-                        {
-                            customerOrder.Status = OrderStatusEnum.COMPLETED;
-                            await _orderItemRepository.UpdateOrderAsync(customerOrder);
-                        }
-                    }
-                }
+                nextStep.StepStatus = StepStatusEnum.IN_PROGRESS;
+                await _batchRepository.UpdateStepAsync(nextStep);
             }
 
             batch.UpdatedAt = DateTime.UtcNow;
@@ -1143,6 +1124,11 @@ public class ProductionOrderService : IProductionOrderService
             throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
+        if (batch.BatchStatus == BatchStatusEnum.DONE || batch.GoodsIssuedUnlocked)
+        {
+            throw new DomainException("Không thể gửi yêu cầu chạy trước (Overdrive) cho lô đã hoàn thành hoặc đã xuất đủ vật tư.", "INVALID_BATCH_STATUS");
+        }
+
         // Bắt buộc phải có lý do giải trình kỹ thuật và rủi ro ETD (UC-63)
         if (string.IsNullOrWhiteSpace(request.Justification))
         {
@@ -1217,12 +1203,21 @@ public class ProductionOrderService : IProductionOrderService
             throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
+        if (batch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Lô sản xuất đã hoàn thành, không thể phê duyệt hoặc từ chối Overdrive.", "BATCH_ALREADY_DONE");
+        }
+
         // Trường hợp 1: Chủ xưởng TỪ CHỐI yêu cầu Overdrive
         if (!request.Approved)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
             {
+                batch.IsOverdriver = false;
+                batch.UpdatedAt = DateTime.UtcNow;
+                await _batchRepository.UpdateAsync(batch);
+
                 await _bomRepository.AddAuditLogAsync(new AuditLog
                 {
                     UserId = currentUserId,
@@ -1261,18 +1256,44 @@ public class ProductionOrderService : IProductionOrderService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var previousStatus = batch.BatchStatus;
+
             // Cập nhật thẻ lô sang trạng thái IN_PROGRESS kèm cờ Overdrive và trạm dừng Hold Point
             batch.IsOverdriver = true;
             batch.HoldPointStageSeq = holdPointSeq;
             batch.BatchStatus = BatchStatusEnum.IN_PROGRESS;
             batch.UpdatedAt = DateTime.UtcNow;
 
-            // Kích hoạt trạm 1 nếu đang chờ WAITING
-            var step1 = batch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == 1);
-            if (step1 != null && step1.StepStatus == StepStatusEnum.WAITING)
+            if (previousStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
             {
-                step1.StepStatus = StepStatusEnum.IN_PROGRESS;
-                await _batchRepository.UpdateStepAsync(step1);
+                // Chủ xưởng phê duyệt vượt chốt tại Hold Point -> mở khóa bước đang BLOCKED để tránh vòng lặp khóa vô tận
+                batch.GoodsIssuedUnlocked = true;
+                var blockedSteps = batch.BatchRoutingSteps
+                    .Where(s => s.StepStatus == StepStatusEnum.BLOCKED)
+                    .OrderBy(s => s.StageSequence)
+                    .ToList();
+                var firstBlocked = blockedSteps.FirstOrDefault();
+                if (firstBlocked != null)
+                {
+                    batch.CurrentStageSeq = firstBlocked.StageSequence;
+                }
+                foreach (var bs in blockedSteps)
+                {
+                    bs.StepStatus = bs.StageSequence == batch.CurrentStageSeq
+                        ? StepStatusEnum.IN_PROGRESS
+                        : StepStatusEnum.WAITING;
+                    await _batchRepository.UpdateStepAsync(bs);
+                }
+            }
+            else
+            {
+                // Kích hoạt trạm 1 nếu đang chờ WAITING
+                var step1 = batch.BatchRoutingSteps.FirstOrDefault(s => s.StageSequence == 1);
+                if (step1 != null && step1.StepStatus == StepStatusEnum.WAITING)
+                {
+                    step1.StepStatus = StepStatusEnum.IN_PROGRESS;
+                    await _batchRepository.UpdateStepAsync(step1);
+                }
             }
 
             await _batchRepository.UpdateAsync(batch);
@@ -1346,6 +1367,11 @@ public class ProductionOrderService : IProductionOrderService
             throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
+        if (batch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Lô sản xuất đã hoàn thành, không thể mở khóa.", "BATCH_ALREADY_DONE");
+        }
+
         await _unitOfWork.BeginTransactionAsync();
         try
         {
@@ -1415,7 +1441,9 @@ public class ProductionOrderService : IProductionOrderService
                 IsOverdriver = batch.IsOverdriver,
                 HoldPointStageSeq = batch.HoldPointStageSeq,
                 BatchStatus = batch.BatchStatus.ToString(),
-                Message = $"Đã mở khóa chốt chặn Hold Point cho thẻ lô {batch.BatchCode} thành công. Dây chuyền tiếp tục lắp ráp và hoàn thiện."
+                Message = previousStatus == BatchStatusEnum.LOCKED
+                    ? $"Đã mở khóa lô sản xuất {batch.BatchCode} thành công. Dây chuyền sẵn sàng bắt đầu gia công."
+                    : $"Đã mở khóa chốt chặn Hold Point cho lô sản xuất {batch.BatchCode} thành công. Dây chuyền tiếp tục lắp ráp và hoàn thiện."
             };
         }
         catch
@@ -1467,11 +1495,14 @@ public class ProductionOrderService : IProductionOrderService
         var holdPointStage = routingStages.FirstOrDefault(s => s.IsHoldPoint);
         int? holdPointSeq = holdPointStage?.StageSequence ?? (routingStages.Count >= 5 ? 5 : null);
 
-        // Kiểm tra điều kiện xuất kho vật tư bù
-        bool isIssuedToShop = orderItem.MaterialAllocations.Any() &&
-                              orderItem.MaterialAllocations.All(a =>
-                                  a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP ||
-                                  a.AllocationStatus == AllocationStatusEnum.RELEASED);
+        // Kiểm tra điều kiện xuất kho vật tư bù (bỏ RELEASED và yêu cầu IssuedQty >= RequiredQty)
+        var activeRepAllocations = orderItem.MaterialAllocations
+            .Where(a => a.AllocationStatus != AllocationStatusEnum.RELEASED)
+            .ToList();
+        bool isIssuedToShop = activeRepAllocations.Any() &&
+                              activeRepAllocations.All(a =>
+                                  a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP &&
+                                  a.IssuedQty >= a.RequiredQty);
 
         bool isOverdriver = false;
         bool goodsIssuedUnlocked = false;
@@ -1485,24 +1516,10 @@ public class ProductionOrderService : IProductionOrderService
         }
         else
         {
-            if (request.AllowOverdrive)
-            {
-                if (string.IsNullOrWhiteSpace(request.OverdriveJustification))
-                {
-                    throw new DomainException(
-                        "Khi kích hoạt chế độ chạy trước (Overdrive) cho lô bù, bắt buộc phải cung cấp lý do giải trình kỹ thuật.",
-                        "OVERDRIVE_JUSTIFICATION_REQUIRED");
-                }
-                isOverdriver = true;
-                goodsIssuedUnlocked = false;
-                initialBatchStatus = BatchStatusEnum.IN_PROGRESS;
-            }
-            else
-            {
-                isOverdriver = false;
-                goodsIssuedUnlocked = false;
-                initialBatchStatus = BatchStatusEnum.LOCKED;
-            }
+            // Cấm tự bật Overdrive khi tạo lô bù (phải đi qua quy trình Chủ xưởng phê duyệt Overdrive)
+            isOverdriver = false;
+            goodsIssuedUnlocked = false;
+            initialBatchStatus = BatchStatusEnum.LOCKED;
         }
 
         await _unitOfWork.BeginTransactionAsync();
@@ -1739,11 +1756,21 @@ public class ProductionOrderService : IProductionOrderService
             throw new DomainException("Lô phụ này đã hoàn tất hoặc đã được gộp/chuyển tiếp trước đó.", "SUB_BATCH_ALREADY_DONE");
         }
 
+        if (subBatch.BatchStatus is BatchStatusEnum.LOCKED or BatchStatusEnum.HOLD_POINT_BLOCKED)
+        {
+            throw new DomainException("Lô phụ đang bị khóa chờ xuất kho vật tư hoặc chốt kiểm soát, chưa thể nghiệm thu lại.", "SUB_BATCH_LOCKED");
+        }
+
         var steps = subBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
         var step = steps.FirstOrDefault(s => s.BatchStepId == request.BatchStepId);
         if (step == null)
         {
             throw new NotFoundException("Không tìm thấy công đoạn của lô phụ cần nghiệm thu.");
+        }
+
+        if (step.StepStatus == StepStatusEnum.PASSED)
+        {
+            throw new DomainException($"Công đoạn {step.StageSequence} ({step.StageName}) đã nghiệm thu đạt chuẩn, không thể nghiệm thu lại.", "STEP_ALREADY_PASSED");
         }
 
         if (step.StageSequence != subBatch.CurrentStageSeq)
@@ -2104,6 +2131,11 @@ public class ProductionOrderService : IProductionOrderService
             throw new DomainException("Thẻ nhánh phụ này đã hoàn tất sản xuất, không thể chuyển tiếp thêm.", "SUB_BATCH_ALREADY_DONE");
         }
 
+        if (subBatch.BatchStatus == BatchStatusEnum.LOCKED)
+        {
+            throw new DomainException("Lô phụ đang tạm khóa chờ xuất kho vật tư, không thể chuyển tiếp.", "SUB_BATCH_LOCKED");
+        }
+
         if (subBatch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
         {
             throw new DomainException(
@@ -2166,66 +2198,16 @@ public class ProductionOrderService : IProductionOrderService
                 "HOLD_POINT_BLOCKED");
         }
 
+        if (nextStep == null)
+        {
+            throw new DomainException(
+                "Lô phụ đã đạt chuẩn KCS ở công đoạn cuối. Vui lòng thực hiện bước Xác nhận Hoàn tất & Nhập kho Thành phẩm.",
+                "USE_FINISHED_GOODS_RECEIPT");
+        }
+
         await _unitOfWork.BeginTransactionAsync();
         try
         {
-            if (nextStep == null)
-            {
-                // Đã là công đoạn cuối cùng -> Hoàn tất thẻ phụ
-                subBatch.BatchStatus = BatchStatusEnum.DONE;
-                await _batchRepository.UpdateAsync(subBatch);
-
-                // Cập nhật tiến độ dòng đơn hàng OrderItem (UC-64)
-                var orderItem = await _orderItemRepository.GetByIdAsync(subBatch.OrderItemId);
-                if (orderItem != null)
-                {
-                    var allBatchesForItem = await _batchRepository.GetByOrderItemIdAsync(subBatch.OrderItemId, cancellationToken);
-                    var totalDoneQty = allBatchesForItem
-                        .Where(b => (b.BatchId == subBatch.BatchId || b.BatchStatus == BatchStatusEnum.DONE) &&
-                                    (b.BatchType == BatchTypeEnum.MAIN_CARD ||
-                                     b.BatchType == BatchTypeEnum.REWORK_SUB_CARD ||
-                                     b.BatchType == BatchTypeEnum.REPLENISH_LOT))
-                        .Sum(b => b.BatchId == subBatch.BatchId ? subBatch.BatchQty : b.BatchQty);
-
-                    if (orderItem.OrderedQty > 0 && totalDoneQty >= orderItem.OrderedQty)
-                    {
-                        orderItem.Status = OrderItemStatusEnum.DONE;
-                        await _orderItemRepository.UpdateAsync(orderItem);
-                    }
-                    else if (orderItem.Status != OrderItemStatusEnum.DONE)
-                    {
-                        orderItem.Status = OrderItemStatusEnum.IN_PROD;
-                        await _orderItemRepository.UpdateAsync(orderItem);
-                    }
-                }
-
-                await _bomRepository.AddAuditLogAsync(new AuditLog
-                {
-                    UserId = currentUserId,
-                    ActionType = AuditActionConstants.SubBatchContinued,
-                    EntityName = "ProductionBatch",
-                    EntityId = subBatch.BatchCode,
-                    BeforeState = $"SubCard_{subBatch.BatchCode}_Stage_{subBatch.CurrentStageSeq}_IN_PROGRESS",
-                    AfterState = $"SubCard_{subBatch.BatchCode}_DONE",
-                    Reason = $"Thẻ nhánh phụ {subBatch.BatchCode} hoàn tất công đoạn đóng thùng cuối cùng độc lập.",
-                    CreatedAt = DateTime.UtcNow
-                });
-
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-                await _unitOfWork.CommitTransactionAsync();
-
-                return new ContinueSubBatchResultDto
-                {
-                    SubBatchId = subBatch.BatchId,
-                    SubBatchCode = subBatch.BatchCode,
-                    NextStageSeq = subBatch.CurrentStageSeq,
-                    NextStageName = currentStep.StageName,
-                    BatchQty = subBatch.BatchQty,
-                    BatchStatus = subBatch.BatchStatus.ToString(),
-                    Message = $"Lô phụ {subBatch.BatchCode} đã hoàn tất công đoạn cuối cùng thành công."
-                };
-            }
-
             // Chuyển sang công đoạn tiếp theo
             subBatch.CurrentStageSeq = nextStep.StageSequence;
             nextStep.StepStatus = StepStatusEnum.IN_PROGRESS;

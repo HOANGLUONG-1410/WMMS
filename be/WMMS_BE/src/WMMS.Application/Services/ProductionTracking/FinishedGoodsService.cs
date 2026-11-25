@@ -176,6 +176,7 @@ public class FinishedGoodsService : IFinishedGoodsService
 
         var now = DateTime.UtcNow;
         var previousBatchStatus = batch.BatchStatus;
+        var previousBatchQty = batch.BatchQty;
 
         await _unitOfWork.BeginTransactionAsync();
         try
@@ -199,7 +200,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                 BeforeState = JsonSerializer.Serialize(new
                 {
                     BatchStatus = previousBatchStatus.ToString(),
-                    BatchQty = batch.BatchQty
+                    BatchQty = previousBatchQty
                 }),
                 AfterState = JsonSerializer.Serialize(new
                 {
