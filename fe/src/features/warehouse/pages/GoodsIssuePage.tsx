@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useSession } from "../../auth/store/SessionContext";
 import { ROLES } from "../../../constants/roles";
 import { allocationStatusLabel } from "../../../lib/statusLabels";
@@ -53,7 +52,6 @@ export default function GoodsIssuePage() {
   };
 
   return (
-    <WmmsAppShell mode="warehouse">
       <div className="max-w-[1400px] mx-auto space-y-6">
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
@@ -226,6 +224,5 @@ export default function GoodsIssuePage() {
           </div>
         </div>
       </div>
-    </WmmsAppShell>
   );
 }

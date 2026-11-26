@@ -69,18 +69,16 @@ export default function WmmsHeader({
         return "/admin/users";
       case ROLES.OWNER:
       case ROLES.SALES:
-        return "/orders/sales";
       case ROLES.PLANNER:
-        return "/bom";
+      case ROLES.LEADER:
+      case ROLES.QC:
+        return "/orders";
       case ROLES.PURCHASING:
         return "/purchasing/orders";
       case ROLES.WAREHOUSE:
         return "/inventory/stock";
-      case ROLES.LEADER:
-      case ROLES.QC:
-        return "/production/kanban";
       default:
-        return "/dashboard";
+        return "/orders";
     }
   };
 

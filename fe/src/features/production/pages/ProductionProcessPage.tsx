@@ -2,15 +2,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
+import { HeaderTopLeft } from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
 import { useSession } from "../../auth/store/SessionContext";
 import { orderIntakeApi } from "../../../services/wmmsApi";
 import { bomApi } from "../../bom/api/bomApi";
 import { mrpApi } from "../../inventory/api/mrpApi";
 import { productionApi } from "../api/productionApi";
-import type { BomDto, OrderSpaceLineItemForBom, RoutingStageDto } from "../../bom/types";
-import type { MaterialOrderAllocationDto, MrpAnalysisResultDto } from "../../inventory/types";
+import type {
+  BomDto,
+  OrderSpaceLineItemForBom,
+  RoutingStageDto,
+} from "../../bom/types";
+import type {
+  MaterialOrderAllocationDto,
+  MrpAnalysisResultDto,
+} from "../../inventory/types";
 import type {
   AdvanceStepRequestDto,
   ApproveOverdriveDto,
@@ -74,7 +81,8 @@ const getStepTimestamps = (
     step.passedQty > 0 ||
     step.defectQty > 0 ||
     Boolean(completedAt) ||
-    (batch.batchStatus !== "LOCKED" && step.stageSequence <= batch.currentStageSeq);
+    (batch.batchStatus !== "LOCKED" &&
+      step.stageSequence <= batch.currentStageSeq);
 
   if (!isStarted) {
     return { startedAt: null, completedAt };
@@ -143,7 +151,10 @@ const getStepStatusMeta = (
       badgeClass: "bg-emerald-100 text-emerald-800 border border-emerald-200",
     };
   }
-  if (step.stepStatus === "BLOCKED" || (isActiveStage && batchStatus === "HOLD_POINT_BLOCKED")) {
+  if (
+    step.stepStatus === "BLOCKED" ||
+    (isActiveStage && batchStatus === "HOLD_POINT_BLOCKED")
+  ) {
     return {
       label: "BỊ CHẶN HOLD POINT",
       badgeClass: "bg-rose-100 text-rose-800 border border-rose-300",
@@ -199,18 +210,28 @@ export default function ProductionProcessPage() {
   const isQcAuthorized = isOwnerOrAdmin || activeRole === "QC";
   const isLeaderAuthorized = isOwnerOrAdmin || activeRole === "LEADER";
   const isWarehouseAuthorized = isOwnerOrAdmin || activeRole === "WAREHOUSE";
-  const canQueryBom = ["ADMIN", "OWNER", "PLANNER", "LEADER", "PURCHASING", "WAREHOUSE"].includes(
-    activeRole,
-  );
-  const canQueryMrp = ["ADMIN", "OWNER", "PLANNER", "PURCHASING", "WAREHOUSE"].includes(activeRole);
-  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER", "SALES"].includes(activeRole);
+  const canQueryBom = [
+    "ADMIN",
+    "OWNER",
+    "PLANNER",
+    "LEADER",
+    "PURCHASING",
+    "WAREHOUSE",
+  ].includes(activeRole);
+  const canQueryMrp = [
+    "ADMIN",
+    "OWNER",
+    "PLANNER",
+    "PURCHASING",
+    "WAREHOUSE",
+  ].includes(activeRole);
+  const canAccessBomPage = ["ADMIN", "OWNER"].includes(activeRole);
   const canAccessReconciliationPage = [
     "ADMIN",
     "OWNER",
     "PLANNER",
     "WAREHOUSE",
     "PURCHASING",
-    "SALES",
   ].includes(activeRole);
 
   // Thông tin Không gian đơn hàng
@@ -230,7 +251,9 @@ export default function ProductionProcessPage() {
   const [spaceError, setSpaceError] = useState<string | null>(null);
 
   // Dòng sản phẩm đang chọn trong Space
-  const [selectedOrderItemId, setSelectedOrderItemId] = useState<number | null>(null);
+  const [selectedOrderItemId, setSelectedOrderItemId] = useState<number | null>(
+    null,
+  );
 
   // Danh sách Lô sản xuất của Space
   const [batches, setBatches] = useState<ProductionBatchDto[]>([]);
@@ -238,14 +261,21 @@ export default function ProductionProcessPage() {
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
 
   // Điều kiện tiên quyết BOM, Quy trình mẫu & MRP
-  const [productRoutingStages, setProductRoutingStages] = useState<RoutingStageDto[]>([]);
+  const [productRoutingStages, setProductRoutingStages] = useState<
+    RoutingStageDto[]
+  >([]);
   const [itemBom, setItemBom] = useState<BomDto | null>(null);
-  const [bomCheckState, setBomCheckState] = useState<"LOADING" | "FOUND" | "NOT_CREATED" | "RESTRICTED">(
-    "LOADING",
+  const [bomCheckState, setBomCheckState] = useState<
+    "LOADING" | "FOUND" | "NOT_CREATED" | "RESTRICTED"
+  >("LOADING");
+  const [mrpAnalysis, setMrpAnalysis] = useState<MrpAnalysisResultDto | null>(
+    null,
   );
-  const [mrpAnalysis, setMrpAnalysis] = useState<MrpAnalysisResultDto | null>(null);
-  const [spaceAllocations, setSpaceAllocations] = useState<MaterialOrderAllocationDto[]>([]);
-  const [orderProgress, setOrderProgress] = useState<OrderProductionProgressDto | null>(null);
+  const [spaceAllocations, setSpaceAllocations] = useState<
+    MaterialOrderAllocationDto[]
+  >([]);
+  const [orderProgress, setOrderProgress] =
+    useState<OrderProductionProgressDto | null>(null);
 
   // Banner thông báo kết quả
   const [toastBanner, setToastBanner] = useState<{
@@ -254,19 +284,25 @@ export default function ProductionProcessPage() {
   } | null>(null);
 
   // Action States
-  const [isGeneratingBatches, setIsGeneratingBatches] = useState<boolean>(false);
+  const [isGeneratingBatches, setIsGeneratingBatches] =
+    useState<boolean>(false);
   const [isSubmittingAction, setIsSubmittingAction] = useState<boolean>(false);
 
   // Modal 1: Thiết lập Phát hành Lệnh sản xuất & Tùy chỉnh BatchSize
-  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState<boolean>(false);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] =
+    useState<boolean>(false);
   const [splitMode, setSplitMode] = useState<"MAX_SIZE" | "CUSTOM">("MAX_SIZE");
   const [maxBatchSizeInput, setMaxBatchSizeInput] = useState<number>(100);
   const [customSplitsInput, setCustomSplitsInput] = useState<number[]>([100]);
-  const [allowOverdriveInput, setAllowOverdriveInput] = useState<boolean>(false);
-  const [overdriveJustificationInput, setOverdriveJustificationInput] = useState<string>("");
+  const [allowOverdriveInput, setAllowOverdriveInput] =
+    useState<boolean>(false);
+  const [overdriveJustificationInput, setOverdriveJustificationInput] =
+    useState<string>("");
 
   // Modal 2: Nghiệm thu KCS Lô chính (QC Inspect)
-  const [qcModalStep, setQcModalStep] = useState<BatchRoutingStepDto | null>(null);
+  const [qcModalStep, setQcModalStep] = useState<BatchRoutingStepDto | null>(
+    null,
+  );
   const [qcForm, setQcForm] = useState<RecordQcInspectionDto>({
     batchStepId: 0,
     inspectedQty: 0,
@@ -279,7 +315,8 @@ export default function ProductionProcessPage() {
   });
 
   // Modal 3: Nghiệm thu lại Lô phụ (Re-inspect Sub-batch)
-  const [reinspectModalStep, setReinspectModalStep] = useState<BatchRoutingStepDto | null>(null);
+  const [reinspectModalStep, setReinspectModalStep] =
+    useState<BatchRoutingStepDto | null>(null);
   const [reinspectForm, setReinspectForm] = useState<ReinspectSubBatchDto>({
     batchStepId: 0,
     inspectedQty: 0,
@@ -289,42 +326,52 @@ export default function ProductionProcessPage() {
   });
 
   // Modal 4: Chuyển công đoạn (Advance Step)
-  const [advanceModalStep, setAdvanceModalStep] = useState<BatchRoutingStepDto | null>(null);
+  const [advanceModalStep, setAdvanceModalStep] =
+    useState<BatchRoutingStepDto | null>(null);
   const [advanceForm, setAdvanceForm] = useState<AdvanceStepRequestDto>({
     targetStageSeq: null,
     notes: "",
   });
 
   // Modal 5: Gộp lô phụ vào lô chính (Merge Sub-batch)
-  const [mergeModalBatch, setMergeModalBatch] = useState<ProductionBatchDto | null>(null);
+  const [mergeModalBatch, setMergeModalBatch] =
+    useState<ProductionBatchDto | null>(null);
   const [mergeReasonInput, setMergeReasonInput] = useState<string>("");
 
   // Modal 6: Chuyển bước độc lập Lô phụ (Continue Independently)
-  const [continueSubModalStep, setContinueSubModalStep] = useState<BatchRoutingStepDto | null>(null);
-  const [continueSubNotesInput, setContinueSubNotesInput] = useState<string>("");
+  const [continueSubModalStep, setContinueSubModalStep] =
+    useState<BatchRoutingStepDto | null>(null);
+  const [continueSubNotesInput, setContinueSubNotesInput] =
+    useState<string>("");
 
   // Modal 7: Gửi yêu cầu Overdrive (Tổ trưởng)
-  const [requestOverdriveBatch, setRequestOverdriveBatch] = useState<ProductionBatchDto | null>(null);
-  const [requestOverdriveForm, setRequestOverdriveForm] = useState<RequestOverdriveDto>({
-    holdPointStageSeq: 5,
-    justification: "",
-  });
+  const [requestOverdriveBatch, setRequestOverdriveBatch] =
+    useState<ProductionBatchDto | null>(null);
+  const [requestOverdriveForm, setRequestOverdriveForm] =
+    useState<RequestOverdriveDto>({
+      holdPointStageSeq: 5,
+      justification: "",
+    });
 
   // Modal 8: Phê duyệt / Từ chối Overdrive (Chủ xưởng / Admin)
-  const [approveOverdriveBatch, setApproveOverdriveBatch] = useState<ProductionBatchDto | null>(null);
-  const [approveOverdriveForm, setApproveOverdriveForm] = useState<ApproveOverdriveDto>({
-    approved: true,
-    holdPointStageSeq: 5,
-    notes: "",
-  });
+  const [approveOverdriveBatch, setApproveOverdriveBatch] =
+    useState<ProductionBatchDto | null>(null);
+  const [approveOverdriveForm, setApproveOverdriveForm] =
+    useState<ApproveOverdriveDto>({
+      approved: true,
+      holdPointStageSeq: 5,
+      notes: "",
+    });
 
   // Modal 9: Nhập kho thành phẩm hoàn tất lô
-  const [completeBatchModal, setCompleteBatchModal] = useState<ProductionBatchDto | null>(null);
-  const [completeForm, setCompleteForm] = useState<CompleteFinishedBatchRequestDto>({
-    receivedQty: null,
-    warehouseLocation: "KHO-TP-A1",
-    handoverNote: "",
-  });
+  const [completeBatchModal, setCompleteBatchModal] =
+    useState<ProductionBatchDto | null>(null);
+  const [completeForm, setCompleteForm] =
+    useState<CompleteFinishedBatchRequestDto>({
+      receivedQty: null,
+      warehouseLocation: "KHO-TP-A1",
+      handoverNote: "",
+    });
 
   // Modal 10: Chi tiết công đoạn (kèm Ngày bắt đầu / Ngày kết thúc)
   const [detailModalContext, setDetailModalContext] = useState<{
@@ -357,7 +404,9 @@ export default function ProductionProcessPage() {
       if (detail) {
         const orderId = Number(detail.orderId || detail.id || 0);
         const spaceId = detail.spaceId ? Number(detail.spaceId) : undefined;
-        const rawItems: OrderSpaceLineItemForBom[] = Array.isArray(detail.lineItems)
+        const rawItems: OrderSpaceLineItemForBom[] = Array.isArray(
+          detail.lineItems,
+        )
           ? detail.lineItems
           : [];
 
@@ -388,13 +437,14 @@ export default function ProductionProcessPage() {
           const targetParamId = searchParams.get("orderItemId")
             ? Number(searchParams.get("orderItemId"))
             : null;
-          const matchedTarget = targetParamId && items.some((i) => i.orderItemId === targetParamId);
+          const matchedTarget =
+            targetParamId && items.some((i) => i.orderItemId === targetParamId);
           setSelectedOrderItemId((prev) =>
             matchedTarget
               ? targetParamId
               : prev && items.some((i) => i.orderItemId === prev)
-              ? prev
-              : items[0].orderItemId,
+                ? prev
+                : items[0].orderItemId,
           );
         }
 
@@ -417,7 +467,9 @@ export default function ProductionProcessPage() {
               .catch(() => setMrpAnalysis(null));
             mrpApi
               .getOrderSpaceAllocations(spaceId)
-              .then((allocs) => setSpaceAllocations(Array.isArray(allocs) ? allocs : []))
+              .then((allocs) =>
+                setSpaceAllocations(Array.isArray(allocs) ? allocs : []),
+              )
               .catch(() => setSpaceAllocations([]));
           } else if (orderId > 0) {
             mrpApi
@@ -427,13 +479,15 @@ export default function ProductionProcessPage() {
           }
         }
       } else {
-        setSpaceError(`Lỗi: Không tìm thấy dữ liệu cho Không gian "${spaceKey}".`);
+        setSpaceError(
+          `Lỗi: Không tìm thấy dữ liệu cho Không gian "${spaceKey}".`,
+        );
       }
     } catch (err: any) {
       setSpaceError(
         err?.response?.data?.message ||
-        err?.message ||
-        `Không thể tải dữ liệu Không gian đơn hàng "${spaceKey}" từ máy chủ.`
+          err?.message ||
+          `Không thể tải dữ liệu Không gian đơn hàng "${spaceKey}" từ máy chủ.`,
       );
     } finally {
       setIsLoadingSpace(false);
@@ -470,8 +524,9 @@ export default function ProductionProcessPage() {
   const currentLineItem = useMemo(() => {
     if (!spaceInfo || spaceInfo.lineItems.length === 0) return null;
     return (
-      spaceInfo.lineItems.find((li) => li.orderItemId === selectedOrderItemId) ||
-      spaceInfo.lineItems[0]
+      spaceInfo.lineItems.find(
+        (li) => li.orderItemId === selectedOrderItemId,
+      ) || spaceInfo.lineItems[0]
     );
   }, [spaceInfo, selectedOrderItemId]);
 
@@ -511,9 +566,11 @@ export default function ProductionProcessPage() {
           if (res?.data && res.data.length > 0) {
             setProductRoutingStages(res.data);
           } else {
-            return bomApi.getDefaultRouting(currentLineItem.productId).then((defRes) => {
-              setProductRoutingStages(defRes?.data || []);
-            });
+            return bomApi
+              .getDefaultRouting(currentLineItem.productId)
+              .then((defRes) => {
+                setProductRoutingStages(defRes?.data || []);
+              });
           }
         })
         .catch(() => {
@@ -544,17 +601,28 @@ export default function ProductionProcessPage() {
       };
     }
 
-    const mainBatches = currentItemBatches.filter((b) => b.batchType === "MAIN_CARD");
-    const subBatches = currentItemBatches.filter((b) => b.batchType !== "MAIN_CARD");
+    const mainBatches = currentItemBatches.filter(
+      (b) => b.batchType === "MAIN_CARD",
+    );
+    const subBatches = currentItemBatches.filter(
+      (b) => b.batchType !== "MAIN_CARD",
+    );
 
     const initialMainReleasedQty = mainBatches.reduce((sum, b) => {
       const firstTarget = b.steps?.[0]?.targetQty;
-      const originalQty = firstTarget && firstTarget > b.batchQty ? firstTarget : b.batchQty;
+      const originalQty =
+        firstTarget && firstTarget > b.batchQty ? firstTarget : b.batchQty;
       return sum + originalQty;
     }, 0);
 
-    const backendMainQtySum = mainBatches.reduce((sum, b) => sum + b.batchQty, 0);
-    const remainingUnreleasedQty = Math.max(0, currentLineItem.orderedQty - initialMainReleasedQty);
+    const backendMainQtySum = mainBatches.reduce(
+      (sum, b) => sum + b.batchQty,
+      0,
+    );
+    const remainingUnreleasedQty = Math.max(
+      0,
+      currentLineItem.orderedQty - initialMainReleasedQty,
+    );
 
     return {
       orderedQty: currentLineItem.orderedQty,
@@ -590,23 +658,32 @@ export default function ProductionProcessPage() {
       bomStatusRaw === "5";
 
     const itemAllocations = currentLineItem
-      ? spaceAllocations.filter((a) => a.orderItemId === currentLineItem.orderItemId)
+      ? spaceAllocations.filter(
+          (a) => a.orderItemId === currentLineItem.orderItemId,
+        )
       : [];
 
     const isMaterialIssuedToShop =
       itemAllocations.length > 0 &&
       itemAllocations.every(
-        (a) => a.allocationStatus === "ISSUED_TO_SHOP" || a.allocationStatus === "RELEASED",
+        (a) =>
+          a.allocationStatus === "ISSUED_TO_SHOP" ||
+          a.allocationStatus === "RELEASED",
       );
 
     const hasReservedAllocations =
       itemAllocations.length > 0 &&
-      itemAllocations.some((a) => (a.reservedQty || 0) > 0 || a.allocationStatus === "RESERVED");
+      itemAllocations.some(
+        (a) => (a.reservedQty || 0) > 0 || a.allocationStatus === "RESERVED",
+      );
 
     return {
       hasBomRecord,
       isBomApproved,
-      bomStatusLabel: itemBom?.bomStatusText || currentLineItem?.bomLifecycleBadge || (hasBomRecord ? "Đã thiết lập" : "Chưa lập BOM"),
+      bomStatusLabel:
+        itemBom?.bomStatusText ||
+        currentLineItem?.bomLifecycleBadge ||
+        (hasBomRecord ? "Đã thiết lập" : "Chưa lập BOM"),
       isMaterialIssuedToShop,
       hasReservedAllocations,
       shortageMaterialsCount: mrpAnalysis?.shortageMaterialsCount ?? 0,
@@ -616,12 +693,16 @@ export default function ProductionProcessPage() {
   // Lô đang được chọn để hiển thị tiến trình
   const activeBatch = useMemo(() => {
     if (currentItemBatches.length === 0) return null;
-    return currentItemBatches.find((b) => b.batchId === selectedBatchId) || currentItemBatches[0];
+    return (
+      currentItemBatches.find((b) => b.batchId === selectedBatchId) ||
+      currentItemBatches[0]
+    );
   }, [currentItemBatches, selectedBatchId]);
 
   const isSubBatch = Boolean(
     activeBatch &&
-      (activeBatch.batchType === "REWORK_SUB_CARD" || activeBatch.batchType === "REPLENISH_LOT"),
+    (activeBatch.batchType === "REWORK_SUB_CARD" ||
+      activeBatch.batchType === "REPLENISH_LOT"),
   );
 
   const parentMainBatch = useMemo(() => {
@@ -631,14 +712,19 @@ export default function ProductionProcessPage() {
 
   // Công đoạn hiện tại của lô đang chọn (dựa vào currentStageSeq)
   const activeStep = useMemo(() => {
-    if (!activeBatch || !activeBatch.steps || activeBatch.steps.length === 0) return null;
-    const matched = activeBatch.steps.find((s) => s.stageSequence === activeBatch.currentStageSeq);
+    if (!activeBatch || !activeBatch.steps || activeBatch.steps.length === 0)
+      return null;
+    const matched = activeBatch.steps.find(
+      (s) => s.stageSequence === activeBatch.currentStageSeq,
+    );
     return matched || activeBatch.steps[0];
   }, [activeBatch]);
 
   const activeStepIndex = useMemo(() => {
     if (!activeBatch || !activeStep) return -1;
-    return activeBatch.steps.findIndex((s) => s.batchStepId === activeStep.batchStepId);
+    return activeBatch.steps.findIndex(
+      (s) => s.batchStepId === activeStep.batchStepId,
+    );
   }, [activeBatch, activeStep]);
 
   const isBatchDone = activeBatch?.batchStatus === "DONE";
@@ -669,7 +755,13 @@ export default function ProductionProcessPage() {
       parentMainBatch.currentStageSeq === activeBatch.currentStageSeq &&
       isCurrentStepPassed
     );
-  }, [isSubBatch, activeBatch, parentMainBatch, isBatchDone, isCurrentStepPassed]);
+  }, [
+    isSubBatch,
+    activeBatch,
+    parentMainBatch,
+    isBatchDone,
+    isCurrentStepPassed,
+  ]);
 
   // Tính toán danh sách lô dự kiến (Live Preview) trong Modal Phát hành Lệnh sản xuất
   const previewBatchSplits = useMemo(() => {
@@ -680,7 +772,10 @@ export default function ProductionProcessPage() {
       return customSplitsInput.filter((q) => Number.isFinite(q) && q > 0);
     }
 
-    const cap = Math.max(1, Math.min(10000, Number(maxBatchSizeInput) || remaining));
+    const cap = Math.max(
+      1,
+      Math.min(10000, Number(maxBatchSizeInput) || remaining),
+    );
     const list: number[] = [];
     let temp = remaining;
     while (temp > 0) {
@@ -689,7 +784,12 @@ export default function ProductionProcessPage() {
       temp -= sz;
     }
     return list;
-  }, [splitMode, maxBatchSizeInput, customSplitsInput, releaseSummary.remainingUnreleasedQty]);
+  }, [
+    splitMode,
+    maxBatchSizeInput,
+    customSplitsInput,
+    releaseSummary.remainingUnreleasedQty,
+  ]);
 
   const previewSplitsTotal = useMemo(
     () => previewBatchSplits.reduce((s, q) => s + q, 0),
@@ -704,7 +804,8 @@ export default function ProductionProcessPage() {
     setCustomSplitsInput(rem > 0 ? [rem] : [100]);
     // Nếu chưa xuất kho vật tư ra xưởng hoặc BOM chưa Approved, gợi ý rõ cho người dùng biết
     const shouldSuggestOverdrive =
-      !prerequisiteState.isMaterialIssuedToShop || !prerequisiteState.isBomApproved;
+      !prerequisiteState.isMaterialIssuedToShop ||
+      !prerequisiteState.isBomApproved;
     setAllowOverdriveInput(false);
     setOverdriveJustificationInput(
       shouldSuggestOverdrive
@@ -774,7 +875,11 @@ export default function ProductionProcessPage() {
             }
           : {
               orderItemId: currentLineItem.orderItemId,
-              maxBatchSize: Math.max(1, Number(maxBatchSizeInput) || releaseSummary.remainingUnreleasedQty),
+              maxBatchSize: Math.max(
+                1,
+                Number(maxBatchSizeInput) ||
+                  releaseSummary.remainingUnreleasedQty,
+              ),
               allowOverdrive: allowOverdriveInput,
               justification: allowOverdriveInput
                 ? overdriveJustificationInput.trim()
@@ -847,7 +952,8 @@ export default function ProductionProcessPage() {
     try {
       const res = await productionApi.qcInspect(activeBatch.batchId, {
         ...qcForm,
-        defectCode: qcForm.failQty > 0 ? qcForm.defectCode?.trim() || "DEF-ERR-01" : null,
+        defectCode:
+          qcForm.failQty > 0 ? qcForm.defectCode?.trim() || "DEF-ERR-01" : null,
         defectName:
           qcForm.failQty > 0
             ? qcForm.defectName?.trim() || "Lỗi gia công chi tiết cần sửa chữa"
@@ -877,7 +983,10 @@ export default function ProductionProcessPage() {
     e.preventDefault();
     if (!activeBatch || !reinspectModalStep) return;
 
-    if (reinspectForm.passQty + reinspectForm.failQty !== reinspectForm.inspectedQty) {
+    if (
+      reinspectForm.passQty + reinspectForm.failQty !==
+      reinspectForm.inspectedQty
+    ) {
       setToastBanner({
         type: "error",
         text: "Tổng Số lượng đạt và Số lượng lỗi phải khớp 100% sản lượng thẻ nhánh phụ.",
@@ -888,7 +997,10 @@ export default function ProductionProcessPage() {
     setIsSubmittingAction(true);
     setToastBanner(null);
     try {
-      const res = await productionApi.reinspectSubBatch(activeBatch.batchId, reinspectForm);
+      const res = await productionApi.reinspectSubBatch(
+        activeBatch.batchId,
+        reinspectForm,
+      );
       setToastBanner({
         type: res.passQty > 0 ? "success" : "info",
         text: res.message,
@@ -960,7 +1072,9 @@ export default function ProductionProcessPage() {
     setToastBanner(null);
     try {
       const res = await productionApi.mergeSubBatch(mergeModalBatch.batchId, {
-        reason: mergeReasonInput.trim() || "Hoàn thành sửa chữa KCS, tái hòa nhập vào lô chính.",
+        reason:
+          mergeReasonInput.trim() ||
+          "Hoàn thành sửa chữa KCS, tái hòa nhập vào lô chính.",
       });
       setToastBanner({
         type: "success",
@@ -988,9 +1102,12 @@ export default function ProductionProcessPage() {
     setIsSubmittingAction(true);
     setToastBanner(null);
     try {
-      const res = await productionApi.continueSubBatchIndependently(activeBatch.batchId, {
-        notes: continueSubNotesInput.trim() || undefined,
-      });
+      const res = await productionApi.continueSubBatchIndependently(
+        activeBatch.batchId,
+        {
+          notes: continueSubNotesInput.trim() || undefined,
+        },
+      );
       setToastBanner({
         type: "success",
         text: res.message,
@@ -1050,7 +1167,11 @@ export default function ProductionProcessPage() {
     e.preventDefault();
     if (!approveOverdriveBatch) return;
 
-    if (!approveOverdriveForm.approved && (!approveOverdriveForm.notes || approveOverdriveForm.notes.trim().length < 10)) {
+    if (
+      !approveOverdriveForm.approved &&
+      (!approveOverdriveForm.notes ||
+        approveOverdriveForm.notes.trim().length < 10)
+    ) {
       setToastBanner({
         type: "error",
         text: "Khi từ chối yêu cầu Overdrive, lý do từ chối phải có tối thiểu 10 ký tự.",
@@ -1122,7 +1243,10 @@ export default function ProductionProcessPage() {
     setIsSubmittingAction(true);
     setToastBanner(null);
     try {
-      const res = await productionApi.completeFinishedBatch(completeBatchModal.batchId, completeForm);
+      const res = await productionApi.completeFinishedBatch(
+        completeBatchModal.batchId,
+        completeForm,
+      );
       setToastBanner({
         type: "success",
         text:
@@ -1152,12 +1276,18 @@ export default function ProductionProcessPage() {
       : { startedAt: null, completedAt: null };
 
   return (
-    <WmmsAppShell
-      customTopLeft={
+    <>
+      <HeaderTopLeft>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate("/orders")}
+            onClick={() =>
+              navigate(
+                activeSpaceKey
+                  ? `/orders/spaces/${encodeURIComponent(activeSpaceKey)}`
+                  : "/orders",
+              )
+            }
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs cursor-pointer"
           >
             <svg
@@ -1167,45 +1297,18 @@ export default function ProductionProcessPage() {
               strokeWidth={2}
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
             </svg>
-            <span>Danh sách đơn hàng</span>
+            <span>
+              {activeSpaceKey ? "Danh sách sản phẩm" : "Danh sách đơn hàng"}
+            </span>
           </button>
-
-          {activeSpaceKey && (
-            <button
-              type="button"
-              onClick={() => navigate(`/orders/spaces/${encodeURIComponent(activeSpaceKey)}`)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition cursor-pointer"
-            >
-              <span>Không gian: {activeSpaceKey}</span>
-            </button>
-          )}
-
-          {activeSpaceKey && canAccessBomPage && (
-            <button
-              type="button"
-              onClick={() => navigate(`/bom?spaceKey=${encodeURIComponent(activeSpaceKey)}`)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
-            >
-              <span>BOM &amp; quy trình</span>
-            </button>
-          )}
-
-          {activeSpaceKey && canAccessReconciliationPage && (
-            <button
-              type="button"
-              onClick={() =>
-                navigate(`/inventory/reconciliation?spaceKey=${encodeURIComponent(activeSpaceKey)}`)
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
-            >
-              <span>Đối chiếu tồn kho</span>
-            </button>
-          )}
         </div>
-      }
-    >
+      </HeaderTopLeft>
       <div className="max-w-[1440px] mx-auto space-y-6">
         {/* Toast thông báo kết quả */}
         {toastBanner && (
@@ -1255,36 +1358,53 @@ export default function ProductionProcessPage() {
               </span>
               {spaceInfo?.poNumber && (
                 <span className="text-sm text-slate-600">
-                  Mã PO: <strong className="font-mono text-slate-900">{spaceInfo.poNumber}</strong>
+                  Mã PO:{" "}
+                  <strong className="font-mono text-slate-900">
+                    {spaceInfo.poNumber}
+                  </strong>
                 </span>
               )}
               {spaceInfo?.customerName && (
                 <span className="text-sm text-slate-600">
                   • Khách hàng:{" "}
-                  <strong className="text-slate-900">{spaceInfo.customerName}</strong>
+                  <strong className="text-slate-900">
+                    {spaceInfo.customerName}
+                  </strong>
                 </span>
               )}
               {spaceInfo?.etdDate && (
                 <span className="text-sm text-slate-600">
-                  • ETD: <strong className="text-slate-900">{fmtDate(spaceInfo.etdDate)}</strong>
+                  • ETD:{" "}
+                  <strong className="text-slate-900">
+                    {fmtDate(spaceInfo.etdDate)}
+                  </strong>
                 </span>
               )}
             </div>
 
             <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight mt-2">
               Tiến độ &amp; Quy trình Sản xuất:{" "}
-              <span className="text-blue-700">{currentLineItem?.productName || "Đang tải..."}</span>
+              <span className="text-blue-700">
+                {currentLineItem?.productName || "Đang tải..."}
+              </span>
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Mã SKU: <strong className="font-mono text-slate-800">{currentLineItem?.productSku || "—"}</strong>{" "}
-              (Mục #{currentLineItem?.orderItemId}) • Theo dõi trực quan chuỗi công đoạn tuần tự theo cấu trúc định tuyến động (Routing) &amp; Kiểm soát KCS.
+              Mã SKU:{" "}
+              <strong className="font-mono text-slate-800">
+                {currentLineItem?.productSku || "—"}
+              </strong>{" "}
+              (Mục #{currentLineItem?.orderItemId}) • Theo dõi trực quan chuỗi
+              công đoạn tuần tự theo cấu trúc định tuyến động (Routing) &amp;
+              Kiểm soát KCS.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => navigate(`/orders/spaces/${encodeURIComponent(activeSpaceKey)}`)}
+              onClick={() =>
+                navigate(`/orders/spaces/${encodeURIComponent(activeSpaceKey)}`)
+              }
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer"
             >
               <span>← Về Không gian đơn hàng</span>
@@ -1292,7 +1412,10 @@ export default function ProductionProcessPage() {
 
             {currentLineItem && (
               <div className="px-3.5 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900">
-                SL yêu cầu: <strong className="font-extrabold">{fmtNum(currentLineItem.orderedQty)} SP</strong>
+                SL yêu cầu:{" "}
+                <strong className="font-extrabold">
+                  {fmtNum(currentLineItem.orderedQty)} SP
+                </strong>
               </div>
             )}
           </div>
@@ -1316,7 +1439,10 @@ export default function ProductionProcessPage() {
                     </span>
                   </div>
                   <div className="text-xs text-slate-500 mt-1.5">
-                    Lô đang chọn: <strong className="font-mono text-slate-800">{activeBatch.batchCode}</strong>
+                    Lô đang chọn:{" "}
+                    <strong className="font-mono text-slate-800">
+                      {activeBatch.batchCode}
+                    </strong>
                     {activeBatch.isOverdriver && " • Chế độ Overdrive"}
                   </div>
                 </>
@@ -1340,11 +1466,14 @@ export default function ProductionProcessPage() {
                 SẢN LƯỢNG ĐÃ PHÁT HÀNH
               </div>
               <div className="text-2xl font-extrabold text-slate-900 mt-1.5">
-                <span className="text-blue-600">{fmtNum(releaseSummary.initialMainReleasedQty)}</span>{" "}
+                <span className="text-blue-600">
+                  {fmtNum(releaseSummary.initialMainReleasedQty)}
+                </span>{" "}
                 / {fmtNum(releaseSummary.orderedQty)} SP
               </div>
               <div className="text-xs text-slate-500 mt-1">
-                {releaseSummary.mainBatchesCount} lô chính • {releaseSummary.subBatchesCount} lô phụ
+                {releaseSummary.mainBatchesCount} lô chính •{" "}
+                {releaseSummary.subBatchesCount} lô phụ
                 {releaseSummary.remainingUnreleasedQty > 0
                   ? ` • Còn ${fmtNum(releaseSummary.remainingUnreleasedQty)} SP chưa phát hành`
                   : " • Đã phát hành 100%"}
@@ -1359,8 +1488,8 @@ export default function ProductionProcessPage() {
               {activeBatch ? (
                 <>
                   <div className="text-2xl font-extrabold text-slate-900 mt-1.5">
-                    <span className="text-emerald-600">{passedStepsCount}</span> /{" "}
-                    {activeBatch.steps.length} công đoạn
+                    <span className="text-emerald-600">{passedStepsCount}</span>{" "}
+                    / {activeBatch.steps.length} công đoạn
                   </div>
                   <div className="text-xs text-slate-500 mt-1 truncate">
                     {isBatchDone
@@ -1389,7 +1518,8 @@ export default function ProductionProcessPage() {
               </div>
               <div
                 className={`text-xl font-extrabold mt-1.5 ${
-                  orderProgress?.etdRiskLevel === "OVERDUE" || orderProgress?.etdRiskLevel === "WARNING"
+                  orderProgress?.etdRiskLevel === "OVERDUE" ||
+                  orderProgress?.etdRiskLevel === "WARNING"
                     ? "text-rose-600"
                     : "text-slate-900"
                 }`}
@@ -1410,137 +1540,159 @@ export default function ProductionProcessPage() {
         )}
 
         {/* TRƯỜNG HỢP CHƯA PHÁT HÀNH LÔ SẢN XUẤT NÀO */}
-        {!isLoadingBatches && currentLineItem && currentItemBatches.length === 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-xs space-y-6">
-            <div className="text-center max-w-2xl mx-auto space-y-2">
-              <div className="w-14 h-14 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
-                ⚙️
+        {!isLoadingBatches &&
+          currentLineItem &&
+          currentItemBatches.length === 0 && (
+            <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-xs space-y-6">
+              <div className="text-center max-w-2xl mx-auto space-y-2">
+                <div className="w-14 h-14 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
+                  ⚙️
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Sản phẩm &ldquo;{currentLineItem.productName}&rdquo; chưa phát
+                  hành lệnh sản xuất
+                </h3>
+                <p className="text-sm text-slate-600">
+                  Kiểm tra điều kiện tiên quyết trước khi chia lô và phát hành
+                  xuống phân xưởng. Lưu ý: Lệnh sản xuất sau khi phát hành không
+                  thể hủy bỏ.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-slate-900">
-                Sản phẩm &ldquo;{currentLineItem.productName}&rdquo; chưa phát hành lệnh sản xuất
-              </h3>
-              <p className="text-sm text-slate-600">
-                Kiểm tra điều kiện tiên quyết trước khi chia lô và phát hành xuống phân xưởng. Lưu ý:
-                Lệnh sản xuất sau khi phát hành không thể hủy bỏ.
-              </p>
-            </div>
 
-            {/* Checklist Điều kiện tiên quyết */}
-            <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              <div
-                className={`p-4 rounded-xl border ${
-                  prerequisiteState.hasBomRecord && prerequisiteState.isBomApproved
-                    ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
-                    : prerequisiteState.hasBomRecord
-                      ? "bg-amber-50/70 border-amber-200 text-amber-900"
-                      : "bg-rose-50/70 border-rose-200 text-rose-900"
-                }`}
-              >
-                <div className="font-bold uppercase tracking-wide flex items-center justify-between">
-                  <span>1. Điều kiện Định mức BOM</span>
-                  <span>
-                    {prerequisiteState.hasBomRecord && prerequisiteState.isBomApproved
-                      ? "✓ Đạt"
+              {/* Checklist Điều kiện tiên quyết */}
+              <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div
+                  className={`p-4 rounded-xl border ${
+                    prerequisiteState.hasBomRecord &&
+                    prerequisiteState.isBomApproved
+                      ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
                       : prerequisiteState.hasBomRecord
-                        ? "⚠ Chờ duyệt"
-                        : "✕ Chưa có BOM"}
-                  </span>
+                        ? "bg-amber-50/70 border-amber-200 text-amber-900"
+                        : "bg-rose-50/70 border-rose-200 text-rose-900"
+                  }`}
+                >
+                  <div className="font-bold uppercase tracking-wide flex items-center justify-between">
+                    <span>1. Điều kiện Định mức BOM</span>
+                    <span>
+                      {prerequisiteState.hasBomRecord &&
+                      prerequisiteState.isBomApproved
+                        ? "✓ Đạt"
+                        : prerequisiteState.hasBomRecord
+                          ? "⚠ Chờ duyệt"
+                          : "✕ Chưa có BOM"}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 text-slate-700">
+                    {prerequisiteState.hasBomRecord
+                      ? prerequisiteState.isBomApproved
+                        ? `BOM đã được phê duyệt (${prerequisiteState.bomStatusLabel}), sẵn sàng phát hành.`
+                        : `BOM đang ở trạng thái "${prerequisiteState.bomStatusLabel}". Cần duyệt BOM trước hoặc kích hoạt Overdrive có giải trình.`
+                      : "Bắt buộc phải thiết lập định mức BOM trước khi phát hành lệnh sản xuất."}
+                  </div>
+                  {!prerequisiteState.isBomApproved && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/bom?spaceKey=${encodeURIComponent(activeSpaceKey)}&orderItemId=${currentLineItem.orderItemId}&sku=${encodeURIComponent(currentLineItem.productSku)}`,
+                        )
+                      }
+                      className="mt-2 inline-flex items-center gap-1 font-bold text-blue-700 hover:underline cursor-pointer"
+                    >
+                      <span>Đi tới trang Lập &amp; Duyệt BOM →</span>
+                    </button>
+                  )}
                 </div>
-                <div className="mt-1.5 text-slate-700">
-                  {prerequisiteState.hasBomRecord
-                    ? prerequisiteState.isBomApproved
-                      ? `BOM đã được phê duyệt (${prerequisiteState.bomStatusLabel}), sẵn sàng phát hành.`
-                      : `BOM đang ở trạng thái "${prerequisiteState.bomStatusLabel}". Cần duyệt BOM trước hoặc kích hoạt Overdrive có giải trình.`
-                    : "Bắt buộc phải thiết lập định mức BOM trước khi phát hành lệnh sản xuất."}
-                </div>
-                {!prerequisiteState.isBomApproved && (
+
+                <div
+                  className={`p-4 rounded-xl border ${
+                    prerequisiteState.isMaterialIssuedToShop
+                      ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+                      : "bg-amber-50/70 border-amber-200 text-amber-900"
+                  }`}
+                >
+                  <div className="font-bold uppercase tracking-wide flex items-center justify-between">
+                    <span>2. Điều kiện Vật tư &amp; Xuất kho</span>
+                    <span>
+                      {prerequisiteState.isMaterialIssuedToShop
+                        ? "✓ Đã xuất kho"
+                        : "⚠ Chưa xuất kho"}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 text-slate-700">
+                    {prerequisiteState.isMaterialIssuedToShop
+                      ? "Toàn bộ vật tư đã được Thủ kho xuất ra xưởng. Lô phát hành sẽ chạy ngay."
+                      : "Vật tư chưa chuyển trạng thái Xuất kho ra xưởng (ISSUED_TO_SHOP). Nếu không bật chạy trước Overdrive, lô tạo ra sẽ tạm khóa (LOCKED)."}
+                  </div>
                   <button
                     type="button"
-                    onClick={() => navigate(`/bom?spaceKey=${encodeURIComponent(activeSpaceKey)}`)}
+                    onClick={() =>
+                      navigate(
+                        `/inventory/reconciliation?spaceKey=${encodeURIComponent(activeSpaceKey)}`,
+                      )
+                    }
                     className="mt-2 inline-flex items-center gap-1 font-bold text-blue-700 hover:underline cursor-pointer"
                   >
-                    <span>Đi tới trang Lập &amp; Duyệt BOM →</span>
+                    <span>Kiểm tra Đối chiếu &amp; Khóa vật tư →</span>
                   </button>
-                )}
+                </div>
               </div>
 
-              <div
-                className={`p-4 rounded-xl border ${
-                  prerequisiteState.isMaterialIssuedToShop
-                    ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
-                    : "bg-amber-50/70 border-amber-200 text-amber-900"
-                }`}
-              >
-                <div className="font-bold uppercase tracking-wide flex items-center justify-between">
-                  <span>2. Điều kiện Vật tư &amp; Xuất kho (BR-008)</span>
-                  <span>{prerequisiteState.isMaterialIssuedToShop ? "✓ Đã xuất kho" : "⚠ Chưa xuất kho"}</span>
-                </div>
-                <div className="mt-1.5 text-slate-700">
-                  {prerequisiteState.isMaterialIssuedToShop
-                    ? "Toàn bộ vật tư đã được Thủ kho xuất ra xưởng. Lô phát hành sẽ chạy ngay."
-                    : "Vật tư chưa chuyển trạng thái Xuất kho ra xưởng (ISSUED_TO_SHOP). Nếu không bật chạy trước Overdrive, lô tạo ra sẽ tạm khóa (LOCKED)."}
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(`/inventory/reconciliation?spaceKey=${encodeURIComponent(activeSpaceKey)}`)
-                  }
-                  className="mt-2 inline-flex items-center gap-1 font-bold text-blue-700 hover:underline cursor-pointer"
-                >
-                  <span>Kiểm tra Đối chiếu &amp; Khóa vật tư →</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Hiển thị các công đoạn dự kiến từ quy trình động */}
-            {productRoutingStages.length > 0 && (
-              <div className="max-w-3xl mx-auto">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                  Quy trình định tuyến dự kiến ({productRoutingStages.length} công đoạn):
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-left">
-                  {productRoutingStages.map((stg) => (
-                    <div
-                      key={stg.stageId || stg.stageSequence}
-                      className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                    >
-                      <span className="font-mono font-bold text-blue-600">
-                        S-{stg.stageSequence.toString().padStart(2, "0")}
-                      </span>
-                      <div className="font-semibold text-slate-800 mt-1 truncate" title={stg.stageName}>
-                        {stg.stageName}
+              {/* Hiển thị các công đoạn dự kiến từ quy trình động */}
+              {productRoutingStages.length > 0 && (
+                <div className="max-w-3xl mx-auto">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                    Quy trình định tuyến dự kiến ({productRoutingStages.length}{" "}
+                    công đoạn):
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-left">
+                    {productRoutingStages.map((stg) => (
+                      <div
+                        key={stg.stageId || stg.stageSequence}
+                        className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                      >
+                        <span className="font-mono font-bold text-blue-600">
+                          S-{stg.stageSequence.toString().padStart(2, "0")}
+                        </span>
+                        <div
+                          className="font-semibold text-slate-800 mt-1 truncate"
+                          title={stg.stageName}
+                        >
+                          {stg.stageName}
+                        </div>
+                        <div className="text-slate-500 text-[11px] mt-0.5 flex items-center justify-between">
+                          <span>{stg.workstationCode || "Trạm SX"}</span>
+                          {stg.isHoldPoint && (
+                            <span className="text-rose-600 font-bold">
+                              Hold Point
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-slate-500 text-[11px] mt-0.5 flex items-center justify-between">
-                        <span>{stg.workstationCode || "Trạm SX"}</span>
-                        {stg.isHoldPoint && (
-                          <span className="text-rose-600 font-bold">Hold Point</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="text-center pt-2">
-              {isLeaderAuthorized ? (
-                <button
-                  type="button"
-                  onClick={handleOpenGenerateModal}
-                  disabled={!prerequisiteState.hasBomRecord}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span>Thiết lập Chia lô &amp; Phát hành Lệnh sản xuất</span>
-                </button>
-              ) : (
-                <div className="text-xs text-slate-500 italic">
-                  Chỉ Tổ trưởng sản xuất (Leader), Chủ xưởng hoặc Admin mới có quyền phát hành lệnh
-                  sản xuất.
+                    ))}
+                  </div>
                 </div>
               )}
+
+              <div className="text-center pt-2">
+                {isLeaderAuthorized ? (
+                  <button
+                    type="button"
+                    onClick={handleOpenGenerateModal}
+                    disabled={!prerequisiteState.hasBomRecord}
+                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span>Thiết lập Chia lô &amp; Phát hành Lệnh sản xuất</span>
+                  </button>
+                ) : (
+                  <div className="text-xs text-slate-500 italic">
+                    Chỉ Tổ trưởng sản xuất (Leader), Chủ xưởng hoặc Admin mới có
+                    quyền phát hành lệnh sản xuất.
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* TRƯỜNG HỢP ĐÃ CÓ LÔ SẢN XUẤT */}
         {currentItemBatches.length > 0 && activeBatch && (
@@ -1552,7 +1704,9 @@ export default function ProductionProcessPage() {
                   Danh sách lô ({currentItemBatches.length}):
                 </span>
                 {currentItemBatches.map((b) => {
-                  const isSub = b.batchType === "REWORK_SUB_CARD" || b.batchType === "REPLENISH_LOT";
+                  const isSub =
+                    b.batchType === "REWORK_SUB_CARD" ||
+                    b.batchType === "REPLENISH_LOT";
                   const isSelected = activeBatch.batchId === b.batchId;
                   const meta = getBatchStatusMeta(b.batchStatus);
                   return (
@@ -1573,14 +1727,18 @@ export default function ProductionProcessPage() {
                       {isSub && (
                         <span
                           className={`px-1 py-0.2 rounded text-[10px] font-extrabold ${
-                            isSelected ? "bg-amber-800 text-amber-100" : "bg-amber-200 text-amber-900"
+                            isSelected
+                              ? "bg-amber-800 text-amber-100"
+                              : "bg-amber-200 text-amber-900"
                           }`}
                         >
                           Lô phụ 3%
                         </span>
                       )}
                       <span className="font-mono">{b.batchCode}</span>
-                      <span className="opacity-85">({fmtNum(b.batchQty)} SP)</span>
+                      <span className="opacity-85">
+                        ({fmtNum(b.batchQty)} SP)
+                      </span>
                       <span
                         className={`w-2 h-2 rounded-full ${
                           b.batchStatus === "DONE"
@@ -1598,15 +1756,17 @@ export default function ProductionProcessPage() {
                 })}
               </div>
 
-              {releaseSummary.remainingUnreleasedQty > 0 && isLeaderAuthorized && (
-                <button
-                  type="button"
-                  onClick={handleOpenGenerateModal}
-                  className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-lg transition cursor-pointer shrink-0"
-                >
-                  + Phát hành bổ sung ({fmtNum(releaseSummary.remainingUnreleasedQty)} SP còn lại)
-                </button>
-              )}
+              {releaseSummary.remainingUnreleasedQty > 0 &&
+                isLeaderAuthorized && (
+                  <button
+                    type="button"
+                    onClick={handleOpenGenerateModal}
+                    className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-lg transition cursor-pointer shrink-0"
+                  >
+                    + Phát hành bổ sung (
+                    {fmtNum(releaseSummary.remainingUnreleasedQty)} SP còn lại)
+                  </button>
+                )}
             </div>
 
             {/* Banner thông tin riêng cho Lô phụ tách nhánh 97%-3% */}
@@ -1614,12 +1774,16 @@ export default function ProductionProcessPage() {
               <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <div className="font-extrabold uppercase tracking-wide flex items-center gap-2">
-                    <span>⚠️ Thẻ nhánh phụ xử lý lỗi 97%-3% ({activeBatch.batchType})</span>
+                    <span>
+                      ⚠️ Thẻ nhánh phụ xử lý lỗi 97%-3% ({activeBatch.batchType}
+                      )
+                    </span>
                   </div>
                   <div>
                     Tách từ Lô chính:{" "}
                     <strong className="font-mono">
-                      {parentMainBatch?.batchCode || `#${activeBatch.parentBatchId}`}
+                      {parentMainBatch?.batchCode ||
+                        `#${activeBatch.parentBatchId}`}
                     </strong>{" "}
                     {parentMainBatch &&
                       `(Lô chính đang ở công đoạn S-${parentMainBatch.currentStageSeq} • Trạng thái: ${getBatchStatusMeta(parentMainBatch.batchStatus).label})`}
@@ -1663,7 +1827,8 @@ export default function ProductionProcessPage() {
                     </span>
                     {activeBatch.isOverdriver && (
                       <span className="inline-block px-2 py-0.5 rounded-md text-xs font-bold uppercase bg-orange-100 text-orange-800 border border-orange-200">
-                        ⚡ OVERDRIVE (Hold #{activeBatch.holdPointStageSeq ?? 5})
+                        ⚡ OVERDRIVE (Hold #{activeBatch.holdPointStageSeq ?? 5}
+                        )
                       </span>
                     )}
                   </h2>
@@ -1671,7 +1836,8 @@ export default function ProductionProcessPage() {
 
                 <div className="text-xs text-slate-500 text-right">
                   <div>
-                    Tổng <strong>{activeBatch.steps.length} công đoạn</strong> định tuyến
+                    Tổng <strong>{activeBatch.steps.length} công đoạn</strong>{" "}
+                    định tuyến
                   </div>
                   <div>Khởi tạo: {fmtDateTime(activeBatch.createdAt)}</div>
                 </div>
@@ -1685,7 +1851,8 @@ export default function ProductionProcessPage() {
                   {activeBatch.steps.map((st) => {
                     const isPassed = st.stepStatus === "PASSED";
                     const isActiveStage =
-                      !isBatchDone && st.stageSequence === activeBatch.currentStageSeq;
+                      !isBatchDone &&
+                      st.stageSequence === activeBatch.currentStageSeq;
                     const isStepBlocked =
                       st.stepStatus === "BLOCKED" ||
                       (isActiveStage && (isBatchLocked || isBatchHoldBlocked));
@@ -1739,10 +1906,18 @@ export default function ProductionProcessPage() {
                           </div>
 
                           <div className="text-[11px] font-semibold text-slate-700 mt-1">
-                            <span className={isPassed ? "text-emerald-700 font-bold" : "text-slate-900"}>
+                            <span
+                              className={
+                                isPassed
+                                  ? "text-emerald-700 font-bold"
+                                  : "text-slate-900"
+                              }
+                            >
                               {fmtNum(st.passedQty)}
                             </span>
-                            <span className="text-slate-400">/{fmtNum(st.targetQty)}</span>
+                            <span className="text-slate-400">
+                              /{fmtNum(st.targetQty)}
+                            </span>
                           </div>
 
                           {st.isHoldPoint && (
@@ -1769,12 +1944,17 @@ export default function ProductionProcessPage() {
                         ✓ Hoàn tất quy trình sản xuất
                       </span>
                       <h3 className="text-xl font-extrabold text-slate-900">
-                        Lô <span className="font-mono text-emerald-700">{activeBatch.batchCode}</span>{" "}
+                        Lô{" "}
+                        <span className="font-mono text-emerald-700">
+                          {activeBatch.batchCode}
+                        </span>{" "}
                         đã hoàn tất 100% các công đoạn &amp; nhập kho thành phẩm
                       </h3>
                       <p className="text-xs text-slate-600">
                         Sản lượng hoàn tất:{" "}
-                        <strong className="text-emerald-800">{fmtNum(activeBatch.batchQty)} SP</strong>{" "}
+                        <strong className="text-emerald-800">
+                          {fmtNum(activeBatch.batchQty)} SP
+                        </strong>{" "}
                         • Hoàn thành lúc:{" "}
                         <strong>{fmtDateTime(activeStep.completedAt)}</strong>
                       </p>
@@ -1796,7 +1976,9 @@ export default function ProductionProcessPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span
                             className={`px-2.5 py-0.5 text-white text-xs font-extrabold uppercase rounded-full ${
-                              isBatchHoldBlocked ? "bg-rose-600" : "bg-amber-600"
+                              isBatchHoldBlocked
+                                ? "bg-rose-600"
+                                : "bg-amber-600"
                             }`}
                           >
                             {isBatchHoldBlocked
@@ -1804,7 +1986,10 @@ export default function ProductionProcessPage() {
                               : "🔒 ĐANG TẠM KHÓA CHỜ XUẤT KHO VẬT TƯ (LOCKED)"}
                           </span>
                           <span className="text-xs font-bold text-slate-600">
-                            Công đoạn đang chờ: S-{activeStep.stageSequence.toString().padStart(2, "0")}{" "}
+                            Công đoạn đang chờ: S-
+                            {activeStep.stageSequence
+                              .toString()
+                              .padStart(2, "0")}{" "}
                             {activeStep.stageName}
                           </span>
                         </div>
@@ -1816,8 +2001,8 @@ export default function ProductionProcessPage() {
                         </h3>
                         <p className="text-xs text-slate-700">
                           {isBatchHoldBlocked
-                            ? "Theo quy tắc QT-06 / KBN02, Thủ kho cần xác nhận xuất kho bổ sung vật tư (Mở khóa Hold Point) hoặc Chủ xưởng phê duyệt ghi đè ngoại lệ Overdrive để dây chuyền tiếp tục."
-                            : "Theo quy tắc BR-008, vật tư chưa được chuyển trạng thái Xuất kho ra xưởng (ISSUED_TO_SHOP). Tổ trưởng có thể gửi yêu cầu chạy trước Overdrive hoặc Chủ xưởng/Admin phê duyệt mở khóa để bắt đầu gia công ngay."}
+                            ? "Thủ kho cần xác nhận xuất kho bổ sung vật tư (Mở khóa Hold Point) hoặc Chủ xưởng phê duyệt ghi đè ngoại lệ Overdrive để dây chuyền tiếp tục."
+                            : "Vật tư chưa được xác nhận Xuất kho ra xưởng. Tổ trưởng có thể gửi yêu cầu chạy trước Overdrive hoặc Chủ xưởng/Quản trị viên phê duyệt mở khóa để bắt đầu gia công ngay."}
                         </p>
                       </div>
 
@@ -1828,7 +2013,8 @@ export default function ProductionProcessPage() {
                             onClick={() => {
                               setRequestOverdriveBatch(activeBatch);
                               setRequestOverdriveForm({
-                                holdPointStageSeq: activeBatch.holdPointStageSeq ?? 5,
+                                holdPointStageSeq:
+                                  activeBatch.holdPointStageSeq ?? 5,
                                 justification:
                                   "Đề nghị mở khóa chạy sơ chế gỗ thô trước để đảm bảo tiến độ giao hàng ETD.",
                               });
@@ -1846,7 +2032,8 @@ export default function ProductionProcessPage() {
                               setApproveOverdriveBatch(activeBatch);
                               setApproveOverdriveForm({
                                 approved: true,
-                                holdPointStageSeq: activeBatch.holdPointStageSeq ?? 5,
+                                holdPointStageSeq:
+                                  activeBatch.holdPointStageSeq ?? 5,
                                 notes:
                                   "Chủ xưởng phê duyệt mở khóa chạy sản xuất trước trạm dừng Hold Point.",
                               });
@@ -1858,7 +2045,8 @@ export default function ProductionProcessPage() {
                         )}
 
                         {(isWarehouseAuthorized || isOwnerOrAdmin) &&
-                          (isBatchHoldBlocked || !activeBatch.goodsIssuedUnlocked) && (
+                          (isBatchHoldBlocked ||
+                            !activeBatch.goodsIssuedUnlocked) && (
                             <button
                               type="button"
                               disabled={isSubmittingAction}
@@ -1877,7 +2065,9 @@ export default function ProductionProcessPage() {
                 {!isBatchDone && !isBatchLocked && !isBatchHoldBlocked && (
                   <div
                     className={`p-6 rounded-xl border-2 transition shadow-xs ${
-                      isQcAuthorized || isLeaderAuthorized || (isFinalStep && isWarehouseAuthorized)
+                      isQcAuthorized ||
+                      isLeaderAuthorized ||
+                      (isFinalStep && isWarehouseAuthorized)
                         ? isSubBatch
                           ? "bg-gradient-to-r from-amber-50/90 via-orange-50/40 to-white border-amber-400 ring-2 ring-amber-100"
                           : "bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-white border-blue-400 ring-2 ring-blue-100"
@@ -1893,12 +2083,15 @@ export default function ProductionProcessPage() {
                             }`}
                           >
                             Công đoạn đang thực thi: S-
-                            {activeStep.stageSequence.toString().padStart(2, "0")}
+                            {activeStep.stageSequence
+                              .toString()
+                              .padStart(2, "0")}
                           </span>
                           <span className="text-xs font-bold text-slate-600 uppercase">
                             Trạm:{" "}
                             <strong className="text-slate-900">
-                              {activeStep.workstationName || activeStep.workstationCode}
+                              {activeStep.workstationName ||
+                                activeStep.workstationCode}
                             </strong>
                           </span>
                           {activeStep.isHoldPoint && (
@@ -1920,7 +2113,8 @@ export default function ProductionProcessPage() {
                         </h3>
 
                         <p className="text-xs text-slate-600">
-                          Tiêu chuẩn KCS ({activeStep.qualityGateCode || "QC GATE"}):{" "}
+                          Tiêu chuẩn KCS (
+                          {activeStep.qualityGateCode || "QC GATE"}):{" "}
                           <strong>
                             {activeStep.inspectionCriteria ||
                               "Kiểm định 100% kích thước & thông số kỹ thuật phôi"}
@@ -1978,35 +2172,42 @@ export default function ProductionProcessPage() {
                         )}
 
                         {/* Trường hợp 2A: Lô phụ đã đạt KCS và có thể Gộp lô chính */}
-                        {isSubBatch && canMergeWithParent && isLeaderAuthorized && parentMainBatch && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMergeModalBatch(activeBatch);
-                              setMergeReasonInput(
-                                `Gộp ${activeBatch.batchQty} SP đã sửa chữa đạt chuẩn vào lô chính ${parentMainBatch.batchCode} tại công đoạn S-${activeBatch.currentStageSeq}.`,
-                              );
-                            }}
-                            className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer"
-                          >
-                            <span>Gộp vào Lô chính ({parentMainBatch.batchCode})</span>
-                          </button>
-                        )}
+                        {isSubBatch &&
+                          canMergeWithParent &&
+                          isLeaderAuthorized &&
+                          parentMainBatch && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMergeModalBatch(activeBatch);
+                                setMergeReasonInput(
+                                  `Gộp ${activeBatch.batchQty} SP đã sửa chữa đạt chuẩn vào lô chính ${parentMainBatch.batchCode} tại công đoạn S-${activeBatch.currentStageSeq}.`,
+                                );
+                              }}
+                              className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer"
+                            >
+                              <span>
+                                Gộp vào Lô chính ({parentMainBatch.batchCode})
+                              </span>
+                            </button>
+                          )}
 
                         {/* Trường hợp 2B: Đã đạt KCS và chưa phải công đoạn cuối -> Chuyển bước */}
-                        {isCurrentStepPassed && !isFinalStep && isLeaderAuthorized && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenAdvanceModal(activeStep)}
-                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer"
-                          >
-                            <span>
-                              {isSubBatch
-                                ? `Chuyển bước độc lập S-${(activeStep.stageSequence + 1).toString().padStart(2, "0")} →`
-                                : `Chuyển sang công đoạn S-${(activeStep.stageSequence + 1).toString().padStart(2, "0")} →`}
-                            </span>
-                          </button>
-                        )}
+                        {isCurrentStepPassed &&
+                          !isFinalStep &&
+                          isLeaderAuthorized && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAdvanceModal(activeStep)}
+                              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer"
+                            >
+                              <span>
+                                {isSubBatch
+                                  ? `Chuyển bước độc lập S-${(activeStep.stageSequence + 1).toString().padStart(2, "0")} →`
+                                  : `Chuyển sang công đoạn S-${(activeStep.stageSequence + 1).toString().padStart(2, "0")} →`}
+                              </span>
+                            </button>
+                          )}
 
                         {/* Trường hợp 3: Công đoạn cuối cùng đã đạt 100% KCS -> Nhập kho thành phẩm */}
                         {isCurrentStepPassed &&
@@ -2014,10 +2215,14 @@ export default function ProductionProcessPage() {
                           (isLeaderAuthorized || isWarehouseAuthorized) && (
                             <button
                               type="button"
-                              onClick={() => handleOpenCompleteModal(activeBatch)}
+                              onClick={() =>
+                                handleOpenCompleteModal(activeBatch)
+                              }
                               className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer"
                             >
-                              <span>Hoàn tất Lô &amp; Nhập kho thành phẩm ★</span>
+                              <span>
+                                Hoàn tất Lô &amp; Nhập kho thành phẩm ★
+                              </span>
                             </button>
                           )}
 
@@ -2063,7 +2268,8 @@ export default function ProductionProcessPage() {
                           <strong className="text-rose-700">
                             {fmtNum(activeStep.defectQty)} lỗi
                           </strong>{" "}
-                          / Tổng định mức <strong>{fmtNum(activeStep.targetQty)} SP</strong>
+                          / Tổng định mức{" "}
+                          <strong>{fmtNum(activeStep.targetQty)} SP</strong>
                         </span>
                         <span className="font-bold text-slate-800">
                           {Math.min(
@@ -2105,8 +2311,8 @@ export default function ProductionProcessPage() {
                     Chi tiết các công đoạn sản xuất &amp; Cổng QC
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Bảng theo dõi tuần tự qua các trạm máy, thời gian bắt đầu/kết thúc, kiểm định
-                    chất lượng và trạng thái thực thi.
+                    Bảng theo dõi tuần tự qua các trạm máy, thời gian bắt
+                    đầu/kết thúc, kiểm định chất lượng và trạng thái thực thi.
                   </p>
                 </div>
               </div>
@@ -2117,9 +2323,15 @@ export default function ProductionProcessPage() {
                     <tr>
                       <th className="px-5 py-3">Thứ tự &amp; Công đoạn</th>
                       <th className="px-4 py-3">Trạm gia công</th>
-                      <th className="px-4 py-3">Cổng QC Gate &amp; Tiêu chuẩn</th>
-                      <th className="px-4 py-3">Thời gian (Bắt đầu / Kết thúc)</th>
-                      <th className="px-4 py-3 text-right">Số lượng Đạt / Tổng</th>
+                      <th className="px-4 py-3">
+                        Cổng QC Gate &amp; Tiêu chuẩn
+                      </th>
+                      <th className="px-4 py-3">
+                        Thời gian (Bắt đầu / Kết thúc)
+                      </th>
+                      <th className="px-4 py-3 text-right">
+                        Số lượng Đạt / Tổng
+                      </th>
                       <th className="px-4 py-3 text-center">Trạng thái</th>
                       <th className="px-5 py-3 text-right">Thao tác</th>
                     </tr>
@@ -2128,14 +2340,28 @@ export default function ProductionProcessPage() {
                     {activeBatch.steps.map((st, idx) => {
                       const isPassed = st.stepStatus === "PASSED";
                       const isActiveStage =
-                        !isBatchDone && st.stageSequence === activeBatch.currentStageSeq;
+                        !isBatchDone &&
+                        st.stageSequence === activeBatch.currentStageSeq;
                       const isStepFinal =
                         st.stageSequence ===
-                        Math.max(...activeBatch.steps.map((x) => x.stageSequence));
+                        Math.max(
+                          ...activeBatch.steps.map((x) => x.stageSequence),
+                        );
                       const canActOnRow =
-                        isActiveStage && !isBatchLocked && !isBatchHoldBlocked && !isBatchDone;
-                      const timestamps = getStepTimestamps(activeBatch.steps, idx, activeBatch);
-                      const statusMeta = getStepStatusMeta(st, isActiveStage, activeBatch.batchStatus);
+                        isActiveStage &&
+                        !isBatchLocked &&
+                        !isBatchHoldBlocked &&
+                        !isBatchDone;
+                      const timestamps = getStepTimestamps(
+                        activeBatch.steps,
+                        idx,
+                        activeBatch,
+                      );
+                      const statusMeta = getStepStatusMeta(
+                        st,
+                        isActiveStage,
+                        activeBatch.batchStatus,
+                      );
 
                       return (
                         <tr
@@ -2160,7 +2386,9 @@ export default function ProductionProcessPage() {
                                 {isPassed ? "✓" : st.stageSequence}
                               </span>
                               <div>
-                                <div className="font-bold text-slate-900">{st.stageName}</div>
+                                <div className="font-bold text-slate-900">
+                                  {st.stageName}
+                                </div>
                                 {st.isHoldPoint && (
                                   <span className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
                                     ⛔ Chốt chặn Hold Point
@@ -2187,7 +2415,8 @@ export default function ProductionProcessPage() {
                               className="text-xs text-slate-500 truncate"
                               title={st.inspectionCriteria}
                             >
-                              {st.inspectionCriteria || "Kiểm định thông số kỹ thuật 100%"}
+                              {st.inspectionCriteria ||
+                                "Kiểm định thông số kỹ thuật 100%"}
                             </div>
                           </td>
 
@@ -2196,14 +2425,20 @@ export default function ProductionProcessPage() {
                               <div className="text-slate-700">
                                 <span className="text-slate-400">Bắt đầu:</span>{" "}
                                 <strong className="font-mono text-slate-800">
-                                  {timestamps.startedAt ? fmtDateTime(timestamps.startedAt) : "Chưa bắt đầu"}
+                                  {timestamps.startedAt
+                                    ? fmtDateTime(timestamps.startedAt)
+                                    : "Chưa bắt đầu"}
                                 </strong>
                               </div>
                               <div className="text-slate-700">
-                                <span className="text-slate-400">Kết thúc:</span>{" "}
+                                <span className="text-slate-400">
+                                  Kết thúc:
+                                </span>{" "}
                                 <strong
                                   className={`font-mono ${
-                                    timestamps.completedAt ? "text-emerald-700" : "text-slate-500"
+                                    timestamps.completedAt
+                                      ? "text-emerald-700"
+                                      : "text-slate-500"
                                   }`}
                                 >
                                   {timestamps.completedAt
@@ -2218,8 +2453,10 @@ export default function ProductionProcessPage() {
 
                           <td className="px-4 py-4 text-right whitespace-nowrap">
                             <div className="font-bold text-slate-900">
-                              <span className="text-emerald-700">{fmtNum(st.passedQty)}</span> /{" "}
-                              {fmtNum(st.targetQty)} SP
+                              <span className="text-emerald-700">
+                                {fmtNum(st.passedQty)}
+                              </span>{" "}
+                              / {fmtNum(st.targetQty)} SP
                             </div>
                             {st.defectQty > 0 && (
                               <div className="text-xs text-rose-600 font-semibold">
@@ -2266,7 +2503,9 @@ export default function ProductionProcessPage() {
                               (isLeaderAuthorized || isWarehouseAuthorized) && (
                                 <button
                                   type="button"
-                                  onClick={() => handleOpenCompleteModal(activeBatch)}
+                                  onClick={() =>
+                                    handleOpenCompleteModal(activeBatch)
+                                  }
                                   className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition cursor-pointer"
                                 >
                                   Nhập kho TP
@@ -2307,8 +2546,8 @@ export default function ProductionProcessPage() {
                     Thiết lập Chia lô &amp; Phát hành Lệnh sản xuất
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {currentLineItem.productName} ({currentLineItem.productSku}) • Số lượng còn lại
-                    cần phát hành:{" "}
+                    {currentLineItem.productName} ({currentLineItem.productSku})
+                    • Số lượng còn lại cần phát hành:{" "}
                     <strong className="text-blue-700">
                       {fmtNum(releaseSummary.remainingUnreleasedQty)} SP
                     </strong>
@@ -2323,7 +2562,10 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitGenerateBatches} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitGenerateBatches}
+                className="space-y-4 text-sm"
+              >
                 {/* Chọn chế độ chia lô */}
                 <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
                   <button
@@ -2359,10 +2601,15 @@ export default function ProductionProcessPage() {
                       <div className="flex flex-wrap gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setMaxBatchSizeInput(releaseSummary.remainingUnreleasedQty)}
+                          onClick={() =>
+                            setMaxBatchSizeInput(
+                              releaseSummary.remainingUnreleasedQty,
+                            )
+                          }
                           className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[11px] font-bold cursor-pointer"
                         >
-                          Gộp 1 lô ({fmtNum(releaseSummary.remainingUnreleasedQty)} SP)
+                          Gộp 1 lô (
+                          {fmtNum(releaseSummary.remainingUnreleasedQty)} SP)
                         </button>
                         {[100, 200, 250].map((preset) => (
                           <button
@@ -2381,7 +2628,9 @@ export default function ProductionProcessPage() {
                       min={1}
                       max={10000}
                       value={maxBatchSizeInput}
-                      onChange={(e) => setMaxBatchSizeInput(Number(e.target.value))}
+                      onChange={(e) =>
+                        setMaxBatchSizeInput(Number(e.target.value))
+                      }
                       className="w-full px-3 py-2 border border-slate-300 bg-white rounded-lg font-bold text-slate-900"
                       required
                     />
@@ -2394,7 +2643,9 @@ export default function ProductionProcessPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => setCustomSplitsInput((prev) => [...prev, 50])}
+                        onClick={() =>
+                          setCustomSplitsInput((prev) => [...prev, 50])
+                        }
                         className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold cursor-pointer"
                       >
                         + Thêm lô
@@ -2423,7 +2674,9 @@ export default function ProductionProcessPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                setCustomSplitsInput((prev) => prev.filter((_, i) => i !== idx))
+                                setCustomSplitsInput((prev) =>
+                                  prev.filter((_, i) => i !== idx),
+                                )
                               }
                               className="px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
                             >
@@ -2439,10 +2692,14 @@ export default function ProductionProcessPage() {
                 {/* Live Preview kết quả chia lô */}
                 <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-blue-900">
-                    <span>Xem trước danh sách lô sẽ tạo ({previewBatchSplits.length} lô):</span>
+                    <span>
+                      Xem trước danh sách lô sẽ tạo ({previewBatchSplits.length}{" "}
+                      lô):
+                    </span>
                     <span
                       className={
-                        previewSplitsTotal > releaseSummary.remainingUnreleasedQty
+                        previewSplitsTotal >
+                        releaseSummary.remainingUnreleasedQty
                           ? "text-rose-600"
                           : "text-blue-800"
                       }
@@ -2475,7 +2732,8 @@ export default function ProductionProcessPage() {
                     />
                     <div className="text-xs">
                       <span className="font-bold text-amber-900">
-                        Kích hoạt chế độ Chạy trước (Overdrive) để mở khóa sản xuất ngay
+                        Kích hoạt chế độ Chạy trước (Overdrive) để mở khóa sản
+                        xuất ngay
                       </span>
                       <p className="text-slate-600 mt-0.5">
                         {prerequisiteState.isMaterialIssuedToShop
@@ -2494,7 +2752,9 @@ export default function ProductionProcessPage() {
                         rows={2}
                         maxLength={500}
                         value={overdriveJustificationInput}
-                        onChange={(e) => setOverdriveJustificationInput(e.target.value)}
+                        onChange={(e) =>
+                          setOverdriveJustificationInput(e.target.value)
+                        }
                         className="w-full px-3 py-2 border border-amber-300 bg-white rounded-lg text-xs"
                         placeholder="Nhập lý do chạy trước (tối đa 500 ký tự)..."
                         required
@@ -2504,9 +2764,9 @@ export default function ProductionProcessPage() {
                 </div>
 
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
-                  <strong>Lưu ý quan trọng:</strong> Lệnh sản xuất sau khi phát hành xuống phân
-                  xưởng <strong>không thể hủy bỏ</strong> và đơn hàng sẽ chuyển sang trạng thái Đang
-                  sản xuất.
+                  <strong>Lưu ý quan trọng:</strong> Lệnh sản xuất sau khi phát
+                  hành xuống phân xưởng <strong>không thể hủy bỏ</strong> và đơn
+                  hàng sẽ chuyển sang trạng thái Đang sản xuất.
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
@@ -2526,7 +2786,9 @@ export default function ProductionProcessPage() {
                     }
                     className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg cursor-pointer text-xs disabled:opacity-50"
                   >
-                    {isGeneratingBatches ? "Đang phát hành..." : "Xác nhận Phát hành Lệnh sản xuất"}
+                    {isGeneratingBatches
+                      ? "Đang phát hành..."
+                      : "Xác nhận Phát hành Lệnh sản xuất"}
                   </button>
                 </div>
               </form>
@@ -2540,7 +2802,8 @@ export default function ProductionProcessPage() {
             <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <h3 className="text-base font-bold text-slate-900">
-                  Nghiệm thu KCS • S-{qcModalStep.stageSequence} ({qcModalStep.stageName})
+                  Nghiệm thu KCS • S-{qcModalStep.stageSequence} (
+                  {qcModalStep.stageName})
                 </h3>
                 <button
                   type="button"
@@ -2551,17 +2814,24 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitQcInspection} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitQcInspection}
+                className="space-y-4 text-sm"
+              >
                 <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-800 space-y-1">
                   <div>
                     Cổng kiểm tra:{" "}
-                    <strong>{qcModalStep.qualityGateName || qcModalStep.qualityGateCode}</strong>
+                    <strong>
+                      {qcModalStep.qualityGateName ||
+                        qcModalStep.qualityGateCode}
+                    </strong>
                   </div>
                   <div>
-                    Tiêu chuẩn: <strong>{qcModalStep.inspectionCriteria}</strong>
+                    Tiêu chuẩn:{" "}
+                    <strong>{qcModalStep.inspectionCriteria}</strong>
                   </div>
                   <div className="text-blue-700 font-semibold pt-0.5">
-                    Quy tắc BR-008: Bắt buộc kiểm định đủ 100% sản lượng lô (
+                    Bắt buộc kiểm định đủ 100% sản lượng lô (
                     {fmtNum(activeBatch.batchQty)} SP).
                   </div>
                 </div>
@@ -2589,7 +2859,10 @@ export default function ProductionProcessPage() {
                       max={qcForm.inspectedQty}
                       value={qcForm.passQty}
                       onChange={(e) => {
-                        const v = Math.max(0, Math.min(qcForm.inspectedQty, Number(e.target.value)));
+                        const v = Math.max(
+                          0,
+                          Math.min(qcForm.inspectedQty, Number(e.target.value)),
+                        );
                         setQcForm((prev) => ({
                           ...prev,
                           passQty: v,
@@ -2611,7 +2884,10 @@ export default function ProductionProcessPage() {
                       max={qcForm.inspectedQty}
                       value={qcForm.failQty}
                       onChange={(e) => {
-                        const v = Math.max(0, Math.min(qcForm.inspectedQty, Number(e.target.value)));
+                        const v = Math.max(
+                          0,
+                          Math.min(qcForm.inspectedQty, Number(e.target.value)),
+                        );
                         setQcForm((prev) => ({
                           ...prev,
                           failQty: v,
@@ -2627,7 +2903,8 @@ export default function ProductionProcessPage() {
                 {qcForm.failQty > 0 && (
                   <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg space-y-3">
                     <div className="text-xs font-bold text-rose-800">
-                      Thông tin lỗi &amp; Tách nhánh 97%-3% ({fmtNum(qcForm.failQty)} SP lỗi):
+                      Thông tin lỗi &amp; Tách nhánh 97%-3% (
+                      {fmtNum(qcForm.failQty)} SP lỗi):
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -2639,7 +2916,10 @@ export default function ProductionProcessPage() {
                           placeholder="Ví dụ: ERR_CUT_01"
                           value={qcForm.defectCode || ""}
                           onChange={(e) =>
-                            setQcForm((prev) => ({ ...prev, defectCode: e.target.value }))
+                            setQcForm((prev) => ({
+                              ...prev,
+                              defectCode: e.target.value,
+                            }))
                           }
                           className="w-full px-3 py-1.5 border border-slate-300 bg-white rounded-lg text-xs"
                         />
@@ -2651,12 +2931,19 @@ export default function ProductionProcessPage() {
                         <select
                           value={qcForm.disposition}
                           onChange={(e) =>
-                            setQcForm((prev) => ({ ...prev, disposition: e.target.value }))
+                            setQcForm((prev) => ({
+                              ...prev,
+                              disposition: e.target.value,
+                            }))
                           }
                           className="w-full px-3 py-1.5 border border-slate-300 bg-white rounded-lg text-xs font-semibold"
                         >
-                          <option value="REWORK_SUB_CARD">Tách lô sửa chữa (Rework 3%)</option>
-                          <option value="SCRAP_REPLENISH">Hủy &amp; Phát hành lô bù (Scrap)</option>
+                          <option value="REWORK_SUB_CARD">
+                            Tách lô sửa chữa (Rework 3%)
+                          </option>
+                          <option value="SCRAP_REPLENISH">
+                            Hủy &amp; Phát hành lô bù (Scrap)
+                          </option>
                         </select>
                       </div>
                     </div>
@@ -2669,7 +2956,10 @@ export default function ProductionProcessPage() {
                         placeholder="Ví dụ: Vát mộng không khít, nứt phôi thô, bọt khí sơn PU..."
                         value={qcForm.defectName || ""}
                         onChange={(e) =>
-                          setQcForm((prev) => ({ ...prev, defectName: e.target.value }))
+                          setQcForm((prev) => ({
+                            ...prev,
+                            defectName: e.target.value,
+                          }))
                         }
                         className="w-full px-3 py-1.5 border border-slate-300 bg-white rounded-lg text-xs"
                       />
@@ -2678,11 +2968,15 @@ export default function ProductionProcessPage() {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Ghi chú KCS</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Ghi chú KCS
+                  </label>
                   <textarea
                     rows={2}
                     value={qcForm.notes || ""}
-                    onChange={(e) => setQcForm((prev) => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) =>
+                      setQcForm((prev) => ({ ...prev, notes: e.target.value }))
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     placeholder="Ghi chú chi tiết kết quả kiểm định..."
                   />
@@ -2726,11 +3020,16 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitReinspectSubBatch} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitReinspectSubBatch}
+                className="space-y-4 text-sm"
+              >
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
-                  Nghiệm thu lại 100% sản lượng lô phụ sau sửa chữa/bù phôi tại công đoạn{" "}
+                  Nghiệm thu lại 100% sản lượng lô phụ sau sửa chữa/bù phôi tại
+                  công đoạn{" "}
                   <strong>
-                    S-{reinspectModalStep.stageSequence} ({reinspectModalStep.stageName})
+                    S-{reinspectModalStep.stageSequence} (
+                    {reinspectModalStep.stageName})
                   </strong>
                   .
                 </div>
@@ -2759,7 +3058,10 @@ export default function ProductionProcessPage() {
                       onChange={(e) => {
                         const v = Math.max(
                           0,
-                          Math.min(reinspectForm.inspectedQty, Number(e.target.value)),
+                          Math.min(
+                            reinspectForm.inspectedQty,
+                            Number(e.target.value),
+                          ),
                         );
                         setReinspectForm((prev) => ({
                           ...prev,
@@ -2783,7 +3085,10 @@ export default function ProductionProcessPage() {
                       onChange={(e) => {
                         const v = Math.max(
                           0,
-                          Math.min(reinspectForm.inspectedQty, Number(e.target.value)),
+                          Math.min(
+                            reinspectForm.inspectedQty,
+                            Number(e.target.value),
+                          ),
                         );
                         setReinspectForm((prev) => ({
                           ...prev,
@@ -2806,7 +3111,10 @@ export default function ProductionProcessPage() {
                     maxLength={500}
                     value={reinspectForm.notes || ""}
                     onChange={(e) =>
-                      setReinspectForm((prev) => ({ ...prev, notes: e.target.value }))
+                      setReinspectForm((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
                     }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                   />
@@ -2825,7 +3133,9 @@ export default function ProductionProcessPage() {
                     disabled={isSubmittingAction}
                     className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg cursor-pointer text-xs disabled:opacity-50"
                   >
-                    {isSubmittingAction ? "Đang lưu..." : "Xác nhận Nghiệm thu lại"}
+                    {isSubmittingAction
+                      ? "Đang lưu..."
+                      : "Xác nhận Nghiệm thu lại"}
                   </button>
                 </div>
               </form>
@@ -2838,7 +3148,9 @@ export default function ProductionProcessPage() {
           <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <h3 className="text-base font-bold text-slate-900">Xác nhận Chuyển công đoạn</h3>
+                <h3 className="text-base font-bold text-slate-900">
+                  Xác nhận Chuyển công đoạn
+                </h3>
                 <button
                   type="button"
                   onClick={() => setAdvanceModalStep(null)}
@@ -2848,18 +3160,25 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitAdvanceStep} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitAdvanceStep}
+                className="space-y-4 text-sm"
+              >
                 <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-900 space-y-1">
                   <div>
                     Chuyển từ:{" "}
                     <strong>
-                      S-{advanceModalStep.stageSequence} ({advanceModalStep.stageName})
+                      S-{advanceModalStep.stageSequence} (
+                      {advanceModalStep.stageName})
                     </strong>
                   </div>
                   <div>
                     Đích đến:{" "}
                     <strong>
-                      S-{(advanceModalStep.stageSequence + 1).toString().padStart(2, "0")}
+                      S-
+                      {(advanceModalStep.stageSequence + 1)
+                        .toString()
+                        .padStart(2, "0")}
                     </strong>
                   </div>
                   <div className="text-slate-600 pt-1">
@@ -2876,7 +3195,12 @@ export default function ProductionProcessPage() {
                     rows={3}
                     maxLength={500}
                     value={advanceForm.notes || ""}
-                    onChange={(e) => setAdvanceForm((prev) => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) =>
+                      setAdvanceForm((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     placeholder="Ghi chú bàn giao phân xưởng..."
                   />
@@ -2895,7 +3219,9 @@ export default function ProductionProcessPage() {
                     disabled={isSubmittingAction}
                     className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg cursor-pointer text-xs disabled:opacity-50"
                   >
-                    {isSubmittingAction ? "Đang chuyển..." : "Xác nhận Chuyển công đoạn"}
+                    {isSubmittingAction
+                      ? "Đang chuyển..."
+                      : "Xác nhận Chuyển công đoạn"}
                   </button>
                 </div>
               </form>
@@ -2920,28 +3246,41 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitMergeSubBatch} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitMergeSubBatch}
+                className="space-y-4 text-sm"
+              >
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1">
                   <div>
-                    Thẻ phụ: <strong className="font-mono">{mergeModalBatch.batchCode}</strong> (
-                    {fmtNum(mergeModalBatch.batchQty)} SP đạt chuẩn)
+                    Thẻ phụ:{" "}
+                    <strong className="font-mono">
+                      {mergeModalBatch.batchCode}
+                    </strong>{" "}
+                    ({fmtNum(mergeModalBatch.batchQty)} SP đạt chuẩn)
                   </div>
                   <div>
                     Gộp vào thẻ chính:{" "}
-                    <strong className="font-mono">{parentMainBatch.batchCode}</strong> (Hiện tại:{" "}
-                    {fmtNum(parentMainBatch.batchQty)} SP)
+                    <strong className="font-mono">
+                      {parentMainBatch.batchCode}
+                    </strong>{" "}
+                    (Hiện tại: {fmtNum(parentMainBatch.batchQty)} SP)
                   </div>
                   <div>
                     Sản lượng sau khi gộp:{" "}
                     <strong className="text-emerald-700">
-                      {fmtNum(parentMainBatch.batchQty + mergeModalBatch.batchQty)} SP
+                      {fmtNum(
+                        parentMainBatch.batchQty + mergeModalBatch.batchQty,
+                      )}{" "}
+                      SP
                     </strong>{" "}
                     tại công đoạn S-{parentMainBatch.currentStageSeq}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Lý do gộp lô</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Lý do gộp lô
+                  </label>
                   <textarea
                     rows={2}
                     maxLength={500}
@@ -2989,11 +3328,15 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitContinueSubIndependently} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitContinueSubIndependently}
+                className="space-y-4 text-sm"
+              >
                 <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-900">
-                  Thẻ nhánh phụ <strong className="font-mono">{activeBatch.batchCode}</strong> (
-                  {fmtNum(activeBatch.batchQty)} SP) sẽ đi tiếp độc lập qua các công đoạn còn lại mà
-                  không gộp vào lô chính.
+                  Thẻ nhánh phụ{" "}
+                  <strong className="font-mono">{activeBatch.batchCode}</strong>{" "}
+                  ({fmtNum(activeBatch.batchQty)} SP) sẽ đi tiếp độc lập qua các
+                  công đoạn còn lại mà không gộp vào lô chính.
                 </div>
 
                 <div>
@@ -3022,7 +3365,9 @@ export default function ProductionProcessPage() {
                     disabled={isSubmittingAction}
                     className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg cursor-pointer text-xs disabled:opacity-50"
                   >
-                    {isSubmittingAction ? "Đang chuyển..." : "Xác nhận Chuyển tiếp"}
+                    {isSubmittingAction
+                      ? "Đang chuyển..."
+                      : "Xác nhận Chuyển tiếp"}
                   </button>
                 </div>
               </form>
@@ -3047,10 +3392,16 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitRequestOverdrive} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitRequestOverdrive}
+                className="space-y-4 text-sm"
+              >
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
                   Gửi đề xuất tới Chủ xưởng phê duyệt mở khóa cho lô{" "}
-                  <strong className="font-mono">{requestOverdriveBatch.batchCode}</strong>.
+                  <strong className="font-mono">
+                    {requestOverdriveBatch.batchCode}
+                  </strong>
+                  .
                 </div>
 
                 <div>
@@ -3119,7 +3470,8 @@ export default function ProductionProcessPage() {
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <h3 className="text-base font-bold text-slate-900">
-                  Phê duyệt Mở khóa Overdrive • {approveOverdriveBatch.batchCode}
+                  Phê duyệt Mở khóa Overdrive •{" "}
+                  {approveOverdriveBatch.batchCode}
                 </h3>
                 <button
                   type="button"
@@ -3130,11 +3482,16 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitApproveOverdrive} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitApproveOverdrive}
+                className="space-y-4 text-sm"
+              >
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setApproveOverdriveForm((p) => ({ ...p, approved: true }))}
+                    onClick={() =>
+                      setApproveOverdriveForm((p) => ({ ...p, approved: true }))
+                    }
                     className={`flex-1 py-2 text-xs font-bold rounded-lg border cursor-pointer ${
                       approveOverdriveForm.approved
                         ? "bg-emerald-600 text-white border-emerald-700"
@@ -3145,7 +3502,12 @@ export default function ProductionProcessPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setApproveOverdriveForm((p) => ({ ...p, approved: false }))}
+                    onClick={() =>
+                      setApproveOverdriveForm((p) => ({
+                        ...p,
+                        approved: false,
+                      }))
+                    }
                     className={`flex-1 py-2 text-xs font-bold rounded-lg border cursor-pointer ${
                       !approveOverdriveForm.approved
                         ? "bg-rose-600 text-white border-rose-700"
@@ -3189,7 +3551,10 @@ export default function ProductionProcessPage() {
                     maxLength={500}
                     value={approveOverdriveForm.notes || ""}
                     onChange={(e) =>
-                      setApproveOverdriveForm((prev) => ({ ...prev, notes: e.target.value }))
+                      setApproveOverdriveForm((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
                     }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     required={!approveOverdriveForm.approved}
@@ -3213,7 +3578,9 @@ export default function ProductionProcessPage() {
                         : "bg-rose-600 hover:bg-rose-700"
                     }`}
                   >
-                    {isSubmittingAction ? "Đang xử lý..." : "Xác nhận quyết định"}
+                    {isSubmittingAction
+                      ? "Đang xử lý..."
+                      : "Xác nhận quyết định"}
                   </button>
                 </div>
               </form>
@@ -3238,16 +3605,23 @@ export default function ProductionProcessPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitCompleteBatch} className="space-y-4 text-sm">
+              <form
+                onSubmit={handleSubmitCompleteBatch}
+                className="space-y-4 text-sm"
+              >
                 <div className="p-3 bg-purple-50 rounded-lg text-xs text-purple-900 space-y-1">
                   <div>
-                    Mã lô hoàn tất: <strong className="font-mono">{completeBatchModal.batchCode}</strong>
+                    Mã lô hoàn tất:{" "}
+                    <strong className="font-mono">
+                      {completeBatchModal.batchCode}
+                    </strong>
                   </div>
                   <div>
                     Sản phẩm: <strong>{currentLineItem?.productName}</strong>
                   </div>
                   <div>
-                    Số lượng định mức lô: <strong>{fmtNum(completeBatchModal.batchQty)} SP</strong>
+                    Số lượng định mức lô:{" "}
+                    <strong>{fmtNum(completeBatchModal.batchQty)} SP</strong>
                   </div>
                 </div>
 
@@ -3259,9 +3633,14 @@ export default function ProductionProcessPage() {
                     type="number"
                     min={1}
                     max={completeBatchModal.batchQty}
-                    value={completeForm.receivedQty ?? completeBatchModal.batchQty}
+                    value={
+                      completeForm.receivedQty ?? completeBatchModal.batchQty
+                    }
                     onChange={(e) =>
-                      setCompleteForm((prev) => ({ ...prev, receivedQty: Number(e.target.value) }))
+                      setCompleteForm((prev) => ({
+                        ...prev,
+                        receivedQty: Number(e.target.value),
+                      }))
                     }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg font-bold"
                     required
@@ -3276,7 +3655,10 @@ export default function ProductionProcessPage() {
                     type="text"
                     value={completeForm.warehouseLocation || ""}
                     onChange={(e) =>
-                      setCompleteForm((prev) => ({ ...prev, warehouseLocation: e.target.value }))
+                      setCompleteForm((prev) => ({
+                        ...prev,
+                        warehouseLocation: e.target.value,
+                      }))
                     }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     placeholder="Ví dụ: KHO-TP-A1"
@@ -3291,7 +3673,10 @@ export default function ProductionProcessPage() {
                     rows={2}
                     value={completeForm.handoverNote || ""}
                     onChange={(e) =>
-                      setCompleteForm((prev) => ({ ...prev, handoverNote: e.target.value }))
+                      setCompleteForm((prev) => ({
+                        ...prev,
+                        handoverNote: e.target.value,
+                      }))
                     }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     placeholder="Ghi chú bàn giao thủ kho..."
@@ -3311,7 +3696,9 @@ export default function ProductionProcessPage() {
                     disabled={isSubmittingAction}
                     className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg cursor-pointer text-xs disabled:opacity-50"
                   >
-                    {isSubmittingAction ? "Đang nhập kho..." : "Xác nhận Nhập kho thành phẩm"}
+                    {isSubmittingAction
+                      ? "Đang nhập kho..."
+                      : "Xác nhận Nhập kho thành phẩm"}
                   </button>
                 </div>
               </form>
@@ -3345,7 +3732,11 @@ export default function ProductionProcessPage() {
                       {detailModalContext.step.workstationName ||
                         detailModalContext.step.workstationCode}
                     </strong>{" "}
-                    (<span className="font-mono">{detailModalContext.step.workstationCode}</span>)
+                    (
+                    <span className="font-mono">
+                      {detailModalContext.step.workstationCode}
+                    </span>
+                    )
                   </div>
                   <div>
                     Cổng chất lượng:{" "}
@@ -3357,7 +3748,9 @@ export default function ProductionProcessPage() {
                   <div>
                     Chốt chặn kỹ thuật:{" "}
                     <strong>
-                      {detailModalContext.step.isHoldPoint ? "CÓ (Hold Point)" : "Không"}
+                      {detailModalContext.step.isHoldPoint
+                        ? "CÓ (Hold Point)"
+                        : "Không"}
                     </strong>
                   </div>
                 </div>
@@ -3385,9 +3778,12 @@ export default function ProductionProcessPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-700">Tiêu chuẩn kiểm tra:</span>
+                  <span className="font-bold text-slate-700">
+                    Tiêu chuẩn kiểm tra:
+                  </span>
                   <p className="p-2.5 bg-slate-100 rounded-lg text-slate-800 font-mono text-[11px]">
-                    {detailModalContext.step.inspectionCriteria || "Chưa có văn bản tiêu chuẩn"}
+                    {detailModalContext.step.inspectionCriteria ||
+                      "Chưa có văn bản tiêu chuẩn"}
                   </p>
                 </div>
 
@@ -3426,6 +3822,6 @@ export default function ProductionProcessPage() {
           </div>
         )}
       </div>
-    </WmmsAppShell>
+    </>
   );
 }

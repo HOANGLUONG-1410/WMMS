@@ -179,7 +179,9 @@ export interface OrderSpaceLineItemForBom {
   finishSpec?: string | null;
   orderedQty: number;
   fscCertifiedReq: boolean;
+  productImageUrl?: string | null;
   attachedCadFileName?: string | null;
+  attachedCadUrl?: string | null;
   bomId?: number | null;
   scrapRatePct?: number | null;
   itemStatus: string;

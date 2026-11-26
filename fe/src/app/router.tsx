@@ -10,7 +10,7 @@ import { setNavigate } from "../lib/navigation";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { ROLES } from "../constants/roles";
 import { useSession } from "../features/auth/store/SessionContext";
-import { getDefaultRouteForRole } from "../components/layout/WmmsAppShell";
+import WmmsAppShell, { getDefaultRouteForRole } from "../components/layout/WmmsAppShell";
 
 // Built Pages
 import LoginPage from "../features/auth/pages/LoginPage";
@@ -100,11 +100,18 @@ export const router = createBrowserRouter([
       { path: "/reset-password", element: <ResetPasswordPage /> },
       { path: "/forbidden", element: <ForbiddenPage /> },
 
-      // ==========================================
-      // 1. Phân hệ Quản trị hệ thống & RBAC (ADMIN)
-      // ==========================================
+      // Authenticated Routes with Persistent Sidebar/Header Layout
       {
-        element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
+        element: <ProtectedRoute />,
+        children: [
+          {
+            element: <WmmsAppShell />,
+            children: [
+              // ==========================================
+              // 1. Phân hệ Quản trị hệ thống & RBAC (ADMIN)
+              // ==========================================
+              {
+                element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
         children: [
           { path: "/admin/users", element: <UserManagementPage /> },
         ],
@@ -163,39 +170,12 @@ export const router = createBrowserRouter([
       },
 
       // ==========================================
-      // 3. Phân hệ Kỹ thuật, BOM & Định tuyến động (OWNER, PLANNER, SALES, ADMIN)
+      // 3. Phân hệ Kỹ thuật, BOM & Định tuyến động (OWNER, ADMIN)
       // ==========================================
-      {
-        element: <ProtectedRoute allowedRoles={[ROLES.OWNER, ROLES.PLANNER, ROLES.SALES, ROLES.ADMIN]} />,
-        children: [
-          { path: "/bom", element: <BomBuilderPage /> },
-        ],
-      },
       {
         element: <ProtectedRoute allowedRoles={[ROLES.OWNER, ROLES.ADMIN]} />,
         children: [
-          {
-            path: "/production/routing-config",
-            element: (
-              <UnderConstructionPage
-                title="Cấu hình quy trình động"
-                screenCode="SCR-PRD-04"
-                moduleName="Kỹ thuật & Quy trình"
-                allowedRoles={[ROLES.OWNER, ROLES.ADMIN]}
-              />
-            ),
-          },
-          {
-            path: "/catalog/visual",
-            element: (
-              <UnderConstructionPage
-                title="Danh mục sản phẩm trực quan"
-                screenCode="SCR-CAT-02"
-                moduleName="Kỹ thuật & Quy trình"
-                allowedRoles={[ROLES.OWNER, ROLES.ADMIN]}
-              />
-            ),
-          },
+          { path: "/bom", element: <BomBuilderPage /> },
         ],
       },
       {
@@ -216,7 +196,7 @@ export const router = createBrowserRouter([
       },
 
       // ==========================================
-      // 4. Phân hệ Tồn kho & Đối soát (WAREHOUSE, PURCHASING, OWNER, PLANNER, SALES, ADMIN)
+      // 4. Phân hệ Tồn kho & Đối soát (WAREHOUSE, PURCHASING, OWNER, PLANNER, ADMIN)
       // ==========================================
       {
         element: (
@@ -241,7 +221,6 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute
             allowedRoles={[
-              ROLES.SALES,
               ROLES.OWNER,
               ROLES.PLANNER,
               ROLES.ADMIN,
@@ -313,17 +292,6 @@ export const router = createBrowserRouter([
             path: "/warehouse/issues",
             element: <GoodsIssuePage />,
           },
-          {
-            path: "/warehouse/finished-goods",
-            element: (
-              <UnderConstructionPage
-                title="Nhập kho thành phẩm & đóng Space"
-                screenCode="SCR-WAR-03"
-                moduleName="Nghiệp vụ kho"
-                allowedRoles={[ROLES.WAREHOUSE, ROLES.ADMIN]}
-              />
-            ),
-          },
         ],
       },
 
@@ -347,17 +315,6 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: "/production/overdriver",
-            element: (
-              <UnderConstructionPage
-                title="Yêu cầu & duyệt vượt chốt (Overdriver)"
-                screenCode="SCR-PRD-03"
-                moduleName="Xưởng sản xuất"
-                allowedRoles={[ROLES.LEADER, ROLES.OWNER, ROLES.ADMIN]}
-              />
-            ),
-          },
-          {
             path: "/analytics/reports",
             element: (
               <UnderConstructionPage
@@ -367,26 +324,6 @@ export const router = createBrowserRouter([
                 allowedRoles={[ROLES.OWNER, ROLES.LEADER, ROLES.ADMIN]}
               />
             ),
-          },
-        ],
-      },
-      {
-        element: (
-          <ProtectedRoute
-            allowedRoles={[
-              ROLES.LEADER,
-              ROLES.QC,
-              ROLES.OWNER,
-              ROLES.WAREHOUSE,
-              ROLES.PLANNER,
-              ROLES.ADMIN,
-            ]}
-          />
-        ),
-        children: [
-          {
-            path: "/production/kanban",
-            element: <ProductionProcessPage />,
           },
         ],
       },
@@ -426,23 +363,7 @@ export const router = createBrowserRouter([
           },
         ],
       },
-
-      // ==========================================
-      // 8. Phân hệ Quản lý Chất lượng QC (QC, ADMIN)
-      // ==========================================
-      {
-        element: <ProtectedRoute allowedRoles={[ROLES.QC, ROLES.ADMIN]} />,
-        children: [
-          {
-            path: "/qc/inspection",
-            element: (
-              <UnderConstructionPage
-                title="Kiểm tra QC & ghi nhận lỗi"
-                screenCode="SCR-QC-01"
-                moduleName="Kiểm soát chất lượng"
-                allowedRoles={[ROLES.QC, ROLES.ADMIN]}
-              />
-            ),
+            ],
           },
         ],
       },

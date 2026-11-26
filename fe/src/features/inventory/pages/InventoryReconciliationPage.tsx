@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
+import { HeaderTopLeft } from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
 import { useSession } from "../../auth/store/SessionContext";
 import { orderIntakeApi } from "../../../services/wmmsApi";
@@ -34,15 +34,8 @@ export default function InventoryReconciliationPage() {
   const { currentUser } = useSession();
 
   const activeRole = currentUser?.activeRole || "OWNER";
-  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER", "SALES"].includes(activeRole);
-  const canAccessProductionPage = [
-    "ADMIN",
-    "OWNER",
-    "PLANNER",
-    "LEADER",
-    "QC",
-    "WAREHOUSE",
-  ].includes(activeRole);
+  const canExecuteAllocation = ["ADMIN", "OWNER", "PLANNER", "WAREHOUSE"].includes(activeRole);
+  const canAccessPrPage = ["ADMIN", "OWNER", "PLANNER", "PURCHASING"].includes(activeRole);
 
   const spaceParam = searchParams.get("spaceKey");
   const activeSpaceKey = spaceParam || currentSpaceKey || "";
@@ -424,12 +417,18 @@ export default function InventoryReconciliationPage() {
   }, [sortedFilteredMaterials, pageNumber, pageSize]);
 
   return (
-    <WmmsAppShell
-      customTopLeft={
+    <>
+      <HeaderTopLeft>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate("/orders")}
+            onClick={() =>
+              navigate(
+                activeSpaceKey
+                  ? `/orders/spaces/${encodeURIComponent(activeSpaceKey)}`
+                  : "/orders",
+              )
+            }
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs cursor-pointer"
           >
             <svg
@@ -441,47 +440,11 @@ export default function InventoryReconciliationPage() {
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            <span>Danh sách đơn hàng</span>
+            <span>{activeSpaceKey ? "Danh sách sản phẩm" : "Danh sách đơn hàng"}</span>
           </button>
 
-          {activeSpaceKey && (
-            <button
-              type="button"
-              onClick={() =>
-                navigate(`/orders/spaces/${encodeURIComponent(activeSpaceKey)}`)
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition cursor-pointer"
-            >
-              <span>Không gian: {activeSpaceKey}</span>
-            </button>
-          )}
-
-          {activeSpaceKey && canAccessBomPage && (
-            <button
-              type="button"
-              onClick={() =>
-                navigate(`/bom?spaceKey=${encodeURIComponent(activeSpaceKey)}`)
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
-            >
-              <span>BOM &amp; quy trình sản xuất</span>
-            </button>
-          )}
-
-          {activeSpaceKey && canAccessProductionPage && (
-            <button
-              type="button"
-              onClick={() =>
-                navigate(`/production/progress?spaceKey=${encodeURIComponent(activeSpaceKey)}`)
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
-            >
-              <span>Tiến độ sản xuất</span>
-            </button>
-          )}
         </div>
-      }
-    >
+      </HeaderTopLeft>
       <div className="max-w-[1440px] mx-auto space-y-6">
         {/* Toast thông báo kết quả */}
         {toastBanner && (
@@ -526,7 +489,7 @@ export default function InventoryReconciliationPage() {
               </div>
 
               {/* Nút nối thẳng sang Bước 2: Xem & Duyệt PR ngày */}
-              {allocationResult.consolidatedPrId && (
+              {canAccessPrPage && allocationResult.consolidatedPrId && (
                 <button
                   type="button"
                   onClick={() =>
@@ -630,13 +593,15 @@ export default function InventoryReconciliationPage() {
               </strong>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate("/purchasing/requisitions")}
-              className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition border border-slate-300 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-            >
-              <span>Yêu cầu mua hàng →</span>
-            </button>
+            {canAccessPrPage && (
+              <button
+                type="button"
+                onClick={() => navigate("/purchasing/requisitions")}
+                className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition border border-slate-300 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              >
+                <span>Yêu cầu mua hàng →</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -783,118 +748,120 @@ export default function InventoryReconciliationPage() {
         )}
 
         {/* Thanh Công cụ Thực thi Đối chiếu & Phân bổ tự động */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={autoQueuePr}
-                onChange={(e) => setAutoQueuePr(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-              />
-              <span className="text-xs md:text-sm font-semibold text-slate-700">
-                Tự động gom phần vật tư thiếu hụt vào Phiếu PR tổng hợp trong ngày
-              </span>
-            </label>
-          </div>
+        {canExecuteAllocation && (
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={autoQueuePr}
+                  onChange={(e) => setAutoQueuePr(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                />
+                <span className="text-xs md:text-sm font-semibold text-slate-700">
+                  Tự động gom phần vật tư thiếu hụt vào Phiếu PR tổng hợp trong ngày
+                </span>
+              </label>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-            {/* Nút Tái phân bổ theo ETD */}
-            <button
-              type="button"
-              onClick={handleReallocateByEtd}
-              disabled={isReallocatingEtd || isAllocating}
-              title="Phân bổ lại tồn kho khả dụng cho các đơn hàng theo thứ tự hạn giao hàng gần nhất"
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg transition disabled:opacity-50 cursor-pointer"
-            >
-              {isReallocatingEtd ? "Đang xử lý ETD..." : "Tái phân bổ theo ETD (FIFO)"}
-            </button>
-
-            {/* Nút Thực thi Khóa giữ chỗ (Primary xanh) HOẶC Hủy giữ chỗ (Danger đỏ) */}
-            {spaceAllocationSummary.hasAnyAllocation ? (
-              // Nút HỦY GIỮ CHỖ (Danger)
+            <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+              {/* Nút Tái phân bổ theo ETD */}
               <button
                 type="button"
-                onClick={handleReleaseAllocations}
-                disabled={
-                  isReleasing ||
-                  spaceAllocationSummary.isBlocked ||
-                  isAllocating ||
-                  isReallocatingEtd
-                }
-                title={
-                  spaceAllocationSummary.isBlocked
-                    ? spaceAllocationSummary.blockReason
-                    : "Hủy toàn bộ vật tư đang giữ chỗ của đơn hàng và hoàn trả lại vào kho khả dụng"
-                }
-                className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2 ${
-                  spaceAllocationSummary.isBlocked
-                    ? "bg-rose-400 opacity-60 cursor-not-allowed"
-                    : "bg-rose-600 hover:bg-rose-700 cursor-pointer"
-                }`}
+                onClick={handleReallocateByEtd}
+                disabled={isReallocatingEtd || isAllocating}
+                title="Phân bổ lại tồn kho khả dụng cho các đơn hàng theo thứ tự hạn giao hàng gần nhất"
+                className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg transition disabled:opacity-50 cursor-pointer"
               >
-                {isReleasing ? (
-                  <span>Đang hủy giữ chỗ...</span>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                    <span>
-                      {spaceAllocationSummary.isBlocked
-                        ? "Hủy giữ chỗ (Bị chặn)"
-                        : "Hủy giữ chỗ vật tư"}
-                    </span>
-                  </>
-                )}
+                {isReallocatingEtd ? "Đang xử lý ETD..." : "Tái phân bổ theo ETD (FIFO)"}
               </button>
-            ) : (
-              // Nút THỰC THI KHÓA GIỮ CHỖ (Primary xanh)
-              <button
-                type="button"
-                onClick={handleExecuteAutoAllocation}
-                disabled={
-                  isAllocating ||
-                  isReallocatingEtd ||
-                  !spaceInfo ||
-                  (mrpData?.materialRequirements?.length || 0) === 0
-                }
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-              >
-                {isAllocating ? (
-                  <span>Đang khóa giữ chỗ...</span>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      />
-                    </svg>
-                    <span>Thực thi Khóa giữ chỗ &amp; Gom PR</span>
-                  </>
-                )}
-              </button>
-            )}
+
+              {/* Nút Thực thi Khóa giữ chỗ (Primary xanh) HOẶC Hủy giữ chỗ (Danger đỏ) */}
+              {spaceAllocationSummary.hasAnyAllocation ? (
+                // Nút HỦY GIỮ CHỖ (Danger)
+                <button
+                  type="button"
+                  onClick={handleReleaseAllocations}
+                  disabled={
+                    isReleasing ||
+                    spaceAllocationSummary.isBlocked ||
+                    isAllocating ||
+                    isReallocatingEtd
+                  }
+                  title={
+                    spaceAllocationSummary.isBlocked
+                      ? spaceAllocationSummary.blockReason
+                      : "Hủy toàn bộ vật tư đang giữ chỗ của đơn hàng và hoàn trả lại vào kho khả dụng"
+                  }
+                  className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2 ${
+                    spaceAllocationSummary.isBlocked
+                      ? "bg-rose-400 opacity-60 cursor-not-allowed"
+                      : "bg-rose-600 hover:bg-rose-700 cursor-pointer"
+                  }`}
+                >
+                  {isReleasing ? (
+                    <span>Đang hủy giữ chỗ...</span>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      <span>
+                        {spaceAllocationSummary.isBlocked
+                          ? "Hủy giữ chỗ (Bị chặn)"
+                          : "Hủy giữ chỗ vật tư"}
+                      </span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                // Nút THỰC THI KHÓA GIỮ CHỖ (Primary xanh)
+                <button
+                  type="button"
+                  onClick={handleExecuteAutoAllocation}
+                  disabled={
+                    isAllocating ||
+                    isReallocatingEtd ||
+                    !spaceInfo ||
+                    (mrpData?.materialRequirements?.length || 0) === 0
+                  }
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  {isAllocating ? (
+                    <span>Đang khóa giữ chỗ...</span>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        />
+                      </svg>
+                      <span>Thực thi Khóa giữ chỗ &amp; Gom PR</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bảng Chi tiết Đối chiếu Tồn kho Khả dụng (MRP Grid) */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
@@ -1248,6 +1215,6 @@ export default function InventoryReconciliationPage() {
           )}
         </div>
       </div>
-    </WmmsAppShell>
+    </>
   );
 }

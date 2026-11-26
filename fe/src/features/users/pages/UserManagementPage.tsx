@@ -1,7 +1,6 @@
 import { Fragment, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { adminApi } from "../api/userApi";
 import { useUsers } from "../hooks/useUsers";
 import type { UserDto } from "../types";
@@ -145,7 +144,7 @@ export default function UserManagementPage() {
   };
 
   return (
-    <WmmsAppShell mode="admin">
+    <>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Page Heading + Action Buttons */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -688,7 +687,7 @@ export default function UserManagementPage() {
           toast.error(msg);
         }}
       />
-    </WmmsAppShell>
+    </>
   );
 }
 
