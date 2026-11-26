@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import StockBalanceTable from "../components/StockBalanceTable";
 import StockDetailModal from "../components/StockDetailModal";
 import StockLedgerTable from "../components/StockLedgerTable";
@@ -157,7 +156,7 @@ export default function InventoryStockPage() {
   };
 
   return (
-    <WmmsAppShell>
+    <>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Top Context Bar: Warehouse Yard Selector */}
         <div className="bg-white border border-slate-200 rounded-xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
@@ -375,7 +374,7 @@ export default function InventoryStockPage() {
         onClose={() => setInspectingStock(null)}
         onOpenFullLedgerForMaterial={(materialId) => handleJumpToFullLedger(materialId)}
       />
-    </WmmsAppShell>
+    </>
   );
 }
 

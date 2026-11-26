@@ -128,6 +128,21 @@ public class OrderProgressService : IOrderProgressService
 
             await _unitOfWork.OrderItems.UpdateOrderAsync(order);
 
+            if (order.OrderSpace != null)
+            {
+                var totalUnits = order.OrderItems.Sum(oi => oi.OrderedQty);
+                var doneUnits = order.OrderItems.Sum(oi => Math.Min(oi.OrderedQty, oi.ProductionBatches
+                    .Where(b => b.BatchStatus == BatchStatusEnum.DONE &&
+                                (b.BatchType == BatchTypeEnum.MAIN_CARD ||
+                                 b.BatchType == BatchTypeEnum.REWORK_SUB_CARD ||
+                                 b.BatchType == BatchTypeEnum.REPLENISH_LOT))
+                    .Sum(b => b.BatchQty)));
+                order.OrderSpace.OverallProgressPct = order.Status == OrderStatusEnum.COMPLETED
+                    ? 100m
+                    : (totalUnits > 0 ? Math.Min(100m, Math.Round((decimal)doneUnits * 100m / totalUnits, 2)) : 0m);
+                await _unitOfWork.OrderItems.UpdateOrderSpaceAsync(order.OrderSpace);
+            }
+
             if (order.Status != previousOrderStatus)
             {
                 await _unitOfWork.Boms.AddAuditLogAsync(new AuditLog

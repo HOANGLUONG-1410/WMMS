@@ -21,7 +21,7 @@ public static class WmmsStatusLabelHelper
     {
         "RESERVED" or "FULL" or "FULLY_ALLOCATED" => "Đã giữ chỗ",
         "PARTIAL" or "PARTIALLY_ALLOCATED" or "PARTIALLY_RESERVED" => "Chưa đủ nguyên liệu",
-        "ISSUED_TO_SHOP" or "ISSUED" => "Đã xuất xưởng",
+        "ISSUED_TO_SHOP" or "ISSUED" => "Đã xuất kho sản xuất",
         "RELEASED" => "Đã hủy giữ chỗ",
         "STOCK_AVAILABLE" or "SUFFICIENT" => "Đủ tồn kho",
         "SHORTAGE" or "WAITING" or "WAITING_MATERIAL" or "PENDING" => "Chưa đủ nguyên liệu",

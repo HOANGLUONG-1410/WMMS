@@ -361,6 +361,13 @@ public class MrpAllocationService : IMrpAllocationService
             return new List<MaterialOrderAllocationDto>();
         }
 
+        if (activeReserved.Any(a => a.OrderItem != null && a.OrderItem.Status is OrderItemStatusEnum.IN_PROD or OrderItemStatusEnum.DONE))
+        {
+            throw AppException.Conflict(
+                "Không thể giải phóng vật tư giữ chỗ vì đơn hàng đã vào sản xuất hoặc đã hoàn thành.",
+                MessageCodes.Msg08DuplicateConflict);
+        }
+
         var materialIds = activeReserved.Select(a => a.MaterialId).Distinct().ToList();
         var stockMap = await _materialStockRepository.GetByMaterialIdsAsync(materialIds, cancellationToken);
         var now = DateTime.UtcNow;
@@ -369,6 +376,7 @@ public class MrpAllocationService : IMrpAllocationService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var affectedOrderItems = new HashSet<OrderItem>();
             foreach (var alloc in activeReserved)
             {
                 var qtyToRelease = alloc.ReservedQty;
@@ -382,7 +390,29 @@ public class MrpAllocationService : IMrpAllocationService
                 alloc.AllocationStatus = AllocationStatusEnum.RELEASED;
                 await _materialAllocationRepository.UpdateAsync(alloc);
 
-                releasedDtos.Add(MapAllocationDto(alloc, alloc.OrderItem));
+                if (alloc.OrderItem != null)
+                {
+                    affectedOrderItems.Add(alloc.OrderItem);
+                }
+
+                releasedDtos.Add(MapAllocationDto(alloc, alloc.OrderItem!));
+            }
+
+            // Hạ trạng thái các OrderItem / BOM vừa bị giải phóng giữ chỗ khỏi READY_PROD / READY_FOR_PRODUCTION về chờ vật tư
+            foreach (var item in affectedOrderItems)
+            {
+                if (item.Status == OrderItemStatusEnum.READY_PROD)
+                {
+                    item.Status = OrderItemStatusEnum.WAITING_MAT;
+                    await _orderItemRepository.UpdateAsync(item);
+                }
+
+                if (item.BomHeader != null && item.BomHeader.BomStatus == BomStatusEnum.READY_FOR_PRODUCTION)
+                {
+                    item.BomHeader.BomStatus = BomStatusEnum.WAITING_FOR_MATERIALS;
+                    item.BomHeader.UpdatedAt = now;
+                    await _bomRepository.UpdateAsync(item.BomHeader);
+                }
             }
 
             await _bomRepository.AddAuditLogAsync(new AuditLog
@@ -460,7 +490,10 @@ public class MrpAllocationService : IMrpAllocationService
 
                 alloc.IssuedQty = Math.Round(alloc.IssuedQty + qtyToIssue, 4);
                 alloc.ReservedQty = 0m;
-                alloc.AllocationStatus = AllocationStatusEnum.ISSUED_TO_SHOP;
+                // Chỉ đánh dấu ISSUED_TO_SHOP khi đã xuất đủ RequiredQty; nếu xuất dở dang giữ RESERVED để GRN tiếp tục phân bổ phần thiếu
+                alloc.AllocationStatus = alloc.IssuedQty >= alloc.RequiredQty
+                    ? AllocationStatusEnum.ISSUED_TO_SHOP
+                    : AllocationStatusEnum.RESERVED;
                 await _materialAllocationRepository.UpdateAsync(alloc);
 
                 transactions.Add(new InventoryTransaction
@@ -481,10 +514,23 @@ public class MrpAllocationService : IMrpAllocationService
                 await _materialStockRepository.AddTransactionsRangeAsync(transactions, cancellationToken);
             }
 
-            // Tự động mở khóa lô LOCKED và chốt chặn Hold Point cho các lô sản xuất của đơn hàng sau khi Thủ kho xác nhận Xuất kho (UC-59, BR-PRD-01)
+            // Chỉ mở khóa lô LOCKED và chốt chặn Hold Point cho các OrderItem đã xuất kho ĐỦ 100% vật tư (UC-59, BR-PRD-01)
+            var fullyIssuedOrderItemIds = allocations
+                .Where(a => a.AllocationStatus != AllocationStatusEnum.RELEASED)
+                .GroupBy(a => a.OrderItemId)
+                .Where(g => g.All(a => a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP && a.IssuedQty >= a.RequiredQty))
+                .Select(g => g.Key)
+                .ToHashSet();
+
             var batches = await _unitOfWork.ProductionBatches.GetByOrderIdAsync(orderId, cancellationToken);
+            int unlockedBatchesCount = 0;
             foreach (var batch in batches)
             {
+                if (batch.BatchStatus == BatchStatusEnum.DONE || !fullyIssuedOrderItemIds.Contains(batch.OrderItemId))
+                {
+                    continue;
+                }
+
                 batch.GoodsIssuedUnlocked = true;
                 if (batch.BatchStatus == BatchStatusEnum.LOCKED)
                 {
@@ -520,6 +566,7 @@ public class MrpAllocationService : IMrpAllocationService
                 }
                 batch.UpdatedAt = now;
                 await _unitOfWork.ProductionBatches.UpdateAsync(batch);
+                unlockedBatchesCount++;
             }
 
             await _bomRepository.AddAuditLogAsync(new AuditLog
@@ -535,7 +582,7 @@ public class MrpAllocationService : IMrpAllocationService
                     PoNumber = order.PoNumber,
                     IssuedAllocationsCount = issuedDtos.Count,
                     TotalQuantityIssued = totalIssuedQty,
-                    BatchesUnlockedCount = batches.Count
+                    BatchesUnlockedCount = unlockedBatchesCount
                 }),
                 Reason = string.IsNullOrWhiteSpace(reason)
                     ? $"Xác nhận xuất kho cấp phát {totalIssuedQty} đơn vị vật tư cho đơn hàng {order.PoNumber} bàn giao xuống xưởng."
@@ -636,16 +683,34 @@ public class MrpAllocationService : IMrpAllocationService
                     await _materialStockRepository.UpdateAsync(stock);
                 }
 
-                var allocation = new MaterialAllocation
+                var existingAlloc = orderItem.MaterialAllocations
+                    .FirstOrDefault(ma => ma.MaterialId == detail.MaterialId && ma.AllocationStatus != AllocationStatusEnum.RELEASED);
+
+                AllocationStatusEnum effectiveStatus;
+                if (existingAlloc != null)
                 {
-                    OrderItemId = orderItem.OrderItemId,
-                    MaterialId = detail.MaterialId,
-                    RequiredQty = grossRequired,
-                    ReservedQty = allocated,
-                    AllocationStatus = AllocationStatusEnum.RESERVED,
-                    AllocatedAt = now
-                };
-                await _materialAllocationRepository.AddAsync(allocation, cancellationToken);
+                    existingAlloc.RequiredQty = Math.Round(existingAlloc.RequiredQty + grossRequired, 4);
+                    existingAlloc.ReservedQty = Math.Round(existingAlloc.ReservedQty + allocated, 4);
+                    existingAlloc.AllocationStatus = AllocationStatusEnum.RESERVED;
+                    existingAlloc.AllocatedAt = now;
+                    await _materialAllocationRepository.UpdateAsync(existingAlloc);
+                    effectiveStatus = existingAlloc.AllocationStatus;
+                }
+                else
+                {
+                    var allocation = new MaterialAllocation
+                    {
+                        OrderItemId = orderItem.OrderItemId,
+                        MaterialId = detail.MaterialId,
+                        RequiredQty = grossRequired,
+                        ReservedQty = allocated,
+                        AllocationStatus = AllocationStatusEnum.RESERVED,
+                        AllocatedAt = now
+                    };
+                    orderItem.MaterialAllocations.Add(allocation);
+                    await _materialAllocationRepository.AddAsync(allocation, cancellationToken);
+                    effectiveStatus = allocation.AllocationStatus;
+                }
 
                 totalAllocated += allocated;
                 totalShortage += shortage;
@@ -665,7 +730,7 @@ public class MrpAllocationService : IMrpAllocationService
                     GrossRequiredQty = grossRequired,
                     AllocatedFromStockQty = allocated,
                     ShortageQty = shortage,
-                    AllocationStatus = allocation.AllocationStatus.ToString()
+                    AllocationStatus = effectiveStatus.ToString()
                 });
             }
 
@@ -762,7 +827,7 @@ public class MrpAllocationService : IMrpAllocationService
 
             bool isFullyCovered = totalShortage == 0m;
             string msg = isFullyCovered
-                ? $"Đã giữ chỗ đủ 100% vật tư từ kho cho {request.ScrappedQty} sản phẩm sản xuất bù ({totalAllocated} đơn vị vật tư)."
+                ? $"Đã giữ chỗ đủ vật tư từ kho cho {request.ScrappedQty} sản phẩm sản xuất bù ({totalAllocated} đơn vị vật tư)."
                 : $"Đã giữ chỗ {totalAllocated} đơn vị vật tư từ kho; phần thiếu hụt ({totalShortage} đơn vị) đã tự động tạo Phiếu yêu cầu mua hàng {createdPrCode} trình Chủ xưởng duyệt.";
 
             return new ScrapReplenishmentResultDto
@@ -897,8 +962,11 @@ public class MrpAllocationService : IMrpAllocationService
         CancellationToken cancellationToken)
     {
         var itemsWithBom = orderItems
-            .Where(oi => oi.BomHeader != null && oi.BomHeader.BomDetails.Count > 0)
-            .OrderBy(oi => oi.CustomerOrder.EtdDate)
+            .Where(oi => (oi.CustomerOrder == null || oi.CustomerOrder.Status is not (OrderStatusEnum.CANCELLED or OrderStatusEnum.COMPLETED))
+                         && oi.BomHeader != null
+                         && oi.BomHeader.BomDetails.Count > 0
+                         && oi.BomHeader.BomStatus != BomStatusEnum.DRAFT)
+            .OrderBy(oi => oi.CustomerOrder?.EtdDate ?? DateTime.MaxValue)
             .ThenBy(oi => oi.OrderItemId)
             .ToList();
 
@@ -1090,7 +1158,7 @@ public class MrpAllocationService : IMrpAllocationService
                     ConsolidatedPrCode = consolidatedPrCode,
                     QueuedShortageMaterialsCount = queuedShortageCount
                 }),
-                Reason = $"Thực thi tính toán nhu cầu vật tư & phân bổ tồn kho tự động: {(waitingMaterialItemsCount == 0 ? "Đủ 100% vật tư sẵn sàng sản xuất" : "Đang chờ mua bổ sung vật tư")}, đã giữ chỗ đủ cho {fullyAllocatedItemsCount}/{itemsWithBom.Count} dòng sản phẩm" +
+                Reason = $"Thực thi tính toán nhu cầu vật tư & phân bổ tồn kho tự động: {(waitingMaterialItemsCount == 0 ? "Đã đủ vật tư sẵn sàng sản xuất" : "Đang chờ mua bổ sung vật tư")}, đã giữ chỗ đủ cho {fullyAllocatedItemsCount}/{itemsWithBom.Count} dòng sản phẩm" +
                          (consolidatedPrCode != null ? $", đã gom phần thiếu hụt vào phiếu PR tổng hợp {consolidatedPrCode}." : "."),
                 CreatedAt = now
             });
@@ -1188,12 +1256,14 @@ public class MrpAllocationService : IMrpAllocationService
             }
             else
             {
-                // BR-PUR-01 / UC-44: Hợp nhất danh sách đơn nguồn theo từng OrderItemId rồi cộng tổng thiếu hụt thực tế (không cộng trùng)
+                // BR-PUR-01 / UC-44: Hợp nhất danh sách đơn nguồn theo từng OrderItemId rồi cộng tổng thiếu hụt thực tế (không cộng trùng) và giữ bù tồn kho an toàn (Safety Stock)
                 var mergedJson = MergeSourceOrderJson(existingItem.SourceOrderIdsJson, sourceJson);
                 var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, line.NetShortageQty);
+                var safetyTopUp = Math.Max(0m, line.SuggestedPrOrderQty - line.NetShortageQty);
+                var existingTopUp = Math.Max(0m, existingItem.SuggestedOrderQty - existingItem.TotalShortageQty);
                 existingItem.SourceOrderIdsJson = mergedJson;
                 existingItem.TotalShortageQty = aggregatedShortage;
-                existingItem.SuggestedOrderQty = aggregatedShortage;
+                existingItem.SuggestedOrderQty = Math.Round(aggregatedShortage + Math.Max(safetyTopUp, existingTopUp), 4);
             }
         }
 
@@ -1372,8 +1442,9 @@ public class MrpAllocationService : IMrpAllocationService
                 ? mat.MaterialStock.AvailableQty
                 : Math.Max(0m, Math.Round(physical - totalAllocated, 4));
 
-            // BR-INV-01: Tồn kho đã giữ chỗ của các đơn hàng khác (bắt buộc loại trừ)
-            var allocatedToOtherOrders = Math.Max(0m, Math.Round(totalAllocated - alreadyReservedForTarget, 4));
+            // BR-INV-01: Tồn kho đang giữ chỗ (ReservedQty) của các đơn hàng khác (không trừ IssuedQty đã xuất kho khỏi TotalAllocated)
+            var reservedOnlyForTarget = Math.Round(breakdowns.Sum(b => b.ReservedQty), 4);
+            var allocatedToOtherOrders = Math.Max(0m, Math.Round(totalAllocated - reservedOnlyForTarget, 4));
 
             var stillNeededForTarget = Math.Max(0m, Math.Round(totalGrossDemand - alreadyReservedForTarget, 4));
             var allocatableNow = Math.Min(stillNeededForTarget, available);

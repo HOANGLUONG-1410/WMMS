@@ -152,7 +152,7 @@ public class FinishedGoodsService : IFinishedGoodsService
             };
 
             throw new AppException(
-                $"Không thể nhập kho thành phẩm cho lô '{batch.BatchCode}' vì công đoạn '{incompleteStep.StageName}' (Thứ tự {incompleteStep.StageSequence}) đang ở trạng thái '{stepStatusVi}' (yêu cầu hoàn tất kiểm định chất lượng đạt chuẩn 100%).",
+                $"Không thể nhập kho thành phẩm cho lô '{batch.BatchCode}' vì công đoạn '{incompleteStep.StageName}' (Thứ tự {incompleteStep.StageSequence}) đang ở trạng thái '{stepStatusVi}' (yêu cầu hoàn tất kiểm định chất lượng đạt chuẩn).",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -176,6 +176,7 @@ public class FinishedGoodsService : IFinishedGoodsService
 
         var now = DateTime.UtcNow;
         var previousBatchStatus = batch.BatchStatus;
+        var previousBatchQty = batch.BatchQty;
 
         await _unitOfWork.BeginTransactionAsync();
         try
@@ -199,7 +200,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                 BeforeState = JsonSerializer.Serialize(new
                 {
                     BatchStatus = previousBatchStatus.ToString(),
-                    BatchQty = batch.BatchQty
+                    BatchQty = previousBatchQty
                 }),
                 AfterState = JsonSerializer.Serialize(new
                 {
@@ -301,6 +302,19 @@ public class FinishedGoodsService : IFinishedGoodsService
                 salesOrderStatusStr = order.Status.ToString();
                 await _unitOfWork.OrderItems.UpdateOrderAsync(order);
 
+                if (order.OrderSpace != null)
+                {
+                    var totalOrderUnits = order.OrderItems.Sum(oi => oi.OrderedQty);
+                    var doneOrderUnits = order.OrderItems.Sum(oi =>
+                        oi.OrderItemId == targetOrderItem?.OrderItemId
+                            ? Math.Min(oi.OrderedQty, totalCompletedForOrderItem)
+                            : (oi.Status == OrderItemStatusEnum.DONE ? oi.OrderedQty : 0));
+                    order.OrderSpace.OverallProgressPct = order.Status == OrderStatusEnum.COMPLETED
+                        ? 100m
+                        : (totalOrderUnits > 0 ? Math.Min(100m, Math.Round((decimal)doneOrderUnits * 100m / totalOrderUnits, 2)) : 0m);
+                    await _unitOfWork.OrderItems.UpdateOrderSpaceAsync(order.OrderSpace);
+                }
+
                 if (isSalesOrderDone && previousOrderStatus != OrderStatusEnum.COMPLETED)
                 {
                     await _unitOfWork.Boms.AddAuditLogAsync(new AuditLog
@@ -311,7 +325,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                         EntityId = order.PoNumber,
                         BeforeState = JsonSerializer.Serialize(new { OrderStatus = previousOrderStatus.ToString() }),
                         AfterState = JsonSerializer.Serialize(new { OrderStatus = order.Status.ToString() }),
-                        Reason = $"Đơn hàng {order.PoNumber} đã hoàn tất 100% các dòng sản phẩm và sẵn sàng xuất xưởng.",
+                        Reason = $"Đơn hàng {order.PoNumber} đã hoàn tất toàn bộ các dòng sản phẩm và sẵn sàng xuất xưởng.",
                         CreatedAt = now
                     });
                 }
@@ -349,8 +363,8 @@ public class FinishedGoodsService : IFinishedGoodsService
                 HandoverNote = request.HandoverNote,
                 CompletedAt = now,
                 Message = isSalesOrderDone
-                    ? $"Đã nhập kho thành phẩm lô '{batch.BatchCode}' ({finalCompletedQty} sản phẩm). Đơn hàng '{order?.PoNumber}' đã hoàn tất 100%!"
-                    : $"Đã nhập kho thành phẩm lô '{batch.BatchCode}' ({finalCompletedQty} sản phẩm). Tiến độ dòng sản phẩm đạt {completionPercent}% ({totalCompletedForOrderItem}/{orderedQty})."
+                    ? $"Đã nhập kho thành phẩm lô '{batch.BatchCode}' ({finalCompletedQty} sản phẩm). Đơn hàng '{order?.PoNumber}' đã hoàn tất!"
+                    : $"Đã nhập kho thành phẩm lô '{batch.BatchCode}' ({finalCompletedQty} sản phẩm). Đã hoàn thành {totalCompletedForOrderItem}/{orderedQty} sản phẩm của hạng mục."
             };
         }
         catch

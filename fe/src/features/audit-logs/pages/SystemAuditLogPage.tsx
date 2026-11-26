@@ -1,5 +1,4 @@
 import { useState } from "react";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useAuditLogs } from "../hooks/useAuditLogs";
 import { auditLogsApi } from "../api/auditLogsApi";
 import type { AuditLogDto } from "../types";
@@ -182,7 +181,6 @@ export default function SystemAuditLogPage() {
   };
 
   return (
-    <WmmsAppShell mode="admin">
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Header + Export CSV Button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -467,6 +465,5 @@ export default function SystemAuditLogPage() {
           </div>
         </div>
       </div>
-    </WmmsAppShell>
   );
 }

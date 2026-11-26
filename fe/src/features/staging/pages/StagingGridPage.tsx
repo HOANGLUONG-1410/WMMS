@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import WmmsAppShell from '../../../components/layout/WmmsAppShell';
+import { HeaderTopLeft } from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
 import { orderIntakeApi } from '../../../services/wmmsApi';
 import { INITIAL_STAGING_GRID_ROWS } from '../../../constants/wmmsConstants';
@@ -514,9 +514,8 @@ export default function StagingGridPage() {
   };
 
   return (
-    <WmmsAppShell
-      mode="staging"
-      customTopLeft={
+    <>
+      <HeaderTopLeft>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -528,23 +527,15 @@ export default function StagingGridPage() {
             </svg>
             <span>Danh sách đơn hàng</span>
           </button>
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-            Khu vực Staging PO
-          </span>
         </div>
-      }
-    >
+      </HeaderTopLeft>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Page Heading + Action Buttons */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-              Tiếp nhận &amp; Làm sạch PO Excel (Staging)
+              Thêm đơn hàng mới
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Tự động lọc bỏ thông tin thương mại nhạy cảm và kiểm tra định dạng dữ liệu trước khi khởi tạo Order Space.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -589,7 +580,7 @@ export default function StagingGridPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Khách hàng B2B
+                Khách hàng
               </label>
               {customerList.length > 0 ? (
                 <select
@@ -1249,6 +1240,6 @@ export default function StagingGridPage() {
           </div>
         </div>
       )}
-    </WmmsAppShell>
+    </>
   );
 }

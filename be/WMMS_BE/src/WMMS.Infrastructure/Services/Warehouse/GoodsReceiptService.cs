@@ -274,13 +274,13 @@ public class GoodsReceiptService : IGoodsReceiptService
         var waiting = await _context.MaterialAllocations
             .Include(a => a.OrderItem).ThenInclude(oi => oi.CustomerOrder).ThenInclude(co => co.OrderSpace)
             .Where(a => a.MaterialId == materialId
-                        && (a.AllocationStatus == AllocationStatusEnum.RESERVED || a.AllocationStatus == AllocationStatusEnum.RELEASED)
+                        && a.AllocationStatus == AllocationStatusEnum.RESERVED
                         && a.RequiredQty > (a.ReservedQty + a.IssuedQty)
                         && a.OrderItem.CustomerOrder.Status != OrderStatusEnum.CANCELLED)
             .ToListAsync(ct);
 
         var coveredItemIds = (await _context.MaterialAllocations
-                .Where(a => a.MaterialId == materialId)
+                .Where(a => a.MaterialId == materialId && a.AllocationStatus != AllocationStatusEnum.RELEASED)
                 .Select(a => a.OrderItemId)
                 .ToListAsync(ct))
             .ToHashSet();
@@ -383,7 +383,7 @@ public class GoodsReceiptService : IGoodsReceiptService
                 AllocatedNowQty = give,
                 RequiredQty = alloc.RequiredQty,
                 ReservedQty = alloc.ReservedQty,
-                ShortageQty = Math.Max(0m, alloc.RequiredQty - alloc.ReservedQty)
+                ShortageQty = Math.Max(0m, alloc.RequiredQty - (alloc.ReservedQty + alloc.IssuedQty))
             });
         }
 

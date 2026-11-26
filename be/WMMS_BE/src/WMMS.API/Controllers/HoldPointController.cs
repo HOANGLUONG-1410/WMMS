@@ -24,10 +24,14 @@ namespace WMMS.API.Controllers;
 public class HoldPointController : MasterDataControllerBase
 {
     private readonly IHoldPointService _holdPointService;
+    private readonly IProductionOrderService _productionOrderService;
 
-    public HoldPointController(IHoldPointService holdPointService)
+    public HoldPointController(
+        IHoldPointService holdPointService,
+        IProductionOrderService productionOrderService)
     {
         _holdPointService = holdPointService;
+        _productionOrderService = productionOrderService;
     }
 
     /// <summary>
@@ -58,15 +62,17 @@ public class HoldPointController : MasterDataControllerBase
         [FromBody] RequestHoldPointOverrideDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _holdPointService.RequestOverrideAsync(
-            request,
+        var op = await _productionOrderService.RequestOverdriveAsync(
+            request.BatchId,
+            new RequestOverdriveDto
+            {
+                HoldPointStageSeq = request.HoldPointStageSeq,
+                Justification = request.Justification
+            },
             GetCurrentUserId(),
-            GetClientIpAddress(),
             cancellationToken);
 
-        return Ok(ApiResponse<HoldPointOverrideResultDto>.Ok(
-            result,
-            $"Đã gửi yêu cầu ghi đè điểm dừng Hold Point công đoạn {result.HoldPointStageSeq} tới Chủ xưởng."));
+        return Ok(ApiResponse<OverdriveOperationResultDto>.Ok(op, op.Message));
     }
 
     /// <summary>
@@ -75,7 +81,7 @@ public class HoldPointController : MasterDataControllerBase
     [HttpPost("override-requests/{batchId:long}/approve")]
     [Obsolete("Khuyến nghị sử dụng endpoint hợp nhất trên ProductionOrderController: POST /api/v1/production-orders/batches/{batchId}/overdrive/approve")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner}")]
-    [ProducesResponseType(typeof(ApiResponse<HoldPointOverrideResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<OverdriveOperationResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -84,16 +90,17 @@ public class HoldPointController : MasterDataControllerBase
         [FromBody] ApproveHoldPointOverrideDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _holdPointService.ApproveOverrideAsync(
+        var op = await _productionOrderService.ApproveOverdriveAsync(
             batchId,
-            request,
+            new ApproveOverdriveDto
+            {
+                Approved = true,
+                Notes = request.Justification
+            },
             GetCurrentUserId(),
-            GetClientIpAddress(),
             cancellationToken);
 
-        return Ok(ApiResponse<HoldPointOverrideResultDto>.Ok(
-            result,
-            $"Chủ xưởng đã phê duyệt ghi đè điểm dừng Hold Point cho Thẻ Lô '{result.BatchCode}'. Thẻ đã được mở khóa tiếp tục sản xuất."));
+        return Ok(ApiResponse<OverdriveOperationResultDto>.Ok(op, op.Message));
     }
 
     /// <summary>
@@ -102,7 +109,7 @@ public class HoldPointController : MasterDataControllerBase
     [HttpPost("override-requests/{batchId:long}/reject")]
     [Obsolete("Khuyến nghị sử dụng endpoint hợp nhất trên ProductionOrderController: POST /api/v1/production-orders/batches/{batchId}/overdrive/approve với Approved=false")]
     [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner}")]
-    [ProducesResponseType(typeof(ApiResponse<HoldPointOverrideResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<OverdriveOperationResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -111,16 +118,17 @@ public class HoldPointController : MasterDataControllerBase
         [FromBody] RejectHoldPointOverrideDto request,
         CancellationToken cancellationToken)
     {
-        var result = await _holdPointService.RejectOverrideAsync(
+        var op = await _productionOrderService.ApproveOverdriveAsync(
             batchId,
-            request,
+            new ApproveOverdriveDto
+            {
+                Approved = false,
+                Notes = request.Reason
+            },
             GetCurrentUserId(),
-            GetClientIpAddress(),
             cancellationToken);
 
-        return Ok(ApiResponse<HoldPointOverrideResultDto>.Ok(
-            result,
-            $"Yêu cầu ghi đè điểm dừng Hold Point cho Thẻ Lô '{result.BatchCode}' đã bị từ chối. Thẻ bị khóa cứng tại trạm kiểm soát."));
+        return Ok(ApiResponse<OverdriveOperationResultDto>.Ok(op, op.Message));
     }
 
     /// <summary>
@@ -129,8 +137,8 @@ public class HoldPointController : MasterDataControllerBase
     /// </summary>
     [HttpPost("batches/{batchId:long}/advance")]
     [Obsolete("Khuyến nghị sử dụng endpoint hợp nhất trên ProductionOrderController: POST /api/v1/production-orders/batches/{batchId}/advance-step")]
-    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Leader}")]
-    [ProducesResponseType(typeof(ApiResponse<AdvanceStageResultDto>), StatusCodes.Status200OK)]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Leader}")]
+    [ProducesResponseType(typeof(ApiResponse<ProductionBatchDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AdvanceStageAsync(
@@ -138,18 +146,15 @@ public class HoldPointController : MasterDataControllerBase
         [FromBody] AdvanceStageRequestDto? request,
         CancellationToken cancellationToken)
     {
-        var result = await _holdPointService.AdvanceStageAsync(
+        var batch = await _productionOrderService.AdvanceStepAsync(
             batchId,
-            request,
+            new AdvanceStepRequestDto { Notes = request?.Notes },
             GetCurrentUserId(),
-            GetClientIpAddress(),
             cancellationToken);
 
-        var message = result.IsCompleted
-            ? $"Thẻ Lô '{result.BatchCode}' đã hoàn tất công đoạn cuối cùng ({result.NewStageName}) thành công!"
-            : $"Thẻ Lô '{result.BatchCode}' đã chuyển thành công sang công đoạn {result.NewStageSeq} ({result.NewStageName}).";
-
-        return Ok(ApiResponse<AdvanceStageResultDto>.Ok(result, message));
+        return Ok(ApiResponse<ProductionBatchDto>.Ok(
+            batch,
+            $"Lô sản xuất '{batch.BatchCode}' đã chuyển thành công sang công đoạn {batch.CurrentStageSeq} ({batch.CurrentStageName})."));
     }
 
     /// <summary>
