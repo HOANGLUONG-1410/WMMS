@@ -135,28 +135,10 @@ function SidebarAccordion({
   isOpen: boolean;
   children: ReactNode;
 }) {
-  const [rendered, setRendered] = useState(isOpen);
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setRendered(true);
-      const raf = requestAnimationFrame(() => {
-        requestAnimationFrame(() => setExpanded(true));
-      });
-      return () => cancelAnimationFrame(raf);
-    }
-    setExpanded(false);
-    const timer = setTimeout(() => setRendered(false), 220);
-    return () => clearTimeout(timer);
-  }, [isOpen]);
-
-  if (!rendered) return null;
-
   return (
     <div
       className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
-        expanded
+        isOpen
           ? "grid-rows-[1fr] opacity-100"
           : "grid-rows-[0fr] opacity-0 pointer-events-none"
       }`}
@@ -260,7 +242,6 @@ export default function WmmsSidebar({
   const roleMeta = ROLE_CONFIG[activeRole] || ROLE_CONFIG.ADMIN;
 
   const isInOrderSpace = location.pathname.startsWith("/orders/spaces");
-  const isInStagingPage = location.pathname.startsWith("/orders/staging");
   const isInBomPage = location.pathname.startsWith("/bom");
   const isInReconciliation = location.pathname.startsWith("/inventory/reconciliation");
   const isInProductionPage =
@@ -285,7 +266,7 @@ export default function WmmsSidebar({
   const canAccessStaging = (
     [ROLES.SALES, ROLES.OWNER, ROLES.ADMIN] as string[]
   ).includes(activeRole);
-  const canAccessBom = ([ROLES.ADMIN, ROLES.OWNER] as string[]).includes(
+  const canAccessBom = ([ROLES.ADMIN, ROLES.OWNER, ROLES.PLANNER] as string[]).includes(
     activeRole,
   );
   const canAccessReconciliation = (
@@ -307,8 +288,6 @@ export default function WmmsSidebar({
       ROLES.WAREHOUSE,
     ] as string[]
   ).includes(activeRole);
-
-  const lastProductItemRef = useRef<{ spaceKey: string; item: SidebarItem } | null>(null);
 
   const spaceSubItems: SidebarItem[] = [];
   if (isSpaceContextActive && displaySpaceKey) {
@@ -364,19 +343,11 @@ export default function WmmsSidebar({
         children: productChildren,
         dynamicOpen: true,
       };
-      lastProductItemRef.current = { spaceKey: displaySpaceKey, item: productItem };
       spaceSubItems.push(productItem);
-    } else if (lastProductItemRef.current?.spaceKey === displaySpaceKey) {
-      spaceSubItems.push({
-        ...lastProductItemRef.current.item,
-        dynamicOpen: false,
-      });
     }
   }
 
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
-  const lastOrderChildrenRef = useRef<SidebarItem[]>([]);
-  const lastSpaceItemRef = useRef<SidebarItem | undefined>(undefined);
 
   const orderSpaceChildItem: SidebarItem | undefined = isSpaceContextActive
     ? {
@@ -387,10 +358,6 @@ export default function WmmsSidebar({
       }
     : undefined;
 
-  if (orderSpaceChildItem) {
-    lastSpaceItemRef.current = orderSpaceChildItem;
-  }
-
   const orderChildren: SidebarItem[] = [];
   if (canAccessStaging) {
     orderChildren.push({
@@ -400,30 +367,13 @@ export default function WmmsSidebar({
     });
     if (orderSpaceChildItem) {
       orderChildren.push({ ...orderSpaceChildItem, dynamicOpen: true });
-    } else if (lastSpaceItemRef.current) {
-      orderChildren.push({ ...lastSpaceItemRef.current, dynamicOpen: false });
     }
   } else if (orderSpaceChildItem) {
     orderChildren.push(orderSpaceChildItem);
   }
 
-  if (orderChildren.length > 0) {
-    lastOrderChildrenRef.current = orderChildren;
-  }
-
-  // Tự động mở lại nhánh "Danh sách đơn hàng" mỗi khi đi vào ngữ cảnh một Space mới hoặc trang Đơn hàng mới
-  useEffect(() => {
-    if (isSpaceContextActive || isInStagingPage) {
-      setCollapsedMap((prev) => (prev["/orders"] ? { ...prev, "/orders": false } : prev));
-    }
-  }, [isSpaceContextActive, isInStagingPage, displaySpaceKey]);
-
   const effectiveOrderChildren =
-    orderChildren.length > 0
-      ? orderChildren
-      : lastOrderChildrenRef.current.length > 0
-        ? lastOrderChildrenRef.current
-        : undefined;
+    orderChildren.length > 0 ? orderChildren : undefined;
 
   const getSidebarSections = (): SidebarSection[] => {
     switch (activeRole) {

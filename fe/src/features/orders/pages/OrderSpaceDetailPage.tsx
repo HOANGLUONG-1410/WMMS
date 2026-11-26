@@ -431,62 +431,106 @@ export default function OrderSpaceDetailPage() {
           </div>
         </div>
 
-        {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              TỔNG SỐ LƯỢNG ĐẶT
+        {/* 4 KPI Cards (Ẩn đối với vai trò SALES) */}
+        {activeRole !== 'SALES' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                TỔNG SỐ LƯỢNG ĐẶT
+              </div>
+              <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                {spaceDetail?.totalOrderedUnits ?? fallbackSpace?.totalOrderedUnits ?? 0} cái
+              </div>
+              <div className="text-xs text-slate-500 mt-1">
+                {spaceDetail?.totalOrderedSubtitle || `${lineItems.length} dòng sản phẩm`}
+              </div>
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">
-              {spaceDetail?.totalOrderedUnits ?? fallbackSpace?.totalOrderedUnits ?? 0} cái
-            </div>
-            <div className="text-xs text-slate-500 mt-1">
-              {spaceDetail?.totalOrderedSubtitle || `${lineItems.length} dòng sản phẩm`}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              TRẠNG THÁI BOM
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                TRẠNG THÁI BOM
+              </div>
+              <div
+                className={`text-2xl font-extrabold mt-2 ${
+                  spaceDetail?.bomStatusTitle === 'Sẵn sàng' ||
+                  (spaceDetail?.bomStatusTitle || '').includes('Sẵn sàng')
+                    ? 'text-emerald-600'
+                    : 'text-amber-600'
+                }`}
+              >
+                {spaceDetail?.bomStatusTitle || 'Đang kiểm tra'}
+              </div>
+              <div className="text-xs text-slate-500 mt-1">
+                {spaceDetail?.bomStatusSubtitle || 'Cập nhật từ định mức sản phẩm'}
+              </div>
             </div>
-            <div
-              className={`text-2xl font-extrabold mt-2 ${
-                spaceDetail?.bomStatusTitle === 'Sẵn sàng' ||
-                (spaceDetail?.bomStatusTitle || '').includes('Sẵn sàng')
-                  ? 'text-emerald-600'
-                  : 'text-amber-600'
-              }`}
-            >
-              {spaceDetail?.bomStatusTitle || 'Đang kiểm tra'}
-            </div>
-            <div className="text-xs text-slate-500 mt-1">
-              {spaceDetail?.bomStatusSubtitle || 'Cập nhật từ định mức sản phẩm'}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              PHÂN BỔ VẬT TƯ
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                PHÂN BỔ VẬT TƯ
+              </div>
+              <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                {spaceDetail?.materialAllocationTitle || 'Chưa phân bổ'}
+              </div>
+              <div className="text-xs text-slate-500 mt-1">
+                {spaceDetail?.materialAllocationSubtitle || 'Theo dõi giữ chỗ tồn kho'}
+              </div>
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">
-              {spaceDetail?.materialAllocationTitle || 'Chưa phân bổ'}
-            </div>
-            <div className="text-xs text-slate-500 mt-1">
-              {spaceDetail?.materialAllocationSubtitle || 'Theo dõi giữ chỗ tồn kho'}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              TIẾN ĐỘ XƯỞNG
-            </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">
-              Hoàn thành {spaceDetail?.floorProgressPct ?? 0}%
-            </div>
-            <div className="text-xs text-slate-500 mt-1">
-              {spaceDetail?.floorProgressSubtitle || 'Tiến độ sản xuất tại xưởng'}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                TIẾN ĐỘ XƯỞNG
+              </div>
+              <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                Hoàn thành {spaceDetail?.floorProgressPct ?? 0}%
+              </div>
+              <div className="text-xs text-slate-500 mt-1">
+                {spaceDetail?.floorProgressSubtitle || 'Tiến độ sản xuất tại xưởng'}
+              </div>
             </div>
           </div>
+        )}
+
+        {/* Recent Space Activity & Milestones (Đặt ngay dưới khung thông tin đơn hàng) */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+          <h2 className="text-base font-bold text-slate-900 mb-4">
+            Nhật ký tiến độ &amp; Cột mốc đơn hàng
+          </h2>
+
+          {milestones.length === 0 ? (
+            <p className="text-sm text-slate-500">Chưa có cột mốc hoạt động nào được ghi nhận.</p>
+          ) : (
+            <div className="relative pl-6 border-l-2 border-slate-200 space-y-5 text-sm">
+              {milestones.map((m, i) => {
+                const parsedDate = m.timestamp ? new Date(m.timestamp) : null;
+                const timeStr =
+                  parsedDate && !Number.isNaN(parsedDate.getTime())
+                    ? parsedDate.toLocaleString('vi-VN')
+                    : m.timestamp || '';
+                const actorStr = m.actorName
+                  ? `bởi ${m.actorName}${m.actorRole ? ` (${m.actorRole})` : ''}`
+                  : '';
+                const metaSuffix = [timeStr, actorStr].filter(Boolean).join(' ');
+
+                return (
+                  <div key={i} className="relative">
+                    <span
+                      className={`w-3 h-3 rounded-full absolute -left-[31px] top-1 ring-4 ring-white ${
+                        i === 0 ? 'bg-emerald-500' : i === 1 ? 'bg-blue-600' : 'bg-slate-400'
+                      }`}
+                    />
+                    <div className="text-slate-900">
+                      <strong className="font-bold">{m.title}</strong>
+                      {metaSuffix && (
+                        <span className="text-slate-500 text-xs"> — {metaSuffix}</span>
+                      )}
+                    </div>
+                    <p className="text-slate-600 text-sm mt-0.5">{m.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Ordered Product Line Items Table */}
@@ -782,36 +826,6 @@ export default function OrderSpaceDetailPage() {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Recent Space Activity & Milestones */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-          <h2 className="text-base font-bold text-slate-900 mb-4">
-            Nhật ký tiến độ &amp; Cột mốc đơn hàng
-          </h2>
-
-          {milestones.length === 0 ? (
-            <p className="text-sm text-slate-500">Chưa có cột mốc hoạt động nào được ghi nhận.</p>
-          ) : (
-            <div className="relative pl-6 border-l-2 border-slate-200 space-y-5 text-sm">
-              {milestones.map((m, i) => (
-                <div key={i} className="relative">
-                  <span
-                    className={`w-3 h-3 rounded-full absolute -left-[31px] top-1 ring-4 ring-white ${
-                      i === 0 ? 'bg-emerald-500' : i === 1 ? 'bg-blue-600' : 'bg-slate-400'
-                    }`}
-                  />
-                  <div className="text-slate-900">
-                    <strong className="font-bold">{m.title}</strong>{' '}
-                    <span className="text-slate-500 text-xs">
-                      — {new Date(m.timestamp).toLocaleString('vi-VN')} bởi {m.actorName} ({m.actorRole})
-                    </span>
-                  </div>
-                  <p className="text-slate-600 text-sm mt-0.5">{m.description}</p>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
