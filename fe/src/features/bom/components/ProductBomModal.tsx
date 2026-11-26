@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { isAxiosError } from "axios";
+import { ApiError } from "../../../lib/api/apiError";
 import { bomApi } from "../api/bomApi";
 import {
   useApproveBom,
@@ -71,7 +72,10 @@ export default function ProductBomModal({
   } | null>(null);
 
   const isLockedForProduction =
-    bomStatus === "READY_FOR_PRODUCTION" || bomStatus === "LOCKED";
+    bomStatus === "READY_FOR_PRODUCTION" ||
+    bomStatus === "LOCKED" ||
+    lineItem?.itemStatus === "IN_PROD" ||
+    lineItem?.itemStatus === "DONE";
 
   useEffect(() => {
     if (!isOpen || !lineItem) return;
@@ -342,7 +346,9 @@ export default function ProductBomModal({
       });
     } catch (err) {
       let msg = "Không thể lưu BOM xuống máy chủ. Vui lòng kiểm tra lại dữ liệu.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({
@@ -382,7 +388,9 @@ export default function ProductBomModal({
       });
     } catch (err) {
       let msg = "Phê duyệt BOM thất bại.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({

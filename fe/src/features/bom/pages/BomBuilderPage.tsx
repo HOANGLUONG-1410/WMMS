@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
-import { HeaderTopLeft } from "../../../components/layout/WmmsAppShell";
+import { ApiError } from "../../../lib/api/apiError";
+import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
 import { orderIntakeApi } from "../../../services/wmmsApi";
 import { bomApi } from "../api/bomApi";
@@ -140,7 +141,9 @@ export default function BomBuilderPage() {
       });
     } catch (err) {
       let msg = `Không thể lưu quy trình sản xuất cho sản phẩm ${routingModalItem.productSku}.`;
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({

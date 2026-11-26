@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { isAxiosError } from "axios";
-import { HeaderTopLeft } from "../../../components/layout/WmmsAppShell";
+import { ApiError } from "../../../lib/api/apiError";
+import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
 import { useSession } from "../../auth/store/SessionContext";
 import { orderIntakeApi } from "../../../services/wmmsApi";
@@ -42,8 +42,15 @@ export default function InventoryReconciliationPage() {
   const { currentUser } = useSession();
 
   const activeRole = currentUser?.activeRole || "OWNER";
-  const canExecuteAllocation = ["ADMIN", "OWNER", "PLANNER", "WAREHOUSE"].includes(activeRole);
-  const canAccessPrPage = ["ADMIN", "OWNER", "PLANNER", "PURCHASING"].includes(activeRole);
+  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER"].includes(activeRole);
+  const canAccessProductionPage = [
+    "ADMIN",
+    "OWNER",
+    "PLANNER",
+    "LEADER",
+    "QC",
+    "WAREHOUSE",
+  ].includes(activeRole);
 
   const spaceParam = searchParams.get("spaceKey");
   const activeSpaceKey = spaceParam || currentSpaceKey || "";
@@ -151,8 +158,10 @@ export default function InventoryReconciliationPage() {
           setSpaceAllocations(Array.isArray(allocs) ? allocs : []);
         } catch (mrpErr) {
           let msg = `Không thể phân tích nhu cầu vật tư MRP cho Không gian "${spaceKey}".`;
-          if (isAxiosError(mrpErr)) {
-            msg = mrpErr.response?.data?.message || mrpErr.message || msg;
+          if (mrpErr instanceof ApiError) {
+            msg = mrpErr.message || msg;
+          } else if (mrpErr instanceof Error) {
+            msg = mrpErr.message || msg;
           }
           setMrpError(msg);
           setSpaceAllocations([]);
@@ -214,8 +223,8 @@ export default function InventoryReconciliationPage() {
       loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể thực thi phân bổ tồn kho tự động.";
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.message || err.message || msg;
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
       } else if (err instanceof Error) {
         msg = err.message;
       }
@@ -240,8 +249,10 @@ export default function InventoryReconciliationPage() {
       loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể tái phân bổ tồn kho theo ETD.";
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.message || err.message || msg;
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (err instanceof Error) {
+        msg = err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
     } finally {
@@ -367,8 +378,8 @@ export default function InventoryReconciliationPage() {
       loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể hủy giữ chỗ vật tư cho đơn hàng.";
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.message || err.message || msg;
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
       } else if (err instanceof Error) {
         msg = err.message;
       }
@@ -527,7 +538,7 @@ export default function InventoryReconciliationPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
               <div className="p-2.5 bg-white rounded-lg border border-slate-200">
-                <span className="text-slate-500">Sản phẩm đủ 100% vật tư:</span>
+                <span className="text-slate-500">Sản phẩm đủ vật tư:</span>
                 <div className="text-sm font-bold text-emerald-700 mt-0.5">
                   {allocationResult.fullyAllocatedItemsCount} sản phẩm (SẴN SÀNG SX)
                 </div>
@@ -671,7 +682,7 @@ export default function InventoryReconciliationPage() {
                     <span>ĐÃ KHÓA ĐỦ VẬT TƯ (LOCKED)</span>
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
-                    Toàn bộ vật tư định mức trong BOM đã được khóa giữ chỗ 100%
+                    Toàn bộ vật tư định mức trong BOM đã được khóa giữ chỗ
                   </div>
                 </>
               ) : (
@@ -681,7 +692,7 @@ export default function InventoryReconciliationPage() {
                     <span>ĐỦ TỒN KHO (CHỜ KHÓA)</span>
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
-                    Tồn khả dụng đáp ứng 100% BOM, bấm Thực thi để khóa giữ chỗ
+                    Tồn khả dụng đáp ứng đủ định mức BOM, bấm Thực thi để khóa giữ chỗ
                   </div>
                 </>
               )}

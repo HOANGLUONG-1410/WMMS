@@ -93,66 +93,28 @@ export const ROLE_CONFIG = {
 };
 
 /**
- * Danh sách Không gian Đơn hàng (Order Spaces) mặc định cho Global Space Switcher (Section III.2, III.3, III.4)
+ * Kiểu dữ liệu Không gian Đơn hàng (Order Spaces) đồng bộ từ Backend API
  */
-export const DEFAULT_ORDER_SPACES = [
-  {
-    spaceKey: 'SPACE-PO-880504',
-    spaceLabel: 'SPACE-PO-880504 (Bộ bàn ăn - Ashley Mỹ)',
-    customerName: 'Ashley Furniture Homestore (Mỹ)',
-    poNumber: 'ASH-2026-OCT-880504',
-    orderDate: '2026-10-12',
-    etdDate: '2026-10-28',
-    daysRemaining: 8,
-    isUrgentEtd: true,
-    totalOrderedUnits: 500,
-    lineItemsVolumeSummary: '500 bộ (ghế + bàn)',
-    lifecycleStatusBadge: 'IN_PRODUCTION',
-    overallProgressPct: 62
-  },
-  {
-    spaceKey: 'SPACE-PO-880506',
-    spaceLabel: 'SPACE-PO-880506 (Bàn cà phê - JYSK Đan Mạch)',
-    customerName: 'JYSK Nordic (Đan Mạch)',
-    poNumber: 'JYSK-DK-880506',
-    orderDate: '2026-10-14',
-    etdDate: '2026-11-05',
-    daysRemaining: 16,
-    isUrgentEtd: false,
-    totalOrderedUnits: 250,
-    lineItemsVolumeSummary: '250 cái bàn cà phê gỗ sồi',
-    lifecycleStatusBadge: 'IN_PRODUCTION',
-    overallProgressPct: 45
-  },
-  {
-    spaceKey: 'SPACE-PO-880507',
-    spaceLabel: 'SPACE-PO-880507 (Khung giường - IKEA Úc)',
-    customerName: 'IKEA Supply AG (Úc)',
-    poNumber: 'IKEA-AU-880507',
-    orderDate: '2026-10-17',
-    etdDate: '2026-11-20',
-    daysRemaining: 31,
-    isUrgentEtd: false,
-    totalOrderedUnits: 300,
-    lineItemsVolumeSummary: '300 cái khung giường Queen',
-    lifecycleStatusBadge: 'BOM_SETTING',
-    overallProgressPct: 0
-  },
-  {
-    spaceKey: 'SPACE-PO-880512',
-    spaceLabel: 'SPACE-PO-880512 (Ghế đẩu gỗ - Nitori Nhật)',
-    customerName: 'Nitori Holdings (Nhật Bản)',
-    poNumber: 'NIT-JP-880512',
-    orderDate: '2026-10-19',
-    etdDate: '2026-12-10',
-    daysRemaining: 51,
-    isUrgentEtd: false,
-    totalOrderedUnits: 400,
-    lineItemsVolumeSummary: '400 cái ghế đẩu gỗ nguyên khối',
-    lifecycleStatusBadge: 'NEWLY_RECEIVED',
-    overallProgressPct: 0
-  }
-];
+export interface OrderSpaceSummary {
+  spaceKey: string;
+  spaceLabel: string;
+  customerName: string;
+  poNumber: string;
+  orderDate: string;
+  etdDate: string;
+  daysRemaining: number;
+  isUrgentEtd: boolean;
+  totalOrderedUnits: number;
+  lineItemsVolumeSummary: string;
+  lifecycleStatusBadge: string;
+  lifecycleStatusLabel?: string;
+  overallProgressPct: number;
+}
+
+/**
+ * Danh sách Không gian Đơn hàng khởi tạo rỗng (sẽ được tải động từ Backend API /api/v1/orders)
+ */
+export const DEFAULT_ORDER_SPACES: OrderSpaceSummary[] = [];
 
 /**
  * Dữ liệu mặc định cho bảng Employee User Directory (SCR-ADM-01 - Section III.3.1)
@@ -247,7 +209,7 @@ export const ROLE_PERMISSION_MATRIX_ROWS = [
     functionalDomain: 'Điều phối Kanban',
     actionScope: 'Chuyển lô giữa các trạm',
     workshopOwner: { label: 'MONITOR', type: 'monitor' },
-    productionLeader: { label: 'ĐẦY ĐỦ (QUY TẮC 100%)', type: 'full' },
+    productionLeader: { label: 'ĐẦY ĐỦ (KIỂM ĐỊNH TOÀN BỘ)', type: 'full' },
     qcStaff: { label: 'NO', type: 'no' },
     warehouse: { label: 'NO', type: 'no' }
   },

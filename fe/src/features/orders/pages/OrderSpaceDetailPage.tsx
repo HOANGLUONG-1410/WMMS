@@ -2,10 +2,8 @@ import { Fragment, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { isAxiosError } from 'axios';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { HeaderTopLeft } from '../../../components/layout/WmmsAppShell';
-import { resolveBackendAssetUrl } from '../../../constants/env';
+import { ApiError } from '../../../lib/api/apiError';
+import WmmsAppShell from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
 import { useSession } from '../../auth/store/SessionContext';
 import { bomStatusLabel, lifecycleStatusLabel } from '../../../lib/statusLabels';
@@ -72,10 +70,10 @@ export default function OrderSpaceDetailPage() {
 
   const activeKey = spaceKey || currentSpaceKey || orderSpaces[0]?.spaceKey || '';
 
-  // Quyền người dùng
+  // Quyền người dùng (SALES chỉ xem thông tin đơn hàng & tiến độ, không truy cập BOM hay Đối chiếu tồn kho MRP)
   const activeRole = currentUser?.activeRole || 'OWNER';
   const canReleaseBatches = ['OWNER', 'ADMIN', 'LEADER'].includes(activeRole);
-  const canAccessBom = ['OWNER', 'ADMIN'].includes(activeRole);
+  const canAccessBom = ['OWNER', 'PLANNER', 'ADMIN'].includes(activeRole);
   const canAccessReconciliation = [
     'OWNER',
     'PLANNER',
@@ -143,7 +141,7 @@ export default function OrderSpaceDetailPage() {
 
     // Đánh giá tính hợp lệ để tick chọn phát hành hàng loạt:
     // 1. Chưa có BOM -> Chặn cứng (Disabled), nộp lên backend chắc chắn ném BOM_NOT_CONFIGURED
-    // 2. Đã phát hành hết 100% -> Chặn (Disabled)
+    // 2. Đã phát hành đủ số lượng -> Chặn (Disabled)
     let isEligible = true;
     let disableReason: string | null = null;
 
@@ -152,7 +150,7 @@ export default function OrderSpaceDetailPage() {
       disableReason = 'Chưa thiết lập định mức BOM (Chặn cứng)';
     } else if (remainingQty <= 0) {
       isEligible = false;
-      disableReason = 'Đã phát hành 100% số lượng';
+      disableReason = 'Đã phát hành đủ số lượng';
     }
 
     return {
@@ -257,8 +255,10 @@ export default function OrderSpaceDetailPage() {
         successCount++;
       } catch (err) {
         let msg = `Lỗi SP "${item.productName}": `;
-        if (isAxiosError(err)) {
-          msg += err.response?.data?.message || err.message;
+        if (err instanceof ApiError) {
+          msg += err.message;
+        } else if (err instanceof Error) {
+          msg += err.message;
         } else {
           msg += 'Không thể phát hành.';
         }
@@ -382,7 +382,14 @@ export default function OrderSpaceDetailPage() {
               <span className="text-slate-300">|</span>
               <span>
                 Hạn giao (ETD):{' '}
-                <strong className="text-rose-600">
+                <strong
+                  className={
+                    (spaceDetail?.isUrgentEtd ?? fallbackSpace?.isUrgentEtd) ||
+                    (spaceDetail?.daysRemaining ?? fallbackSpace?.daysRemaining ?? 0) < 0
+                      ? 'text-rose-600'
+                      : 'text-slate-900'
+                  }
+                >
                   {spaceDetail?.etdDate
                     ? new Date(spaceDetail.etdDate).toLocaleDateString('vi-VN')
                     : fallbackSpace?.etdDate || '—'}{' '}
@@ -442,7 +449,14 @@ export default function OrderSpaceDetailPage() {
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
               TRẠNG THÁI BOM
             </div>
-            <div className="text-2xl font-extrabold text-emerald-600 mt-2">
+            <div
+              className={`text-2xl font-extrabold mt-2 ${
+                spaceDetail?.bomStatusTitle === 'Sẵn sàng' ||
+                (spaceDetail?.bomStatusTitle || '').includes('Sẵn sàng')
+                  ? 'text-emerald-600'
+                  : 'text-amber-600'
+              }`}
+            >
               {spaceDetail?.bomStatusTitle || 'Đang kiểm tra'}
             </div>
             <div className="text-xs text-slate-500 mt-1">
@@ -556,7 +570,7 @@ export default function OrderSpaceDetailPage() {
                             {stats.remainingQty > 0 ? (
                               <span>Còn {fmtNum(stats.remainingQty)} SP</span>
                             ) : (
-                              <span className="text-emerald-600 font-bold">✓ Đã phát hành 100%</span>
+                              <span className="text-emerald-600 font-bold">✓ Đã phát hành đủ</span>
                             )}
                           </div>
                         </td>
@@ -812,7 +826,7 @@ export default function OrderSpaceDetailPage() {
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Không gian đơn hàng: <strong className="font-mono text-slate-800">{activeKey}</strong>.
-                  Các sản phẩm chưa có định mức BOM hoặc đã phát hành hết 100% sẽ được khóa an toàn.
+                  Các sản phẩm chưa có định mức BOM hoặc đã phát hành đủ số lượng sẽ được khóa an toàn.
                 </p>
               </div>
               {!isBulkExecuting && (

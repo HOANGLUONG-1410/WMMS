@@ -32,6 +32,10 @@ export default function GoodsIssuePage() {
 
   const handleConfirmIssue = () => {
     if (!selectedOrderId) return;
+    if (totalShortage > 0) {
+      toast.error("Đơn hàng vẫn còn vật tư đang thiếu hụt, không thể xuất kho cấp phát (BR-INV-01).");
+      return;
+    }
     if (totalReserved <= 0) {
       toast.error("Đơn hàng này không còn vật tư ở trạng thái giữ chỗ (cần xuất) để thực hiện xuất kho.");
       return;
@@ -44,7 +48,7 @@ export default function GoodsIssuePage() {
           toast.success(res.message || `Đã xuất kho cấp phát vật tư thành công cho đơn hàng!`);
         },
         onError: (err: any) => {
-          const msg = err?.response?.data?.message || err?.message || "Không thể thực hiện xuất kho.";
+          const msg = err?.message || err?.response?.data?.message || "Không thể thực hiện xuất kho.";
           toast.error(msg);
         },
       }
@@ -150,7 +154,7 @@ export default function GoodsIssuePage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
-                        <th className="py-3 px-5">Sản phẩm</th>
+                        <th className="py-3 px-5">Sản phẩm &amp; Nguyên vật liệu</th>
                         <th className="py-3 px-3 text-right">Cần</th>
                         <th className="py-3 px-3 text-right">Giữ chỗ</th>
                         <th className="py-3 px-3 text-right">Đã xuất</th>
@@ -183,8 +187,14 @@ export default function GoodsIssuePage() {
                       {allocations.map((a) => (
                         <tr key={a.allocationId}>
                           <td className="py-3 px-5">
-                            <div className="font-semibold text-slate-900">{a.productName}</div>
-                            <div className="font-mono text-xs text-slate-500">{a.productSku}</div>
+                            <div className="font-semibold text-slate-900">
+                              {a.materialName || a.productName}
+                              {a.unitOfMeasure ? ` (${a.unitOfMeasure})` : ""}
+                            </div>
+                            <div className="font-mono text-xs text-slate-500">
+                              {a.materialCode ? `${a.materialCode} • ` : ""}
+                              SP: {a.productName} ({a.productSku})
+                            </div>
                           </td>
                           <td className="py-3 px-3 text-right">{fmtNum(a.requiredQty)}</td>
                           <td className="py-3 px-3 text-right">{fmtNum(a.reservedQty)}</td>
@@ -206,7 +216,7 @@ export default function GoodsIssuePage() {
                                     : "bg-amber-50 text-amber-800 border-amber-200"
                               }`}
                             >
-                              {(a as { allocationStatusLabel?: string }).allocationStatusLabel ||
+                              {a.allocationStatusLabel ||
                                 allocationStatusLabel(a.allocationStatus)}
                             </span>
                           </td>
@@ -217,13 +227,24 @@ export default function GoodsIssuePage() {
                 </div>
 
                 {!readOnly && (
-                <div className="px-6 py-4 border-t border-slate-200 flex justify-end">
+                <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-4">
+                  <div className="text-xs text-slate-500">
+                    {totalShortage > 0 ? (
+                      <span className="text-rose-600 font-semibold">
+                        ⚠ Đơn hàng vẫn còn vật tư thiếu ({fmtNum(totalShortage)}), chưa thể xuất kho.
+                      </span>
+                    ) : totalReserved <= 0 ? (
+                      <span>Tất cả vật tư giữ chỗ đã được xuất kho hoặc chưa phân bổ giữ chỗ.</span>
+                    ) : (
+                      <span>Sẵn sàng xuất kho toàn bộ vật tư đã giữ chỗ xuống phân xưởng.</span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={handleConfirmIssue}
-                    disabled={issueMutation.isPending || totalReserved <= 0}
+                    disabled={issueMutation.isPending || totalReserved <= 0 || totalShortage > 0}
                     className={`px-5 py-2.5 text-white text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 ${
-                      issueMutation.isPending || totalReserved <= 0
+                      issueMutation.isPending || totalReserved <= 0 || totalShortage > 0
                         ? "bg-slate-400 cursor-not-allowed opacity-70"
                         : "bg-emerald-600 hover:bg-emerald-700"
                     }`}

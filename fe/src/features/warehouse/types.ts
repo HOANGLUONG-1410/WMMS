@@ -90,11 +90,16 @@ export interface OrderAllocation {
   orderItemId: number;
   productSku: string;
   productName: string;
+  materialId?: number;
+  materialCode?: string;
+  materialName?: string;
+  unitOfMeasure?: string;
   requiredQty: number;
   reservedQty: number;
   issuedQty: number;
   shortageQty: number;
   allocationStatus: string;
+  allocationStatusLabel?: string;
   etdDate: string;
   allocatedAt: string;
 }
