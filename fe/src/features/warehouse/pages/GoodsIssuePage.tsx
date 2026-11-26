@@ -196,7 +196,20 @@ export default function GoodsIssuePage() {
                           >
                             {fmtNum(a.shortageQty)}
                           </td>
-                          <td className="py-3 px-5 whitespace-nowrap">{allocationStatusLabel(a.allocationStatus)}</td>
+                          <td className="py-3 px-5 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-full border ${
+                                a.allocationStatus === "ISSUED" || a.allocationStatus === "ISSUED_TO_SHOP"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : a.allocationStatus === "RESERVED" || a.allocationStatus === "FULL" || a.allocationStatus === "FULLY_ALLOCATED"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-amber-50 text-amber-800 border-amber-200"
+                              }`}
+                            >
+                              {(a as { allocationStatusLabel?: string }).allocationStatusLabel ||
+                                allocationStatusLabel(a.allocationStatus)}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

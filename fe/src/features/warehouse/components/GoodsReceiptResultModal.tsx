@@ -41,7 +41,9 @@ export default function GoodsReceiptResultModal({ result, onClose }: GoodsReceip
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-500">Trạng thái PO sau nhập</div>
-              <div className="font-semibold text-slate-900 mt-1">{poStatusLabel(result.poStatus)}</div>
+              <div className="font-semibold text-slate-900 mt-1">
+                {(result as { poStatusLabel?: string }).poStatusLabel || poStatusLabel(result.poStatus)}
+              </div>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <div className="text-xs text-slate-500">Thời điểm xác nhận</div>

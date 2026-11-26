@@ -58,7 +58,7 @@ public class HoldPointService : IHoldPointService
 
         if (batch == null)
         {
-            throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
+            throw new NotFoundException("Không tìm thấy lô sản xuất được yêu cầu.");
         }
 
         var sortedSteps = batch.BatchRoutingSteps
@@ -76,10 +76,15 @@ public class HoldPointService : IHoldPointService
             canAdvance = false;
             blockReason = "Lô sản xuất đã hoàn tất toàn bộ các công đoạn trong quy trình.";
         }
+        else if (batch.BatchStatus == BatchStatusEnum.LOCKED)
+        {
+            canAdvance = false;
+            blockReason = "Lô sản xuất đang tạm khóa chờ xuất kho nguyên vật liệu.";
+        }
         else if (batch.BatchStatus == BatchStatusEnum.HOLD_POINT_BLOCKED)
         {
             canAdvance = false;
-            blockReason = $"Thẻ lô đang bị khóa tại trạm Hold Point công đoạn {batch.HoldPointStageSeq ?? batch.CurrentStageSeq}. Cần cấp phát vật tư hoặc phê duyệt Overdriver từ Chủ xưởng.";
+            blockReason = $"Lô sản xuất đang tạm dừng tại chốt kiểm soát (Hold Point) công đoạn {batch.HoldPointStageSeq ?? batch.CurrentStageSeq}. Cần xuất kho vật tư bổ sung hoặc phê duyệt chạy trước (Overdrive) từ Chủ xưởng.";
         }
         else if (currentStep != null && !currentStep.Is100PercentPassed())
         {

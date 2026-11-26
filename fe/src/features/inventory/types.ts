@@ -32,6 +32,7 @@ export interface MaterialOrderAllocationDto {
   issuedQty: number;
   shortageQty: number;
   allocationStatus: string;
+  allocationStatusLabel?: string;
   etdDate: string;
   allocatedAt: string;
 }
@@ -42,6 +43,7 @@ export interface InventoryStockDto {
   materialCode: string;
   materialName: string;
   materialGroup: string;
+  materialGroupLabel?: string;
   unitOfMeasure: string;
   dimensionSpec?: string | null;
   fscCertified: boolean;
@@ -51,6 +53,7 @@ export interface InventoryStockDto {
   availableQty: number;
   isBelowSafetyStock: boolean;
   status: string;
+  statusLabel?: string;
   updatedAt: string;
   /** Danh sách tóm tắt các Order Space đang giữ chỗ để hiển thị pill trên bảng 3 cấp */
   activeAllocationsPreview?: Array<{
@@ -66,8 +69,10 @@ export interface InventoryTransactionDto {
   materialCode: string;
   materialName: string;
   materialGroup: string;
+  materialGroupLabel?: string;
   unitOfMeasure: string;
   txType: "INITIAL_IMPORT" | "IN_RECEIPT" | "OUT_ISSUE" | "ADJUST" | string;
+  txTypeLabel?: string;
   quantity: number;
   referenceCode?: string | null;
   createdAt: string;
@@ -117,6 +122,7 @@ export interface MrpMaterialRequirementLineDto {
   materialCode: string;
   materialName: string;
   materialGroup: string;
+  materialGroupLabel?: string;
   unitOfMeasure: string;
   dimensionSpec?: string | null;
   fscCertified: boolean;
@@ -131,7 +137,8 @@ export interface MrpMaterialRequirementLineDto {
   netShortageQty: number;
   suggestedPrOrderQty: number;
   isShortage: boolean;
-  supplyStatus: "SUFFICIENT" | "PARTIAL_SHORTAGE" | "CRITICAL_SHORTAGE" | string;
+  supplyStatus: "RESERVED" | "SUFFICIENT" | "PARTIAL_SHORTAGE" | "CRITICAL_SHORTAGE" | string;
+  supplyStatusLabel?: string;
   itemBreakdowns: MrpOrderItemBreakdownDto[];
 }
 
@@ -152,6 +159,7 @@ export interface MrpAnalysisResultDto {
   sufficientMaterialsCount: number;
   shortageMaterialsCount: number;
   overallReadinessStatus: "READY_TO_PRODUCE" | "WAITING_FOR_MATERIAL" | string;
+  overallReadinessStatusLabel?: string;
   materialRequirements: MrpMaterialRequirementLineDto[];
 }
 
@@ -167,6 +175,7 @@ export interface AutoAllocationResultDto {
   spaceKey?: string;
   executedAt: string;
   overallReadinessStatus: string;
+  overallReadinessStatusLabel?: string;
   totalOrderItemsProcessed: number;
   fullyAllocatedItemsCount: number;
   waitingMaterialItemsCount: number;

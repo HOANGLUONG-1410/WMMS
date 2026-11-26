@@ -460,7 +460,10 @@ public class MrpAllocationService : IMrpAllocationService
 
                 alloc.IssuedQty = Math.Round(alloc.IssuedQty + qtyToIssue, 4);
                 alloc.ReservedQty = 0m;
-                alloc.AllocationStatus = AllocationStatusEnum.ISSUED_TO_SHOP;
+                // Chỉ đánh dấu ISSUED_TO_SHOP khi đã xuất đủ RequiredQty; nếu xuất dở dang giữ RESERVED để GRN tiếp tục phân bổ phần thiếu
+                alloc.AllocationStatus = alloc.IssuedQty >= alloc.RequiredQty
+                    ? AllocationStatusEnum.ISSUED_TO_SHOP
+                    : AllocationStatusEnum.RESERVED;
                 await _materialAllocationRepository.UpdateAsync(alloc);
 
                 transactions.Add(new InventoryTransaction
@@ -481,10 +484,23 @@ public class MrpAllocationService : IMrpAllocationService
                 await _materialStockRepository.AddTransactionsRangeAsync(transactions, cancellationToken);
             }
 
-            // Tự động mở khóa lô LOCKED và chốt chặn Hold Point cho các lô sản xuất của đơn hàng sau khi Thủ kho xác nhận Xuất kho (UC-59, BR-PRD-01)
+            // Chỉ mở khóa lô LOCKED và chốt chặn Hold Point cho các OrderItem đã xuất kho ĐỦ 100% vật tư (UC-59, BR-PRD-01)
+            var fullyIssuedOrderItemIds = allocations
+                .Where(a => a.AllocationStatus != AllocationStatusEnum.RELEASED)
+                .GroupBy(a => a.OrderItemId)
+                .Where(g => g.All(a => a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP && a.IssuedQty >= a.RequiredQty))
+                .Select(g => g.Key)
+                .ToHashSet();
+
             var batches = await _unitOfWork.ProductionBatches.GetByOrderIdAsync(orderId, cancellationToken);
+            int unlockedBatchesCount = 0;
             foreach (var batch in batches)
             {
+                if (batch.BatchStatus == BatchStatusEnum.DONE || !fullyIssuedOrderItemIds.Contains(batch.OrderItemId))
+                {
+                    continue;
+                }
+
                 batch.GoodsIssuedUnlocked = true;
                 if (batch.BatchStatus == BatchStatusEnum.LOCKED)
                 {
@@ -520,6 +536,7 @@ public class MrpAllocationService : IMrpAllocationService
                 }
                 batch.UpdatedAt = now;
                 await _unitOfWork.ProductionBatches.UpdateAsync(batch);
+                unlockedBatchesCount++;
             }
 
             await _bomRepository.AddAuditLogAsync(new AuditLog
@@ -535,7 +552,7 @@ public class MrpAllocationService : IMrpAllocationService
                     PoNumber = order.PoNumber,
                     IssuedAllocationsCount = issuedDtos.Count,
                     TotalQuantityIssued = totalIssuedQty,
-                    BatchesUnlockedCount = batches.Count
+                    BatchesUnlockedCount = unlockedBatchesCount
                 }),
                 Reason = string.IsNullOrWhiteSpace(reason)
                     ? $"Xác nhận xuất kho cấp phát {totalIssuedQty} đơn vị vật tư cho đơn hàng {order.PoNumber} bàn giao xuống xưởng."

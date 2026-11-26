@@ -224,7 +224,7 @@ export default function StockDetailModal({
                             </td>
                             <td className="py-3.5 px-4 text-center whitespace-nowrap">
                               <span className="px-2.5 py-0.5 text-xs font-bold uppercase rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                                {alloc.allocationStatus || "ĐANG GIỮ CHỖ"}
+                                {alloc.allocationStatusLabel || alloc.allocationStatus || "Đã giữ chỗ"}
                               </span>
                             </td>
                           </tr>

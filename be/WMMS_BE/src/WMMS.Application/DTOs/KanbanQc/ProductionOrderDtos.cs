@@ -264,6 +264,7 @@ public class ReinspectSubBatchResultDto
     public int PassQty { get; set; }
     public int FailQty { get; set; }
     public bool IsFullyPassed { get; set; }
+    public bool RequiresScrapReplenishment => FailQty > 0;
     public string SubBatchStatus { get; set; } = string.Empty;
     public string SubBatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(SubBatchStatus);
     public string Message { get; set; } = string.Empty;

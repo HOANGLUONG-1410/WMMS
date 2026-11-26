@@ -250,8 +250,8 @@ export default function EditUserModal({
                 onChange={(e) => setStatus(e.target.value as "ACTIVE" | "BANNED")}
                 className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               >
-                <option value="ACTIVE">Đang hoạt động (ACTIVE)</option>
-                <option value="BANNED">Tạm khóa truy cập (BANNED)</option>
+                <option value="ACTIVE">Đang hoạt động</option>
+                <option value="BANNED">Đã khóa vĩnh viễn</option>
               </select>
             </div>
           </div>

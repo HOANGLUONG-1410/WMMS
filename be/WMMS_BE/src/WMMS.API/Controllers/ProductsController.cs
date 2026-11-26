@@ -19,7 +19,7 @@ namespace WMMS.API.Controllers;
 /// </para>
 /// </summary>
 [Route("api/v1/products")]
-[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Sales},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Qc}")]
+[Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Sales},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Qc},{RoleConstants.Purchasing},{RoleConstants.Warehouse}")]
 public class ProductsController : MasterDataControllerBase
 {
     private const string WriteRoles = $"{RoleConstants.Admin},{RoleConstants.Planner}";

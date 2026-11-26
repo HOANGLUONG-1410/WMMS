@@ -84,6 +84,17 @@ function buildSessionUser(user: AuthUser): SessionUser {
 
 const SessionContext = createContext<SessionValue | null>(null);
 
+// Gộp các lần gọi refreshToken trùng nhau khi React <StrictMode> mount 2 lần (Single-flight)
+let refreshPromise: ReturnType<typeof authApi.refreshToken> | null = null;
+function refreshSessionOnce() {
+  if (!refreshPromise) {
+    refreshPromise = authApi.refreshToken("").finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -95,7 +106,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const restoreSession = async () => {
       try {
-        const refreshRes = await authApi.refreshToken("");
+        const refreshRes = await refreshSessionOnce();
         const newAccessToken = refreshRes?.data?.accessToken;
 
         if (newAccessToken) {

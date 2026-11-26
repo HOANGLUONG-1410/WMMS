@@ -20,11 +20,19 @@ const fmtDate = (v?: string | null) => {
   return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString("vi-VN");
 };
 
-// Thứ tự ưu tiên nhóm trạng thái: Thiếu gấp (1) -> Thiếu 1 phần (2) -> Đủ (3)
+// Thứ tự ưu tiên nhóm trạng thái: Thiếu hết (1) -> Thiếu 1 phần (2) -> Đủ tồn kho (3) -> Đã giữ chỗ (4)
 const getSupplyRank = (status?: string) => {
   if (status === "CRITICAL_SHORTAGE") return 1;
   if (status === "PARTIAL_SHORTAGE") return 2;
-  return 3;
+  if (status === "SUFFICIENT") return 3;
+  return 4; // RESERVED
+};
+
+const SUPPLY_BADGE_CLASS: Record<string, string> = {
+  RESERVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  SUFFICIENT: "bg-blue-50 text-blue-700 border-blue-200",
+  PARTIAL_SHORTAGE: "bg-amber-50 text-amber-800 border-amber-200",
+  CRITICAL_SHORTAGE: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 export default function InventoryReconciliationPage() {
@@ -373,7 +381,17 @@ export default function InventoryReconciliationPage() {
   // Lọc & Sắp xếp danh sách vật tư của Space: ĐẨY VẬT TƯ THIẾU HỤT LÊN ĐẦU
   const sortedFilteredMaterials = useMemo(() => {
     const list = (mrpData?.materialRequirements || []).filter((item) => {
-      if (filterSupplyStatus !== "ALL" && item.supplyStatus !== filterSupplyStatus) {
+      if (filterSupplyStatus === "INSUFFICIENT") {
+        if (
+          item.supplyStatus !== "PARTIAL_SHORTAGE" &&
+          item.supplyStatus !== "CRITICAL_SHORTAGE"
+        ) {
+          return false;
+        }
+      } else if (
+        filterSupplyStatus !== "ALL" &&
+        item.supplyStatus !== filterSupplyStatus
+      ) {
         return false;
       }
       if (searchKeyword.trim()) {
@@ -898,9 +916,9 @@ export default function InventoryReconciliationPage() {
                 className="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 font-semibold"
               >
                 <option value="ALL">Tất cả trạng thái</option>
-                <option value="SUFFICIENT">Đủ 100% vật tư (Sufficient)</option>
-                <option value="PARTIAL_SHORTAGE">Thiếu một phần (Partial)</option>
-                <option value="CRITICAL_SHORTAGE">Thiếu nghiêm trọng (Critical)</option>
+                <option value="INSUFFICIENT">Chưa đủ nguyên liệu</option>
+                <option value="SUFFICIENT">Đủ tồn kho</option>
+                <option value="RESERVED">Đã giữ chỗ</option>
               </select>
             </div>
           </div>
@@ -983,7 +1001,7 @@ export default function InventoryReconciliationPage() {
                               )}
                             </div>
                             <div className="text-xs text-slate-500 font-mono mt-0.5">
-                              {m.materialCode} • {m.materialGroup}
+                              {m.materialCode} • {m.materialGroupLabel || m.materialGroup}
                               {m.dimensionSpec ? ` • ${m.dimensionSpec}` : ""}
                             </div>
                           </td>
@@ -1040,29 +1058,17 @@ export default function InventoryReconciliationPage() {
                           {/* Trạng thái đáp ứng & Khóa giữ chỗ */}
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold rounded-full border ${
-                                m.alreadyReservedForTargetQty >= m.totalGrossDemandQty &&
-                                m.totalGrossDemandQty > 0
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : m.alreadyReservedForTargetQty > 0
-                                    ? "bg-amber-50 text-amber-800 border-amber-200"
-                                    : m.supplyStatus === "SUFFICIENT"
-                                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                                      : m.supplyStatus === "PARTIAL_SHORTAGE"
-                                        ? "bg-amber-50 text-amber-800 border-amber-200"
-                                        : "bg-rose-50 text-rose-700 border-rose-200"
+                              className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-full border ${
+                                SUPPLY_BADGE_CLASS[m.supplyStatus] ??
+                                "bg-slate-100 text-slate-700 border-slate-200"
                               }`}
                             >
-                              {m.alreadyReservedForTargetQty >= m.totalGrossDemandQty &&
-                              m.totalGrossDemandQty > 0
-                                ? "🔒 ĐÃ KHÓA 100%"
-                                : m.alreadyReservedForTargetQty > 0
-                                  ? "🔒 ĐÃ KHÓA 1 PHẦN"
+                              {m.supplyStatusLabel ||
+                                (m.supplyStatus === "RESERVED"
+                                  ? "Đã giữ chỗ"
                                   : m.supplyStatus === "SUFFICIENT"
-                                    ? "ĐỦ 100%"
-                                    : m.supplyStatus === "PARTIAL_SHORTAGE"
-                                      ? "THIẾU 1 PHẦN"
-                                      : "THIẾU GẮP"}
+                                    ? "Đủ tồn kho"
+                                    : "Chưa đủ nguyên liệu")}
                             </span>
                           </td>
 
