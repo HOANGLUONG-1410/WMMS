@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useSession } from "../../auth/store/SessionContext";
 import { ROLES } from "../../../constants/roles";
 import { prStatusLabel } from "../../../lib/statusLabels";
@@ -74,7 +73,7 @@ export default function PurchaseRequestPage() {
   };
 
   return (
-    <WmmsAppShell mode="purchasing">
+    <>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {toast && (
           <div className="px-4 py-3 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center justify-between">
@@ -313,6 +312,6 @@ export default function PurchaseRequestPage() {
         onClose={handleCloseModal}
         onSuccess={(msg) => setToast(msg)}
       />
-    </WmmsAppShell>
+    </>
   );
 }

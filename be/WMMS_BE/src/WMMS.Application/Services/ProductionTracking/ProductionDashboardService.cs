@@ -362,7 +362,7 @@ public class ProductionDashboardService : IProductionDashboardService
                     TopDefectCode = topCode?.DefectCode ?? string.Empty,
                     TopDefectName = topCode?.DefectName ?? string.Empty,
                     RootCauseSummary = topCatalog?.RootCause ?? "Cần kiểm tra cữ máy, độ ẩm phôi gỗ và thao tác vận hành tại trạm.",
-                    RecommendedAction = topCatalog?.RecommendedAction ?? "Hiệu chuẩn lại thiết bị gia công và kiểm tra KCS 100% đầu chuyền.",
+                    RecommendedAction = topCatalog?.RecommendedAction ?? "Hiệu chuẩn lại thiết bị gia công và kiểm tra KCS toàn bộ phôi đầu chuyền.",
                     DefectBreakdown = breakdown
                 };
             })
@@ -456,7 +456,7 @@ public class ProductionDashboardService : IProductionDashboardService
         var topWoodItem = byWoodType.FirstOrDefault();
 
         string assessment = totalDefectUnits == 0
-            ? "Không phát sinh lỗi chất lượng KCS nào trong phạm vi truy vấn. Toàn bộ các trạm gia công đạt chuẩn 100%."
+            ? "Không phát sinh lỗi chất lượng KCS nào trong phạm vi truy vấn. Toàn bộ các trạm gia công đều đạt chuẩn."
             : $"Phát hiện tổng cộng {totalDefectUnits} SP lỗi qua {totalEvents} lượt ghi nhận KCS (Sửa chữa Rework: {totalReworkUnits} SP [{reworkShare}%], Hủy bù phôi: {totalScrapUnits} SP [{scrapShare}%]). " +
               $"Trạm máy phát sinh lỗi cao nhất: '{topStationItem?.StationName}' ({topStationItem?.TotalDefectQty} SP - chiếm {topStationItem?.ShareOfTotalDefectsPercent}%, lỗi chính: {topStationItem?.TopDefectName}). " +
               $"Loại gỗ phát sinh lỗi nhiều nhất: '{topWoodItem?.WoodType}' ({topWoodItem?.TotalDefectQty} SP).";
@@ -832,7 +832,7 @@ public class ProductionDashboardService : IProductionDashboardService
                         : "Hủy & Bù phôi";
                     return $"{dl.DefectCode}: {dl.DefectName} ({dl.DefectQty} SP - {dispVi})";
                 }))
-                : "Đạt chuẩn 100%";
+                : "Đạt chuẩn";
 
             return new QcInspectionStageExportRowDto
             {

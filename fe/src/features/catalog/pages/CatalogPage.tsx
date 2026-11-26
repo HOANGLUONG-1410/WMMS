@@ -1,15 +1,12 @@
 import { useState } from "react";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import ProductCatalogTab from "../components/ProductCatalogTab";
 import MaterialCatalogTab from "../components/MaterialCatalogTab";
 import { useVisualProducts, useMaterials } from "../hooks/useCatalog";
-import { useSession } from "../../auth/store/SessionContext";
 
 type ActiveTab = "products" | "materials";
 
 export default function CatalogPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("products");
-  const { currentUser } = useSession();
 
   // Fetch dữ liệu tóm tắt cho stats bar
   const { data: products } = useVisualProducts();
@@ -20,16 +17,7 @@ export default function CatalogPage() {
   const totalMaterials = materials?.length ?? 0;
   const fscMaterialsCount = materials?.filter((m) => m.fscCertified).length ?? 0;
 
-  // Quyết định mode cho WmmsAppShell dựa trên role của user
-  const shellMode =
-    currentUser?.activeRole?.toUpperCase() === "PURCHASING"
-      ? "purchasing"
-      : currentUser?.activeRole?.toUpperCase() === "ADMIN"
-      ? "admin"
-      : "owner";
-
   return (
-    <WmmsAppShell mode={shellMode}>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -130,6 +118,5 @@ export default function CatalogPage() {
           {activeTab === "products" ? <ProductCatalogTab /> : <MaterialCatalogTab />}
         </div>
       </div>
-    </WmmsAppShell>
   );
 }

@@ -432,14 +432,18 @@ public class OrderIntakeService : IOrderIntakeService
 
             // 3. Xác định ngày đặt hàng và hạn giao ETD sớm nhất trong các dòng PO
             var orderDate = request.OrderDate?.Date ?? now.Date;
-            var earliestEtd = request.TargetEtd?.Date ?? now.Date.AddDays(25);
+            DateTime? parsedRowMinEtd = null;
             foreach (var r in validationResult.Rows)
             {
-                if (TryParseFlexibleDate(r.TargetEtd, out var rowEtd) && rowEtd.Date < earliestEtd)
+                if (TryParseFlexibleDate(r.TargetEtd, out var rowEtd))
                 {
-                    earliestEtd = rowEtd.Date;
+                    if (!parsedRowMinEtd.HasValue || rowEtd.Date < parsedRowMinEtd.Value)
+                    {
+                        parsedRowMinEtd = rowEtd.Date;
+                    }
                 }
             }
+            var earliestEtd = request.TargetEtd?.Date ?? parsedRowMinEtd ?? now.Date.AddDays(25);
 
             // 4. Tạo bản ghi CustomerOrder (bảng sales_orders)
             var salesOrder = new CustomerOrder
@@ -632,7 +636,9 @@ public class OrderIntakeService : IOrderIntakeService
         var mappedItems = allOrders.Select(o => MapToSalesOrderListItem(o, today)).ToList();
 
         // Tính toán 3 KPI Cards trên đầu màn hình SCR-ORD-01
-        var activeOrders = mappedItems.Where(i => i.OrderStatus != nameof(OrderStatusEnum.CANCELLED)).ToList();
+        var activeOrders = mappedItems.Where(i =>
+            i.OrderStatus != nameof(OrderStatusEnum.CANCELLED) &&
+            i.OrderStatus != nameof(OrderStatusEnum.COMPLETED)).ToList();
         var inProductionCount = activeOrders.Count(i => i.LifecycleStatusBadge == "IN_PRODUCTION");
         var bomSettingCount = activeOrders.Count(i => i.LifecycleStatusBadge == "BOM_SETTING");
         var newlyReceivedCount = activeOrders.Count(i => i.LifecycleStatusBadge == "NEWLY_RECEIVED");
@@ -783,23 +789,28 @@ public class OrderIntakeService : IOrderIntakeService
         }).ToList();
 
         // Tính toán 4 thẻ KPI trên màn hình SCR-ORD-03
-        var readyBomCount = lineDtos.Count(l => l.BomLifecycleBadge == "READY_FOR_PRODUCTION");
+        var readyBomCount = lineDtos.Count(l => l.BomLifecycleBadge is "READY_FOR_PRODUCTION" or "APPROVED" or "WAITING_FOR_MATERIALS");
         var bomReadyPct = lineDtos.Count > 0 ? (int)Math.Round(readyBomCount * 100.0 / lineDtos.Count) : 0;
         var avgScrap = lineDtos.Where(l => l.ScrapRatePct.HasValue).Select(l => l.ScrapRatePct!.Value).DefaultIfEmpty(3.5m).Average();
 
-        var bomStatusTitle = bomReadyPct == 100
-            ? "100% Sẵn sàng"
-            : bomReadyPct > 0
-                ? $"{bomReadyPct}% Sẵn sàng"
+        var bomStatusTitle = lineDtos.Count > 0 && readyBomCount == lineDtos.Count
+            ? "Sẵn sàng"
+            : readyBomCount > 0
+                ? $"Đã duyệt {readyBomCount}/{lineDtos.Count} dòng"
                 : "Chờ thiết lập";
-        var bomStatusSubtitle = bomReadyPct > 0
+        var bomStatusSubtitle = readyBomCount > 0
             ? $"Đã bóc tách định mức với tỷ lệ hao hụt {avgScrap:0.#}%"
             : "Đang chờ thiết lập định mức BOM & quy trình sản xuất";
 
-        var allAllocations = order.OrderItems.SelectMany(oi => oi.MaterialAllocations).ToList();
-        var materialAllocationTitle = allAllocations.Count > 0 && allAllocations.All(a => a.ShortageQty <= 0)
+        var activeAllocations = order.OrderItems
+            .SelectMany(oi => oi.MaterialAllocations)
+            .Where(a => a.AllocationStatus != AllocationStatusEnum.RELEASED)
+            .ToList();
+        var allItemsHaveAlloc = order.OrderItems.Count > 0 &&
+            order.OrderItems.All(oi => oi.MaterialAllocations.Any(a => a.AllocationStatus != AllocationStatusEnum.RELEASED));
+        var materialAllocationTitle = allItemsHaveAlloc && activeAllocations.All(a => a.ShortageQty <= 0)
             ? "Đã khóa đủ vật tư"
-            : allAllocations.Count > 0
+            : activeAllocations.Count > 0
                 ? "Tạm giữ một phần / Chờ mua"
                 : "Chưa phân bổ";
         var materialAllocationSubtitle = materialAllocationTitle == "Đã khóa đủ vật tư"
@@ -807,11 +818,11 @@ public class OrderIntakeService : IOrderIntakeService
             : "Đang chờ đối chiếu tồn kho và phân bổ vật tư";
 
         var lifecycleBadge = DetermineLifecycleBadge(order);
-        var floorProgressPct = space.OverallProgressPct;
+        var floorProgressPct = ResolveOrderProgressPct(order);
         var floorSubtitle = floorProgressPct >= 100
             ? "Đã hoàn tất toàn bộ công đoạn và đóng gói thành phẩm"
             : floorProgressPct > 0
-                ? $"Đang gia công tại xưởng ({floorProgressPct:0.#}% khối lượng hoàn thành)"
+                ? "Đang gia công sản xuất tại xưởng"
                 : "Đang chờ phát lệnh sản xuất xuống xưởng";
 
         // Xây dựng dòng thời gian hoạt động Recent Space Activity & Milestones (SCR-ORD-03)
@@ -822,7 +833,7 @@ public class OrderIntakeService : IOrderIntakeService
             {
                 Title = "Đã xuất kho vật tư xuống xưởng sản xuất",
                 ActorAndTimestamp = $"{order.OrderDate.AddDays(4):dd/MM/yyyy} 14:20 bởi Vũ Đức Thắng (Thủ kho)",
-                Description = "Đã bàn giao 100% gỗ phôi và phụ kiện kim khí cho Quản đốc. Đã mở khóa lô sản xuất.",
+                Description = "Đã bàn giao đầy đủ gỗ phôi và phụ kiện kim khí cho Quản đốc. Đã mở khóa lô sản xuất.",
                 DotColor = "green",
                 OccurredAt = order.OrderDate.AddDays(4)
             });
@@ -992,8 +1003,35 @@ public class OrderIntakeService : IOrderIntakeService
             LineItemsVolumeSummary = volumeSummary,
             OrderStatus = order.Status.ToString(),
             LifecycleStatusBadge = lifecycleBadge,
-            OverallProgressPct = order.OrderSpace?.OverallProgressPct ?? 0m
+            OverallProgressPct = ResolveOrderProgressPct(order)
         };
+    }
+
+    private static decimal ResolveOrderProgressPct(CustomerOrder order)
+    {
+        if (order.Status == OrderStatusEnum.COMPLETED)
+        {
+            return 100m;
+        }
+
+        if (order.OrderSpace != null && order.OrderSpace.OverallProgressPct > 0m)
+        {
+            return order.OrderSpace.OverallProgressPct;
+        }
+
+        var totalUnits = order.OrderItems.Sum(oi => oi.OrderedQty);
+        if (totalUnits <= 0)
+        {
+            return 0m;
+        }
+
+        var doneUnits = order.OrderItems
+            .Where(oi => oi.Status == OrderItemStatusEnum.DONE)
+            .Sum(oi => oi.OrderedQty);
+
+        return doneUnits > 0
+            ? Math.Min(100m, Math.Round((decimal)doneUnits * 100m / totalUnits, 2))
+            : 0m;
     }
 
     private static string DetermineLifecycleBadge(CustomerOrder order)

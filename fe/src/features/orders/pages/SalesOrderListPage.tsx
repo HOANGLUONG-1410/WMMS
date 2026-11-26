@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import WmmsAppShell from '../../../components/layout/WmmsAppShell';
 import { useWmms } from '../../auth/hooks/WmmsContext';
 import { useSession } from '../../auth/store/SessionContext';
 import { ROLES } from '../../../constants/roles';
@@ -146,7 +145,6 @@ export default function SalesOrderListPage() {
   };
 
   return (
-    <WmmsAppShell>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Page Heading + Primary CTA */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -368,6 +366,5 @@ export default function SalesOrderListPage() {
           </div>
         </div>
       </div>
-    </WmmsAppShell>
   );
 }

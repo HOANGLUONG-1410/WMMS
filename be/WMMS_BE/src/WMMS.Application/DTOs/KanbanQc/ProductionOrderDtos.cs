@@ -125,7 +125,7 @@ public class StandardQualityGateDto
     public string QualityGateName { get; set; } = string.Empty;
     public int StageSequence { get; set; }
     public bool IsHoldPoint { get; set; }
-    public string InspectionType { get; set; } = "100% Gate";
+    public string InspectionType { get; set; } = "Kiểm định bắt buộc";
     public string InspectionCriteria { get; set; } = string.Empty;
 }
 
@@ -264,6 +264,7 @@ public class ReinspectSubBatchResultDto
     public int PassQty { get; set; }
     public int FailQty { get; set; }
     public bool IsFullyPassed { get; set; }
+    public bool RequiresScrapReplenishment => FailQty > 0;
     public string SubBatchStatus { get; set; } = string.Empty;
     public string SubBatchStatusLabel => WmmsStatusLabelHelper.ToBatchStatusLabel(SubBatchStatus);
     public string Message { get; set; } = string.Empty;

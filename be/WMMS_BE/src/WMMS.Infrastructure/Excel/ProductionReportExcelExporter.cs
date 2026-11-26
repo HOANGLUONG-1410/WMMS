@@ -274,7 +274,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         var ws = package.Workbook.Worksheets.Add(sheetName);
         WriteBannerTitle(
             ws,
-            "PHIẾU KIỂM ĐỊNH CHẤT LƯỢNG KCS 100% TỪNG CÔNG ĐOẠN SẢN XUẤT",
+            "PHIẾU KIỂM ĐỊNH CHẤT LƯỢNG KCS TỪNG CÔNG ĐOẠN SẢN XUẤT",
             $"Tổng biên bản KCS: {inspectionRows.Count} | Tổng SP lỗi ghi nhận: {defectAnalytics.TotalDefectUnits} SP (Rework: {defectAnalytics.TotalReworkUnits} SP, Hủy bù phôi: {defectAnalytics.TotalScrapReplenishUnits} SP)",
             14);
 
@@ -282,7 +282,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
         {
             "Mã KCS", "Mã Lô Kanban", "Loại Thẻ", "Mã PO#", "Mã SKU",
             "Tên Sản phẩm", "Loại Gỗ", "Thứ tự Trạm", "Tên Công đoạn / Trạm máy",
-            "Hold Point", "SL Kiểm định (100%)", "SL Đạt (Pass)", "SL Lỗi (Fail)",
+            "Hold Point", "SL Kiểm định", "SL Đạt (Pass)", "SL Lỗi (Fail)",
             "Kết quả & Người nghiệm thu"
         };
         WriteHeaderRow(ws, 4, headers, Color.FromArgb(31, 78, 120));
@@ -687,7 +687,7 @@ public class ProductionReportExcelExporter : IProductionReportExcelExporter
 
     private static string FormatQcResultVi(string resultStatus) => resultStatus switch
     {
-        "FULL_PASS_100" => "Đạt chuẩn 100%",
+        "FULL_PASS_100" => "Đạt chuẩn",
         "BRANCHED_PARTIAL" => "Tách nhánh lỗi",
         "FULL_REJECT" => "Không đạt toàn bộ",
         _ => resultStatus

@@ -92,15 +92,6 @@ public class PurchaseOrdersController : MasterDataControllerBase
         [FromBody] CreatePurchaseOrdersRequestDto request,
         CancellationToken cancellationToken)
     {
-        if (request.PrId <= 0 && (request.Lines == null || request.Lines.Count == 0) && !string.IsNullOrWhiteSpace(request.SupplierName))
-        {
-            var batchCreated = await _purchaseOrderService.BatchIssuePurchaseOrdersAsync(
-                null, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
-            return StatusCode(
-                StatusCodes.Status201Created,
-                ApiResponse<List<PurchaseOrderDetailDto>>.Ok(batchCreated, $"Đã phát hành thành công {batchCreated.Count} đơn đặt hàng nhà cung cấp."));
-        }
-
         await _createValidator.ValidateAndThrowAsync(request, cancellationToken);
 
         var created = await _purchaseOrderService.CreatePurchaseOrdersAsync(
