@@ -793,12 +793,12 @@ public class OrderIntakeService : IOrderIntakeService
         var bomReadyPct = lineDtos.Count > 0 ? (int)Math.Round(readyBomCount * 100.0 / lineDtos.Count) : 0;
         var avgScrap = lineDtos.Where(l => l.ScrapRatePct.HasValue).Select(l => l.ScrapRatePct!.Value).DefaultIfEmpty(3.5m).Average();
 
-        var bomStatusTitle = bomReadyPct == 100
-            ? "100% Sẵn sàng"
-            : bomReadyPct > 0
-                ? $"{bomReadyPct}% Sẵn sàng"
+        var bomStatusTitle = lineDtos.Count > 0 && readyBomCount == lineDtos.Count
+            ? "Sẵn sàng"
+            : readyBomCount > 0
+                ? $"Đã duyệt {readyBomCount}/{lineDtos.Count} dòng"
                 : "Chờ thiết lập";
-        var bomStatusSubtitle = bomReadyPct > 0
+        var bomStatusSubtitle = readyBomCount > 0
             ? $"Đã bóc tách định mức với tỷ lệ hao hụt {avgScrap:0.#}%"
             : "Đang chờ thiết lập định mức BOM & quy trình sản xuất";
 
@@ -822,7 +822,7 @@ public class OrderIntakeService : IOrderIntakeService
         var floorSubtitle = floorProgressPct >= 100
             ? "Đã hoàn tất toàn bộ công đoạn và đóng gói thành phẩm"
             : floorProgressPct > 0
-                ? $"Đang gia công tại xưởng ({floorProgressPct:0.#}% khối lượng hoàn thành)"
+                ? "Đang gia công sản xuất tại xưởng"
                 : "Đang chờ phát lệnh sản xuất xuống xưởng";
 
         // Xây dựng dòng thời gian hoạt động Recent Space Activity & Milestones (SCR-ORD-03)
@@ -833,7 +833,7 @@ public class OrderIntakeService : IOrderIntakeService
             {
                 Title = "Đã xuất kho vật tư xuống xưởng sản xuất",
                 ActorAndTimestamp = $"{order.OrderDate.AddDays(4):dd/MM/yyyy} 14:20 bởi Vũ Đức Thắng (Thủ kho)",
-                Description = "Đã bàn giao 100% gỗ phôi và phụ kiện kim khí cho Quản đốc. Đã mở khóa lô sản xuất.",
+                Description = "Đã bàn giao đầy đủ gỗ phôi và phụ kiện kim khí cho Quản đốc. Đã mở khóa lô sản xuất.",
                 DotColor = "green",
                 OccurredAt = order.OrderDate.AddDays(4)
             });

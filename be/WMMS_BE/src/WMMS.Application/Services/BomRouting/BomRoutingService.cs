@@ -880,7 +880,7 @@ public class BomRoutingService : IBomRoutingService
             if (string.IsNullOrWhiteSpace(stage.QualityGateName))
             {
                 stage.QualityGateName = stage.IsHoldPoint
-                    ? "Cổng kiểm soát chất lượng QC (Kiểm định 100%)"
+                    ? "Cổng kiểm soát chất lượng QC (Kiểm định bắt buộc)"
                     : "Tự kiểm tra trên chuyền sản xuất";
             }
         }
@@ -950,7 +950,7 @@ public class BomRoutingService : IBomRoutingService
                 WorkstationName = "Trạm KCS xuất xưởng & Đóng thùng Carton (KCS & Packing)",
                 DefaultStageSequence = 7,
                 StandardCapacityPerHour = 150,
-                Description = "Kiểm tra chất lượng xuất xưởng 100%, dán nhãn tem kiểm định KCS, bọc xốp màng PE và đóng thùng carton 5 lớp."
+                Description = "Kiểm tra chất lượng xuất xưởng toàn bộ sản phẩm, dán nhãn tem kiểm định KCS, bọc xốp màng PE và đóng thùng carton 5 lớp."
             }
         };
     }
@@ -965,7 +965,7 @@ public class BomRoutingService : IBomRoutingService
                 QualityGateName = "Cổng kiểm soát độ ẩm & Kích thước phôi (Rough Mill Gate)",
                 StageSequence = 1,
                 IsHoldPoint = false,
-                InspectionType = "In-Process Self-Check",
+                InspectionType = "Tự kiểm tra trên chuyền",
                 InspectionCriteria = "Độ ẩm gỗ tự nhiên < 12%, kích thước phôi sai lệch chiều dài/dày không quá ±1.0mm."
             },
             new()
@@ -974,7 +974,7 @@ public class BomRoutingService : IBomRoutingService
                 QualityGateName = "Cổng kiểm soát độ nhẵn & Độ phẳng bề mặt (Sanding Gate)",
                 StageSequence = 3,
                 IsHoldPoint = false,
-                InspectionType = "In-Process Self-Check",
+                InspectionType = "Tự kiểm tra trên chuyền",
                 InspectionCriteria = "Bề mặt gỗ phẳng đều, không vết lẹm dao bào, độ nhám Ra <= 3.2µm."
             },
             new()
@@ -983,7 +983,7 @@ public class BomRoutingService : IBomRoutingService
                 QualityGateName = "Cổng kiểm soát độ khít mộng & Tim lỗ khoan (CNC Joinery Gate)",
                 StageSequence = 4,
                 IsHoldPoint = false,
-                InspectionType = "In-Process Self-Check",
+                InspectionType = "Tự kiểm tra trên chuyền",
                 InspectionCriteria = "Mộng âm dương khít chặt (khe hở <= 0.2mm), tim lỗ cam chốt chuẩn xác theo bản vẽ CAD."
             },
             new()
@@ -992,8 +992,8 @@ public class BomRoutingService : IBomRoutingService
                 QualityGateName = "Cổng KCS bắt buộc Kết cấu khung & Mộng dán keo (Hold Point Assembly Gate)",
                 StageSequence = 5,
                 IsHoldPoint = true,
-                InspectionType = "100% Mandatory Gate (Hold Point)",
-                InspectionCriteria = "Độ vuông góc chéo sai lệch <= 1.0mm, keo ghép mộng ngấu 100%, kết cấu chịu lực đạt chuẩn trước khi chuyển sang sơn."
+                InspectionType = "Cổng kiểm định bắt buộc (Hold Point)",
+                InspectionCriteria = "Độ vuông góc chéo sai lệch <= 1.0mm, keo ghép mộng ngấu đều, kết cấu chịu lực đạt chuẩn trước khi chuyển sang sơn."
             },
             new()
             {
@@ -1001,7 +1001,7 @@ public class BomRoutingService : IBomRoutingService
                 QualityGateName = "Cổng kiểm soát màng sơn & Màu sắc hoàn thiện (Finish Coating Gate)",
                 StageSequence = 6,
                 IsHoldPoint = false,
-                InspectionType = "In-Process Self-Check",
+                InspectionType = "Tự kiểm tra trên chuyền",
                 InspectionCriteria = "Màng sơn phủ bóng đều màu, không da cam, không bọt khí rộp, độ bám dính đạt cấp 1."
             },
             new()
@@ -1010,8 +1010,8 @@ public class BomRoutingService : IBomRoutingService
                 QualityGateName = "Cổng KCS xuất xưởng & Đóng gói hoàn thiện (Final QC Gate)",
                 StageSequence = 7,
                 IsHoldPoint = false,
-                InspectionType = "100% Mandatory Gate",
-                InspectionCriteria = "Kiểm tra ngoại quan 100% không trầy xước, đầy đủ tem mác barcode, phụ kiện ốc vít kèm theo và đóng thùng đạt chuẩn."
+                InspectionType = "Cổng kiểm định bắt buộc",
+                InspectionCriteria = "Kiểm tra ngoại quan toàn bộ sản phẩm không trầy xước, đầy đủ tem mác barcode, phụ kiện ốc vít kèm theo và đóng thùng đạt chuẩn."
             }
         };
     }
@@ -1020,13 +1020,13 @@ public class BomRoutingService : IBomRoutingService
     {
         return new List<RoutingStageDto>
         {
-            new() { StageSequence = 1, StageName = "1. Pha phôi gỗ thô", IsHoldPoint = false, WorkstationCode = "WC-01-SAW", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 2, StageName = "2. Cắt/Xẻ định hình chi tiết", IsHoldPoint = false, WorkstationCode = "WC-01-SAW", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 3, StageName = "3. Bào 4 mặt & Chà nhám phẳng mịn", IsHoldPoint = false, WorkstationCode = "WC-02-SAND", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 4, StageName = "4. Khoan lỗ chốt & Phay mộng âm dương", IsHoldPoint = false, WorkstationCode = "WC-03-CNC", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 5, StageName = "5. Lắp ráp kết cấu & Vào mộng dán keo ép vam", IsHoldPoint = true, WorkstationCode = "WC-04-ASSY", QualityGateName = "QC Hold Point Gate (100% Inspection)" },
-            new() { StageSequence = 6, StageName = "6. Phun sơn lót PU & Sơn phủ hoàn thiện", IsHoldPoint = false, WorkstationCode = "WC-05-PAINT", QualityGateName = "In-Process Self-Check" },
-            new() { StageSequence = 7, StageName = "7. Kiểm tra xuất xưởng KCS & Đóng thùng carton", IsHoldPoint = false, WorkstationCode = "WC-06-PACK", QualityGateName = "Final Packing QC Gate" }
+            new() { StageSequence = 1, StageName = "1. Pha phôi gỗ thô", IsHoldPoint = false, WorkstationCode = "WC-01-SAW", QualityGateName = "Tự kiểm tra trên chuyền" },
+            new() { StageSequence = 2, StageName = "2. Cắt/Xẻ định hình chi tiết", IsHoldPoint = false, WorkstationCode = "WC-01-SAW", QualityGateName = "Tự kiểm tra trên chuyền" },
+            new() { StageSequence = 3, StageName = "3. Bào 4 mặt & Chà nhám phẳng mịn", IsHoldPoint = false, WorkstationCode = "WC-02-SAND", QualityGateName = "Tự kiểm tra trên chuyền" },
+            new() { StageSequence = 4, StageName = "4. Khoan lỗ chốt & Phay mộng âm dương", IsHoldPoint = false, WorkstationCode = "WC-03-CNC", QualityGateName = "Tự kiểm tra trên chuyền" },
+            new() { StageSequence = 5, StageName = "5. Lắp ráp kết cấu & Vào mộng dán keo ép vam", IsHoldPoint = true, WorkstationCode = "WC-04-ASSY", QualityGateName = "Cổng kiểm soát Hold Point (Kiểm định bắt buộc)" },
+            new() { StageSequence = 6, StageName = "6. Phun sơn lót PU & Sơn phủ hoàn thiện", IsHoldPoint = false, WorkstationCode = "WC-05-PAINT", QualityGateName = "Tự kiểm tra trên chuyền" },
+            new() { StageSequence = 7, StageName = "7. Kiểm tra xuất xưởng KCS & Đóng thùng carton", IsHoldPoint = false, WorkstationCode = "WC-06-PACK", QualityGateName = "Cổng kiểm định đóng gói thành phẩm" }
         };
     }
 

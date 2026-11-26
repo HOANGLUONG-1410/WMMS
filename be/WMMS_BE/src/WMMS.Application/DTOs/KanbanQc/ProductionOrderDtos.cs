@@ -125,7 +125,7 @@ public class StandardQualityGateDto
     public string QualityGateName { get; set; } = string.Empty;
     public int StageSequence { get; set; }
     public bool IsHoldPoint { get; set; }
-    public string InspectionType { get; set; } = "100% Gate";
+    public string InspectionType { get; set; } = "Kiểm định bắt buộc";
     public string InspectionCriteria { get; set; } = string.Empty;
 }
 

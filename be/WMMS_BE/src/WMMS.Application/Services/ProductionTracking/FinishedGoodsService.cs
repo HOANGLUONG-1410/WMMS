@@ -152,7 +152,7 @@ public class FinishedGoodsService : IFinishedGoodsService
             };
 
             throw new AppException(
-                $"Không thể nhập kho thành phẩm cho lô '{batch.BatchCode}' vì công đoạn '{incompleteStep.StageName}' (Thứ tự {incompleteStep.StageSequence}) đang ở trạng thái '{stepStatusVi}' (yêu cầu hoàn tất kiểm định chất lượng đạt chuẩn 100%).",
+                $"Không thể nhập kho thành phẩm cho lô '{batch.BatchCode}' vì công đoạn '{incompleteStep.StageName}' (Thứ tự {incompleteStep.StageSequence}) đang ở trạng thái '{stepStatusVi}' (yêu cầu hoàn tất kiểm định chất lượng đạt chuẩn).",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -325,7 +325,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                         EntityId = order.PoNumber,
                         BeforeState = JsonSerializer.Serialize(new { OrderStatus = previousOrderStatus.ToString() }),
                         AfterState = JsonSerializer.Serialize(new { OrderStatus = order.Status.ToString() }),
-                        Reason = $"Đơn hàng {order.PoNumber} đã hoàn tất 100% các dòng sản phẩm và sẵn sàng xuất xưởng.",
+                        Reason = $"Đơn hàng {order.PoNumber} đã hoàn tất toàn bộ các dòng sản phẩm và sẵn sàng xuất xưởng.",
                         CreatedAt = now
                     });
                 }
@@ -363,8 +363,8 @@ public class FinishedGoodsService : IFinishedGoodsService
                 HandoverNote = request.HandoverNote,
                 CompletedAt = now,
                 Message = isSalesOrderDone
-                    ? $"Đã nhập kho thành phẩm lô '{batch.BatchCode}' ({finalCompletedQty} sản phẩm). Đơn hàng '{order?.PoNumber}' đã hoàn tất 100%!"
-                    : $"Đã nhập kho thành phẩm lô '{batch.BatchCode}' ({finalCompletedQty} sản phẩm). Tiến độ dòng sản phẩm đạt {completionPercent}% ({totalCompletedForOrderItem}/{orderedQty})."
+                    ? $"Đã nhập kho thành phẩm lô '{batch.BatchCode}' ({finalCompletedQty} sản phẩm). Đơn hàng '{order?.PoNumber}' đã hoàn tất!"
+                    : $"Đã nhập kho thành phẩm lô '{batch.BatchCode}' ({finalCompletedQty} sản phẩm). Đã hoàn thành {totalCompletedForOrderItem}/{orderedQty} sản phẩm của hạng mục."
             };
         }
         catch

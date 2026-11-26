@@ -467,7 +467,7 @@ public class ProductionOrderService : IProductionOrderService
                 WorkstationName = "Trạm KCS xuất xưởng & Đóng thùng Carton (KCS & Packing)",
                 DefaultStageSequence = 7,
                 StandardCapacityPerHour = 150,
-                Description = "Kiểm tra chất lượng xuất xưởng 100%, dán nhãn tem kiểm định KCS, bọc xốp màng PE và đóng thùng carton 5 lớp."
+                Description = "Kiểm tra chất lượng xuất xưởng toàn bộ sản phẩm, dán nhãn tem kiểm định KCS, bọc xốp màng PE và đóng thùng carton 5 lớp."
             }
         };
     }
@@ -482,7 +482,7 @@ public class ProductionOrderService : IProductionOrderService
                 QualityGateName = "Cổng kiểm soát độ ẩm & Kích thước phôi (Rough Mill Gate)",
                 StageSequence = 1,
                 IsHoldPoint = false,
-                InspectionType = "In-Process Self-Check",
+                InspectionType = "Tự kiểm tra trên chuyền",
                 InspectionCriteria = "Độ ẩm gỗ tự nhiên < 12%, kích thước phôi sai lệch chiều dài/dày không quá ±1.0mm."
             },
             new()
@@ -491,7 +491,7 @@ public class ProductionOrderService : IProductionOrderService
                 QualityGateName = "Cổng kiểm soát độ nhẵn & Độ phẳng bề mặt (Sanding Gate)",
                 StageSequence = 3,
                 IsHoldPoint = false,
-                InspectionType = "In-Process Self-Check",
+                InspectionType = "Tự kiểm tra trên chuyền",
                 InspectionCriteria = "Bề mặt gỗ phẳng đều, không vết lẹm dao bào, độ nhám Ra <= 3.2µm."
             },
             new()
@@ -500,7 +500,7 @@ public class ProductionOrderService : IProductionOrderService
                 QualityGateName = "Cổng kiểm soát độ khít mộng & Tim lỗ khoan (CNC Joinery Gate)",
                 StageSequence = 4,
                 IsHoldPoint = false,
-                InspectionType = "In-Process Self-Check",
+                InspectionType = "Tự kiểm tra trên chuyền",
                 InspectionCriteria = "Mộng âm dương khít chặt (khe hở <= 0.2mm), tim lỗ cam chốt chuẩn xác theo bản vẽ CAD."
             },
             new()
@@ -509,8 +509,8 @@ public class ProductionOrderService : IProductionOrderService
                 QualityGateName = "Cổng KCS bắt buộc Kết cấu khung & Mộng dán keo (Hold Point Assembly Gate)",
                 StageSequence = 5,
                 IsHoldPoint = true,
-                InspectionType = "100% Mandatory Gate (Hold Point)",
-                InspectionCriteria = "Độ vuông góc chéo sai lệch <= 1.0mm, keo ghép mộng ngấu 100%, kết cấu chịu lực đạt chuẩn trước khi chuyển sang sơn."
+                InspectionType = "Cổng kiểm định bắt buộc (Hold Point)",
+                InspectionCriteria = "Độ vuông góc chéo sai lệch <= 1.0mm, keo ghép mộng ngấu đều, kết cấu chịu lực đạt chuẩn trước khi chuyển sang sơn."
             },
             new()
             {
@@ -518,7 +518,7 @@ public class ProductionOrderService : IProductionOrderService
                 QualityGateName = "Cổng kiểm soát màng sơn & Màu sắc hoàn thiện (Finish Coating Gate)",
                 StageSequence = 6,
                 IsHoldPoint = false,
-                InspectionType = "In-Process Self-Check",
+                InspectionType = "Tự kiểm tra trên chuyền",
                 InspectionCriteria = "Màng sơn phủ bóng đều màu, không da cam, không bọt khí rộp, độ bám dính đạt cấp 1."
             },
             new()
@@ -527,8 +527,8 @@ public class ProductionOrderService : IProductionOrderService
                 QualityGateName = "Cổng KCS xuất xưởng & Đóng gói hoàn thiện (Final QC Gate)",
                 StageSequence = 7,
                 IsHoldPoint = false,
-                InspectionType = "100% Mandatory Gate",
-                InspectionCriteria = "Kiểm tra ngoại quan 100% không trầy xước, đầy đủ tem mác barcode, phụ kiện ốc vít kèm theo và đóng thùng đạt chuẩn."
+                InspectionType = "Cổng kiểm định bắt buộc",
+                InspectionCriteria = "Kiểm tra ngoại quan toàn bộ sản phẩm không trầy xước, đầy đủ tem mác barcode, phụ kiện ốc vít kèm theo và đóng thùng đạt chuẩn."
             }
         };
     }
@@ -608,7 +608,7 @@ public class ProductionOrderService : IProductionOrderService
         if (!is100Passed)
         {
             throw new DomainException(
-                $"Công đoạn {currentSeq} ({currentStep.StageName}) chưa đạt 100% sản phẩm đạt chuẩn ({currentStep.PassedQty}/{batch.BatchQty} sản phẩm). Bắt buộc bộ phận KCS kiểm tra đạt 100% mới được chuyển sang công đoạn tiếp theo.",
+                $"Công đoạn {currentSeq} ({currentStep.StageName}) chưa hoàn tất nghiệm thu chất lượng cho toàn bộ sản phẩm ({currentStep.PassedQty}/{batch.BatchQty} sản phẩm). Bắt buộc bộ phận KCS kiểm tra đạt chuẩn đủ số lượng mới được chuyển sang công đoạn tiếp theo.",
                 "QC_GATE_INCOMPLETE");
         }
 
@@ -718,7 +718,7 @@ public class ProductionOrderService : IProductionOrderService
                 EntityId = batch.BatchCode,
                 BeforeState = $"Stage_{currentSeq}",
                 AfterState = targetSeq <= maxSeq ? $"Stage_{targetSeq}" : "DONE",
-                Reason = request.Notes ?? $"Chuyển bước lô sản xuất {batch.BatchCode} từ công đoạn {currentSeq} sang {(targetSeq <= maxSeq ? $"công đoạn {targetSeq}" : "Hoàn tất sản xuất")} sau khi đạt 100% kiểm định KCS.",
+                Reason = request.Notes ?? $"Chuyển bước lô sản xuất {batch.BatchCode} từ công đoạn {currentSeq} sang {(targetSeq <= maxSeq ? $"công đoạn {targetSeq}" : "Hoàn tất sản xuất")} sau khi hoàn tất kiểm định KCS.",
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -829,7 +829,7 @@ public class ProductionOrderService : IProductionOrderService
         if (request.InspectedQty != batch.BatchQty)
         {
             throw new DomainException(
-                $"Số lượng đưa vào kiểm định ({request.InspectedQty} sản phẩm) phải bằng đúng 100% sản lượng hiện có của lô ({batch.BatchQty} sản phẩm). Không chấp nhận kiểm định xác suất.",
+                $"Số lượng đưa vào kiểm định ({request.InspectedQty} sản phẩm) phải bằng đúng toàn bộ sản lượng hiện có của lô ({batch.BatchQty} sản phẩm). Không chấp nhận kiểm định xác suất.",
                 "QC_100_RULE_VIOLATION");
         }
 
@@ -875,7 +875,7 @@ public class ProductionOrderService : IProductionOrderService
                     EntityId = batch.BatchCode,
                     BeforeState = $"Stage_{step.StageSequence}_IN_PROGRESS",
                     AfterState = $"Stage_{step.StageSequence}_100_PASS",
-                    Reason = $"Kiểm định KCS đạt chuẩn 100% ({request.PassQty}/{request.InspectedQty} sản phẩm) tại công đoạn {step.StageName} cho lô {batch.BatchCode}.",
+                    Reason = $"Kiểm định KCS đạt chuẩn toàn bộ ({request.PassQty}/{request.InspectedQty} sản phẩm) tại công đoạn {step.StageName} cho lô {batch.BatchCode}.",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -891,7 +891,7 @@ public class ProductionOrderService : IProductionOrderService
                     PassQty = request.PassQty,
                     FailQty = 0,
                     IsBranched = false,
-                    Message = $"Ghi nhận kiểm định đạt chuẩn 100% ({request.PassQty} SP). Lô sản xuất {batch.BatchCode} đủ điều kiện chuyển sang công đoạn tiếp theo."
+                    Message = $"Ghi nhận kiểm định đạt chuẩn ({request.PassQty} SP). Lô sản xuất {batch.BatchCode} đủ điều kiện chuyển sang công đoạn tiếp theo."
                 };
             }
             else
@@ -1070,7 +1070,7 @@ public class ProductionOrderService : IProductionOrderService
                         RequiresScrapReplenishment = true,
                         SpawnedSubBatchId = null,
                         SpawnedSubBatchCode = null,
-                        Message = $"Ghi nhận hủy {request.FailQty} sản phẩm phế phẩm thành công! Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} SP đạt chuẩn. Cần yêu cầu cấp bù vật tư và phát hành lô sản xuất bù để bù đủ 100% sản lượng."
+                        Message = $"Ghi nhận hủy {request.FailQty} sản phẩm phế phẩm thành công! Lô chính {batch.BatchCode} tiếp tục với {request.PassQty} SP đạt chuẩn. Cần yêu cầu cấp bù vật tư và phát hành lô sản xuất bù để bù đủ sản lượng đơn hàng."
                     };
                 }
 
@@ -1783,7 +1783,7 @@ public class ProductionOrderService : IProductionOrderService
         if (request.InspectedQty != subBatch.BatchQty)
         {
             throw new DomainException(
-                $"Số lượng nghiệm thu lại ({request.InspectedQty} sản phẩm) phải bằng đúng 100% sản lượng của lô phụ ({subBatch.BatchQty} sản phẩm).",
+                $"Số lượng nghiệm thu lại ({request.InspectedQty} sản phẩm) phải bằng đúng toàn bộ sản lượng của lô phụ ({subBatch.BatchQty} sản phẩm).",
                 "QC_100_RULE_VIOLATION");
         }
 
@@ -2249,17 +2249,17 @@ public class ProductionOrderService : IProductionOrderService
 
     private static string InferQualityGateName(int seq, string stageName, bool isHoldPoint)
     {
-        if (isHoldPoint) return "Cổng kiểm soát Hold Point (Kiểm định 100% bắt buộc)";
+        if (isHoldPoint) return "Cổng kiểm soát Hold Point (Kiểm định bắt buộc)";
         var lower = (stageName ?? string.Empty).ToLowerInvariant();
         if (lower.Contains("carton") || lower.Contains("xuất xưởng") || lower.Contains("đóng gói"))
-            return "Cổng kiểm định đóng gói thành phẩm (100%)";
+            return "Cổng kiểm định đóng gói thành phẩm";
         return "Tự kiểm tra chất lượng tại công đoạn";
     }
 
     private static string InferInspectionCriteria(int seq, string stageName, bool isHoldPoint)
     {
         if (isHoldPoint)
-            return "Độ vuông góc chéo sai lệch <= 1.0mm, keo ghép mộng ngấu 100%, kết cấu chịu lực đạt chuẩn.";
+            return "Độ vuông góc chéo sai lệch <= 1.0mm, keo ghép mộng ngấu đều, kết cấu chịu lực đạt chuẩn.";
         var lower = (stageName ?? string.Empty).ToLowerInvariant();
         if (lower.Contains("pha phôi") || lower.Contains("cắt"))
             return "Độ ẩm gỗ tự nhiên < 12%, kích thước phôi sai lệch không quá ±1.0mm.";
@@ -2270,7 +2270,7 @@ public class ProductionOrderService : IProductionOrderService
         if (lower.Contains("sơn") || lower.Contains("pu"))
             return "Màng sơn phủ bóng đều màu, không da cam, không bọt khí rộp.";
         if (lower.Contains("carton") || lower.Contains("xuất xưởng"))
-            return "Kiểm tra ngoại quan 100% không trầy xước, dán tem phụ kiện và barcode đạt chuẩn.";
+            return "Kiểm tra ngoại quan toàn bộ sản phẩm không trầy xước, dán tem phụ kiện và barcode đạt chuẩn.";
         return "Kiểm tra chất lượng bán thành phẩm theo tiêu chuẩn kỹ thuật xưởng mộc.";
     }
 

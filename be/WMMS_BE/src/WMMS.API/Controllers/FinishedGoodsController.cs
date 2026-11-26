@@ -116,7 +116,7 @@ public class FinishedGoodsController : ControllerBase
         var result = await _orderProgressService.SynchronizeOrderProgressAsync(orderId, currentUserId, cancellationToken);
         return Ok(ApiResponse<OrderProductionProgressDto>.Ok(
             result,
-            $"Đã đồng bộ tiến độ sản xuất cho đơn hàng '{result.PoNumber}' (Hoàn thành {result.OverallCompletionPercent}%)."));
+            $"Đã đồng bộ tiến độ sản xuất cho đơn hàng '{result.PoNumber}' ({result.TotalCompletedUnits}/{result.TotalOrderedUnits} sản phẩm)."));
     }
 
     private long GetCurrentUserId()

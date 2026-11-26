@@ -89,7 +89,7 @@ public class HoldPointService : IHoldPointService
         else if (currentStep != null && !currentStep.Is100PercentPassed())
         {
             canAdvance = false;
-            blockReason = $"Công đoạn hiện tại '{currentStep.StageName}' chưa đạt 100% nghiệm thu chất lượng ({currentStep.PassedQty}/{currentStep.TargetQty} sản phẩm).";
+            blockReason = $"Công đoạn hiện tại '{currentStep.StageName}' chưa hoàn tất nghiệm thu chất lượng ({currentStep.PassedQty}/{currentStep.TargetQty} sản phẩm).";
         }
         else if (nextStep != null)
         {
@@ -601,7 +601,7 @@ public class HoldPointService : IHoldPointService
         if (!currentStep.Is100PercentPassed())
         {
             throw new InsufficientQcPassException(
-                $"Công đoạn {currentStep.StageSequence} ({currentStep.StageName}) chưa đạt 100% nghiệm thu chất lượng ({currentStep.PassedQty}/{currentStep.TargetQty} sản phẩm). Không được chuyển nhảy cóc công đoạn.",
+                $"Công đoạn {currentStep.StageSequence} ({currentStep.StageName}) chưa hoàn tất nghiệm thu chất lượng ({currentStep.PassedQty}/{currentStep.TargetQty} sản phẩm). Không được chuyển nhảy cóc công đoạn.",
                 currentStep.TargetQty,
                 currentStep.PassedQty);
         }

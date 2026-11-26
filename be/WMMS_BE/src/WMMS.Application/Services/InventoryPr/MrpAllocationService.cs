@@ -827,7 +827,7 @@ public class MrpAllocationService : IMrpAllocationService
 
             bool isFullyCovered = totalShortage == 0m;
             string msg = isFullyCovered
-                ? $"Đã giữ chỗ đủ 100% vật tư từ kho cho {request.ScrappedQty} sản phẩm sản xuất bù ({totalAllocated} đơn vị vật tư)."
+                ? $"Đã giữ chỗ đủ vật tư từ kho cho {request.ScrappedQty} sản phẩm sản xuất bù ({totalAllocated} đơn vị vật tư)."
                 : $"Đã giữ chỗ {totalAllocated} đơn vị vật tư từ kho; phần thiếu hụt ({totalShortage} đơn vị) đã tự động tạo Phiếu yêu cầu mua hàng {createdPrCode} trình Chủ xưởng duyệt.";
 
             return new ScrapReplenishmentResultDto
@@ -1158,7 +1158,7 @@ public class MrpAllocationService : IMrpAllocationService
                     ConsolidatedPrCode = consolidatedPrCode,
                     QueuedShortageMaterialsCount = queuedShortageCount
                 }),
-                Reason = $"Thực thi tính toán nhu cầu vật tư & phân bổ tồn kho tự động: {(waitingMaterialItemsCount == 0 ? "Đủ 100% vật tư sẵn sàng sản xuất" : "Đang chờ mua bổ sung vật tư")}, đã giữ chỗ đủ cho {fullyAllocatedItemsCount}/{itemsWithBom.Count} dòng sản phẩm" +
+                Reason = $"Thực thi tính toán nhu cầu vật tư & phân bổ tồn kho tự động: {(waitingMaterialItemsCount == 0 ? "Đã đủ vật tư sẵn sàng sản xuất" : "Đang chờ mua bổ sung vật tư")}, đã giữ chỗ đủ cho {fullyAllocatedItemsCount}/{itemsWithBom.Count} dòng sản phẩm" +
                          (consolidatedPrCode != null ? $", đã gom phần thiếu hụt vào phiếu PR tổng hợp {consolidatedPrCode}." : "."),
                 CreatedAt = now
             });
