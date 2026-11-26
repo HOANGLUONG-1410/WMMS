@@ -139,6 +139,9 @@ export interface QcInspectionResultDto {
   isBranched: boolean;
   spawnedSubBatchId?: number | null;
   spawnedSubBatchCode?: string | null;
+  requiresScrapReplenishment?: boolean;
+  shortageMaterialsCount?: number;
+  consolidatedPrCode?: string | null;
   message: string;
 }
 

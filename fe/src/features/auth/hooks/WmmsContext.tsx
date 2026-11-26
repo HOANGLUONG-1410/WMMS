@@ -78,9 +78,9 @@ export function WmmsProvider({ children }: { children: ReactNode }) {
     ],
   });
 
-  // Không gian đơn hàng hiện tại (Current Space dropdown trên Header)
+  // Không gian đơn hàng hiện tại (khởi tạo rỗng, sẽ cập nhật khi tải dữ liệu thật từ Backend)
   const [orderSpaces, setOrderSpaces] = useState(DEFAULT_ORDER_SPACES);
-  const [currentSpaceKey, setCurrentSpaceKey] = useState("SPACE-PO-880504");
+  const [currentSpaceKey, setCurrentSpaceKey] = useState("");
 
   // State chia sẻ cho Audit Logs (SCR-ADM-02)
   const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);

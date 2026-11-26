@@ -38,12 +38,14 @@ export interface MaterialCatalogDto {
   materialCode: string;
   materialName: string;
   materialGroup: MaterialGroupType | string;
+  materialGroupLabel?: string;
   unitOfMeasure: string;
   dimensionSpec?: string | null;
   fscCertified: boolean;
   safetyStockQty: number;
   currentStockQty: number;
   status: "ACTIVE" | "INACTIVE" | string;
+  statusLabel?: string;
 }
 
 /**

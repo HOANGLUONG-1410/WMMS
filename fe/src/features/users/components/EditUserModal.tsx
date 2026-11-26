@@ -121,7 +121,7 @@ export default function EditUserModal({
       if (status !== initialStatus) {
         const defaultReason =
           status === "BANNED"
-            ? "Tạm khóa quyền truy cập hệ thống của nhân viên"
+            ? "Khóa vĩnh viễn quyền truy cập hệ thống của nhân viên"
             : "Kích hoạt lại tài khoản truy cập hệ thống của nhân viên";
         const reasonToSend = statusReason.trim() || defaultReason;
         await adminApi.updateUserStatus(user.userId, status, reasonToSend);
@@ -268,8 +268,8 @@ export default function EditUserModal({
                 onChange={(e) => setStatusReason(e.target.value)}
                 placeholder={
                   status === "BANNED"
-                    ? "Nhập lý do tạm khóa (VD: Nhân sự tạm nghỉ phép, vi phạm quy định...)"
-                    : "Nhập lý do mở khóa (VD: Kích hoạt lại sau kỳ nghỉ...)"
+                    ? "Nhập lý do khóa vĩnh viễn tài khoản (VD: Nhân sự nghỉ việc, vi phạm nghiêm trọng quy định...)"
+                    : "Nhập lý do mở khóa (VD: Kích hoạt lại tài khoản...)"
                 }
                 className="w-full px-3 py-1.5 text-sm bg-white border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800"
               />

@@ -93,7 +93,7 @@ export default function RoutingDetailModal({ product, onClose }: RoutingDetailMo
                         <div>
                           <p className="text-sm font-bold text-slate-800">{stg.stageName}</p>
                           <p className="text-xs text-slate-500">
-                            Cổng kiểm tra chất lượng 100% trước khi chuyển công đoạn tiếp theo
+                            Cổng kiểm tra chất lượng bắt buộc trước khi chuyển công đoạn tiếp theo
                           </p>
                         </div>
                       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
+import { ApiError } from "../../../lib/api/apiError";
 import { catalogApi } from "../../catalog/api/catalogApi";
 import { DEFAULT_MASTER_MATERIALS } from "../../catalog/data/defaultMaterials";
 import type { MaterialCatalogDto } from "../../catalog/types";
@@ -52,7 +53,7 @@ export default function BomStagingModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setScrapRate(initialScrapRate >= 3 && initialScrapRate <= 5 ? initialScrapRate : 3.5);
+    setScrapRate(initialScrapRate >= 3 && initialScrapRate <= 15 ? initialScrapRate : 3.5);
     setServerBanner(null);
 
     catalogApi
@@ -151,7 +152,9 @@ export default function BomStagingModal({
       }
     } catch (err) {
       let msg = "Không thể phân tích file Excel BOM trên máy chủ.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setServerBanner({ type: "error", text: msg });
@@ -283,7 +286,9 @@ export default function BomStagingModal({
           }
         } catch (updateErr) {
           let updateMsg = "Lỗi khi cập nhật BOM từ dữ liệu Staging.";
-          if (isAxiosError(updateErr)) {
+          if (updateErr instanceof ApiError) {
+            updateMsg = updateErr.message || updateMsg;
+          } else if (isAxiosError(updateErr)) {
             updateMsg = updateErr.response?.data?.message || updateErr.message || updateMsg;
           }
           setServerBanner({ type: "error", text: updateMsg });
@@ -292,7 +297,9 @@ export default function BomStagingModal({
       }
 
       let msg = "Xác nhận BOM Staging thất bại.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setServerBanner({ type: "error", text: msg });
@@ -462,13 +469,13 @@ export default function BomStagingModal({
 
             <div className="flex items-center gap-2">
               <label className="text-sm font-semibold text-slate-700">
-                Tỷ lệ hao hụt % (3,0% - 5,0%):
+                Tỷ lệ hao hụt % (3,0% - 15,0%):
               </label>
               <input
                 type="number"
                 step="0.1"
                 min="3"
-                max="5"
+                max="15"
                 value={scrapRate}
                 onChange={(e) => setScrapRate(parseFloat(e.target.value) || 3.0)}
                 className="w-20 px-2.5 py-1.5 text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg text-center"
