@@ -177,6 +177,7 @@ public class BomRoutingController : ControllerBase
     /// SC-10, QT-02, BR-001 &amp; BR-002: Bóc tách &amp; Khởi tạo BOM mới ở trạng thái Draft kèm quy trình tùy biến.
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = BomWriteRoles)]
     public async Task<ActionResult<ApiResponse<BomDto>>> CreateBom([FromBody] CreateBomRequestDto request)
     {
         var validation = await _createBomValidator.ValidateAsync(request);
@@ -194,6 +195,7 @@ public class BomRoutingController : ControllerBase
     /// SC-10: Cập nhật thông tin BOM (định mức, tỷ lệ hao hụt hoặc quy trình công đoạn).
     /// </summary>
     [HttpPut("{bomId:long}")]
+    [Authorize(Roles = BomWriteRoles)]
     public async Task<ActionResult<ApiResponse<BomDto>>> UpdateBom(long bomId, [FromBody] UpdateBomRequestDto request)
     {
         var validation = await _updateBomValidator.ValidateAsync(request);
@@ -211,6 +213,7 @@ public class BomRoutingController : ControllerBase
     /// QT-02 &amp; SC-10: Phê duyệt / Chốt khóa BOM từ trạng thái DRAFT sang READY_FOR_PRODUCTION và ghi Audit Log (GBR-05).
     /// </summary>
     [HttpPatch("{bomId:long}/approve")]
+    [Authorize(Roles = BomWriteRoles)]
     public async Task<ActionResult<ApiResponse<BomDto>>> ApproveBom(long bomId)
     {
         long currentUserId = GetCurrentUserId();
@@ -222,6 +225,7 @@ public class BomRoutingController : ControllerBase
     /// SC-11 &amp; BR-011: Tải file Excel BOM lên vùng đệm Staging Grid UI, tự động kiểm tra định dạng và báo lỗi các ô/dòng không hợp lệ.
     /// </summary>
     [HttpPost("staging-preview")]
+    [Authorize(Roles = BomWriteRoles)]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ApiResponse<BomStagingPreviewDto>>> PreviewStaging(
         IFormFile file,
@@ -248,6 +252,7 @@ public class BomRoutingController : ControllerBase
     /// SC-11 &amp; BR-011: Xác nhận Confirm dữ liệu từ Staging Grid sau khi KHVT kiểm tra/sửa lỗi để lưu vào CSDL chính.
     /// </summary>
     [HttpPost("staging-confirm")]
+    [Authorize(Roles = BomWriteRoles)]
     public async Task<ActionResult<ApiResponse<BomDto>>> ConfirmStaging([FromBody] ConfirmBomStagingRequestDto request)
     {
         var validation = await _confirmStagingValidator.ValidateAsync(request);
@@ -263,7 +268,8 @@ public class BomRoutingController : ControllerBase
 
     private long GetCurrentUserId()
     {
-        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.FindFirst("sub")?.Value;
         if (!string.IsNullOrWhiteSpace(claim) && long.TryParse(claim, out var userId))
         {
             return userId;

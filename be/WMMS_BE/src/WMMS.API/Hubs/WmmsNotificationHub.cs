@@ -130,7 +130,7 @@ public class SignalRNotificationHubService : INotificationHubService
         CancellationToken cancellationToken = default)
     {
         var readyMsg = readyOrderPoNumbers.Count > 0
-            ? $" Có {readyOrderPoNumbers.Count} đơn hàng đã đủ 100% vật tư sẵn sàng sản xuất: {string.Join(", ", readyOrderPoNumbers)}."
+            ? $" Có {readyOrderPoNumbers.Count} đơn hàng đã đủ vật tư sẵn sàng sản xuất: {string.Join(", ", readyOrderPoNumbers)}."
             : string.Empty;
 
         var payload = new

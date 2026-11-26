@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import WmmsAppShell from "../layout/WmmsAppShell";
 import { useSession } from "../../features/auth/store/SessionContext";
 import { ROLE_CONFIG } from "../../constants/wmmsConstants";
 
@@ -25,26 +24,21 @@ export default function UnderConstructionPage({
       case "ADMIN":
         return "/admin/users";
       case "SALES":
-        return "/orders";
       case "OWNER":
-        return "/orders";
       case "PLANNER":
-        return "/bom";
+      case "LEADER":
+      case "QC":
+        return "/orders";
       case "PURCHASING":
         return "/purchasing/orders";
       case "WAREHOUSE":
         return "/inventory/stock";
-      case "LEADER":
-        return "/production/kanban";
-      case "QC":
-        return "/qc/inspection";
       default:
         return "/orders";
     }
   };
 
   return (
-    <WmmsAppShell>
       <div className="max-w-4xl mx-auto py-8 px-4">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-6 text-sm text-slate-500 font-medium">
@@ -119,7 +113,6 @@ export default function UnderConstructionPage({
           </div>
         </div>
       </div>
-    </WmmsAppShell>
   );
 }
 

@@ -23,11 +23,14 @@ export interface WmmsSidebarProps {
 }
 
 interface SidebarItem {
+  id?: string;
   icon: ReactNode;
   label: string;
   path: string;
   badge?: string;
   children?: SidebarItem[];
+  /** Dùng cho mục con xuất hiện/ẩn động bên trong một nhánh đang mở sẵn */
+  dynamicOpen?: boolean;
 }
 
 interface SidebarSection {
@@ -117,7 +120,33 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 4v8a4 4 0 004 4h10m0 0l-4-4m4 4l-4 4" />
     </svg>
   ),
+  chevron: (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  ),
 };
+
+/** Accordion 2 chiều dùng CSS Grid (0fr <-> 1fr) giúp nhánh con trượt mở và trượt đóng mượt ở 60fps. */
+function SidebarAccordion({
+  isOpen,
+  children,
+}: {
+  isOpen: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+        isOpen
+          ? "grid-rows-[1fr] opacity-100"
+          : "grid-rows-[0fr] opacity-0 pointer-events-none"
+      }`}
+    >
+      <div className="overflow-hidden">{children}</div>
+    </div>
+  );
+}
 
 const SIDEBAR_STORAGE_KEY = "wmms_sidebar_width";
 const DEFAULT_SIDEBAR_WIDTH = 280;
@@ -234,6 +263,9 @@ export default function WmmsSidebar({
     isInOrderSpace ||
     ((isInBomPage || isInReconciliation || isInProductionPage) && Boolean(displaySpaceKey));
 
+  const canAccessStaging = (
+    [ROLES.SALES, ROLES.OWNER, ROLES.ADMIN] as string[]
+  ).includes(activeRole);
   const canAccessBom = ([ROLES.ADMIN, ROLES.OWNER, ROLES.PLANNER] as string[]).includes(
     activeRole,
   );
@@ -259,13 +291,12 @@ export default function WmmsSidebar({
 
   const spaceSubItems: SidebarItem[] = [];
   if (isSpaceContextActive && displaySpaceKey) {
-    if (canAccessBom) {
-      spaceSubItems.push({
-        icon: Icons.bom,
-        label: "BOM & quy trình sản xuất",
-        path: `/bom?spaceKey=${encodeURIComponent(displaySpaceKey)}`,
-      });
-    }
+    spaceSubItems.push({
+      icon: Icons.orders,
+      label: "Danh sách sản phẩm",
+      path: `/orders/spaces/${encodeURIComponent(displaySpaceKey)}`,
+    });
+
     if (canAccessReconciliation) {
       spaceSubItems.push({
         icon: Icons.reconcile,
@@ -274,24 +305,49 @@ export default function WmmsSidebar({
       });
     }
 
-    // Tab Sản phẩm và Tab con Tiến trình sản xuất: CHỈ hiện khi người dùng có quyền và truy cập trang tiến trình sản xuất của sản phẩm
-    if (isInProductionPage && Boolean(orderItemIdFromQuery) && canAccessProductionProgress) {
-      const productTitle = skuFromQuery ? `Sản phẩm ${skuFromQuery}` : `Sản phẩm #${orderItemIdFromQuery}`;
-      const prodPath = `/production/progress?spaceKey=${encodeURIComponent(displaySpaceKey)}&orderItemId=${encodeURIComponent(orderItemIdFromQuery)}${skuFromQuery ? `&sku=${encodeURIComponent(skuFromQuery)}` : ""}`;
-      spaceSubItems.push({
+    // Tab Sản phẩm và các tab con (BOM & Quy trình SX, Tiến trình sản xuất): hiện khi truy cập trang BOM hoặc Tiến trình SX của sản phẩm cụ thể
+    const isProductSubRoute =
+      (isInBomPage || isInProductionPage) &&
+      Boolean(orderItemIdFromQuery) &&
+      (canAccessBom || canAccessProductionProgress);
+
+    if (isProductSubRoute) {
+      const productTitle = skuFromQuery
+        ? `Sản phẩm ${skuFromQuery}`
+        : `Sản phẩm #${orderItemIdFromQuery}`;
+      const querySuffix = `spaceKey=${encodeURIComponent(displaySpaceKey)}&orderItemId=${encodeURIComponent(orderItemIdFromQuery)}${skuFromQuery ? `&sku=${encodeURIComponent(skuFromQuery)}` : ""}`;
+      const bomPath = `/bom?${querySuffix}`;
+      const prodPath = `/production/progress?${querySuffix}`;
+
+      const productChildren: SidebarItem[] = [];
+      if (canAccessBom) {
+        productChildren.push({
+          icon: Icons.bom,
+          label: "BOM & Quy trình SX",
+          path: bomPath,
+        });
+      }
+      if (canAccessProductionProgress) {
+        productChildren.push({
+          icon: Icons.routing,
+          label: "Tiến trình sản xuất",
+          path: prodPath,
+        });
+      }
+
+      const productItem: SidebarItem = {
+        id: `product-${displaySpaceKey}-${orderItemIdFromQuery}`,
         icon: Icons.catalog,
         label: productTitle,
-        path: prodPath,
-        children: [
-          {
-            icon: Icons.routing,
-            label: "Tiến trình sản xuất",
-            path: prodPath,
-          },
-        ],
-      });
+        path: isInBomPage && canAccessBom ? bomPath : prodPath,
+        children: productChildren,
+        dynamicOpen: true,
+      };
+      spaceSubItems.push(productItem);
     }
   }
+
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
 
   const orderSpaceChildItem: SidebarItem | undefined = isSpaceContextActive
     ? {
@@ -301,6 +357,23 @@ export default function WmmsSidebar({
         children: spaceSubItems.length > 0 ? spaceSubItems : undefined,
       }
     : undefined;
+
+  const orderChildren: SidebarItem[] = [];
+  if (canAccessStaging) {
+    orderChildren.push({
+      icon: Icons.audit,
+      label: "Đơn hàng mới",
+      path: "/orders/staging",
+    });
+    if (orderSpaceChildItem) {
+      orderChildren.push({ ...orderSpaceChildItem, dynamicOpen: true });
+    }
+  } else if (orderSpaceChildItem) {
+    orderChildren.push(orderSpaceChildItem);
+  }
+
+  const effectiveOrderChildren =
+    orderChildren.length > 0 ? orderChildren : undefined;
 
   const getSidebarSections = (): SidebarSection[] => {
     switch (activeRole) {
@@ -320,9 +393,8 @@ export default function WmmsSidebar({
                 icon: Icons.orders,
                 label: "Danh sách đơn hàng",
                 path: "/orders",
-                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+                children: effectiveOrderChildren,
               },
-              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/progress" },
             ],
           },
           {
@@ -347,14 +419,13 @@ export default function WmmsSidebar({
                 icon: Icons.orders,
                 label: "Danh sách đơn hàng",
                 path: "/orders",
-                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+                children: effectiveOrderChildren,
               },
             ],
           },
           {
             heading: "KỸ THUẬT & QUY TRÌNH",
             items: [
-              { icon: Icons.routing, label: "Cấu hình quy trình động", path: "/production/routing-config" },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
             ],
           },
@@ -369,8 +440,6 @@ export default function WmmsSidebar({
           {
             heading: "XƯỞNG & KIỂM TOÁN",
             items: [
-              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
-              { icon: Icons.bolt, label: "Duyệt vượt chốt (Overdriver)", path: "/production/overdriver" },
               { icon: Icons.routing, label: "Duyệt lệnh sản xuất bù", path: "/production/replacement-approvals" },
               { icon: Icons.reports, label: "Báo cáo sản xuất & KCS", path: "/analytics/reports" },
               { icon: Icons.audit, label: "Nhật ký hoạt động", path: "/admin/audit-logs" },
@@ -387,9 +456,8 @@ export default function WmmsSidebar({
                 icon: Icons.orders,
                 label: "Danh sách đơn hàng",
                 path: "/orders",
-                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+                children: effectiveOrderChildren,
               },
-              { icon: Icons.audit, label: "Tiếp nhận đơn hàng Excel", path: "/orders/staging" },
             ],
           },
         ];
@@ -397,15 +465,14 @@ export default function WmmsSidebar({
       case ROLES.PLANNER:
         return [
           {
-            heading: "KẾ HOẠCH VẬT TƯ & BOM",
+            heading: "KẾ HOẠCH VẬT TƯ",
             items: [
               {
                 icon: Icons.orders,
                 label: "Danh sách đơn hàng",
                 path: "/orders",
-                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+                children: effectiveOrderChildren,
               },
-              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/progress" },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
               { icon: Icons.purchasing, label: "Đơn đặt hàng", path: "/purchasing/orders" },
               { icon: Icons.audit, label: "Yêu cầu mua hàng", path: "/purchasing/requisitions" },
@@ -439,7 +506,6 @@ export default function WmmsSidebar({
               { icon: Icons.inventory, label: "Tồn kho vật tư 3 cấp", path: "/inventory/stock" },
               { icon: Icons.orders, label: "Nhập kho & xác nhận", path: "/warehouse/receipts" },
               { icon: Icons.space, label: "Xuất kho & bàn giao", path: "/warehouse/issues" },
-              { icon: Icons.qc, label: "Nhập kho thành phẩm", path: "/warehouse/finished-goods" },
             ],
           },
           {
@@ -449,10 +515,9 @@ export default function WmmsSidebar({
                 icon: Icons.orders,
                 label: "Danh sách đơn hàng",
                 path: "/orders",
-                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+                children: effectiveOrderChildren,
               },
               { icon: Icons.catalog, label: "Danh mục vật tư & sản phẩm", path: "/catalog" },
-              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
             ],
           },
         ];
@@ -467,16 +532,13 @@ export default function WmmsSidebar({
                 icon: Icons.orders,
                 label: "Danh sách đơn hàng",
                 path: "/orders",
-                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+                children: effectiveOrderChildren,
               },
-              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
-              { icon: Icons.routing, label: "Tiến độ công đoạn tại trạm", path: "/production/progress" },
             ],
           },
           {
-            heading: "PHÊ DUYỆT & PHÂN TÍCH",
+            heading: "PHÂN TÍCH & BÁO CÁO",
             items: [
-              { icon: Icons.bolt, label: "Yêu cầu vượt chốt (Overdriver)", path: "/production/overdriver" },
               { icon: Icons.reports, label: "Báo cáo sản xuất & KCS", path: "/analytics/reports" },
             ],
           },
@@ -491,10 +553,8 @@ export default function WmmsSidebar({
                 icon: Icons.orders,
                 label: "Danh sách đơn hàng",
                 path: "/orders",
-                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+                children: effectiveOrderChildren,
               },
-              { icon: Icons.qc, label: "Kiểm tra QC & nhật ký lỗi", path: "/qc/inspection" },
-              { icon: Icons.kanban, label: "Tiến độ & Quy trình SX", path: "/production/kanban" },
             ],
           },
         ];
@@ -508,7 +568,7 @@ export default function WmmsSidebar({
                 icon: Icons.orders,
                 label: "Danh sách đơn hàng",
                 path: "/orders",
-                children: orderSpaceChildItem ? [orderSpaceChildItem] : undefined,
+                children: effectiveOrderChildren,
               },
             ],
           },
@@ -553,76 +613,123 @@ export default function WmmsSidebar({
   const hasActiveDescendant = (item: SidebarItem): boolean => {
     if (!item.children || item.children.length === 0) return false;
     return item.children.some(
-      (child) => isItemActive(child.path) || hasActiveDescendant(child)
+      (child) =>
+        child.dynamicOpen !== false &&
+        (isItemActive(child.path) || hasActiveDescendant(child))
     );
   };
 
-  // Render một item trên cây Sidebar (hỗ trợ phân cấp nhiều tầng: cấp 0, cấp 1, cấp 2)
+  // Render một item trên cây Sidebar (hỗ trợ phân cấp nhiều tầng + trượt đóng/mở 2 chiều)
   const renderSidebarItemNode = (item: SidebarItem, level = 0): ReactNode => {
+    const nodeKey = item.id ?? item.path;
     const active = isItemActive(item.path);
     const hasDescendant = hasActiveDescendant(item);
 
     const isTopLevel = level === 0;
     const isLevel1 = level === 1;
 
-    return (
-      <li key={item.path} className="space-y-1">
-        <button
-          type="button"
-          title={item.label}
-          onClick={() => {
-            navigate(item.path);
-            onCloseMobile();
-          }}
-          className={`w-full flex items-center transition-colors cursor-pointer ${
-            isTopLevel
-              ? `gap-3 px-3 py-2.5 rounded-lg text-sm ${
-                  active
-                    ? "bg-white text-blue-700 font-semibold border-l-4 border-blue-600 shadow-xs"
-                    : hasDescendant
-                    ? "bg-slate-200/60 text-slate-900 font-semibold"
-                    : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 font-medium"
-                }`
-              : `gap-2 px-2.5 py-2 rounded-lg text-xs ${
-                  active && !hasDescendant
-                    ? "bg-white text-blue-700 font-bold border border-blue-200 shadow-xs"
-                    : hasDescendant
-                    ? "bg-slate-200/60 text-slate-900 font-semibold"
-                    : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 font-medium"
-                }`
-          }`}
-        >
-          {!isTopLevel && (
-            <span className={active || hasDescendant ? "text-blue-600" : "text-slate-400"}>
-              {Icons.subItem}
-            </span>
-          )}
-          <span
-            className={
-              active
-                ? "text-blue-600"
-                : hasDescendant
-                ? "text-slate-800"
-                : "text-slate-500"
-            }
-          >
-            {item.icon}
-          </span>
-          <span className="truncate">{item.label}</span>
-        </button>
+    const hasChildren = Boolean(item.children && item.children.length > 0);
+    const isOrdersRoot = isTopLevel && item.path === "/orders";
+    const isContextOpen = isOrdersRoot ? orderChildren.length > 0 : hasChildren;
+    const isExpanded = isContextOpen && !collapsedMap[nodeKey];
 
-        {item.children && item.children.length > 0 && (
-          <ul
-            className={`mt-1 space-y-1 border-l-2 ${
+    const toggleCollapse = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setCollapsedMap((prev) => ({ ...prev, [nodeKey]: !prev[nodeKey] }));
+    };
+
+    return (
+      <li key={nodeKey} className="space-y-1">
+        <div className="relative flex items-center">
+          <button
+            type="button"
+            title={item.label}
+            onClick={() => {
+              navigate(item.path);
+              onCloseMobile();
+            }}
+            className={`w-full flex items-center transition-colors cursor-pointer ${
+              isContextOpen ? "pr-8" : ""
+            } ${
               isTopLevel
-                ? "ml-4 pl-2.5 border-blue-300"
-                : isLevel1
-                ? "ml-4 pl-2.5 border-blue-200"
-                : "ml-3 pl-2 border-slate-300"
+                ? `gap-3 px-3 py-2.5 rounded-lg text-sm ${
+                    active
+                      ? "bg-white text-blue-700 font-semibold border-l-4 border-blue-600 shadow-xs"
+                      : hasDescendant
+                      ? "bg-slate-200/60 text-slate-900 font-semibold"
+                      : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 font-medium"
+                  }`
+                : `gap-2 px-2.5 py-2 rounded-lg text-xs ${
+                    active && !hasDescendant
+                      ? "bg-white text-blue-700 font-bold border border-blue-200 shadow-xs"
+                      : hasDescendant
+                      ? "bg-slate-200/60 text-slate-900 font-semibold"
+                      : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 font-medium"
+                  }`
             }`}
           >
-            {item.children.map((child) => renderSidebarItemNode(child, level + 1))}
-          </ul>
+            {!isTopLevel && (
+              <span className={active || hasDescendant ? "text-blue-600" : "text-slate-400"}>
+                {Icons.subItem}
+              </span>
+            )}
+            <span
+              className={
+                active
+                  ? "text-blue-600"
+                  : hasDescendant
+                  ? "text-slate-800"
+                  : "text-slate-500"
+              }
+            >
+              {item.icon}
+            </span>
+            <span className="truncate">{item.label}</span>
+          </button>
+
+          {isContextOpen && (
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              aria-label={isExpanded ? "Thu gọn mục con" : "Mở rộng mục con"}
+              title={isExpanded ? "Thu gọn" : "Mở rộng"}
+              className="absolute right-1.5 p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 transition-colors cursor-pointer"
+            >
+              <span
+                style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
+                className={`inline-flex items-center justify-center w-4 h-4 transition-transform duration-200 ease-out ${
+                  isExpanded ? "text-slate-600" : ""
+                }`}
+              >
+                {Icons.chevron}
+              </span>
+            </button>
+          )}
+        </div>
+
+        {hasChildren && (
+          <SidebarAccordion isOpen={isExpanded}>
+            <ul
+              className={`mt-1 space-y-1 border-l-2 ${
+                isTopLevel
+                  ? "ml-4 pl-2.5 border-blue-300"
+                  : isLevel1
+                  ? "ml-4 pl-2.5 border-blue-200"
+                  : "ml-3 pl-2 border-slate-300"
+              }`}
+            >
+              {item.children!.map((child) =>
+                child.dynamicOpen !== undefined ? (
+                  <SidebarAccordion key={child.id ?? child.path} isOpen={child.dynamicOpen}>
+                    {renderSidebarItemNode(child, level + 1)}
+                  </SidebarAccordion>
+                ) : (
+                  renderSidebarItemNode(child, level + 1)
+                )
+              )}
+            </ul>
+          </SidebarAccordion>
         )}
       </li>
     );

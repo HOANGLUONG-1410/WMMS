@@ -110,7 +110,7 @@ public class ProductionOrderController : ControllerBase
 
         long currentUserId = GetCurrentUserId();
         var result = await _productionOrderService.AdvanceStepAsync(batchId, request, currentUserId);
-        return Ok(ApiResponse<ProductionBatchDto>.Ok(result, $"Chuyển bước thành công! Thẻ lô {result.BatchCode} hiện đang ở công đoạn {result.CurrentStageSeq} ({result.CurrentStageName})."));
+        return Ok(ApiResponse<ProductionBatchDto>.Ok(result, $"Chuyển bước thành công! Lô sản xuất {result.BatchCode} hiện đang ở công đoạn {result.CurrentStageSeq} ({result.CurrentStageName})."));
     }
 
     /// <summary>
@@ -296,11 +296,11 @@ public class ProductionOrderController : ControllerBase
     public async Task<ActionResult<ApiResponse<List<ProductionBatchDto>>>> GetBatchesBySpace(string spaceKey)
     {
         var batches = await _productionOrderService.GetBatchesBySpaceKeyAsync(spaceKey);
-        return Ok(ApiResponse<List<ProductionBatchDto>>.Ok(batches, $"Lấy danh sách {batches.Count} thẻ lô thuộc không gian {spaceKey} thành công."));
+        return Ok(ApiResponse<List<ProductionBatchDto>>.Ok(batches, $"Đã tải danh sách {batches.Count} lô sản xuất của không gian đơn hàng thành công."));
     }
 
     /// <summary>
-    /// Lấy thông tin chi tiết một thẻ lô Kanban theo BatchId kèm đầy đủ tiến độ các công đoạn (Steps) và cổng QC.
+    /// Lấy thông tin chi tiết một lô sản xuất theo BatchId kèm đầy đủ tiến độ các công đoạn (Steps) và cổng QC.
     /// </summary>
     [HttpGet("batches/{batchId:long}")]
     public async Task<ActionResult<ApiResponse<ProductionBatchDto>>> GetBatchById(long batchId)
@@ -308,9 +308,9 @@ public class ProductionOrderController : ControllerBase
         var batch = await _productionOrderService.GetBatchByIdAsync(batchId);
         if (batch == null)
         {
-            return NotFound(ApiResponse<ProductionBatchDto>.Fail($"Thẻ lô sản xuất với ID {batchId} không tồn tại."));
+            return NotFound(ApiResponse<ProductionBatchDto>.Fail("Không tìm thấy lô sản xuất được yêu cầu."));
         }
-        return Ok(ApiResponse<ProductionBatchDto>.Ok(batch, "Lấy thông tin chi tiết thẻ lô thành công."));
+        return Ok(ApiResponse<ProductionBatchDto>.Ok(batch, "Đã tải thông tin chi tiết lô sản xuất thành công."));
     }
 
     /// <summary>
@@ -364,7 +364,8 @@ public class ProductionOrderController : ControllerBase
 
     private long GetCurrentUserId()
     {
-        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.FindFirst("sub")?.Value;
         if (!string.IsNullOrWhiteSpace(claim) && long.TryParse(claim, out var userId))
         {
             return userId;

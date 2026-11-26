@@ -47,7 +47,7 @@ export const ROLE_CONFIG = {
     roleTitle: 'Nhân viên kế hoạch vật tư',
     badgeClass: 'bg-indigo-600 text-white',
     pillClass: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    operationalScope: 'Bóc tách BOM, đối chiếu tồn kho, gom PR theo ngày',
+    operationalScope: 'Đối chiếu tồn kho, theo dõi vật tư, gom PR theo ngày',
     defaultUser: { fullName: 'Pham Minh Duc', initials: 'MD', email: 'planner@nguyenkhoa.vn' }
   },
   LEADER: {
