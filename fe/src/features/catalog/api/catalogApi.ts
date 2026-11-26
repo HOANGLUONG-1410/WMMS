@@ -50,6 +50,7 @@ export const catalogApi = {
         materialCode: item.materialCode ?? matchedFallback?.materialCode ?? "",
         materialName: item.materialName ?? matchedFallback?.materialName ?? "",
         materialGroup: item.materialGroup ?? matchedFallback?.materialGroup ?? "LUMBER",
+        materialGroupLabel: item.materialGroupLabel,
         unitOfMeasure: item.unitOfMeasure ?? matchedFallback?.unitOfMeasure ?? "PCS",
         dimensionSpec: item.dimensionSpec ?? matchedFallback?.dimensionSpec ?? null,
         fscCertified: item.fscCertified ?? matchedFallback?.fscCertified ?? false,
@@ -62,6 +63,7 @@ export const catalogApi = {
             0,
         ),
         status: item.status ?? matchedFallback?.status ?? "ACTIVE",
+        statusLabel: item.statusLabel,
       };
     };
 

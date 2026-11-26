@@ -53,6 +53,7 @@ export default function SalesOrderListPage() {
             totalOrderedUnits: Number(o.totalOrderedUnits ?? 0),
             lineItemsVolumeSummary: String(o.lineItemsVolumeSummary || ''),
             lifecycleStatusBadge: String(o.lifecycleStatusBadge || o.orderStatus || 'CONFIRMED'),
+            lifecycleStatusLabel: o.lifecycleStatusLabel ? String(o.lifecycleStatusLabel) : undefined,
             overallProgressPct: Number(o.overallProgressPct ?? 0),
           }));
           setOrderSpaces(mappedSpaces);
@@ -118,6 +119,8 @@ export default function SalesOrderListPage() {
       return 'bg-amber-50 text-amber-800 border-amber-200';
     if (badge === 'NEWLY_RECEIVED')
       return 'bg-slate-100 text-slate-700 border-slate-200';
+    if (badge === 'CANCELLED')
+      return 'bg-rose-50 text-rose-700 border-rose-200';
     return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   };
 
@@ -125,10 +128,13 @@ export default function SalesOrderListPage() {
     if (badge === 'IN_PRODUCTION') return 'bg-blue-600';
     if (badge === 'BOM_SETTING') return 'bg-amber-500';
     if (badge === 'NEWLY_RECEIVED') return 'bg-slate-500';
+    if (badge === 'CANCELLED') return 'bg-rose-500';
     return 'bg-emerald-500';
   };
 
-  const getEtdBadgeClass = (days: number) => {
+  const getEtdBadgeClass = (days: number, isUrgent?: boolean) => {
+    if (days < 0 || isUrgent || days <= 10)
+      return 'bg-rose-50 text-rose-700 border-rose-200';
     if (days <= 16)
       return 'bg-amber-50 text-amber-800 border-amber-200';
     return 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -249,6 +255,8 @@ export default function SalesOrderListPage() {
                 <option value="IN_PRODUCTION">Đang sản xuất</option>
                 <option value="BOM_SETTING">Đang lập BOM</option>
                 <option value="NEWLY_RECEIVED">Mới nhận</option>
+                <option value="COMPLETED">Đã hoàn thành</option>
+                <option value="CANCELLED">Đã hủy</option>
               </select>
 
               <div className="relative w-full sm:w-64">
@@ -319,7 +327,8 @@ export default function SalesOrderListPage() {
                       <td className="py-4 px-4 whitespace-nowrap">
                         <span
                           className={`inline-block px-2.5 py-0.5 text-xs font-bold uppercase rounded border whitespace-nowrap ${getEtdBadgeClass(
-                            ord.daysRemaining
+                            ord.daysRemaining,
+                            ord.isUrgentEtd
                           )}`}
                         >
                           {ord.etdDate} ({ord.daysRemaining} NGÀY)
@@ -339,7 +348,7 @@ export default function SalesOrderListPage() {
                               ord.lifecycleStatusBadge
                             )}`}
                           />
-                          {lifecycleStatusLabel(ord.lifecycleStatusBadge)}
+                          {ord.lifecycleStatusLabel || lifecycleStatusLabel(ord.lifecycleStatusBadge)}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right whitespace-nowrap">

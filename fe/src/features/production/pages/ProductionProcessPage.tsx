@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { isAxiosError } from "axios";
+import { ApiError } from "../../../lib/api/apiError";
 import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
 import { useSession } from "../../auth/store/SessionContext";
@@ -203,14 +204,13 @@ export default function ProductionProcessPage() {
     activeRole,
   );
   const canQueryMrp = ["ADMIN", "OWNER", "PLANNER", "PURCHASING", "WAREHOUSE"].includes(activeRole);
-  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER", "SALES"].includes(activeRole);
+  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER"].includes(activeRole);
   const canAccessReconciliationPage = [
     "ADMIN",
     "OWNER",
     "PLANNER",
     "WAREHOUSE",
     "PURCHASING",
-    "SALES",
   ].includes(activeRole);
 
   // Thông tin Không gian đơn hàng
@@ -624,6 +624,11 @@ export default function ProductionProcessPage() {
       (activeBatch.batchType === "REWORK_SUB_CARD" || activeBatch.batchType === "REPLENISH_LOT"),
   );
 
+  // Chỉ lô phụ sửa chữa (REWORK_SUB_CARD) mới gọi endpoint reinspect; lô bù phế phẩm (REPLENISH_LOT) đi từ trạm đầu như lô chính
+  const isReworkSubBatch = Boolean(
+    activeBatch && activeBatch.batchType === "REWORK_SUB_CARD",
+  );
+
   const parentMainBatch = useMemo(() => {
     if (!activeBatch || !activeBatch.parentBatchId) return null;
     return batches.find((b) => b.batchId === activeBatch.parentBatchId) || null;
@@ -792,7 +797,9 @@ export default function ProductionProcessPage() {
       await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể phát hành lệnh sản xuất.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -801,10 +808,10 @@ export default function ProductionProcessPage() {
     }
   };
 
-  // Mở modal Nghiệm thu KCS Lô chính (tuân thủ quy tắc 100% InspectedQty == BatchQty)
+  // Mở modal Nghiệm thu KCS (chỉ REWORK_SUB_CARD dùng reinspect, còn MAIN_CARD và REPLENISH_LOT dùng qcInspect)
   const handleOpenQcModal = (step: BatchRoutingStepDto) => {
     if (!activeBatch) return;
-    if (isSubBatch) {
+    if (isReworkSubBatch) {
       setReinspectModalStep(step);
       setReinspectForm({
         batchStepId: step.batchStepId,
@@ -829,7 +836,7 @@ export default function ProductionProcessPage() {
     });
   };
 
-  // Submit Nghiệm thu KCS Lô chính
+  // Submit Nghiệm thu KCS Lô chính / Lô sản xuất bù
   const handleSubmitQcInspection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeBatch || !qcModalStep) return;
@@ -837,7 +844,7 @@ export default function ProductionProcessPage() {
     if (qcForm.passQty + qcForm.failQty !== qcForm.inspectedQty) {
       setToastBanner({
         type: "error",
-        text: "Tổng Số lượng đạt và Số lượng lỗi phải bằng đúng 100% sản lượng lô đang kiểm định.",
+        text: "Tổng Số lượng đạt và Số lượng lỗi phải bằng đúng toàn bộ sản lượng lô đang kiểm định.",
       });
       return;
     }
@@ -853,17 +860,23 @@ export default function ProductionProcessPage() {
             ? qcForm.defectName?.trim() || "Lỗi gia công chi tiết cần sửa chữa"
             : null,
       });
+      const scrapNote = res.requiresScrapReplenishment
+        ? " Lô bù phế phẩm đang chờ phân bổ/xuất kho vật tư bổ sung."
+        : "";
       setToastBanner({
         type: "success",
         text:
-          res.message ||
-          `Đã ghi nhận kết quả KCS thành công! Đạt: ${res.passQty}, Lỗi: ${res.failQty}.`,
+          (res.message ||
+            `Đã ghi nhận kết quả KCS thành công! Đạt: ${res.passQty}, Lỗi: ${res.failQty}.`) +
+          scrapNote,
       });
       setQcModalStep(null);
-      await loadBatches(activeSpaceKey);
+      await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể ghi nhận kết quả KCS.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -880,7 +893,7 @@ export default function ProductionProcessPage() {
     if (reinspectForm.passQty + reinspectForm.failQty !== reinspectForm.inspectedQty) {
       setToastBanner({
         type: "error",
-        text: "Tổng Số lượng đạt và Số lượng lỗi phải khớp 100% sản lượng thẻ nhánh phụ.",
+        text: "Tổng Số lượng đạt và Số lượng lỗi phải khớp toàn bộ sản lượng thẻ nhánh phụ.",
       });
       return;
     }
@@ -894,10 +907,12 @@ export default function ProductionProcessPage() {
         text: res.message,
       });
       setReinspectModalStep(null);
-      await loadBatches(activeSpaceKey);
+      await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể nghiệm thu lại thẻ nhánh phụ.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -906,10 +921,10 @@ export default function ProductionProcessPage() {
     }
   };
 
-  // Mở modal Chuyển công đoạn (Lô chính) hoặc Chuyển tiếp độc lập (Lô phụ)
+  // Mở modal Chuyển công đoạn (Lô chính / Lô sản xuất bù) hoặc Chuyển tiếp độc lập (Lô phụ sửa chữa)
   const handleOpenAdvanceModal = (step: BatchRoutingStepDto) => {
     if (!activeBatch) return;
-    if (isSubBatch) {
+    if (isReworkSubBatch) {
       setContinueSubModalStep(step);
       setContinueSubNotesInput(
         `Cho phép thẻ nhánh phụ ${activeBatch.batchCode} chuyển tiếp độc lập sang công đoạn kế tiếp.`,
@@ -939,10 +954,12 @@ export default function ProductionProcessPage() {
         text: `Đã chuyển công đoạn thành công cho lô ${activeBatch.batchCode}!`,
       });
       setAdvanceModalStep(null);
-      await loadBatches(activeSpaceKey);
+      await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể chuyển công đoạn.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -968,10 +985,12 @@ export default function ProductionProcessPage() {
       });
       setMergeModalBatch(null);
       setSelectedBatchId(res.mainBatchId);
-      await loadBatches(activeSpaceKey);
+      await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể gộp lô phụ vào lô chính.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -996,10 +1015,12 @@ export default function ProductionProcessPage() {
         text: res.message,
       });
       setContinueSubModalStep(null);
-      await loadBatches(activeSpaceKey);
+      await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể chuyển tiếp độc lập thẻ nhánh phụ.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -1033,10 +1054,12 @@ export default function ProductionProcessPage() {
         text: res.message,
       });
       setRequestOverdriveBatch(null);
-      await loadBatches(activeSpaceKey);
+      await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể gửi yêu cầu Overdrive.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -1070,10 +1093,12 @@ export default function ProductionProcessPage() {
         text: res.message,
       });
       setApproveOverdriveBatch(null);
-      await loadBatches(activeSpaceKey);
+      await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể xử lý phê duyệt Overdrive.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -1092,10 +1117,12 @@ export default function ProductionProcessPage() {
         type: "success",
         text: res.message,
       });
-      await loadBatches(activeSpaceKey);
+      await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể mở khóa trạm dừng Hold Point.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -1133,7 +1160,9 @@ export default function ProductionProcessPage() {
       await loadOrderSpaceData(activeSpaceKey);
     } catch (err) {
       let msg = "Không thể hoàn tất nhập kho thành phẩm.";
-      if (isAxiosError(err)) {
+      if (err instanceof ApiError) {
+        msg = err.message || msg;
+      } else if (isAxiosError(err)) {
         msg = err.response?.data?.message || err.message || msg;
       }
       setToastBanner({ type: "error", text: msg });
@@ -1347,7 +1376,7 @@ export default function ProductionProcessPage() {
                 {releaseSummary.mainBatchesCount} lô chính • {releaseSummary.subBatchesCount} lô phụ
                 {releaseSummary.remainingUnreleasedQty > 0
                   ? ` • Còn ${fmtNum(releaseSummary.remainingUnreleasedQty)} SP chưa phát hành`
-                  : " • Đã phát hành 100%"}
+                  : " • Đã phát hành đủ"}
               </div>
             </div>
 
@@ -1364,7 +1393,9 @@ export default function ProductionProcessPage() {
                   </div>
                   <div className="text-xs text-slate-500 mt-1 truncate">
                     {isBatchDone
-                      ? "Đã hoàn tất 100% và nhập kho thành phẩm"
+                      ? activeBatch.batchQty === 0
+                        ? "Lô đã đóng (0 SP đạt chuẩn — đã tách nhánh/hủy)"
+                        : "Đã hoàn tất toàn bộ công đoạn và nhập kho thành phẩm"
                       : activeStep
                         ? `Hiện tại: S-${activeStep.stageSequence.toString().padStart(2, "0")} ${activeStep.stageName}`
                         : "Đang xử lý"}
@@ -1772,23 +1803,40 @@ export default function ProductionProcessPage() {
               <>
                 {/* TRẠNG THÁI A: LÔ ĐÃ HOÀN TẤT (DONE) */}
                 {isBatchDone && (
-                  <div className="p-6 rounded-xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="space-y-1.5">
-                      <span className="px-2.5 py-0.5 bg-emerald-600 text-white text-xs font-extrabold uppercase rounded-full">
-                        ✓ Hoàn tất quy trình sản xuất
-                      </span>
-                      <h3 className="text-xl font-extrabold text-slate-900">
-                        Lô <span className="font-mono text-emerald-700">{activeBatch.batchCode}</span>{" "}
-                        đã hoàn tất 100% các công đoạn &amp; nhập kho thành phẩm
-                      </h3>
-                      <p className="text-xs text-slate-600">
-                        Sản lượng hoàn tất:{" "}
-                        <strong className="text-emerald-800">{fmtNum(activeBatch.batchQty)} SP</strong>{" "}
-                        • Hoàn thành lúc:{" "}
-                        <strong>{fmtDateTime(activeStep.completedAt)}</strong>
-                      </p>
+                  activeBatch.batchQty === 0 ? (
+                    <div className="p-6 rounded-xl border-2 border-slate-300 bg-gradient-to-r from-slate-100 via-amber-50/40 to-white shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <span className="px-2.5 py-0.5 bg-slate-600 text-white text-xs font-extrabold uppercase rounded-full">
+                          Lô đã đóng (0 SP đạt chuẩn)
+                        </span>
+                        <h3 className="text-xl font-extrabold text-slate-800">
+                          Lô <span className="font-mono text-slate-700">{activeBatch.batchCode}</span>{" "}
+                          đã đóng (0 SP đạt chuẩn — toàn bộ sản lượng đã tách nhánh phụ hoặc hủy phế phẩm)
+                        </h3>
+                        <p className="text-xs text-slate-600">
+                          Vui lòng chọn thẻ nhánh phụ hoặc lô sản xuất bù tương ứng trên thanh chọn lô để tiếp tục theo dõi tiến độ.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="p-6 rounded-xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <span className="px-2.5 py-0.5 bg-emerald-600 text-white text-xs font-extrabold uppercase rounded-full">
+                          ✓ Hoàn tất quy trình sản xuất
+                        </span>
+                        <h3 className="text-xl font-extrabold text-slate-900">
+                          Lô <span className="font-mono text-emerald-700">{activeBatch.batchCode}</span>{" "}
+                          đã hoàn tất toàn bộ các công đoạn &amp; nhập kho thành phẩm
+                        </h3>
+                        <p className="text-xs text-slate-600">
+                          Sản lượng hoàn tất:{" "}
+                          <strong className="text-emerald-800">{fmtNum(activeBatch.batchQty)} SP</strong>{" "}
+                          • Hoàn thành lúc:{" "}
+                          <strong>{fmtDateTime(activeStep.completedAt)}</strong>
+                        </p>
+                      </div>
+                    </div>
+                  )
                 )}
 
                 {/* TRẠNG THÁI B: LÔ ĐANG BỊ KHÓA (LOCKED hoặc HOLD_POINT_BLOCKED) */}
@@ -1922,8 +1970,8 @@ export default function ProductionProcessPage() {
                           <span className="text-blue-700">
                             {isCurrentStepPassed
                               ? isFinalStep
-                                ? "ĐÃ ĐẠT 100% KCS XUẤT XƯỞNG (CHỜ NHẬP KHO THÀNH PHẨM)"
-                                : "ĐÃ HOÀN TẤT KCS 100% (SẴN SÀNG CHUYỂN BƯỚC)"
+                                ? "ĐÃ ĐẠT KCS XUẤT XƯỞNG (CHỜ NHẬP KHO THÀNH PHẨM)"
+                                : "ĐÃ HOÀN TẤT KCS (SẴN SÀNG CHUYỂN BƯỚC)"
                               : "ĐANG CHỜ NGHIỆM THU CHẤT LƯỢNG KCS"}
                           </span>
                         </h3>
@@ -1932,7 +1980,7 @@ export default function ProductionProcessPage() {
                           Tiêu chuẩn KCS ({activeStep.qualityGateCode || "QC GATE"}):{" "}
                           <strong>
                             {activeStep.inspectionCriteria ||
-                              "Kiểm định 100% kích thước & thông số kỹ thuật phôi"}
+                              "Kiểm định toàn bộ kích thước & thông số kỹ thuật phôi"}
                           </strong>
                         </p>
 
@@ -1979,7 +2027,7 @@ export default function ProductionProcessPage() {
                               />
                             </svg>
                             <span>
-                              {isSubBatch
+                              {isReworkSubBatch
                                 ? "Nghiệm thu lại Lô phụ (KCS)"
                                 : "Nghiệm thu KCS (Cổng QC)"}
                             </span>
@@ -2010,14 +2058,14 @@ export default function ProductionProcessPage() {
                             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer"
                           >
                             <span>
-                              {isSubBatch
+                              {isReworkSubBatch
                                 ? `Chuyển bước độc lập S-${(activeStep.stageSequence + 1).toString().padStart(2, "0")} →`
                                 : `Chuyển sang công đoạn S-${(activeStep.stageSequence + 1).toString().padStart(2, "0")} →`}
                             </span>
                           </button>
                         )}
 
-                        {/* Trường hợp 3: Công đoạn cuối cùng đã đạt 100% KCS -> Nhập kho thành phẩm */}
+                        {/* Trường hợp 3: Công đoạn cuối cùng đã đạt KCS -> Nhập kho thành phẩm */}
                         {isCurrentStepPassed &&
                           isFinalStep &&
                           (isLeaderAuthorized || isWarehouseAuthorized) && (
@@ -2026,7 +2074,7 @@ export default function ProductionProcessPage() {
                               onClick={() => handleOpenCompleteModal(activeBatch)}
                               className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-lg shadow-sm transition inline-flex items-center gap-2 cursor-pointer"
                             >
-                              <span>Hoàn tất Lô &amp; Nhập kho thành phẩm ★</span>
+                              <span>Xác nhận Hoàn tất &amp; Nhập kho Thành phẩm ★</span>
                             </button>
                           )}
 
@@ -2196,7 +2244,7 @@ export default function ProductionProcessPage() {
                               className="text-xs text-slate-500 truncate"
                               title={st.inspectionCriteria}
                             >
-                              {st.inspectionCriteria || "Kiểm định thông số kỹ thuật 100%"}
+                              {st.inspectionCriteria || "Kiểm định toàn bộ thông số kỹ thuật"}
                             </div>
                           </td>
 
@@ -2252,7 +2300,7 @@ export default function ProductionProcessPage() {
                                 onClick={() => handleOpenQcModal(st)}
                                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition cursor-pointer"
                               >
-                                {isSubBatch ? "KCS lại" : "KCS"}
+                                {isReworkSubBatch ? "KCS lại" : "KCS"}
                               </button>
                             )}
 
@@ -2265,7 +2313,7 @@ export default function ProductionProcessPage() {
                                   onClick={() => handleOpenAdvanceModal(st)}
                                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition cursor-pointer"
                                 >
-                                  {isSubBatch ? "Đi tiếp →" : "Chuyển bước →"}
+                                  {isReworkSubBatch ? "Đi tiếp →" : "Chuyển bước →"}
                                 </button>
                               )}
 
@@ -2570,7 +2618,7 @@ export default function ProductionProcessPage() {
                     Tiêu chuẩn: <strong>{qcModalStep.inspectionCriteria}</strong>
                   </div>
                   <div className="text-blue-700 font-semibold pt-0.5">
-                    Quy tắc BR-008: Bắt buộc kiểm định đủ 100% sản lượng lô (
+                    Quy tắc BR-008: Bắt buộc kiểm định đủ toàn bộ sản lượng lô (
                     {fmtNum(activeBatch.batchQty)} SP).
                   </div>
                 </div>
@@ -2578,7 +2626,7 @@ export default function ProductionProcessPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Tổng kiểm định (100%)
+                      Tổng kiểm định
                     </label>
                     <input
                       type="number"
@@ -2741,7 +2789,7 @@ export default function ProductionProcessPage() {
 
               <form onSubmit={handleSubmitReinspectSubBatch} className="space-y-4 text-sm">
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
-                  Nghiệm thu lại 100% sản lượng lô phụ sau sửa chữa/bù phôi tại công đoạn{" "}
+                  Nghiệm thu lại toàn bộ sản lượng lô phụ sau sửa chữa/bù phôi tại công đoạn{" "}
                   <strong>
                     S-{reinspectModalStep.stageSequence} ({reinspectModalStep.stageName})
                   </strong>
