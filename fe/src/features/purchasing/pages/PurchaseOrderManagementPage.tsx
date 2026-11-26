@@ -1,5 +1,4 @@
 import { useState } from "react";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
 import { useSession } from "../../auth/store/SessionContext";
 import { ROLES } from "../../../constants/roles";
 import {
@@ -28,6 +27,9 @@ export default function PurchaseOrderManagementPage() {
 
   const { currentUser } = useSession();
   const isOwner = currentUser?.activeRole === ROLES.OWNER;
+  const canManagePo =
+    currentUser?.activeRole === ROLES.ADMIN ||
+    currentUser?.activeRole === ROLES.PURCHASING;
 
   const { data: purchaseOrders = [], isLoading } = usePurchaseOrders({
     searchKeyword: searchKeyword.trim() || undefined,
@@ -145,7 +147,7 @@ export default function PurchaseOrderManagementPage() {
   };
 
   return (
-    <WmmsAppShell mode="purchasing">
+    <>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Thông báo phản hồi */}
         {toastBanner && (
@@ -178,17 +180,19 @@ export default function PurchaseOrderManagementPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowGeneratePoModal(true)}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition self-start sm:self-auto inline-flex items-center gap-2 shrink-0"
-          >
-            <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            <span>Lập đơn mua nguyên liệu</span>
-          </button>
+          {canManagePo && (
+            <button
+              type="button"
+              onClick={() => setShowGeneratePoModal(true)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition self-start sm:self-auto inline-flex items-center gap-2 shrink-0"
+            >
+              <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Lập đơn mua nguyên liệu</span>
+            </button>
+          )}
         </div>
 
         {/* Thông báo động khi có yêu cầu mua hàng mới được Chủ xưởng phê duyệt */}
@@ -203,8 +207,13 @@ export default function PurchaseOrderManagementPage() {
               {pendingMaterialCount > 0
                 ? ` — gồm ${pendingMaterialCount} loại nguyên vật liệu`
                 : ""}
-              ) đang chờ lập đơn mua. Hãy bấm{" "}
-              <strong className="text-blue-700">+ Lập đơn mua nguyên liệu</strong> ở góc trên để phân phối nhà cung cấp và gửi đơn.
+              ) đang chờ lập đơn mua.
+              {canManagePo && (
+                <>
+                  {" "}Hãy bấm{" "}
+                  <strong className="text-blue-700">+ Lập đơn mua nguyên liệu</strong> ở góc trên để phân phối nhà cung cấp và gửi đơn.
+                </>
+              )}
             </div>
           </div>
         )}
@@ -390,13 +399,20 @@ export default function PurchaseOrderManagementPage() {
                                     Hủy đơn
                                   </button>
                                 )}
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedPoForEta(po)}
-                                  className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
-                                >
-                                  {isConfirmed ? "Cập nhật ngày giao" : "Theo dõi hàng về →"}
-                                </button>
+                                {canManagePo && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedPoForEta(po)}
+                                    className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg shadow-2xs transition"
+                                  >
+                                    {isConfirmed ? "Cập nhật ngày giao" : "Theo dõi hàng về →"}
+                                  </button>
+                                )}
+                                {!canCancel && !canManagePo && (
+                                  <span className="inline-block px-3 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 text-xs font-semibold rounded-lg select-none">
+                                    Chỉ xem
+                                  </span>
+                                )}
                               </>
                             )}
                           </div>
@@ -496,6 +512,6 @@ export default function PurchaseOrderManagementPage() {
           </div>
         </div>
       )}
-    </WmmsAppShell>
+    </>
   );
 }

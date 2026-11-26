@@ -3,7 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
-import WmmsAppShell from '../../../components/layout/WmmsAppShell';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { HeaderTopLeft } from '../../../components/layout/WmmsAppShell';
+import { resolveBackendAssetUrl } from '../../../constants/env';
 import { useWmms } from '../../auth/hooks/WmmsContext';
 import { useSession } from '../../auth/store/SessionContext';
 import { bomStatusLabel, lifecycleStatusLabel } from '../../../lib/statusLabels';
@@ -12,6 +14,27 @@ import { useOrderSpaceDetail } from '../hooks/useOrderSpaceDetail';
 import type { OrderSpaceLineItemForBom } from '../../bom/types';
 
 const fmtNum = (n?: number | null) => (n ?? 0).toLocaleString('vi-VN');
+
+/** Nhận diện URL ảnh hợp lệ của dòng sản phẩm và chuẩn hóa theo origin Backend */
+const getLineItemImageUrl = (item: OrderSpaceLineItemForBom): string | null => {
+  const candidates = [item.productImageUrl, item.attachedCadUrl];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      const trimmed = candidate.trim();
+      if (
+        trimmed.startsWith('data:image/') ||
+        trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://') ||
+        trimmed.startsWith('/uploads/') ||
+        trimmed.startsWith('blob:') ||
+        /\.(png|jpe?g|webp|gif|svg)$/i.test(trimmed)
+      ) {
+        return resolveBackendAssetUrl(trimmed);
+      }
+    }
+  }
+  return null;
+};
 
 /**
  * Màn hình III.4.3: Order Space Detail Dashboard (SCR-ORD-03)
@@ -23,16 +46,37 @@ export default function OrderSpaceDetailPage() {
   const { orderSpaces, currentSpaceKey } = useWmms();
   const { currentUser } = useSession();
 
-  const [previewAttachment, setPreviewAttachment] = useState<string | null>(null);
+  const [hoverPreview, setHoverPreview] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    placement: 'top' | 'bottom';
+    imageUrl: string;
+    title: string;
+  } | null>(null);
+
+  const [modalPreview, setModalPreview] = useState<{
+    isOpen: boolean;
+    imageUrl: string;
+    title: string;
+    sku: string;
+    desc: string;
+  } | null>(null);
+
+  const [zoomScale, setZoomScale] = useState<number>(1);
+  const [brokenImageIds, setBrokenImageIds] = useState<Record<number, boolean>>({});
+  const [textAttachmentModal, setTextAttachmentModal] = useState<{
+    fileName: string;
+    url?: string | null;
+  } | null>(null);
 
   const activeKey = spaceKey || currentSpaceKey || orderSpaces[0]?.spaceKey || '';
 
   // Quyền người dùng
   const activeRole = currentUser?.activeRole || 'OWNER';
   const canReleaseBatches = ['OWNER', 'ADMIN', 'LEADER'].includes(activeRole);
-  const canAccessBom = ['OWNER', 'PLANNER', 'SALES', 'ADMIN'].includes(activeRole);
+  const canAccessBom = ['OWNER', 'ADMIN'].includes(activeRole);
   const canAccessReconciliation = [
-    'SALES',
     'OWNER',
     'PLANNER',
     'PURCHASING',
@@ -274,8 +318,8 @@ export default function OrderSpaceDetailPage() {
   };
 
   return (
-    <WmmsAppShell
-      customTopLeft={
+    <>
+      <HeaderTopLeft>
         <button
           type="button"
           onClick={() => navigate('/orders')}
@@ -286,8 +330,7 @@ export default function OrderSpaceDetailPage() {
           </svg>
           <span>Danh sách đơn hàng</span>
         </button>
-      }
-    >
+      </HeaderTopLeft>
       <div className="max-w-[1400px] mx-auto space-y-6">
         {isError && (
           <div className="px-4 py-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium">
@@ -363,19 +406,6 @@ export default function OrderSpaceDetailPage() {
                     {eligibleBulkItems.length}
                   </span>
                 )}
-              </button>
-            )}
-
-            {canAccessBom && (
-              <button
-                type="button"
-                onClick={() => navigate(`/bom?spaceKey=${encodeURIComponent(activeKey)}`)}
-                className="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 text-sm font-semibold rounded-lg shadow-xs transition flex items-center gap-2 cursor-pointer"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <span>Quản lý BOM &amp; quy trình</span>
               </button>
             )}
 
@@ -466,14 +496,14 @@ export default function OrderSpaceDetailPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
-                  <th className="py-3.5 px-6 min-w-[130px]">Mã SKU</th>
-                  <th className="py-3.5 px-4 min-w-[220px]">Mẫu sản phẩm &amp; quy cách</th>
-                  <th className="py-3.5 px-4 min-w-[160px]">Quy cách hoàn thiện</th>
-                  <th className="py-3.5 px-4 min-w-[110px]">Số lượng đặt</th>
-                  <th className="py-3.5 px-4 min-w-[150px]">Tiến độ phát hành</th>
-                  <th className="py-3.5 px-4 min-w-[160px]">Bản vẽ kỹ thuật</th>
-                  <th className="py-3.5 px-4 min-w-[150px]">Trạng thái BOM</th>
-                  <th className="py-3.5 px-6 text-right min-w-[190px]">Thao tác</th>
+                  <th className="py-3.5 px-4 min-w-[95px]">Mã SKU</th>
+                  <th className="py-3.5 px-3 min-w-[190px]">Mẫu sản phẩm &amp; quy cách</th>
+                  <th className="py-3.5 px-3 min-w-[115px]">Quy cách hoàn thiện</th>
+                  <th className="py-3.5 px-3 min-w-[90px]">Số lượng đặt</th>
+                  <th className="py-3.5 px-3 min-w-[130px]">Tiến độ phát hành</th>
+                  <th className="py-3.5 px-3 min-w-[145px]">Bản vẽ kỹ thuật</th>
+                  <th className="py-3.5 px-3 min-w-[140px]">Trạng thái BOM</th>
+                  <th className="py-3.5 px-4 text-right min-w-[175px]">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-sm bg-white">
@@ -497,25 +527,25 @@ export default function OrderSpaceDetailPage() {
 
                     return (
                       <tr key={item.orderItemId} className="hover:bg-slate-50/90 transition-colors">
-                        <td className="py-4 px-6 font-mono font-bold text-slate-800 whitespace-nowrap">
+                        <td className="py-4 px-4 font-mono font-bold text-slate-800 whitespace-nowrap">
                           {item.productSku}
                           <div className="text-[11px] text-slate-400 font-normal">
                             #{item.orderItemId}
                           </div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-4 px-3">
                           <div className="font-semibold text-slate-900">{item.productName}</div>
                           <div className="text-xs text-slate-500 mt-0.5">
                             {item.dimensionsSpec} | {item.woodSpecies}
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-slate-700 whitespace-nowrap">
+                        <td className="py-4 px-3 text-slate-700 whitespace-nowrap">
                           {item.finishSpec || '—'}
                         </td>
-                        <td className="py-4 px-4 font-bold text-slate-900 whitespace-nowrap">
+                        <td className="py-4 px-3 font-bold text-slate-900 whitespace-nowrap">
                           {fmtNum(item.orderedQty)} cái
                         </td>
-                        <td className="py-4 px-4 whitespace-nowrap">
+                        <td className="py-4 px-3 whitespace-nowrap">
                           <div className="text-xs font-bold text-slate-800">
                             <span className={stats.initialReleasedQty > 0 ? 'text-blue-600' : 'text-slate-400'}>
                               {fmtNum(stats.initialReleasedQty)}
@@ -530,23 +560,87 @@ export default function OrderSpaceDetailPage() {
                             )}
                           </div>
                         </td>
-                        <td className="py-4 px-4 whitespace-nowrap">
-                          {item.attachedCadFileName ? (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewAttachment(item.attachedCadFileName || null)}
-                              className="text-blue-600 hover:text-blue-700 hover:underline font-medium flex items-center gap-1.5 text-xs cursor-pointer"
-                            >
-                              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                              <span>{item.attachedCadFileName}</span>
-                            </button>
-                          ) : (
-                            <span className="text-slate-400 text-xs italic">Chưa đính kèm</span>
-                          )}
+                        <td className="py-4 px-3 whitespace-nowrap">
+                          {(() => {
+                            const imgUrl = !brokenImageIds[item.orderItemId]
+                              ? getLineItemImageUrl(item)
+                              : null;
+                            const drawingTitle = item.attachedCadFileName || `Ảnh ${item.productSku}`;
+
+                            if (imgUrl) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHoverPreview(null);
+                                    setZoomScale(1);
+                                    setModalPreview({
+                                      isOpen: true,
+                                      imageUrl: imgUrl,
+                                      title: drawingTitle,
+                                      sku: item.productSku,
+                                      desc: item.productName,
+                                    });
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const isTop = rect.top > 240;
+                                    setHoverPreview({
+                                      visible: true,
+                                      x: Math.max(10, Math.min(rect.left, window.innerWidth - 240)),
+                                      y: isTop ? rect.top - 8 : rect.bottom + 8,
+                                      placement: isTop ? 'top' : 'bottom',
+                                      imageUrl: imgUrl,
+                                      title: drawingTitle,
+                                    });
+                                  }}
+                                  onMouseLeave={() => setHoverPreview(null)}
+                                  className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 hover:border-blue-400 rounded-lg p-1 pr-2.5 transition cursor-pointer max-w-[135px] min-w-0 overflow-hidden text-left"
+                                  title={`${drawingTitle} — Nhấn để phóng to ảnh bản vẽ`}
+                                >
+                                  <img
+                                    src={imgUrl}
+                                    alt={drawingTitle}
+                                    onError={() =>
+                                      setBrokenImageIds((prev) => ({
+                                        ...prev,
+                                        [item.orderItemId]: true,
+                                      }))
+                                    }
+                                    className="w-7 h-7 rounded object-cover border border-slate-200 shrink-0 bg-white"
+                                  />
+                                  <span className="text-xs font-mono font-medium text-slate-700 truncate min-w-0 flex-1">
+                                    {drawingTitle}
+                                  </span>
+                                </button>
+                              );
+                            }
+
+                            if (item.attachedCadFileName) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setTextAttachmentModal({
+                                      fileName: item.attachedCadFileName || '',
+                                      url: resolveBackendAssetUrl(item.attachedCadUrl),
+                                    })
+                                  }
+                                  title={item.attachedCadFileName}
+                                  className="text-blue-600 hover:text-blue-700 hover:underline font-medium inline-flex items-center gap-1.5 text-xs cursor-pointer max-w-[135px] min-w-0"
+                                >
+                                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  <span className="truncate min-w-0">{item.attachedCadFileName}</span>
+                                </button>
+                              );
+                            }
+
+                            return <span className="text-slate-400 text-xs italic">Chưa đính kèm</span>;
+                          })()}
                         </td>
-                        <td className="py-4 px-4 whitespace-nowrap">
+                        <td className="py-4 px-3 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full border whitespace-nowrap ${badgeStyle.badge}`}
                           >
@@ -556,13 +650,13 @@ export default function OrderSpaceDetailPage() {
                               bomStatusLabel(statusText)}
                           </span>
                         </td>
-                        <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">
+                        <td className="py-4 px-4 text-right whitespace-nowrap space-x-2">
                           {canAccessBom && (
                             <button
                               type="button"
                               onClick={() =>
                                 navigate(
-                                  `/bom?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}`
+                                  `/bom?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}&sku=${encodeURIComponent(item.productSku)}`
                                 )
                               }
                               className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer"
@@ -1021,8 +1115,151 @@ export default function OrderSpaceDetailPage() {
         </div>
       )}
 
-      {/* Modal xem trước bản vẽ CAD */}
-      {previewAttachment && (
+      {/* Tooltip Hover Preview ảnh bản vẽ */}
+      {hoverPreview?.visible && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${hoverPreview.x}px`,
+            top: hoverPreview.placement === 'bottom' ? `${hoverPreview.y}px` : undefined,
+            bottom: hoverPreview.placement === 'top' ? `${window.innerHeight - hoverPreview.y}px` : undefined,
+          }}
+          className="z-50 pointer-events-none w-56 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 text-center"
+        >
+          <div className="w-full h-44 rounded-lg overflow-hidden bg-slate-100 border border-slate-100 flex items-center justify-center">
+            <img
+              src={hoverPreview.imageUrl}
+              alt={hoverPreview.title}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+          <div className="mt-1.5 px-1 flex items-center justify-between text-[11px] text-slate-500">
+            <span className="truncate max-w-[130px] font-mono text-slate-700 font-semibold">{hoverPreview.title}</span>
+            <span className="text-blue-600 font-medium">Click xem lớn</span>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xem lớn ảnh bản vẽ kỹ thuật có hỗ trợ thu phóng và kéo thả (chỉ xem) */}
+      {modalPreview?.isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-[2px]"
+          onClick={() => setModalPreview(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-[96vw] max-w-6xl h-[88vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <TransformWrapper
+              initialScale={1}
+              minScale={0.5}
+              maxScale={4}
+              centerOnInit={true}
+              wheel={{ step: 0.001 }}
+              doubleClick={{ step: 0.25 }}
+              onTransform={(_ref, state) => setZoomScale(state.scale)}
+            >
+              {({ zoomIn, zoomOut, resetTransform }) => (
+                <>
+                  <div className="px-6 py-3 border-b border-slate-200 flex items-center justify-between gap-4 bg-slate-50 shrink-0">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 min-w-0">
+                        <span className="shrink-0">Bản vẽ kỹ thuật:</span>
+                        <span
+                          className="font-mono text-blue-600 font-semibold truncate min-w-0"
+                          title={modalPreview.title}
+                        >
+                          {modalPreview.title}
+                        </span>
+                      </h3>
+                      <p
+                        className="text-xs text-slate-500 mt-0.5 truncate"
+                        title={`Mã SKU: ${modalPreview.sku}${modalPreview.desc ? ` — ${modalPreview.desc}` : ''}`}
+                      >
+                        Mã SKU: <span className="font-semibold text-slate-700">{modalPreview.sku}</span>
+                        {modalPreview.desc ? ` — ${modalPreview.desc}` : ''}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center bg-white border border-slate-300 rounded-lg shadow-xs overflow-hidden text-xs">
+                        <button
+                          type="button"
+                          onClick={() => zoomOut(0.15)}
+                          title="Thu nhỏ"
+                          className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer select-none text-base"
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetTransform();
+                            setZoomScale(1);
+                          }}
+                          title="Bấm để đặt lại 100%"
+                          className="px-2.5 h-8 flex items-center justify-center font-mono font-semibold text-slate-700 hover:bg-slate-100 border-x border-slate-200 transition cursor-pointer select-none"
+                        >
+                          {Math.round(zoomScale * 100)}%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => zoomIn(0.15)}
+                          title="Phóng to"
+                          className="w-8 h-8 flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer select-none text-base"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="h-6 w-px bg-slate-300 mx-1" />
+
+                      <button
+                        type="button"
+                        onClick={() => setModalPreview(null)}
+                        className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition cursor-pointer text-sm font-semibold"
+                        title="Đóng"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative flex-1 bg-zinc-200 overflow-hidden flex items-center justify-center select-none">
+                    <TransformComponent
+                      wrapperClass="!w-full !h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
+                      contentClass="!w-full !h-full flex items-center justify-center"
+                    >
+                      <img
+                        src={modalPreview.imageUrl}
+                        alt={modalPreview.title}
+                        className="max-w-[85vw] max-h-[70vh] object-contain rounded shadow-lg bg-white"
+                        draggable={false}
+                      />
+                    </TransformComponent>
+                  </div>
+                </>
+              )}
+            </TransformWrapper>
+
+            <div className="px-6 py-3 border-t border-slate-200 flex items-center justify-between bg-white shrink-0">
+              <span className="text-xs text-slate-500">
+                Cuộn chuột hoặc dùng nút +/- để thu phóng, nhấn giữ chuột để kéo xem chi tiết.
+              </span>
+              <button
+                type="button"
+                onClick={() => setModalPreview(null)}
+                className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal fallback cho tệp CAD/PDF không phải ảnh */}
+      {textAttachmentModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -1031,30 +1268,30 @@ export default function OrderSpaceDetailPage() {
               </h3>
               <button
                 type="button"
-                onClick={() => setPreviewAttachment(null)}
+                onClick={() => setTextAttachmentModal(null)}
                 className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none cursor-pointer"
               >
                 ×
               </button>
             </div>
-            <p className="text-sm text-slate-700">
-              Tệp: <strong className="font-mono">{previewAttachment}</strong>
+            <p className="text-sm text-slate-700 break-words">
+              Tệp: <strong className="font-mono break-all">{textAttachmentModal.fileName}</strong>
             </p>
             <p className="text-xs text-slate-500">
-              Đã xác minh URL kho lưu trữ riêng có chữ ký. Sẵn sàng xem trên thiết bị tại xưởng.
+              Tệp này ở định dạng bản vẽ kỹ thuật hoặc chưa có ảnh xem trước trực tiếp.
             </p>
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setPreviewAttachment(null)}
+                onClick={() => setTextAttachmentModal(null)}
                 className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer"
               >
-                Đóng xem trước
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
-    </WmmsAppShell>
+    </>
   );
 }
