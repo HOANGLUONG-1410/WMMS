@@ -234,7 +234,7 @@ export default function WmmsSidebar({
     isInOrderSpace ||
     ((isInBomPage || isInReconciliation || isInProductionPage) && Boolean(displaySpaceKey));
 
-  const canAccessBom = ([ROLES.ADMIN, ROLES.OWNER, ROLES.PLANNER, ROLES.SALES] as string[]).includes(
+  const canAccessBom = ([ROLES.ADMIN, ROLES.OWNER, ROLES.PLANNER] as string[]).includes(
     activeRole,
   );
   const canAccessReconciliation = (
@@ -244,7 +244,6 @@ export default function WmmsSidebar({
       ROLES.PLANNER,
       ROLES.WAREHOUSE,
       ROLES.PURCHASING,
-      ROLES.SALES,
     ] as string[]
   ).includes(activeRole);
   const canAccessProductionProgress = (
