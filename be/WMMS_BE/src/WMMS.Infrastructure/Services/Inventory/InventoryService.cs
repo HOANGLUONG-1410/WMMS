@@ -138,7 +138,7 @@ public class InventoryService : IInventoryService
                     .ThenInclude(co => co.OrderSpace)
             .Include(a => a.OrderItem)
                 .ThenInclude(oi => oi.Product)
-            .Where(a => a.MaterialId == materialId && a.AllocationStatus == AllocationStatusEnum.RESERVED)
+            .Where(a => a.MaterialId == materialId && a.AllocationStatus == AllocationStatusEnum.RESERVED && a.ReservedQty > 0m)
             .OrderBy(a => a.OrderItem.CustomerOrder.EtdDate)
             .ToListAsync(cancellationToken);
 
@@ -159,7 +159,7 @@ public class InventoryService : IInventoryService
             RequiredQty = a.RequiredQty,
             ReservedQty = a.ReservedQty,
             IssuedQty = a.IssuedQty,
-            ShortageQty = Math.Max(0m, a.RequiredQty - a.ReservedQty),
+            ShortageQty = Math.Max(0m, a.RequiredQty - (a.ReservedQty + a.IssuedQty)),
             AllocationStatus = a.AllocationStatus.ToString(),
             EtdDate = a.OrderItem.CustomerOrder.EtdDate,
             AllocatedAt = a.AllocatedAt
@@ -314,7 +314,7 @@ public class InventoryService : IInventoryService
         var total = await query.CountAsync(cancellationToken);
         var txs = await query
             .OrderByDescending(tx => tx.CreatedAt)
-            .ThenBy(tx => tx.TransactionId)
+            .ThenByDescending(tx => tx.TransactionId)
             .Skip((page - 1) * size)
             .Take(size)
             .ToListAsync(cancellationToken);

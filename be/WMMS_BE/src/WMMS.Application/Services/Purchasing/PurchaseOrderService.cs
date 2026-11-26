@@ -1,4 +1,5 @@
 using System.Text.Json;
+using WMMS.Application.Common.Helpers;
 using WMMS.Application.Common.Models;
 using WMMS.Application.DTOs.Purchasing;
 using WMMS.Application.Interfaces.External;
@@ -1245,24 +1246,10 @@ public class PurchaseOrderService : IPurchaseOrderService
     }
 
     private static string FormatMaterialCategory(string? category) =>
-        (category?.Trim().ToUpperInvariant()) switch
-        {
-            "LUMBER" => "Gỗ nguyên khối",
-            "HARDWARE" => "Phụ kiện kim khí",
-            "FINISH_PAINT" => "Sơn & Hóa chất hoàn thiện",
-            "PACKAGING" => "Bao bì đóng gói xuất khẩu",
-            _ => string.IsNullOrWhiteSpace(category) ? "Vật tư sản xuất" : category
-        };
+        WmmsStatusLabelHelper.ToMaterialGroupLabel(category);
 
     private static string FormatPoStatusLabel(PoStatusEnum status) =>
-        status switch
-        {
-            PoStatusEnum.ISSUED => "Đã phát hành / Đang giao",
-            PoStatusEnum.PARTIALLY_RECEIVED => "Đã nhận một phần",
-            PoStatusEnum.FULFILLED => "Đã nhận đủ hàng",
-            PoStatusEnum.CANCELLED => "Đã hủy",
-            _ => status.ToString()
-        };
+        WmmsStatusLabelHelper.ToPoStatusLabel(status.ToString());
 
     private static decimal GetDefaultUnitPriceByGroup(string? materialGroup) =>
         (materialGroup?.Trim().ToUpperInvariant()) switch

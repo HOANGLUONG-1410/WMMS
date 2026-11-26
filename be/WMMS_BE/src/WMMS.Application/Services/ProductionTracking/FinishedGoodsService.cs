@@ -302,6 +302,19 @@ public class FinishedGoodsService : IFinishedGoodsService
                 salesOrderStatusStr = order.Status.ToString();
                 await _unitOfWork.OrderItems.UpdateOrderAsync(order);
 
+                if (order.OrderSpace != null)
+                {
+                    var totalOrderUnits = order.OrderItems.Sum(oi => oi.OrderedQty);
+                    var doneOrderUnits = order.OrderItems.Sum(oi =>
+                        oi.OrderItemId == targetOrderItem?.OrderItemId
+                            ? Math.Min(oi.OrderedQty, totalCompletedForOrderItem)
+                            : (oi.Status == OrderItemStatusEnum.DONE ? oi.OrderedQty : 0));
+                    order.OrderSpace.OverallProgressPct = order.Status == OrderStatusEnum.COMPLETED
+                        ? 100m
+                        : (totalOrderUnits > 0 ? Math.Min(100m, Math.Round((decimal)doneOrderUnits * 100m / totalOrderUnits, 2)) : 0m);
+                    await _unitOfWork.OrderItems.UpdateOrderSpaceAsync(order.OrderSpace);
+                }
+
                 if (isSalesOrderDone && previousOrderStatus != OrderStatusEnum.COMPLETED)
                 {
                     await _unitOfWork.Boms.AddAuditLogAsync(new AuditLog

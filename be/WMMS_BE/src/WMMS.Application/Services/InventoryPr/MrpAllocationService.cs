@@ -1256,12 +1256,14 @@ public class MrpAllocationService : IMrpAllocationService
             }
             else
             {
-                // BR-PUR-01 / UC-44: Hợp nhất danh sách đơn nguồn theo từng OrderItemId rồi cộng tổng thiếu hụt thực tế (không cộng trùng)
+                // BR-PUR-01 / UC-44: Hợp nhất danh sách đơn nguồn theo từng OrderItemId rồi cộng tổng thiếu hụt thực tế (không cộng trùng) và giữ bù tồn kho an toàn (Safety Stock)
                 var mergedJson = MergeSourceOrderJson(existingItem.SourceOrderIdsJson, sourceJson);
                 var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, line.NetShortageQty);
+                var safetyTopUp = Math.Max(0m, line.SuggestedPrOrderQty - line.NetShortageQty);
+                var existingTopUp = Math.Max(0m, existingItem.SuggestedOrderQty - existingItem.TotalShortageQty);
                 existingItem.SourceOrderIdsJson = mergedJson;
                 existingItem.TotalShortageQty = aggregatedShortage;
-                existingItem.SuggestedOrderQty = aggregatedShortage;
+                existingItem.SuggestedOrderQty = Math.Round(aggregatedShortage + Math.Max(safetyTopUp, existingTopUp), 4);
             }
         }
 
@@ -1440,8 +1442,9 @@ public class MrpAllocationService : IMrpAllocationService
                 ? mat.MaterialStock.AvailableQty
                 : Math.Max(0m, Math.Round(physical - totalAllocated, 4));
 
-            // BR-INV-01: Tồn kho đã giữ chỗ của các đơn hàng khác (bắt buộc loại trừ)
-            var allocatedToOtherOrders = Math.Max(0m, Math.Round(totalAllocated - alreadyReservedForTarget, 4));
+            // BR-INV-01: Tồn kho đang giữ chỗ (ReservedQty) của các đơn hàng khác (không trừ IssuedQty đã xuất kho khỏi TotalAllocated)
+            var reservedOnlyForTarget = Math.Round(breakdowns.Sum(b => b.ReservedQty), 4);
+            var allocatedToOtherOrders = Math.Max(0m, Math.Round(totalAllocated - reservedOnlyForTarget, 4));
 
             var stillNeededForTarget = Math.Max(0m, Math.Round(totalGrossDemand - alreadyReservedForTarget, 4));
             var allocatableNow = Math.Min(stillNeededForTarget, available);
