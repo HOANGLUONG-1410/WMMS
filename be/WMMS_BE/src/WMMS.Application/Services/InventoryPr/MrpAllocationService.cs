@@ -361,6 +361,13 @@ public class MrpAllocationService : IMrpAllocationService
             return new List<MaterialOrderAllocationDto>();
         }
 
+        if (activeReserved.Any(a => a.OrderItem != null && a.OrderItem.Status is OrderItemStatusEnum.IN_PROD or OrderItemStatusEnum.DONE))
+        {
+            throw AppException.Conflict(
+                "Không thể giải phóng vật tư giữ chỗ vì đơn hàng đã vào sản xuất hoặc đã hoàn thành.",
+                MessageCodes.Msg08DuplicateConflict);
+        }
+
         var materialIds = activeReserved.Select(a => a.MaterialId).Distinct().ToList();
         var stockMap = await _materialStockRepository.GetByMaterialIdsAsync(materialIds, cancellationToken);
         var now = DateTime.UtcNow;
@@ -369,6 +376,7 @@ public class MrpAllocationService : IMrpAllocationService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            var affectedOrderItems = new HashSet<OrderItem>();
             foreach (var alloc in activeReserved)
             {
                 var qtyToRelease = alloc.ReservedQty;
@@ -382,7 +390,29 @@ public class MrpAllocationService : IMrpAllocationService
                 alloc.AllocationStatus = AllocationStatusEnum.RELEASED;
                 await _materialAllocationRepository.UpdateAsync(alloc);
 
-                releasedDtos.Add(MapAllocationDto(alloc, alloc.OrderItem));
+                if (alloc.OrderItem != null)
+                {
+                    affectedOrderItems.Add(alloc.OrderItem);
+                }
+
+                releasedDtos.Add(MapAllocationDto(alloc, alloc.OrderItem!));
+            }
+
+            // Hạ trạng thái các OrderItem / BOM vừa bị giải phóng giữ chỗ khỏi READY_PROD / READY_FOR_PRODUCTION về chờ vật tư
+            foreach (var item in affectedOrderItems)
+            {
+                if (item.Status == OrderItemStatusEnum.READY_PROD)
+                {
+                    item.Status = OrderItemStatusEnum.WAITING_MAT;
+                    await _orderItemRepository.UpdateAsync(item);
+                }
+
+                if (item.BomHeader != null && item.BomHeader.BomStatus == BomStatusEnum.READY_FOR_PRODUCTION)
+                {
+                    item.BomHeader.BomStatus = BomStatusEnum.WAITING_FOR_MATERIALS;
+                    item.BomHeader.UpdatedAt = now;
+                    await _bomRepository.UpdateAsync(item.BomHeader);
+                }
             }
 
             await _bomRepository.AddAuditLogAsync(new AuditLog
@@ -653,16 +683,34 @@ public class MrpAllocationService : IMrpAllocationService
                     await _materialStockRepository.UpdateAsync(stock);
                 }
 
-                var allocation = new MaterialAllocation
+                var existingAlloc = orderItem.MaterialAllocations
+                    .FirstOrDefault(ma => ma.MaterialId == detail.MaterialId && ma.AllocationStatus != AllocationStatusEnum.RELEASED);
+
+                AllocationStatusEnum effectiveStatus;
+                if (existingAlloc != null)
                 {
-                    OrderItemId = orderItem.OrderItemId,
-                    MaterialId = detail.MaterialId,
-                    RequiredQty = grossRequired,
-                    ReservedQty = allocated,
-                    AllocationStatus = AllocationStatusEnum.RESERVED,
-                    AllocatedAt = now
-                };
-                await _materialAllocationRepository.AddAsync(allocation, cancellationToken);
+                    existingAlloc.RequiredQty = Math.Round(existingAlloc.RequiredQty + grossRequired, 4);
+                    existingAlloc.ReservedQty = Math.Round(existingAlloc.ReservedQty + allocated, 4);
+                    existingAlloc.AllocationStatus = AllocationStatusEnum.RESERVED;
+                    existingAlloc.AllocatedAt = now;
+                    await _materialAllocationRepository.UpdateAsync(existingAlloc);
+                    effectiveStatus = existingAlloc.AllocationStatus;
+                }
+                else
+                {
+                    var allocation = new MaterialAllocation
+                    {
+                        OrderItemId = orderItem.OrderItemId,
+                        MaterialId = detail.MaterialId,
+                        RequiredQty = grossRequired,
+                        ReservedQty = allocated,
+                        AllocationStatus = AllocationStatusEnum.RESERVED,
+                        AllocatedAt = now
+                    };
+                    orderItem.MaterialAllocations.Add(allocation);
+                    await _materialAllocationRepository.AddAsync(allocation, cancellationToken);
+                    effectiveStatus = allocation.AllocationStatus;
+                }
 
                 totalAllocated += allocated;
                 totalShortage += shortage;
@@ -682,7 +730,7 @@ public class MrpAllocationService : IMrpAllocationService
                     GrossRequiredQty = grossRequired,
                     AllocatedFromStockQty = allocated,
                     ShortageQty = shortage,
-                    AllocationStatus = allocation.AllocationStatus.ToString()
+                    AllocationStatus = effectiveStatus.ToString()
                 });
             }
 
@@ -914,8 +962,11 @@ public class MrpAllocationService : IMrpAllocationService
         CancellationToken cancellationToken)
     {
         var itemsWithBom = orderItems
-            .Where(oi => oi.BomHeader != null && oi.BomHeader.BomDetails.Count > 0)
-            .OrderBy(oi => oi.CustomerOrder.EtdDate)
+            .Where(oi => (oi.CustomerOrder == null || oi.CustomerOrder.Status is not (OrderStatusEnum.CANCELLED or OrderStatusEnum.COMPLETED))
+                         && oi.BomHeader != null
+                         && oi.BomHeader.BomDetails.Count > 0
+                         && oi.BomHeader.BomStatus != BomStatusEnum.DRAFT)
+            .OrderBy(oi => oi.CustomerOrder?.EtdDate ?? DateTime.MaxValue)
             .ThenBy(oi => oi.OrderItemId)
             .ToList();
 

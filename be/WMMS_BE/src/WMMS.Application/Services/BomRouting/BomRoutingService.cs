@@ -452,10 +452,18 @@ public class BomRoutingService : IBomRoutingService
             throw new NotFoundException("Không tìm thấy bảng định mức vật tư cần cập nhật.");
         }
 
+        var orderItem = await _orderItemRepository.GetByIdAsync(bomHeader.OrderItemId);
+        if (bomHeader.BomStatus == BomStatusEnum.READY_FOR_PRODUCTION
+            || orderItem?.Status is OrderItemStatusEnum.IN_PROD or OrderItemStatusEnum.DONE)
+        {
+            throw new DomainException(
+                "Không thể chỉnh sửa định mức vật tư đã chốt khóa sản xuất hoặc của sản phẩm đang gia công tại xưởng.",
+                "BOM_LOCKED");
+        }
+
         // Validate BR-002
         await ValidateScrapRateAsync(request.ScrapRatePercent);
 
-        var orderItem = await _orderItemRepository.GetByIdAsync(bomHeader.OrderItemId);
         int orderedQty = orderItem?.OrderedQty ?? 1;
 
         await _unitOfWork.BeginTransactionAsync();
@@ -547,7 +555,7 @@ public class BomRoutingService : IBomRoutingService
         var bomHeader = await _bomRepository.GetByIdAsync(bomId);
         if (bomHeader == null)
         {
-            throw new NotFoundException($"Không tìm thấy định mức BOM với ID {bomId}.");
+            throw new NotFoundException("Không tìm thấy định mức vật tư được yêu cầu.");
         }
 
         if (!bomHeader.BomDetails.Any())
@@ -558,6 +566,19 @@ public class BomRoutingService : IBomRoutingService
         await ValidateScrapRateAsync(bomHeader.ScrapRatePercent);
 
         var orderItem = await _orderItemRepository.GetByIdAsync(bomHeader.OrderItemId);
+        if (orderItem?.Status is OrderItemStatusEnum.IN_PROD or OrderItemStatusEnum.DONE)
+        {
+            throw new DomainException(
+                "Sản phẩm này đã vào sản xuất hoặc đã hoàn thành, không thể phê duyệt lại định mức vật tư.",
+                "INVALID_ORDER_ITEM_STATUS");
+        }
+
+        if (bomHeader.BomStatus == BomStatusEnum.WAITING_FOR_MATERIALS)
+        {
+            throw new DomainException(
+                "Định mức vật tư đang chờ nguyên vật liệu bổ sung từ kho/mua hàng, không thể duyệt vượt rào tồn kho.",
+                "BOM_WAITING_MATERIALS");
+        }
 
         // QT-03: Kiểm tra xem tồn kho khả dụng (AvailableStock) có đáp ứng đủ toàn bộ dòng BOM không
         var hasShortage = bomHeader.BomDetails.Any(d =>
