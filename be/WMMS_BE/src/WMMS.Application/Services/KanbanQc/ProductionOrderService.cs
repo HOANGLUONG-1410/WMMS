@@ -1514,7 +1514,7 @@ public class ProductionOrderService : IProductionOrderService
                 "REPLENISH_QTY_EXCEEDED");
         }
 
-        // Kiểm tra điều kiện xuất kho vật tư bù: ngoài trạng thái ISSUED_TO_SHOP, tổng lượng đã xuất phải đủ cho cả đơn hàng + phần phế phẩm cần bù
+        // Kiểm tra điều kiện xuất kho vật tư bù: tổng lượng đã xuất phải đủ cho (OrderedQty + tổng các lô REPLENISH_LOT đã phát hành + request.ReplenishQty)
         var activeRepAllocations = orderItem.MaterialAllocations
             .Where(a => a.AllocationStatus != AllocationStatusEnum.RELEASED)
             .ToList();
@@ -1522,20 +1522,29 @@ public class ProductionOrderService : IProductionOrderService
         bool hasIssuedExtraForReplenish = true;
         if (bom != null && bom.BomDetails.Count > 0)
         {
-            var baseRequiredByMaterial = bom.BomDetails
+            var existingReplenishLotsQty = existingOrderBatches
+                .Where(b => b.BatchType == BatchTypeEnum.REPLENISH_LOT)
+                .Sum(b => b.BatchRoutingSteps.OrderBy(s => s.StageSequence).FirstOrDefault()?.TargetQty ?? b.BatchQty);
+            var totalCumulativeReplenishQty = existingReplenishLotsQty + request.ReplenishQty;
+
+            var cumulativeRequiredByMaterial = bom.BomDetails
                 .GroupBy(d => d.MaterialId)
                 .ToDictionary(
                     g => g.Key,
-                    g => Math.Round(g.Sum(d => d.GrossTotalDemand > 0m
-                        ? d.GrossTotalDemand
-                        : (d.NetQtyPerUnit * orderItem.OrderedQty) * (1m + bom.ScrapRatePercent / 100m)), 4));
+                    g =>
+                    {
+                        var baseDemand = g.Sum(d => d.GrossTotalDemand > 0m
+                            ? d.GrossTotalDemand
+                            : (d.NetQtyPerUnit * orderItem.OrderedQty) * (1m + bom.ScrapRatePercent / 100m));
+                        var extraDemand = g.Sum(d => (d.NetQtyPerUnit * totalCumulativeReplenishQty) * (1m + bom.ScrapRatePercent / 100m));
+                        return Math.Round(baseDemand + extraDemand, 4);
+                    });
 
-            hasIssuedExtraForReplenish = baseRequiredByMaterial.All(kvp =>
+            hasIssuedExtraForReplenish = cumulativeRequiredByMaterial.All(kvp =>
             {
                 var alloc = activeRepAllocations.FirstOrDefault(a => a.MaterialId == kvp.Key);
                 if (alloc == null) return false;
-                // Phải đã có yêu cầu cấp bù vật tư (RequiredQty > định mức gốc) và đã xuất đủ xuống xưởng
-                return alloc.RequiredQty > kvp.Value &&
+                return alloc.RequiredQty + 0.0001m >= kvp.Value &&
                        alloc.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP &&
                        alloc.IssuedQty >= alloc.RequiredQty;
             });

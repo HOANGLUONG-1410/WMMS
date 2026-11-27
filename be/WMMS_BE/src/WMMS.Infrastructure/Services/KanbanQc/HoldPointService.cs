@@ -172,6 +172,11 @@ public class HoldPointService : IHoldPointService
             throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
+        if (batch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Lô sản xuất đã hoàn thành, không thể thực hiện thao tác chạy trước (Overdrive) hoặc chuyển bước.");
+        }
+
         var requester = await _context.Users
             .FirstOrDefaultAsync(u => u.UserId == requesterUserId, cancellationToken);
 
@@ -301,6 +306,11 @@ public class HoldPointService : IHoldPointService
             throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
         }
 
+        if (batch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Lô sản xuất đã hoàn thành, không thể thực hiện thao tác chạy trước (Overdrive) hoặc chuyển bước.");
+        }
+
         var approver = await _context.Users
             .FirstOrDefaultAsync(u => u.UserId == approverUserId, cancellationToken);
 
@@ -339,10 +349,13 @@ public class HoldPointService : IHoldPointService
         batch.UpdatedAt = DateTime.UtcNow;
 
         // Nếu công đoạn hiện tại hoặc hold point đang bị BLOCKED thì chuyển sang IN_PROGRESS
-        var currentStep = sortedSteps.FirstOrDefault(s => s.StageSequence == batch.CurrentStageSeq);
-        if (currentStep != null && currentStep.StepStatus == StepStatusEnum.BLOCKED)
+        foreach (var blockedStep in sortedSteps.Where(s => s.StepStatus == StepStatusEnum.BLOCKED))
         {
-            currentStep.StepStatus = StepStatusEnum.IN_PROGRESS;
+            blockedStep.StepStatus = StepStatusEnum.IN_PROGRESS;
+            if (blockedStep.StageSequence > batch.CurrentStageSeq)
+            {
+                batch.CurrentStageSeq = blockedStep.StageSequence;
+            }
         }
 
         var now = DateTime.UtcNow;
@@ -446,6 +459,11 @@ public class HoldPointService : IHoldPointService
         if (batch == null)
         {
             throw new NotFoundException("Không tìm thấy thẻ lô sản xuất được yêu cầu.");
+        }
+
+        if (batch.BatchStatus == BatchStatusEnum.DONE)
+        {
+            throw new DomainException("Lô sản xuất đã hoàn thành, không thể thực hiện thao tác chạy trước (Overdrive) hoặc chuyển bước.");
         }
 
         var rejecter = await _context.Users

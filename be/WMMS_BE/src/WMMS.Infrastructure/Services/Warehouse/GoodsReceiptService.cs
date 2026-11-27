@@ -208,7 +208,13 @@ public class GoodsReceiptService : IGoodsReceiptService
         {
             var stock = stocks[materialId];
             var material = po.Details.First(d => d.MaterialId == materialId).Material;
-            allocationResults.AddRange(await AllocateWaitingDemandAsync(stock, material, now, ct));
+            var allocatedForMaterial = await AllocateWaitingDemandAsync(stock, material, now, ct);
+            if (allocatedForMaterial.Count > 0)
+            {
+                allocationResults.AddRange(allocatedForMaterial);
+            }
+            // Flush ngay sau mỗi vật tư để vòng lặp vật tư tiếp theo nhìn thấy mọi MaterialAllocation vừa khởi tạo
+            await _context.SaveChangesAsync(ct);
         }
 
         var readyPoNumbers = new List<string>();
@@ -294,14 +300,28 @@ public class GoodsReceiptService : IGoodsReceiptService
                          && bd.BomHeader.OrderItem.CustomerOrder.Status != OrderStatusEnum.CANCELLED)
             .ToListAsync(ct);
 
-        foreach (var bd in bomDemand.Where(bd => !coveredItemIds.Contains(bd.BomHeader.OrderItemId)))
+        var groupedBomDemand = bomDemand
+            .Where(bd => !coveredItemIds.Contains(bd.BomHeader.OrderItemId))
+            .GroupBy(bd => bd.BomHeader.OrderItemId)
+            .Select(g => new
+            {
+                OrderItemId = g.Key,
+                BomId = g.First().BomId,
+                OrderItem = g.First().BomHeader.OrderItem,
+                TotalGrossDemand = Math.Round(g.Sum(x => x.GrossTotalDemand), 4)
+            })
+            .ToList();
+
+        foreach (var group in groupedBomDemand)
         {
+            coveredItemIds.Add(group.OrderItemId);
+
             var created = new MaterialAllocation
             {
-                OrderItemId = bd.BomHeader.OrderItemId,
-                OrderItem = bd.BomHeader.OrderItem,
+                OrderItemId = group.OrderItemId,
+                OrderItem = group.OrderItem,
                 MaterialId = materialId,
-                RequiredQty = bd.GrossTotalDemand,
+                RequiredQty = group.TotalGrossDemand,
                 ReservedQty = 0m,
                 AllocationStatus = AllocationStatusEnum.RESERVED,
                 AllocatedAt = now
@@ -309,36 +329,29 @@ public class GoodsReceiptService : IGoodsReceiptService
             _context.MaterialAllocations.Add(created);
             waiting.Add(created);
 
-            // Đồng bộ khởi tạo MaterialAllocation cho TOÀN BỘ các dòng vật tư khác trong cùng BOM của OrderItem này
-            // để bảo đảm không bị thiếu hụt dữ liệu phân bổ của các vật tư đi kèm
+            // Đồng bộ khởi tạo khung MaterialAllocation (ReservedQty = 0) cho các vật tư khác trong cùng BOM của OrderItem này
+            // Tuyệt đối không chiếm trước tồn kho của vật tư khác ở đây để không phá vỡ thứ tự ưu tiên ETD (BR-WHS-01)
             var otherBomDetails = await _context.BomDetails
-                .Where(other => other.BomId == bd.BomId && other.MaterialId != materialId)
+                .Where(other => other.BomId == group.BomId && other.MaterialId != materialId)
                 .ToListAsync(ct);
 
-            foreach (var other in otherBomDetails)
+            foreach (var otherGroup in otherBomDetails.GroupBy(o => o.MaterialId))
             {
-                var existingOtherAlloc = await _context.MaterialAllocations
-                    .FirstOrDefaultAsync(a => a.OrderItemId == bd.BomHeader.OrderItemId && a.MaterialId == other.MaterialId, ct);
+                var otherMaterialId = otherGroup.Key;
+                var existingOtherAlloc = _context.MaterialAllocations.Local
+                    .FirstOrDefault(a => a.OrderItemId == group.OrderItemId && a.MaterialId == otherMaterialId && a.AllocationStatus != AllocationStatusEnum.RELEASED)
+                    ?? await _context.MaterialAllocations
+                        .FirstOrDefaultAsync(a => a.OrderItemId == group.OrderItemId && a.MaterialId == otherMaterialId && a.AllocationStatus != AllocationStatusEnum.RELEASED, ct);
 
                 if (existingOtherAlloc == null)
                 {
-                    var otherStock = await _context.MaterialStocks.FirstOrDefaultAsync(s => s.MaterialId == other.MaterialId, ct);
-                    decimal otherReserved = 0m;
-                    if (otherStock != null && otherStock.AvailableQty > 0m)
-                    {
-                        otherReserved = Math.Min(otherStock.AvailableQty, other.GrossTotalDemand);
-                        otherStock.AllocatedQty += otherReserved;
-                        otherStock.AvailableQty = Math.Max(0m, otherStock.PhysicalQty - otherStock.AllocatedQty);
-                        otherStock.UpdatedAt = now;
-                    }
-
                     var otherCreated = new MaterialAllocation
                     {
-                        OrderItemId = bd.BomHeader.OrderItemId,
-                        OrderItem = bd.BomHeader.OrderItem,
-                        MaterialId = other.MaterialId,
-                        RequiredQty = other.GrossTotalDemand,
-                        ReservedQty = otherReserved,
+                        OrderItemId = group.OrderItemId,
+                        OrderItem = group.OrderItem,
+                        MaterialId = otherMaterialId,
+                        RequiredQty = Math.Round(otherGroup.Sum(x => x.GrossTotalDemand), 4),
+                        ReservedQty = 0m,
                         AllocationStatus = AllocationStatusEnum.RESERVED,
                         AllocatedAt = now
                     };
@@ -414,14 +427,31 @@ public class GoodsReceiptService : IGoodsReceiptService
                 .Where(a => a.OrderItemId == bom.OrderItemId && a.AllocationStatus != AllocationStatusEnum.RELEASED)
                 .ToListAsync(ct);
 
-            var fullyCovered = bom.BomDetails.Count > 0 && bom.BomDetails.All(bd =>
-                allocations.Any(a => a.MaterialId == bd.MaterialId && (a.ReservedQty + a.IssuedQty) >= bd.GrossTotalDemand));
+            var groupedBomLines = bom.BomDetails
+                .GroupBy(bd => bd.MaterialId)
+                .Select(g => new
+                {
+                    MaterialId = g.Key,
+                    TotalGrossDemand = Math.Round(g.Sum(x => x.GrossTotalDemand), 4)
+                })
+                .ToList();
+
+            var fullyCovered = groupedBomLines.Count > 0 && groupedBomLines.All(line =>
+            {
+                var alloc = allocations.FirstOrDefault(a => a.MaterialId == line.MaterialId);
+                if (alloc == null) return false;
+                var effectiveRequired = Math.Max(line.TotalGrossDemand, alloc.RequiredQty);
+                return (alloc.ReservedQty + alloc.IssuedQty) >= effectiveRequired;
+            });
 
             if (!fullyCovered) continue;
 
             bom.BomStatus = BomStatusEnum.READY_FOR_PRODUCTION;
             bom.UpdatedAt = DateTime.UtcNow;
-            bom.OrderItem.Status = OrderItemStatusEnum.READY_PROD;
+            if (bom.OrderItem.Status != OrderItemStatusEnum.IN_PROD && bom.OrderItem.Status != OrderItemStatusEnum.DONE)
+            {
+                bom.OrderItem.Status = OrderItemStatusEnum.READY_PROD;
+            }
             ready.Add(bom.OrderItem.CustomerOrder.PoNumber);
         }
 

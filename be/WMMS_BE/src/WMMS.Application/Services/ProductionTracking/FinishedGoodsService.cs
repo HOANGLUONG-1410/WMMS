@@ -174,6 +174,14 @@ public class FinishedGoodsService : IFinishedGoodsService
                 MessageCodes.Msg13ValidationError);
         }
 
+        if (finalCompletedQty < batch.BatchQty)
+        {
+            throw new AppException(
+                $"Số lượng thành phẩm bàn giao ({finalCompletedQty}) phải khớp với toàn bộ sản lượng đã nghiệm thu đạt chuẩn của lô ({batch.BatchQty}). Nếu phát sinh hao hụt/lỗi ở khâu đóng gói, vui lòng ghi nhận tại bước kiểm định KCS trước khi đóng lô.",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
+
         var now = DateTime.UtcNow;
         var previousBatchStatus = batch.BatchStatus;
         var previousBatchQty = batch.BatchQty;

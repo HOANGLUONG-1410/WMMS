@@ -774,8 +774,13 @@ public class MrpAllocationService : IMrpAllocationService
                 var dailyPr = await _purchaseRequestRepository.GetPendingPrByDateAsync(today, cancellationToken);
                 if (dailyPr == null)
                 {
-                    var countToday = await _purchaseRequestRepository.CountByDateAsync(today, cancellationToken);
-                    string prCode = $"PR-{now:yyyyMMdd}-{countToday + 1:D3}";
+                    var seq = await _purchaseRequestRepository.CountByDateAsync(today, cancellationToken) + 1;
+                    string prCode = $"PR-{now:yyyyMMdd}-{seq:D3}";
+                    while (await _purchaseRequestRepository.GetByCodeAsync(prCode, cancellationToken) != null)
+                    {
+                        seq++;
+                        prCode = $"PR-{now:yyyyMMdd}-{seq:D3}";
+                    }
                     dailyPr = new PurchaseRequest
                     {
                         PrCode = prCode,
@@ -792,6 +797,13 @@ public class MrpAllocationService : IMrpAllocationService
                 foreach (var item in shortageLinesForPr)
                 {
                     var existingItem = dailyPr.Items.FirstOrDefault(i => i.MaterialId == item.MaterialId);
+                    var currentAllocForItem = orderItem.MaterialAllocations
+                        .FirstOrDefault(ma => ma.MaterialId == item.MaterialId && ma.AllocationStatus != AllocationStatusEnum.RELEASED);
+                    // Truyền tổng thiếu hụt thực tế hiện tại của OrderItem (bao gồm cả thiếu gốc lẫn thiếu cấp bù phế phẩm) để MergeSourceOrderJson không làm tụt lượng thiếu
+                    var totalItemShortageNow = currentAllocForItem != null
+                        ? Math.Max(item.ShortageQty, Math.Round(currentAllocForItem.RequiredQty - (currentAllocForItem.ReservedQty + currentAllocForItem.IssuedQty), 4))
+                        : item.ShortageQty;
+
                     var sourceOrders = new[]
                     {
                         new
@@ -802,7 +814,7 @@ public class MrpAllocationService : IMrpAllocationService
                             orderItem.OrderItemId,
                             ProductSku = orderItem.Product?.ProductSku ?? string.Empty,
                             EtdDate = customerOrder?.EtdDate.ToString("yyyy-MM-dd") ?? string.Empty,
-                            ShortageQty = item.ShortageQty
+                            ShortageQty = totalItemShortageNow
                         }
                     };
                     var sourceJson = JsonSerializer.Serialize(sourceOrders);
@@ -813,8 +825,8 @@ public class MrpAllocationService : IMrpAllocationService
                         {
                             PrId = dailyPr.PrId,
                             MaterialId = item.MaterialId,
-                            TotalShortageQty = item.ShortageQty,
-                            SuggestedOrderQty = item.ShortageQty,
+                            TotalShortageQty = totalItemShortageNow,
+                            SuggestedOrderQty = totalItemShortageNow,
                             SourceOrderIdsJson = sourceJson
                         };
                         dailyPr.Items.Add(newItem);
@@ -822,11 +834,12 @@ public class MrpAllocationService : IMrpAllocationService
                     }
                     else
                     {
+                        var existingTopUp = Math.Max(0m, existingItem.SuggestedOrderQty - existingItem.TotalShortageQty);
                         var mergedJson = MergeSourceOrderJson(existingItem.SourceOrderIdsJson, sourceJson);
                         var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, existingItem.TotalShortageQty + item.ShortageQty);
                         existingItem.SourceOrderIdsJson = mergedJson;
                         existingItem.TotalShortageQty = aggregatedShortage;
-                        existingItem.SuggestedOrderQty = aggregatedShortage;
+                        existingItem.SuggestedOrderQty = Math.Round(aggregatedShortage + existingTopUp, 4);
                     }
                 }
 
@@ -1242,12 +1255,12 @@ public class MrpAllocationService : IMrpAllocationService
         DateTime now,
         CancellationToken cancellationToken)
     {
-        // Chống mua trùng (Double Purchasing): kiểm tra các PR đã duyệt (APPROVED / PO_ISSUED) xem OrderItemId + MaterialId nào đã được đặt mua
+        // Chống mua trùng (Double Purchasing): chỉ trừ lượng thiếu hụt của (MaterialId, OrderItemId) đang nằm trong các PR ở trạng thái APPROVED (đã duyệt, đang chờ phát hành PO).
+        // Không trừ từ PR PO_ISSUED lịch sử (vì PO có thể đã nhập kho/xuất kho xong hoặc đã bị hủy).
         var approvedPrs = await _purchaseRequestRepository.GetAllAsync(PrStatusEnum.APPROVED, cancellationToken);
-        var poIssuedPrs = await _purchaseRequestRepository.GetAllAsync(PrStatusEnum.PO_ISSUED, cancellationToken);
         var coveredOrderItemMaterials = new Dictionary<(long MaterialId, long OrderItemId), decimal>();
 
-        foreach (var pr in approvedPrs.Concat(poIssuedPrs))
+        foreach (var pr in approvedPrs)
         {
             foreach (var prItem in pr.Items)
             {
@@ -1481,9 +1494,12 @@ public class MrpAllocationService : IMrpAllocationService
                 var alloc = item.MaterialAllocations
                     .FirstOrDefault(ma => ma.MaterialId == line.MaterialId && ma.AllocationStatus != AllocationStatusEnum.RELEASED);
 
+                var effectiveGrossDemand = alloc != null
+                    ? Math.Max(line.GrossDemand, alloc.RequiredQty)
+                    : line.GrossDemand;
                 var reservedQty = alloc?.ReservedQty ?? 0m;
                 var issuedQty = alloc?.IssuedQty ?? 0m;
-                var unfulfilled = Math.Max(0m, Math.Round(line.GrossDemand - (reservedQty + issuedQty), 4));
+                var unfulfilled = Math.Max(0m, Math.Round(effectiveGrossDemand - (reservedQty + issuedQty), 4));
 
                 if (unfulfilled > 0m)
                 {
@@ -1509,7 +1525,7 @@ public class MrpAllocationService : IMrpAllocationService
                     OrderedQty = item.OrderedQty,
                     ScrapRatePercent = bom.ScrapRatePercent,
                     NetQtyPerUnit = line.NetQtyPerUnit,
-                    GrossDemandQty = line.GrossDemand,
+                    GrossDemandQty = effectiveGrossDemand,
                     ReservedQty = reservedQty,
                     IssuedQty = issuedQty,
                     UnfulfilledDemandQty = unfulfilled,

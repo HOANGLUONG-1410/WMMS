@@ -260,7 +260,9 @@ public class PurchaseOrderService : IPurchaseOrderService
             }
         }
 
-        var termsBySupplier = request.SupplierTerms.ToDictionary(t => t.SupplierId);
+        var termsBySupplier = (request.SupplierTerms ?? new List<CreatePoSupplierTermsDto>())
+            .GroupBy(t => t.SupplierId)
+            .ToDictionary(g => g.Key, g => g.First());
         var today = DateTime.UtcNow.Date;
         foreach (var terms in termsBySupplier.Values)
         {
@@ -268,6 +270,31 @@ public class PurchaseOrderService : IPurchaseOrderService
             {
                 throw new AppException(
                     "Ngày nhà cung cấp hẹn giao hàng không được nằm trong quá khứ.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+        }
+
+        foreach (var line in request.Lines)
+        {
+            if (line.OrderedQty <= 0m)
+            {
+                throw new AppException(
+                    "Số lượng đặt mua trên mỗi dòng phải lớn hơn 0.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+            if (line.UnitPrice < 0m)
+            {
+                throw new AppException(
+                    "Đơn giá mua hàng không được nhỏ hơn 0.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+            if (!termsBySupplier.ContainsKey(line.SupplierId))
+            {
+                throw new AppException(
+                    $"Thiếu thông tin ngày hẹn giao hàng và điều khoản cho nhà cung cấp #{line.SupplierId}.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -322,15 +349,21 @@ public class PurchaseOrderService : IPurchaseOrderService
                     CreatedAt = now
                 };
 
-                foreach (var line in group.OrderBy(l => l.PrItemId))
+                // Gộp các dòng có cùng MaterialId trên cùng một PO để tránh tạo 2 dòng trùng vật tư làm kẹt GRN
+                var groupedDetails = group
+                    .GroupBy(l => itemsById[l.PrItemId].MaterialId)
+                    .OrderBy(g => g.Min(x => x.PrItemId));
+
+                foreach (var matGroup in groupedDetails)
                 {
+                    var firstLine = matGroup.First();
                     po.Details.Add(new PurchaseOrderDetail
                     {
-                        MaterialId = itemsById[line.PrItemId].MaterialId,
-                        OrderedQty = Math.Round(line.OrderedQty, 4),
+                        MaterialId = matGroup.Key,
+                        OrderedQty = Math.Round(matGroup.Sum(x => x.OrderedQty), 4),
                         ReceivedQty = 0m,
-                        UnitPrice = Math.Round(line.UnitPrice, 2),
-                        ExpectedDeliveryDate = line.ExpectedDeliveryDate?.Date
+                        UnitPrice = Math.Round(firstLine.UnitPrice, 2),
+                        ExpectedDeliveryDate = firstLine.ExpectedDeliveryDate?.Date
                     });
                 }
 
