@@ -246,15 +246,6 @@ public class IssueReplenishLotRequestValidator : AbstractValidator<IssueReplenis
                 .MaximumLength(500)
                 .WithMessage("Lý do sản xuất bù không được vượt quá 500 ký tự.");
         });
-
-        When(x => x.AllowOverdrive, () =>
-        {
-            RuleFor(x => x.OverdriveJustification)
-                .NotEmpty()
-                .WithMessage("Khi kích hoạt chế độ chạy trước (Overdrive) cho lô bù, bắt buộc phải cung cấp lý do giải trình kỹ thuật.")
-                .MaximumLength(500)
-                .WithMessage("Lý do giải trình chạy trước không vượt quá 500 ký tự.");
-        });
     }
 }
 

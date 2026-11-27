@@ -681,6 +681,42 @@ public class MrpAllocationService : IMrpAllocationService
         var now = DateTime.UtcNow;
         var today = now.Date;
 
+        // Chặn cấp bù vượt sản lượng còn thiếu thực tế & chặn gửi trùng yêu cầu cấp bù chưa phát hành lô (chống nhân đôi giữ chỗ / PR).
+        // Cùng công thức "sản lượng còn thiếu" với IssueReplenishLotAsync để hai API luôn khớp nhau.
+        var existingOrderBatches = await _unitOfWork.ProductionBatches.GetByOrderItemIdAsync(orderItem.OrderItemId, cancellationToken);
+        var activeAndDoneQty = existingOrderBatches.Where(b => b.BatchQty > 0).Sum(b => b.BatchQty);
+        var missingQty = Math.Max(0, orderItem.OrderedQty - activeAndDoneQty);
+        if (missingQty <= 0)
+        {
+            throw new DomainException(
+                $"Hạng mục '{orderItem.Product?.ProductName}' đã đủ sản lượng ({activeAndDoneQty}/{orderItem.OrderedQty} SP), không có phế phẩm cần cấp bù.",
+                "SCRAP_REPLENISH_NOT_REQUIRED");
+        }
+
+        var issuedReplenishLotsQty = existingOrderBatches
+            .Where(b => b.BatchType == BatchTypeEnum.REPLENISH_LOT)
+            .Sum(b => b.BatchRoutingSteps.OrderBy(s => s.StageSequence).FirstOrDefault()?.TargetQty ?? b.BatchQty);
+        decimal cumulativeRequestedUnits = 0m;
+        foreach (var g in bom.BomDetails.GroupBy(d => d.MaterialId))
+        {
+            var perUnitGross = g.Sum(d => d.NetQtyPerUnit) * (1m + bom.ScrapRatePercent / 100m);
+            if (perUnitGross <= 0m) continue;
+            var alloc = orderItem.MaterialAllocations
+                .FirstOrDefault(ma => ma.MaterialId == g.Key && ma.AllocationStatus != AllocationStatusEnum.RELEASED);
+            if (alloc == null) continue;
+            var baseGross = g.Sum(d => CalculateDemandForQuantity(d, orderItem.OrderedQty, bom.ScrapRatePercent));
+            var extraRequired = Math.Max(0m, alloc.RequiredQty - baseGross);
+            cumulativeRequestedUnits = Math.Max(cumulativeRequestedUnits, extraRequired / perUnitGross);
+        }
+        var pendingRequestedQty = Math.Max(0m, Math.Round(cumulativeRequestedUnits, MidpointRounding.AwayFromZero) - issuedReplenishLotsQty);
+        var unrequestedMissingQty = Math.Max(0, missingQty - (int)pendingRequestedQty);
+        if (request.ScrappedQty > unrequestedMissingQty)
+        {
+            throw new DomainException(
+                $"Số lượng cấp bù yêu cầu ({request.ScrappedQty} SP) vượt quá sản lượng phế phẩm chưa được cấp bù ({unrequestedMissingQty} SP). Đã có {pendingRequestedQty} SP đang giữ chỗ/chờ mua thêm.",
+                "SCRAP_QTY_EXCEEDED");
+        }
+
         await _unitOfWork.BeginTransactionAsync();
         try
         {
@@ -794,6 +830,10 @@ public class MrpAllocationService : IMrpAllocationService
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
                 }
 
+                // Chống mua trùng: trừ phần thiếu hụt của (Vật tư, OrderItem) đã nằm trong PR APPROVED đang chờ phát hành PO
+                var approvedCoverage = await LoadApprovedPrCoverageAsync(cancellationToken);
+                bool queuedAnyShortageLine = false;
+
                 foreach (var item in shortageLinesForPr)
                 {
                     var existingItem = dailyPr.Items.FirstOrDefault(i => i.MaterialId == item.MaterialId);
@@ -803,6 +843,14 @@ public class MrpAllocationService : IMrpAllocationService
                     var totalItemShortageNow = currentAllocForItem != null
                         ? Math.Max(item.ShortageQty, Math.Round(currentAllocForItem.RequiredQty - (currentAllocForItem.ReservedQty + currentAllocForItem.IssuedQty), 4))
                         : item.ShortageQty;
+
+                    var uncoveredShortage = Math.Max(0m, Math.Round(totalItemShortageNow - approvedCoverage.GetValueOrDefault((item.MaterialId, orderItem.OrderItemId), 0m), 4));
+                    if (uncoveredShortage <= 0m)
+                    {
+                        continue;
+                    }
+
+                    queuedAnyShortageLine = true;
 
                     var sourceOrders = new[]
                     {
@@ -814,7 +862,7 @@ public class MrpAllocationService : IMrpAllocationService
                             orderItem.OrderItemId,
                             ProductSku = orderItem.Product?.ProductSku ?? string.Empty,
                             EtdDate = customerOrder?.EtdDate.ToString("yyyy-MM-dd") ?? string.Empty,
-                            ShortageQty = totalItemShortageNow
+                            ShortageQty = uncoveredShortage
                         }
                     };
                     var sourceJson = JsonSerializer.Serialize(sourceOrders);
@@ -825,8 +873,8 @@ public class MrpAllocationService : IMrpAllocationService
                         {
                             PrId = dailyPr.PrId,
                             MaterialId = item.MaterialId,
-                            TotalShortageQty = totalItemShortageNow,
-                            SuggestedOrderQty = totalItemShortageNow,
+                            TotalShortageQty = uncoveredShortage,
+                            SuggestedOrderQty = uncoveredShortage,
                             SourceOrderIdsJson = sourceJson
                         };
                         dailyPr.Items.Add(newItem);
@@ -836,7 +884,7 @@ public class MrpAllocationService : IMrpAllocationService
                     {
                         var existingTopUp = Math.Max(0m, existingItem.SuggestedOrderQty - existingItem.TotalShortageQty);
                         var mergedJson = MergeSourceOrderJson(existingItem.SourceOrderIdsJson, sourceJson);
-                        var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, existingItem.TotalShortageQty + item.ShortageQty);
+                        var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, existingItem.TotalShortageQty + uncoveredShortage);
                         existingItem.SourceOrderIdsJson = mergedJson;
                         existingItem.TotalShortageQty = aggregatedShortage;
                         existingItem.SuggestedOrderQty = Math.Round(aggregatedShortage + existingTopUp, 4);
@@ -845,8 +893,11 @@ public class MrpAllocationService : IMrpAllocationService
 
                 dailyPr.UpdatedAt = now;
                 await _purchaseRequestRepository.UpdateAsync(dailyPr);
-                createdPrId = dailyPr.PrId;
-                createdPrCode = dailyPr.PrCode;
+                if (queuedAnyShortageLine)
+                {
+                    createdPrId = dailyPr.PrId;
+                    createdPrCode = dailyPr.PrCode;
+                }
             }
 
             await _bomRepository.AddAuditLogAsync(new AuditLog
@@ -863,7 +914,9 @@ public class MrpAllocationService : IMrpAllocationService
                     TotalShortage = totalShortage,
                     CreatedPrId = createdPrId
                 }),
-                Reason = $"Yêu cầu cấp bù vật tư cho {request.ScrappedQty} SP phế phẩm của đơn {poNumber}.",
+                Reason = string.IsNullOrWhiteSpace(request.Reason)
+                    ? $"Yêu cầu cấp bù vật tư cho {request.ScrappedQty} SP phế phẩm của đơn {poNumber}."
+                    : $"Yêu cầu cấp bù vật tư cho {request.ScrappedQty} SP phế phẩm của đơn {poNumber}. Lý do: {request.Reason.Trim()}",
                 CreatedAt = now
             });
 
@@ -873,7 +926,9 @@ public class MrpAllocationService : IMrpAllocationService
             bool isFullyCovered = totalShortage == 0m;
             string msg = isFullyCovered
                 ? $"Đã giữ chỗ đủ vật tư từ kho cho {request.ScrappedQty} sản phẩm sản xuất bù ({totalAllocated} đơn vị vật tư)."
-                : $"Đã giữ chỗ {totalAllocated} đơn vị vật tư từ kho; phần thiếu hụt ({totalShortage} đơn vị) đã tự động tạo Phiếu yêu cầu mua hàng {createdPrCode} trình Chủ xưởng duyệt.";
+                : createdPrCode != null
+                    ? $"Đã giữ chỗ {totalAllocated} đơn vị vật tư từ kho; phần thiếu hụt ({totalShortage} đơn vị) đã tự động tạo Phiếu yêu cầu mua hàng {createdPrCode} trình Chủ xưởng duyệt."
+                    : $"Đã giữ chỗ {totalAllocated} đơn vị vật tư từ kho; phần thiếu hụt ({totalShortage} đơn vị) {(request.AutoCreatePrIfShortage ? "đã nằm trong Phiếu yêu cầu mua hàng được duyệt đang chờ phát hành đơn đặt hàng" : "chưa được lập Phiếu yêu cầu mua hàng do tắt tự động tạo PR")}.";
 
             return new ScrapReplenishmentResultDto
             {
@@ -998,6 +1053,248 @@ public class MrpAllocationService : IMrpAllocationService
         result.Recommendation = result.IsFullyCoveredByStock
             ? $"Tồn kho khả dụng ĐỦ để cấp phát bù cho {scrappedQty} sản phẩm ngay từ kho xưởng. Quản đốc có thể gửi yêu cầu xuất phôi bù và phát hành lô sản xuất bù."
             : $"Tồn kho KHÔNG ĐỦ vật tư để bù {scrappedQty} sản phẩm (thiếu hụt vật tư). Cần lập Phiếu Yêu cầu mua hàng (PR) gửi Chủ xưởng phê duyệt mua thêm trước khi sản xuất bù.";
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<List<ScrapReplenishmentSummaryDto>> GetScrapReplenishmentRequestsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var activeOrderItems = await _orderItemRepository.GetAllActiveOrderItemsWithMrpGraphAsync(cancellationToken);
+        var results = new List<ScrapReplenishmentSummaryDto>();
+        var prs = await _purchaseRequestRepository.GetAllAsync(null, cancellationToken);
+
+        foreach (var item in activeOrderItems)
+        {
+            var batches = item.ProductionBatches.ToList();
+            var mainBatches = batches.Where(b => b.BatchType != BatchTypeEnum.REPLENISH_LOT).ToList();
+            var replenishBatches = batches.Where(b => b.BatchType == BatchTypeEnum.REPLENISH_LOT).ToList();
+
+            int activeMainQty = mainBatches.Sum(b => b.BatchQty);
+            int totalScrapped = Math.Max(0, item.OrderedQty - activeMainQty);
+            if (totalScrapped <= 0)
+            {
+                continue;
+            }
+
+            int issuedRepQty = replenishBatches.Sum(b => b.BatchQty);
+            int missingQty = Math.Max(0, item.OrderedQty - (activeMainQty + issuedRepQty));
+
+            var order = item.CustomerOrder;
+            decimal tolerancePcnt = 5.0m;
+            int maxAbsorbAllowed = (int)Math.Ceiling(item.OrderedQty * (tolerancePcnt / 100m));
+            bool canAbsorb = missingQty > 0 && missingQty <= maxAbsorbAllowed;
+
+            // Xác định trạng thái cấp bù
+            var activeAllocations = item.MaterialAllocations
+                .Where(a => a.AllocationStatus != AllocationStatusEnum.RELEASED)
+                .ToList();
+
+            bool isMaterialIssued = activeAllocations.Any() && activeAllocations.All(a => a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP);
+            bool isMaterialReserved = activeAllocations.Any(a => a.ReservedQty > 0);
+
+            // Tìm PR liên quan đến OrderItem
+            PurchaseRequest? relatedPr = null;
+            foreach (var pr in prs)
+            {
+                if (pr.Items.Any(pri => !string.IsNullOrEmpty(pri.SourceOrderIdsJson) && pri.SourceOrderIdsJson.Contains($"\"OrderItemId\":{item.OrderItemId}")))
+                {
+                    relatedPr = pr;
+                    break;
+                }
+            }
+
+            string status;
+            string statusLabel;
+            if (missingQty == 0)
+            {
+                status = "LOT_ISSUED";
+                statusLabel = "Đã phát hành lô sản xuất bù đủ";
+            }
+            else if (isMaterialIssued)
+            {
+                status = "MATERIAL_ISSUED";
+                statusLabel = "Đã xuất kho phôi bù, chờ phát hành thẻ lô";
+            }
+            else if (relatedPr != null && relatedPr.PrStatus == PrStatusEnum.PENDING_APPROVAL)
+            {
+                status = "PR_PENDING_APPROVAL";
+                statusLabel = $"Chờ duyệt PR mua thêm ({relatedPr.PrCode})";
+            }
+            else if (isMaterialReserved)
+            {
+                status = "MATERIAL_RESERVED";
+                statusLabel = "Đã giữ chỗ vật tư, chờ xuất kho";
+            }
+            else
+            {
+                status = "PENDING_REVIEW";
+                statusLabel = "Chờ Chủ xưởng / Quản đốc xem xét cấp bù";
+            }
+
+            bool isStockSufficient = false;
+            if (item.BomHeader != null && missingQty > 0)
+            {
+                isStockSufficient = item.BomHeader.BomDetails.All(d =>
+                {
+                    var gross = CalculateDemandForQuantity(d, missingQty, item.BomHeader.ScrapRatePercent);
+                    var stock = d.Material?.MaterialStock;
+                    return stock != null && stock.AvailableQty >= gross;
+                });
+            }
+
+            results.Add(new ScrapReplenishmentSummaryDto
+            {
+                OrderItemId = item.OrderItemId,
+                OrderId = item.OrderId,
+                PoNumber = order?.PoNumber ?? "PO-DEFAULT",
+                CustomerName = order?.Customer?.CompanyName ?? string.Empty,
+                ProductSku = item.Product?.ProductSku ?? string.Empty,
+                ProductName = item.Product?.ProductName ?? string.Empty,
+                OrderedQty = item.OrderedQty,
+                ActiveBatchQty = activeMainQty,
+                TotalScrappedQty = totalScrapped,
+                IssuedReplenishLotQty = issuedRepQty,
+                MissingQty = missingQty,
+                CanAbsorbShortfall = canAbsorb,
+                ShortfallTolerancePercent = tolerancePcnt,
+                Status = status,
+                StatusLabel = statusLabel,
+                IsStockSufficient = isStockSufficient,
+                PurchaseRequestId = relatedPr?.PrId,
+                PurchaseRequestCode = relatedPr?.PrCode,
+                PurchaseRequestStatus = relatedPr?.PrStatus.ToString(),
+                EtdDate = order?.EtdDate
+            });
+        }
+
+        return results.OrderBy(r => r.EtdDate).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<AbsorbScrapShortfallResultDto> AbsorbScrapShortfallAsync(
+        long orderItemId,
+        AbsorbScrapShortfallRequestDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Reason))
+        {
+            throw new DomainException("Bắt buộc phải nhập lý do khi Chủ xưởng quyết định chấp nhận thiếu hụt phế phẩm.", "REASON_REQUIRED");
+        }
+
+        var orderItem = await _orderItemRepository.GetByIdWithFullMrpGraphAsync(orderItemId, cancellationToken);
+        if (orderItem == null)
+        {
+            throw new NotFoundException("Không tìm thấy sản phẩm tương ứng trong đơn hàng.");
+        }
+
+        var batches = orderItem.ProductionBatches.ToList();
+        var mainBatches = batches.Where(b => b.BatchType != BatchTypeEnum.REPLENISH_LOT).ToList();
+        var replenishBatches = batches.Where(b => b.BatchType == BatchTypeEnum.REPLENISH_LOT).ToList();
+
+        int activeMainQty = mainBatches.Sum(b => b.BatchQty);
+        int issuedRepQty = replenishBatches.Sum(b => b.BatchQty);
+        int missingQty = Math.Max(0, orderItem.OrderedQty - (activeMainQty + issuedRepQty));
+
+        if (missingQty <= 0)
+        {
+            throw new DomainException($"Đơn hàng đã đủ sản lượng ({activeMainQty + issuedRepQty}/{orderItem.OrderedQty} SP), không có thiếu hụt để chấp nhận.", "NO_SHORTFALL_TO_ABSORB");
+        }
+
+        decimal tolerancePcnt = 5.0m;
+        int maxAbsorbAllowed = (int)Math.Ceiling(orderItem.OrderedQty * (tolerancePcnt / 100m));
+        if (missingQty > maxAbsorbAllowed)
+        {
+            throw new DomainException(
+                $"Số lượng thiếu hụt ({missingQty} SP, tương đương {(missingQty * 100m / orderItem.OrderedQty):0.##}%) vượt quá dung sai hợp đồng cho phép tối đa ({tolerancePcnt}%, tức {maxAbsorbAllowed} SP). Bắt buộc phải sản xuất bù hoặc thỏa thuận lại hợp đồng.",
+                "SHORTFALL_EXCEEDS_TOLERANCE");
+        }
+
+        decimal shortfallPct = Math.Round(missingQty * 100m / orderItem.OrderedQty, 2);
+
+        // Ghi AuditLog bất biến ghi nhận quyết định chấp nhận thiếu hụt của Chủ xưởng (GBR-05, UC075.1)
+        await _bomRepository.AddAuditLogAsync(new AuditLog
+        {
+            UserId = currentUserId,
+            ActionType = "SCRAP_REPLENISHMENT_ABSORBED",
+            EntityName = "OrderItem",
+            EntityId = orderItemId.ToString(),
+            BeforeState = JsonSerializer.Serialize(new { OrderedQty = orderItem.OrderedQty, MissingQty = missingQty }),
+            AfterState = JsonSerializer.Serialize(new
+            {
+                OrderItemId = orderItemId,
+                AbsorbedShortfallQty = missingQty,
+                ShortfallPercentage = shortfallPct,
+                Reason = request.Reason.Trim(),
+                DecidedBy = currentUserId
+            }),
+            Reason = $"Chủ xưởng chấp nhận thiếu hụt {missingQty}/{orderItem.OrderedQty} SP ({shortfallPct}%, trong dung sai {tolerancePcnt}%). Không phát hành lô bù. Lý do: {request.Reason.Trim()}",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new AbsorbScrapShortfallResultDto
+        {
+            OrderItemId = orderItemId,
+            PoNumber = orderItem.CustomerOrder?.PoNumber ?? "PO-DEFAULT",
+            ProductSku = orderItem.Product?.ProductSku ?? string.Empty,
+            OrderedQty = orderItem.OrderedQty,
+            AbsorbedShortfallQty = missingQty,
+            ShortfallPercentage = shortfallPct,
+            Message = $"Chủ xưởng đã xác nhận chấp nhận thiếu hụt {missingQty} SP ({shortfallPct}%) cho đơn hàng {orderItem.CustomerOrder?.PoNumber}. Đã ghi nhận nhật ký kiểm toán đóng luồng cấp bù.",
+            DecidedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<ScrapReplenishmentResultDto> ApproveScrapReplenishmentAsync(
+        long orderItemId,
+        ApproveScrapReplenishmentRequestDto? request,
+        long currentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var preview = await GetScrapReplenishmentPreviewAsync(orderItemId, null, cancellationToken);
+        if (preview.ScrappedQty <= 0)
+        {
+            throw new DomainException("Dòng sản phẩm không phát sinh phế phẩm cần phê duyệt cấp bù.", "NO_SCRAP_DETECTED");
+        }
+
+        var scrapReq = new ScrapReplenishmentRequestDto
+        {
+            OrderItemId = orderItemId,
+            ScrappedQty = preview.ScrappedQty,
+            Reason = request?.ApprovalNote ?? "Chủ xưởng phê duyệt cấp bù nguyên vật liệu cho phế phẩm sản xuất.",
+            AutoCreatePrIfShortage = request?.AutoCreatePrIfShortage ?? true
+        };
+
+        var result = await RequestScrapReplenishmentAsync(scrapReq, currentUserId, cancellationToken);
+
+        // Ghi AuditLog xác nhận phê duyệt từ Chủ xưởng
+        await _bomRepository.AddAuditLogAsync(new AuditLog
+        {
+            UserId = currentUserId,
+            ActionType = "SCRAP_REPLENISHMENT_APPROVED_BY_OWNER",
+            EntityName = "OrderItem",
+            EntityId = orderItemId.ToString(),
+            BeforeState = null,
+            AfterState = JsonSerializer.Serialize(new
+            {
+                OrderItemId = orderItemId,
+                ScrappedQty = preview.ScrappedQty,
+                result.IsFullyCoveredByStock,
+                result.CreatedPurchaseRequestId,
+                result.PurchaseRequestCode,
+                result.TotalAllocatedFromStock,
+                result.TotalShortageQty,
+                Note = request?.ApprovalNote
+            }),
+            Reason = $"Chủ xưởng phê duyệt cấp bù vật tư cho {preview.ScrappedQty} SP phế phẩm. Ghi chú: {request?.ApprovalNote ?? "Đồng ý cấp bù"}",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return result;
     }
@@ -1255,40 +1552,8 @@ public class MrpAllocationService : IMrpAllocationService
         DateTime now,
         CancellationToken cancellationToken)
     {
-        // Chống mua trùng (Double Purchasing): chỉ trừ lượng thiếu hụt của (MaterialId, OrderItemId) đang nằm trong các PR ở trạng thái APPROVED (đã duyệt, đang chờ phát hành PO).
-        // Không trừ từ PR PO_ISSUED lịch sử (vì PO có thể đã nhập kho/xuất kho xong hoặc đã bị hủy).
-        var approvedPrs = await _purchaseRequestRepository.GetAllAsync(PrStatusEnum.APPROVED, cancellationToken);
-        var coveredOrderItemMaterials = new Dictionary<(long MaterialId, long OrderItemId), decimal>();
-
-        foreach (var pr in approvedPrs)
-        {
-            foreach (var prItem in pr.Items)
-            {
-                if (string.IsNullOrWhiteSpace(prItem.SourceOrderIdsJson)) continue;
-                try
-                {
-                    using var doc = JsonDocument.Parse(prItem.SourceOrderIdsJson);
-                    if (doc.RootElement.ValueKind != JsonValueKind.Array) continue;
-                    foreach (var el in doc.RootElement.EnumerateArray())
-                    {
-                        if (el.TryGetProperty("OrderItemId", out var oidProp) && oidProp.TryGetInt64(out var oid))
-                        {
-                            decimal qty = 0m;
-                            if (el.TryGetProperty("ShortageQty", out var sqProp) && sqProp.TryGetDecimal(out var sq))
-                            {
-                                qty = sq;
-                            }
-                            var key = (prItem.MaterialId, oid);
-                            coveredOrderItemMaterials[key] = coveredOrderItemMaterials.GetValueOrDefault(key, 0m) + qty;
-                        }
-                    }
-                }
-                catch
-                {
-                    // Bỏ qua JSON không chuẩn định dạng
-                }
-            }
-        }
+        // Chống mua trùng (Double Purchasing): chỉ trừ lượng thiếu hụt của (MaterialId, OrderItemId) đang nằm trong các PR ở trạng thái APPROVED.
+        var coveredOrderItemMaterials = await LoadApprovedPrCoverageAsync(cancellationToken);
 
         // Lọc ra các dòng thực sự còn thiếu chưa nằm trong PR đã duyệt / đã phát hành PO
         var linesToQueue = new List<(MrpMaterialRequirementLineDto Line, List<object> SourceOrders, decimal UncoveredShortage)>();
@@ -1641,6 +1906,49 @@ public class MrpAllocationService : IMrpAllocationService
         };
     }
 
+    /// <summary>
+    /// Tải lượng thiếu hụt (<c>ShortageQty</c>) theo từng cặp (VậtTư, OrderItem) đang nằm trong các PR trạng thái APPROVED (đã duyệt, chờ phát hành PO)
+    /// để chống mua trùng (BR-PUR-01). Không tính PR PO_ISSUED lịch sử vì PO có thể đã nhập/xuất kho xong hoặc đã bị hủy.
+    /// Dùng chung cho luồng gom PR tự động và luồng cấp bù phế phẩm (SC-14b).
+    /// </summary>
+    private async Task<Dictionary<(long MaterialId, long OrderItemId), decimal>> LoadApprovedPrCoverageAsync(CancellationToken cancellationToken)
+    {
+        var approvedPrs = await _purchaseRequestRepository.GetAllAsync(PrStatusEnum.APPROVED, cancellationToken);
+        var covered = new Dictionary<(long MaterialId, long OrderItemId), decimal>();
+
+        foreach (var pr in approvedPrs)
+        {
+            foreach (var prItem in pr.Items)
+            {
+                if (string.IsNullOrWhiteSpace(prItem.SourceOrderIdsJson)) continue;
+                try
+                {
+                    using var doc = JsonDocument.Parse(prItem.SourceOrderIdsJson);
+                    if (doc.RootElement.ValueKind != JsonValueKind.Array) continue;
+                    foreach (var el in doc.RootElement.EnumerateArray())
+                    {
+                        if (el.TryGetProperty("OrderItemId", out var oidProp) && oidProp.TryGetInt64(out var oid))
+                        {
+                            decimal qty = 0m;
+                            if (el.TryGetProperty("ShortageQty", out var sqProp) && sqProp.TryGetDecimal(out var sq))
+                            {
+                                qty = sq;
+                            }
+                            var key = (prItem.MaterialId, oid);
+                            covered[key] = covered.GetValueOrDefault(key, 0m) + qty;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Bỏ qua JSON không chuẩn định dạng
+                }
+            }
+        }
+
+        return covered;
+    }
+
     private static bool IsOrderItemFullyAllocated(OrderItem item)
     {
         if (item.BomHeader == null || item.BomHeader.BomDetails.Count == 0)
@@ -1662,7 +1970,9 @@ public class MrpAllocationService : IMrpAllocationService
                 .FirstOrDefault(ma => ma.MaterialId == req.MaterialId && ma.AllocationStatus != AllocationStatusEnum.RELEASED);
 
             var fulfilled = alloc != null ? alloc.ReservedQty + alloc.IssuedQty : 0m;
-            if (fulfilled + 0.0001m < req.RequiredGross)
+            // Nhu cầu hiệu lực = max(nhu cầu BOM gốc, RequiredQty đã cộng dồn từ cấp bù phế phẩm) để không bỏ sót phần cấp bù (C2)
+            var effectiveRequired = alloc != null ? Math.Max(req.RequiredGross, alloc.RequiredQty) : req.RequiredGross;
+            if (fulfilled + 0.0001m < effectiveRequired)
             {
                 return false;
             }

@@ -337,7 +337,7 @@ public class ProductionOrderController : ControllerBase
     /// [P0-04, SC-18 &amp; UC-62]: Phê duyệt &amp; Phát hành Lô sản xuất bù (REPLENISH_LOT) cho số lượng sản phẩm phế phẩm đã hủy.
     /// Lô sản xuất bù sẽ chạy độc lập đầy đủ từ Trạm 1 (Pha phôi thô) đến Trạm 7 (Đóng gói) để bù đủ 100% sản lượng cho đơn hàng.
     /// </summary>
-    /// <param name="request">DTO chứa OrderItemId, ReplenishQty, Reason, AllowOverdrive, OverdriveJustification.</param>
+    /// <param name="request">DTO chứa OrderItemId, ReplenishQty, Reason.</param>
     /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
     /// <returns>Thông tin Lô sản xuất bù kèm tiến trình 7 công đoạn trên Bảng Kanban.</returns>
     [HttpPost("batches/issue-replenish-lot")]

@@ -336,11 +336,5 @@ public class IssueReplenishLotRequestDto
 
     /// <summary>Lý do phát hành lô bù và thông tin phế phẩm KCS.</summary>
     public string? Reason { get; set; }
-
-    /// <summary>Cho phép chạy trước các công đoạn đầu (Overdrive) nếu phụ kiện chưa xuất kho.</summary>
-    public bool AllowOverdrive { get; set; } = false;
-
-    /// <summary>Lý do giải trình kỹ thuật nếu kích hoạt Overdrive.</summary>
-    public string? OverdriveJustification { get; set; }
 }
 

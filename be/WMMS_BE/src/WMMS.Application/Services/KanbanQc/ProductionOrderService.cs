@@ -1457,7 +1457,7 @@ public class ProductionOrderService : IProductionOrderService
     /// Phát hành Lô sản xuất bù (REPLENISH_LOT) cho số lượng sản phẩm phế phẩm đã hủy (P0-04, UC-62).
     /// Lô sản xuất bù chạy độc lập đầy đủ từ Trạm 1 (Pha phôi thô) đến Trạm 7 (Đóng gói) để bù đủ số lượng đơn hàng.
     /// </summary>
-    /// <param name="request">DTO chứa OrderItemId, ReplenishQty, Reason, AllowOverdrive, OverdriveJustification.</param>
+    /// <param name="request">DTO chứa OrderItemId, ReplenishQty, Reason (lô bù không tự bật Overdrive; muốn chạy trước phải qua luồng Yêu cầu/Phê duyệt Overdrive của Chủ xưởng - KBN02).</param>
     /// <param name="currentUserId">ID người dùng đang thao tác (Chủ xưởng / Quản đốc).</param>
     /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
     /// <returns>DTO thông tin Lô sản xuất bù kèm tiến trình 7 công đoạn.</returns>
@@ -1618,19 +1618,6 @@ public class ProductionOrderService : IProductionOrderService
             }).ToList();
 
             await _batchRepository.AddStepsRangeAsync(steps, cancellationToken);
-
-            if (isOverdriver && holdPointSeq.HasValue)
-            {
-                replenishBatch.OverdriveLogs.Add(new OverdriveLog
-                {
-                    ProductionBatch = replenishBatch,
-                    RequestedBy = currentUserId,
-                    ApprovedBy = currentUserId,
-                    Justification = request.OverdriveJustification?.Trim() ?? "Chạy trước Overdrive cho lô sản xuất bù để kịp tiến độ giao hàng.",
-                    HoldPointStageSeq = holdPointSeq.Value,
-                    ApprovedAt = DateTime.UtcNow
-                });
-            }
 
             // Ghi nhật ký kiểm toán bất biến GBR-05
             var auditPayload = JsonSerializer.Serialize(new
