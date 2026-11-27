@@ -440,7 +440,11 @@ public class AuditLogService : IAuditLogService
 
         if (filter.ToDate.HasValue)
         {
-            query = query.Where(al => al.CreatedAt <= filter.ToDate.Value);
+            var toDate = filter.ToDate.Value;
+            var inclusiveToDate = toDate.TimeOfDay == TimeSpan.Zero
+                ? toDate.Date.AddDays(1).AddTicks(-1)
+                : toDate;
+            query = query.Where(al => al.CreatedAt <= inclusiveToDate);
         }
 
         return query;

@@ -219,7 +219,17 @@ public class MrpAllocationService : IMrpAllocationService
                     continue;
                 }
 
-                foreach (var detail in item.BomHeader.BomDetails)
+                var groupedBomLines = item.BomHeader.BomDetails
+                    .GroupBy(d => d.MaterialId)
+                    .Select(g => new
+                    {
+                        MaterialId = g.Key,
+                        Material = g.First().Material,
+                        TotalGrossDemand = Math.Round(g.Sum(x => ResolveGrossDemand(x, item.OrderedQty, item.BomHeader.ScrapRatePercent)), 4)
+                    })
+                    .ToList();
+
+                foreach (var detail in groupedBomLines)
                 {
                     if (request.MaterialIds != null && request.MaterialIds.Count > 0 && !request.MaterialIds.Contains(detail.MaterialId))
                     {
@@ -232,9 +242,13 @@ public class MrpAllocationService : IMrpAllocationService
                         stockMap[detail.MaterialId] = stock;
                     }
 
-                    var requiredGross = ResolveGrossDemand(detail, item.OrderedQty, item.BomHeader.ScrapRatePercent);
                     var existingAlloc = item.MaterialAllocations
                         .FirstOrDefault(ma => ma.MaterialId == detail.MaterialId && ma.AllocationStatus != AllocationStatusEnum.RELEASED);
+
+                    // Bảo toàn phần RequiredQty đã cộng thêm từ cấp bù phế phẩm (Scrap Replenishment) thay vì ghi đè bằng BOM gốc
+                    var requiredGross = existingAlloc != null
+                        ? Math.Max(detail.TotalGrossDemand, existingAlloc.RequiredQty)
+                        : detail.TotalGrossDemand;
 
                     var currentReservedAndIssued = existingAlloc != null
                         ? existingAlloc.ReservedQty + existingAlloc.IssuedQty
@@ -387,7 +401,17 @@ public class MrpAllocationService : IMrpAllocationService
                 }
 
                 alloc.ReservedQty = 0m;
-                alloc.AllocationStatus = AllocationStatusEnum.RELEASED;
+                // Nếu dòng phân bổ đã xuất kho một phần xuống xưởng (IssuedQty > 0), giữ trạng thái ISSUED_TO_SHOP/RESERVED để không làm mất dấu lượng đã xuất
+                if (alloc.IssuedQty > 0m)
+                {
+                    alloc.AllocationStatus = alloc.IssuedQty >= alloc.RequiredQty
+                        ? AllocationStatusEnum.ISSUED_TO_SHOP
+                        : AllocationStatusEnum.RESERVED;
+                }
+                else
+                {
+                    alloc.AllocationStatus = AllocationStatusEnum.RELEASED;
+                }
                 await _materialAllocationRepository.UpdateAsync(alloc);
 
                 if (alloc.OrderItem != null)
@@ -660,15 +684,23 @@ public class MrpAllocationService : IMrpAllocationService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var bomDetails = bom.BomDetails.ToList();
+            var groupedBomDetails = bom.BomDetails
+                .GroupBy(d => d.MaterialId)
+                .Select(g => new
+                {
+                    MaterialId = g.Key,
+                    Material = g.First().Material,
+                    GrossRequired = Math.Round(g.Sum(x => CalculateDemandForQuantity(x, request.ScrappedQty, bom.ScrapRatePercent)), 4)
+                })
+                .ToList();
             var detailsDtoList = new List<ScrapMaterialAllocationDetailDto>();
             decimal totalAllocated = 0m;
             decimal totalShortage = 0m;
             var shortageLinesForPr = new List<(long MaterialId, decimal ShortageQty)>();
 
-            foreach (var detail in bomDetails)
+            foreach (var detail in groupedBomDetails)
             {
-                var grossRequired = ResolveGrossDemand(detail, request.ScrappedQty, bom.ScrapRatePercent);
+                var grossRequired = detail.GrossRequired;
                 var stock = await _materialStockRepository.GetOrCreateByMaterialIdAsync(detail.MaterialId, cancellationToken);
 
                 decimal available = Math.Max(0m, stock.AvailableQty);
@@ -908,13 +940,21 @@ public class MrpAllocationService : IMrpAllocationService
             return result;
         }
 
-        var bomDetails = bom.BomDetails.ToList();
+        var groupedBomDetails = bom.BomDetails
+            .GroupBy(d => d.MaterialId)
+            .Select(g => new
+            {
+                MaterialId = g.Key,
+                Material = g.First().Material,
+                GrossRequired = Math.Round(g.Sum(x => CalculateDemandForQuantity(x, scrappedQty, bom.ScrapRatePercent)), 4)
+            })
+            .ToList();
         decimal totalAllocated = 0m;
         decimal totalShortage = 0m;
 
-        foreach (var detail in bomDetails)
+        foreach (var detail in groupedBomDetails)
         {
-            var grossRequired = ResolveGrossDemand(detail, scrappedQty, bom.ScrapRatePercent);
+            var grossRequired = detail.GrossRequired;
             var stock = await _materialStockRepository.GetOrCreateByMaterialIdAsync(detail.MaterialId, cancellationToken);
 
             decimal available = Math.Max(0m, stock.AvailableQty);
@@ -1024,7 +1064,11 @@ public class MrpAllocationService : IMrpAllocationService
                         ? existingAlloc.ReservedQty + existingAlloc.IssuedQty
                         : 0m;
 
-                    var stillNeeded = Math.Max(0m, Math.Round(line.TotalGrossDemand - alreadyReservedOrIssued, 4));
+                    var effectiveRequired = existingAlloc != null
+                        ? Math.Max(line.TotalGrossDemand, existingAlloc.RequiredQty)
+                        : line.TotalGrossDemand;
+
+                    var stillNeeded = Math.Max(0m, Math.Round(effectiveRequired - alreadyReservedOrIssued, 4));
                     decimal newlyReserved = 0m;
 
                     // BR-INV-01 & BR-INV-02: Chỉ khóa phân bổ mềm từ AvailableQty (đã loại trừ phần giữ chỗ của đơn khác)
@@ -1045,7 +1089,7 @@ public class MrpAllocationService : IMrpAllocationService
                             OrderItem = item,
                             MaterialId = line.MaterialId,
                             Material = line.Material,
-                            RequiredQty = line.TotalGrossDemand,
+                            RequiredQty = effectiveRequired,
                             ReservedQty = newlyReserved,
                             IssuedQty = 0m,
                             AllocationStatus = AllocationStatusEnum.RESERVED,
@@ -1056,7 +1100,7 @@ public class MrpAllocationService : IMrpAllocationService
                     }
                     else
                     {
-                        existingAlloc.RequiredQty = line.TotalGrossDemand;
+                        existingAlloc.RequiredQty = effectiveRequired;
                         existingAlloc.ReservedQty = Math.Round(existingAlloc.ReservedQty + newlyReserved, 4);
                         existingAlloc.AllocatedAt = now;
                         await _materialAllocationRepository.UpdateAsync(existingAlloc);
@@ -1192,19 +1236,96 @@ public class MrpAllocationService : IMrpAllocationService
         }
     }
 
-    private async Task<(long PrId, string PrCode, int QueuedMaterialsCount)> UpsertDailyConsolidatedPrAsync(
+    private async Task<(long? PrId, string? PrCode, int QueuedMaterialsCount)> UpsertDailyConsolidatedPrAsync(
         List<MrpMaterialRequirementLineDto> shortageLines,
         long currentUserId,
         DateTime now,
         CancellationToken cancellationToken)
     {
+        // Chống mua trùng (Double Purchasing): kiểm tra các PR đã duyệt (APPROVED / PO_ISSUED) xem OrderItemId + MaterialId nào đã được đặt mua
+        var approvedPrs = await _purchaseRequestRepository.GetAllAsync(PrStatusEnum.APPROVED, cancellationToken);
+        var poIssuedPrs = await _purchaseRequestRepository.GetAllAsync(PrStatusEnum.PO_ISSUED, cancellationToken);
+        var coveredOrderItemMaterials = new Dictionary<(long MaterialId, long OrderItemId), decimal>();
+
+        foreach (var pr in approvedPrs.Concat(poIssuedPrs))
+        {
+            foreach (var prItem in pr.Items)
+            {
+                if (string.IsNullOrWhiteSpace(prItem.SourceOrderIdsJson)) continue;
+                try
+                {
+                    using var doc = JsonDocument.Parse(prItem.SourceOrderIdsJson);
+                    if (doc.RootElement.ValueKind != JsonValueKind.Array) continue;
+                    foreach (var el in doc.RootElement.EnumerateArray())
+                    {
+                        if (el.TryGetProperty("OrderItemId", out var oidProp) && oidProp.TryGetInt64(out var oid))
+                        {
+                            decimal qty = 0m;
+                            if (el.TryGetProperty("ShortageQty", out var sqProp) && sqProp.TryGetDecimal(out var sq))
+                            {
+                                qty = sq;
+                            }
+                            var key = (prItem.MaterialId, oid);
+                            coveredOrderItemMaterials[key] = coveredOrderItemMaterials.GetValueOrDefault(key, 0m) + qty;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Bỏ qua JSON không chuẩn định dạng
+                }
+            }
+        }
+
+        // Lọc ra các dòng thực sự còn thiếu chưa nằm trong PR đã duyệt / đã phát hành PO
+        var linesToQueue = new List<(MrpMaterialRequirementLineDto Line, List<object> SourceOrders, decimal UncoveredShortage)>();
+        foreach (var line in shortageLines)
+        {
+            var uncoveredSources = new List<object>();
+            decimal uncoveredTotal = 0m;
+
+            foreach (var b in line.ItemBreakdowns.Where(x => x.UnfulfilledDemandQty > 0m))
+            {
+                var alreadyOrderedQty = coveredOrderItemMaterials.GetValueOrDefault((line.MaterialId, b.OrderItemId), 0m);
+                var netUncovered = Math.Max(0m, Math.Round(b.UnfulfilledDemandQty - alreadyOrderedQty, 4));
+                if (netUncovered <= 0m) continue;
+
+                uncoveredTotal += netUncovered;
+                uncoveredSources.Add(new
+                {
+                    b.OrderId,
+                    b.PoNumber,
+                    b.SpaceKey,
+                    b.OrderItemId,
+                    b.ProductSku,
+                    EtdDate = b.EtdDate.ToString("yyyy-MM-dd"),
+                    ShortageQty = netUncovered
+                });
+            }
+
+            if (uncoveredTotal > 0m)
+            {
+                linesToQueue.Add((line, uncoveredSources, Math.Round(uncoveredTotal, 4)));
+            }
+        }
+
+        if (linesToQueue.Count == 0)
+        {
+            return (null, null, 0);
+        }
+
         var today = now.Date;
         var dailyPr = await _purchaseRequestRepository.GetPendingPrByDateAsync(today, cancellationToken);
 
         if (dailyPr == null)
         {
-            var countToday = await _purchaseRequestRepository.CountByDateAsync(today, cancellationToken);
-            var prCode = $"PR-{today:yyyyMMdd}-{countToday + 1:D3}";
+            var seq = await _purchaseRequestRepository.CountByDateAsync(today, cancellationToken) + 1;
+            var prCode = $"PR-{today:yyyyMMdd}-{seq:D3}";
+            while (await _purchaseRequestRepository.GetByCodeAsync(prCode, cancellationToken) != null)
+            {
+                seq++;
+                prCode = $"PR-{today:yyyyMMdd}-{seq:D3}";
+            }
 
             dailyPr = new PurchaseRequest
             {
@@ -1220,26 +1341,11 @@ public class MrpAllocationService : IMrpAllocationService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        foreach (var line in shortageLines)
+        foreach (var (line, sourceOrders, uncoveredShortage) in linesToQueue)
         {
             var existingItem = dailyPr.Items.FirstOrDefault(i => i.MaterialId == line.MaterialId);
-
-            // Hợp nhất danh sách đơn hàng nguồn gây thiếu hụt vào SourceOrderIdsJson để truy vết nhiều-nhiều (BR-PUR-01)
-            var sourceOrders = line.ItemBreakdowns
-                .Where(b => b.UnfulfilledDemandQty > 0m)
-                .Select(b => new
-                {
-                    b.OrderId,
-                    b.PoNumber,
-                    b.SpaceKey,
-                    b.OrderItemId,
-                    b.ProductSku,
-                    EtdDate = b.EtdDate.ToString("yyyy-MM-dd"),
-                    ShortageQty = b.UnfulfilledDemandQty
-                })
-                .ToList();
-
             var sourceJson = JsonSerializer.Serialize(sourceOrders);
+            var safetyTopUp = Math.Max(0m, line.SuggestedPrOrderQty - line.NetShortageQty);
 
             if (existingItem == null)
             {
@@ -1247,8 +1353,8 @@ public class MrpAllocationService : IMrpAllocationService
                 {
                     PrId = dailyPr.PrId,
                     MaterialId = line.MaterialId,
-                    TotalShortageQty = line.NetShortageQty,
-                    SuggestedOrderQty = line.SuggestedPrOrderQty,
+                    TotalShortageQty = uncoveredShortage,
+                    SuggestedOrderQty = Math.Round(uncoveredShortage + safetyTopUp, 4),
                     SourceOrderIdsJson = sourceJson
                 };
                 dailyPr.Items.Add(newItem);
@@ -1258,8 +1364,7 @@ public class MrpAllocationService : IMrpAllocationService
             {
                 // BR-PUR-01 / UC-44: Hợp nhất danh sách đơn nguồn theo từng OrderItemId rồi cộng tổng thiếu hụt thực tế (không cộng trùng) và giữ bù tồn kho an toàn (Safety Stock)
                 var mergedJson = MergeSourceOrderJson(existingItem.SourceOrderIdsJson, sourceJson);
-                var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, line.NetShortageQty);
-                var safetyTopUp = Math.Max(0m, line.SuggestedPrOrderQty - line.NetShortageQty);
+                var aggregatedShortage = SumShortageFromSourceOrderJson(mergedJson, uncoveredShortage);
                 var existingTopUp = Math.Max(0m, existingItem.SuggestedOrderQty - existingItem.TotalShortageQty);
                 existingItem.SourceOrderIdsJson = mergedJson;
                 existingItem.TotalShortageQty = aggregatedShortage;
@@ -1270,7 +1375,7 @@ public class MrpAllocationService : IMrpAllocationService
         dailyPr.UpdatedAt = now;
         await _purchaseRequestRepository.UpdateAsync(dailyPr);
 
-        return (dailyPr.PrId, dailyPr.PrCode, shortageLines.Count);
+        return (dailyPr.PrId, dailyPr.PrCode, linesToQueue.Count);
     }
 
     /// <summary>
@@ -1557,7 +1662,16 @@ public class MrpAllocationService : IMrpAllocationService
             return Math.Round(detail.GrossTotalDemand, 4);
         }
 
-        return Math.Round((detail.NetQtyPerUnit * orderedQty) * (1m + (scrapRatePercent / 100m)), 4);
+        return CalculateDemandForQuantity(detail, orderedQty, scrapRatePercent);
+    }
+
+    /// <summary>
+    /// Tính trực tiếp nhu cầu vật tư gộp (có hao hụt BOM) cho một số lượng sản phẩm cụ thể (dùng cho cấp bù phế phẩm ScrappedQty, không lấy nhầm GrossTotalDemand của cả đơn).
+    /// </summary>
+    private static decimal CalculateDemandForQuantity(BomDetail detail, int quantity, decimal scrapRatePercent)
+    {
+        if (quantity <= 0) return 0m;
+        return Math.Round((detail.NetQtyPerUnit * quantity) * (1m + (scrapRatePercent / 100m)), 4);
     }
 
     private static MaterialOrderAllocationDto MapAllocationDto(MaterialAllocation a, OrderItem item)

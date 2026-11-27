@@ -720,12 +720,19 @@ public class PurchaseOrderService : IPurchaseOrderService
                 MessageCodes.Msg08DuplicateConflict);
         }
 
-        if (newStatus == PoStatusEnum.FULFILLED)
+        if (newStatus is PoStatusEnum.FULFILLED or PoStatusEnum.PARTIALLY_RECEIVED)
         {
             throw new AppException(
-                "Trạng thái Đã nhận đủ hàng chỉ được cập nhật tự động thông qua Phiếu nhập kho (GRN).",
+                "Trạng thái Nhận một phần hoặc Đã nhận đủ hàng chỉ được cập nhật tự động thông qua Phiếu nhập kho (GRN).",
                 400,
                 MessageCodes.Msg13ValidationError);
+        }
+
+        if (newStatus == PoStatusEnum.ISSUED && oldStatus == PoStatusEnum.PARTIALLY_RECEIVED)
+        {
+            throw AppException.Conflict(
+                $"Không thể chuyển ngược đơn đặt hàng {po.PoCode} về trạng thái Đã phát hành khi đã phát sinh phiếu nhập kho.",
+                MessageCodes.Msg08DuplicateConflict);
         }
 
         if (newStatus == PoStatusEnum.CANCELLED)
@@ -972,13 +979,18 @@ public class PurchaseOrderService : IPurchaseOrderService
         }
 
         Supplier? targetSupplier = null;
-        if (request?.SupplierId is > 0)
+        var resolvedSupplierId = request?.SupplierId is > 0 ? request.SupplierId.Value : po.SupplierId;
+        if (resolvedSupplierId > 0)
         {
-            targetSupplier = activeSuppliers.FirstOrDefault(s => s.SupplierId == request.SupplierId.Value);
+            targetSupplier = activeSuppliers.FirstOrDefault(s => s.SupplierId == resolvedSupplierId);
             if (targetSupplier == null)
             {
-                var map = await _purchaseOrderRepository.GetSuppliersByIdsAsync(new[] { request.SupplierId.Value }, cancellationToken);
-                map.TryGetValue(request.SupplierId.Value, out targetSupplier);
+                var map = await _purchaseOrderRepository.GetSuppliersByIdsAsync(new[] { resolvedSupplierId }, cancellationToken);
+                if (map.TryGetValue(resolvedSupplierId, out var loadedSupplier) &&
+                    string.Equals(loadedSupplier.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+                {
+                    targetSupplier = loadedSupplier;
+                }
             }
         }
 

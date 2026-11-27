@@ -453,11 +453,11 @@ public class BomRoutingService : IBomRoutingService
         }
 
         var orderItem = await _orderItemRepository.GetByIdAsync(bomHeader.OrderItemId);
-        if (bomHeader.BomStatus == BomStatusEnum.READY_FOR_PRODUCTION
+        if (bomHeader.BomStatus is BomStatusEnum.READY_FOR_PRODUCTION or BomStatusEnum.WAITING_FOR_MATERIALS
             || orderItem?.Status is OrderItemStatusEnum.IN_PROD or OrderItemStatusEnum.DONE)
         {
             throw new DomainException(
-                "Không thể chỉnh sửa định mức vật tư đã chốt khóa sản xuất hoặc của sản phẩm đang gia công tại xưởng.",
+                "Không thể chỉnh sửa định mức vật tư đã duyệt phân bổ/chốt khóa sản xuất hoặc của sản phẩm đang gia công tại xưởng.",
                 "BOM_LOCKED");
         }
 

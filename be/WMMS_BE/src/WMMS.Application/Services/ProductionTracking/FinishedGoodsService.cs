@@ -51,7 +51,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                 continue;
             }
 
-            if (!onlyReadyForReceipt && !isReadyForReceipt && batch.BatchStatus != BatchStatusEnum.DONE)
+            if (!onlyReadyForReceipt && !isReadyForReceipt && (batch.BatchStatus != BatchStatusEnum.DONE || batch.BatchQty <= 0))
             {
                 continue;
             }
@@ -308,7 +308,12 @@ public class FinishedGoodsService : IFinishedGoodsService
                     var doneOrderUnits = order.OrderItems.Sum(oi =>
                         oi.OrderItemId == targetOrderItem?.OrderItemId
                             ? Math.Min(oi.OrderedQty, totalCompletedForOrderItem)
-                            : (oi.Status == OrderItemStatusEnum.DONE ? oi.OrderedQty : 0));
+                            : Math.Min(oi.OrderedQty, oi.ProductionBatches
+                                .Where(b => b.BatchStatus == BatchStatusEnum.DONE &&
+                                            (b.BatchType == BatchTypeEnum.MAIN_CARD ||
+                                             b.BatchType == BatchTypeEnum.REWORK_SUB_CARD ||
+                                             b.BatchType == BatchTypeEnum.REPLENISH_LOT))
+                                .Sum(b => b.BatchQty)));
                     order.OrderSpace.OverallProgressPct = order.Status == OrderStatusEnum.COMPLETED
                         ? 100m
                         : (totalOrderUnits > 0 ? Math.Min(100m, Math.Round((decimal)doneOrderUnits * 100m / totalOrderUnits, 2)) : 0m);
