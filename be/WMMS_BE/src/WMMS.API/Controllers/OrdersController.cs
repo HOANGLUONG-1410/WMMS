@@ -45,6 +45,22 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> GetSalesOrdersAsync([FromQuery] SalesOrderFilterDto filter, CancellationToken cancellationToken)
     {
         var result = await _orderIntakeService.GetSalesOrdersAsync(filter, cancellationToken);
+
+        // Chỉ SALES, OWNER, ADMIN được xem thông tin định danh khách hàng
+        var canViewCustomer = User.IsInRole(RoleConstants.Owner) ||
+                              User.IsInRole(RoleConstants.Admin) ||
+                              User.IsInRole(RoleConstants.Sales);
+        if (!canViewCustomer && result.Items != null)
+        {
+            foreach (var item in result.Items)
+            {
+                item.CustomerId = 0;
+                item.CustomerName = string.Empty;
+                item.CustomerCountry = null;
+                item.SpaceName = item.OrderSpaceKey;
+            }
+        }
+
         return Ok(ApiResponse<SalesOrderListSummaryDto>.Ok(result, "Đã tải danh sách đơn hàng bán và chỉ số tiến độ."));
     }
 
@@ -151,6 +167,19 @@ public class OrdersController : ControllerBase
                          !User.IsInRole(RoleConstants.Admin);
 
         var detail = await _orderIntakeService.GetOrderSpaceDetailAsync(idOrKey, isViewOnly, cancellationToken);
+
+        // Chỉ SALES, OWNER, ADMIN được xem thông tin định danh khách hàng
+        var canViewCustomer = User.IsInRole(RoleConstants.Owner) ||
+                              User.IsInRole(RoleConstants.Admin) ||
+                              User.IsInRole(RoleConstants.Sales);
+        if (!canViewCustomer && detail != null)
+        {
+            detail.CustomerId = 0;
+            detail.CustomerName = string.Empty;
+            detail.CustomerCountry = null;
+            detail.SpaceName = detail.SpaceKey;
+        }
+
         return Ok(ApiResponse<OrderSpaceDetailDto>.Ok(detail, "Đã tải thông tin chi tiết không gian đơn hàng."));
     }
 

@@ -42,6 +42,7 @@ export default function InventoryReconciliationPage() {
   const { currentUser } = useSession();
 
   const activeRole = currentUser?.activeRole || "OWNER";
+  const canViewCustomer = ["ADMIN", "OWNER", "SALES"].includes(activeRole);
   const canExecuteAllocation = ["ADMIN", "OWNER", "PLANNER", "WAREHOUSE"].includes(activeRole);
   const canAccessPrPage = ["ADMIN", "OWNER", "PLANNER", "PURCHASING"].includes(activeRole);
 
@@ -591,7 +592,7 @@ export default function InventoryReconciliationPage() {
                   Mã PO: <strong className="font-mono text-slate-900">{spaceInfo.poNumber}</strong>
                 </span>
               )}
-              {spaceInfo?.customerName && (
+              {canViewCustomer && spaceInfo?.customerName && (
                 <span className="text-sm text-slate-600">
                   • Khách hàng: <strong className="text-slate-900">{spaceInfo.customerName}</strong>
                 </span>

@@ -16,6 +16,9 @@ export default function GoodsIssuePage() {
   const { currentUser } = useSession();
   // Quản trị viên chỉ được xem, không được xác nhận xuất kho.
   const readOnly = currentUser?.activeRole === ROLES.ADMIN;
+  const canViewCustomer = ([ROLES.ADMIN, ROLES.OWNER, ROLES.SALES] as string[]).includes(
+    currentUser?.activeRole || "",
+  );
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
@@ -110,7 +113,9 @@ export default function GoodsIssuePage() {
                   }`}
                 >
                   <div className="font-mono font-bold text-slate-900">{o.poNumber}</div>
-                  <div className="text-sm text-slate-700 mt-0.5">{o.customerName}</div>
+                  {canViewCustomer && o.customerName && (
+                    <div className="text-sm text-slate-700 mt-0.5">{o.customerName}</div>
+                  )}
                   <div className="text-xs text-slate-500 mt-0.5">
                     ETD: {fmtDate(o.etdDate)} · Không gian {o.orderSpaceKey}
                   </div>
@@ -130,7 +135,9 @@ export default function GoodsIssuePage() {
                   <h2 className="text-base font-bold text-slate-900">
                     Cấp phát vật tư cho đơn <span className="font-mono">{selectedOrder.poNumber}</span>
                   </h2>
-                  <p className="text-sm text-slate-500 mt-0.5">Khách hàng: {selectedOrder.customerName}</p>
+                  {canViewCustomer && selectedOrder.customerName && (
+                    <p className="text-sm text-slate-500 mt-0.5">Khách hàng: {selectedOrder.customerName}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 p-6 pb-0 text-sm">

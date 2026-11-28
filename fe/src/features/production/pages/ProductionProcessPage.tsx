@@ -196,6 +196,7 @@ export default function ProductionProcessPage() {
 
   // Quyền thực tế của người dùng hiện tại
   const activeRole = currentUser?.activeRole || "OWNER";
+  const canViewCustomer = ["ADMIN", "OWNER", "SALES"].includes(activeRole);
   const isOwnerOrAdmin = activeRole === "OWNER" || activeRole === "ADMIN";
   const isQcAuthorized = isOwnerOrAdmin || activeRole === "QC";
   const isLeaderAuthorized = isOwnerOrAdmin || activeRole === "LEADER";
@@ -1287,7 +1288,7 @@ export default function ProductionProcessPage() {
                   Mã PO: <strong className="font-mono text-slate-900">{spaceInfo.poNumber}</strong>
                 </span>
               )}
-              {spaceInfo?.customerName && (
+              {canViewCustomer && spaceInfo?.customerName && (
                 <span className="text-sm text-slate-600">
                   • Khách hàng:{" "}
                   <strong className="text-slate-900">{spaceInfo.customerName}</strong>
