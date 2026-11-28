@@ -170,10 +170,10 @@ export const router = createBrowserRouter([
       },
 
       // ==========================================
-      // 3. Phân hệ Kỹ thuật, BOM & Định tuyến động (OWNER, ADMIN)
+      // 3. Phân hệ Kỹ thuật, BOM & Định tuyến động (OWNER, PLANNER, ADMIN)
       // ==========================================
       {
-        element: <ProtectedRoute allowedRoles={[ROLES.OWNER, ROLES.ADMIN]} />,
+        element: <ProtectedRoute allowedRoles={[ROLES.OWNER, ROLES.PLANNER, ROLES.ADMIN]} />,
         children: [
           { path: "/bom", element: <BomBuilderPage /> },
         ],

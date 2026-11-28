@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "../../auth/store/SessionContext";
 import { ROLES } from "../../../constants/roles";
 import { prStatusLabel } from "../../../lib/statusLabels";
@@ -19,18 +19,16 @@ const fmtDate = (v?: string | null) => {
 };
 const fmtNum = (n?: number | null) => (n ?? 0).toLocaleString("vi-VN");
 
-/** Chi tiết PR: thông tin chung, vật tư thiếu hụt, đơn nguồn; Chủ xưởng có thể duyệt / từ chối. */
+/** Chi tiết PR: thông tin chung, vật tư thiếu hụt; Chủ xưởng có thể duyệt / từ chối. */
 export default function PrDetailModal({ prId, onClose, onSuccess }: PrDetailModalProps) {
   const { currentUser } = useSession();
   const { data: pr, isLoading, isError } = usePurchaseRequestDetail(prId);
   const approveMutation = useApprovePr();
   const [notes, setNotes] = useState("");
-  const [expanded, setExpanded] = useState<number | null>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
 
   useEffect(() => {
     setNotes("");
-    setExpanded(null);
     setRejectOpen(false);
   }, [prId]);
 
@@ -119,70 +117,28 @@ export default function PrDetailModal({ prId, onClose, onSuccess }: PrDetailModa
                   <thead>
                     <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
                       <th className="py-3 px-4">Vật tư</th>
-                      <th className="py-3 px-3 text-right">Tồn khả dụng</th>
-                      <th className="py-3 px-3 text-right">Thiếu hụt</th>
-                      <th className="py-3 px-3 text-right">Đề xuất đặt</th>
-                      <th className="py-3 px-3">ETD sớm nhất</th>
-                      <th className="py-3 px-4 text-right">Đơn nguồn</th>
+                      <th className="py-3 px-4 text-right">Tồn khả dụng</th>
+                      <th className="py-3 px-4 text-right">Thiếu hụt</th>
+                      <th className="py-3 px-4 text-right">Đề xuất đặt</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 text-sm">
                     {pr.items.map((it) => (
-                      <Fragment key={it.prItemId}>
-                        <tr className="hover:bg-slate-50/80">
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-slate-900">{it.materialName}</div>
-                            <div className="font-mono text-xs text-slate-500">{it.materialCode}</div>
-                          </td>
-                          <td className="py-3 px-3 text-right text-slate-700">
-                            {fmtNum(it.availableStockQty)} {it.unitOfMeasure}
-                          </td>
-                          <td className="py-3 px-3 text-right font-semibold text-rose-600">
-                            {fmtNum(it.totalShortageQty)} {it.unitOfMeasure}
-                          </td>
-                          <td className="py-3 px-3 text-right font-bold text-slate-900">
-                            {fmtNum(it.suggestedOrderQty)} {it.unitOfMeasure}
-                          </td>
-                          <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{fmtDate(it.earliestEtd)}</td>
-                          <td className="py-3 px-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setExpanded(expanded === it.prItemId ? null : it.prItemId)}
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-800"
-                            >
-                              {it.sourceOrders.length} đơn {expanded === it.prItemId ? "▲" : "▼"}
-                            </button>
-                          </td>
-                        </tr>
-                        {expanded === it.prItemId && (
-                          <tr className="bg-slate-50/70">
-                            <td colSpan={6} className="px-4 py-3">
-                              <table className="w-full text-xs">
-                                <thead>
-                                  <tr className="text-slate-500 text-left">
-                                    <th className="py-1 pr-3">Số PO khách</th>
-                                    <th className="py-1 pr-3">Không gian</th>
-                                    <th className="py-1 pr-3">Sản phẩm</th>
-                                    <th className="py-1 pr-3">ETD</th>
-                                    <th className="py-1 text-right">Thiếu</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {it.sourceOrders.map((s) => (
-                                    <tr key={`${s.orderId}-${s.orderItemId}`} className="border-t border-slate-200">
-                                      <td className="py-1.5 pr-3 font-mono">{s.poNumber}</td>
-                                      <td className="py-1.5 pr-3 font-mono">{s.spaceKey || "—"}</td>
-                                      <td className="py-1.5 pr-3">{s.productSku || "—"}</td>
-                                      <td className="py-1.5 pr-3">{fmtDate(s.etdDate)}</td>
-                                      <td className="py-1.5 text-right font-semibold">{fmtNum(s.shortageQty)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
+                      <tr key={it.prItemId} className="hover:bg-slate-50/80">
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-900">{it.materialName}</div>
+                          <div className="font-mono text-xs text-slate-500">{it.materialCode}</div>
+                        </td>
+                        <td className="py-3 px-4 text-right text-slate-700">
+                          {fmtNum(it.availableStockQty)} {it.unitOfMeasure}
+                        </td>
+                        <td className="py-3 px-4 text-right font-semibold text-rose-600">
+                          {fmtNum(it.totalShortageQty)} {it.unitOfMeasure}
+                        </td>
+                        <td className="py-3 px-4 text-right font-bold text-slate-900">
+                          {fmtNum(it.suggestedOrderQty)} {it.unitOfMeasure}
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>

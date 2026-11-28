@@ -987,12 +987,12 @@ public class OrderIntakeService : IOrderIntakeService
         var lifecycleBadge = DetermineLifecycleBadge(order);
 
         var itemDescriptions = order.OrderItems
-            .Select(oi => oi.Product?.ProductName ?? "Sản phẩm nội thất gỗ")
+            .Select(oi => ShortenProductSummaryName(oi.Product?.ProductName))
             .Distinct()
             .ToList();
 
         var volumeSummary = order.OrderItems.Count > 1
-            ? $"{totalUnits} bộ ({string.Join(" + ", itemDescriptions.Take(2))})"
+            ? $"{totalUnits} bộ"
             : $"{totalUnits} chiếc {itemDescriptions.FirstOrDefault() ?? "sản phẩm gỗ"}";
 
         var customerDisplay = !string.IsNullOrWhiteSpace(order.Customer?.Country)
@@ -1019,6 +1019,34 @@ public class OrderIntakeService : IOrderIntakeService
             LifecycleStatusBadge = lifecycleBadge,
             OverallProgressPct = ResolveOrderProgressPct(order)
         };
+    }
+
+    /// <summary>
+    /// Rút gọn tên sản phẩm trên cột Dòng hàng / Số lượng (ví dụ: "Tủ sideboard gỗ tần bì 3 ngăn" -> "Tủ sideboard").
+    /// </summary>
+    private static string ShortenProductSummaryName(string? productName)
+    {
+        if (string.IsNullOrWhiteSpace(productName))
+        {
+            return "sản phẩm gỗ";
+        }
+
+        var trimmed = productName.Trim();
+        var lower = trimmed.ToLowerInvariant();
+        if (lower.Contains("sideboard")) return "Tủ sideboard";
+        if (lower.Contains("bàn cà phê")) return "Bàn cà phê";
+        if (lower.Contains("khung giường")) return "Khung giường";
+        if (lower.Contains("ghế đẩu")) return "Ghế đẩu gỗ";
+        if (lower.Contains("ghế ăn")) return "Ghế ăn";
+        if (lower.Contains("bàn ăn")) return "Bàn ăn";
+
+        var woodIdx = lower.IndexOf(" gỗ ", StringComparison.Ordinal);
+        if (woodIdx > 0)
+        {
+            return trimmed[..woodIdx].Trim();
+        }
+
+        return trimmed;
     }
 
     private static decimal ResolveOrderProgressPct(CustomerOrder order)

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSession } from "../../auth/store/SessionContext";
+import { ROLES } from "../../../constants/roles";
 import StockBalanceTable from "../components/StockBalanceTable";
 import StockDetailModal from "../components/StockDetailModal";
 import StockLedgerTable from "../components/StockLedgerTable";
@@ -13,14 +15,12 @@ import type {
 
 export default function InventoryStockPage() {
   const navigate = useNavigate();
+  const { currentUser } = useSession();
+  const canOperateWarehouse =
+    currentUser?.activeRole === ROLES.WAREHOUSE || currentUser?.activeRole === ROLES.ADMIN;
 
   // Tab điều hướng chính: "balance" (Tab 1: Tồn kho 3 cấp) | "ledger" (Tab 2: Sổ kho điện tử)
   const [activeTab, setActiveTab] = useState<"balance" | "ledger">("balance");
-
-  // Kho vật lý đang chọn (theo Mockup 7.1)
-  const [selectedYard, setSelectedYard] = useState<string>(
-    "Bãi gỗ & nguyên liệu chính (Hà Nam)",
-  );
 
   // Bộ lọc Tab 1: GET /api/v1/inventory/stocks (mặc định 10 dòng/trang giống UserManagementPage)
   const [stockFilter, setStockFilter] = useState<InventoryStockFilterDto>({
@@ -158,54 +158,6 @@ export default function InventoryStockPage() {
   return (
     <>
       <div className="max-w-[1400px] mx-auto space-y-6">
-        {/* Top Context Bar: Warehouse Yard Selector */}
-        <div className="bg-white border border-slate-200 rounded-xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
-          <div className="flex flex-wrap items-center gap-2.5 text-sm">
-            <span className="font-semibold text-slate-600">Bãi kho:</span>
-            <select
-              value={selectedYard}
-              onChange={(e) => setSelectedYard(e.target.value)}
-              className="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
-            >
-              <option value="Bãi gỗ & nguyên liệu chính (Hà Nam)">
-                Bãi gỗ &amp; nguyên liệu chính (Hà Nam)
-              </option>
-              <option value="Kho gỗ sấy & veneer (Khu B)">
-                Kho gỗ sấy &amp; veneer (Khu B)
-              </option>
-              <option value="Kho phụ kiện, sơn & bao bì (Khu C)">
-                Kho phụ kiện, sơn &amp; bao bì (Khu C)
-              </option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2.5 text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                refetchStocks();
-                refetchAllStocks();
-                refetchLedger();
-              }}
-              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-sm font-semibold transition shadow-2xs"
-            >
-              Làm mới dữ liệu
-            </button>
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-sm font-semibold transition shadow-2xs inline-flex items-center gap-1.5"
-            >
-              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Xuất CSV
-            </button>
-          </div>
-        </div>
-
         {/* Page Title & Action Buttons */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -217,28 +169,54 @@ export default function InventoryStockPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {/* + Inbound Receipt (Commit) */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => navigate("/warehouse/receipts")}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition inline-flex items-center gap-2"
+              onClick={() => {
+                refetchStocks();
+                refetchAllStocks();
+                refetchLedger();
+              }}
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-sm font-semibold transition shadow-2xs"
             >
-              <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
+              Làm mới dữ liệu
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-sm font-semibold transition shadow-2xs inline-flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              <span>Nhập kho (Xác nhận)</span>
+              Xuất CSV
             </button>
 
-            {/* Goods Issue to Floor */}
-            <button
-              type="button"
-              onClick={() => navigate("/warehouse/issues")}
-              className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-2xs transition"
-            >
-              Xuất kho xuống xưởng
-            </button>
+            {canOperateWarehouse && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate("/warehouse/receipts")}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-xs transition inline-flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span>Nhập kho (Xác nhận)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/warehouse/issues")}
+                  className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-2xs transition"
+                >
+                  Xuất kho xuống xưởng
+                </button>
+              </>
+            )}
           </div>
         </div>
 

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useSession } from "../../auth/store/SessionContext";
+import { ROLES } from "../../../constants/roles";
 import ProductCatalogTab from "../components/ProductCatalogTab";
 import MaterialCatalogTab from "../components/MaterialCatalogTab";
 import { useVisualProducts, useMaterials } from "../hooks/useCatalog";
@@ -6,7 +8,10 @@ import { useVisualProducts, useMaterials } from "../hooks/useCatalog";
 type ActiveTab = "products" | "materials";
 
 export default function CatalogPage() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("products");
+  const { currentUser } = useSession();
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    currentUser?.activeRole === ROLES.PURCHASING ? "materials" : "products",
+  );
 
   // Fetch dữ liệu tóm tắt cho stats bar
   const { data: products } = useVisualProducts();
