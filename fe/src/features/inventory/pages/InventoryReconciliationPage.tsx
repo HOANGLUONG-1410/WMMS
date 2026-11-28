@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../../lib/api/apiError";
-import WmmsAppShell from "../../../components/layout/WmmsAppShell";
+import { HeaderTopLeft } from "../../../components/layout/WmmsAppShell";
 import { useWmms } from "../../auth/hooks/WmmsContext";
 import { useSession } from "../../auth/store/SessionContext";
 import { orderIntakeApi } from "../../../services/wmmsApi";
@@ -42,15 +42,8 @@ export default function InventoryReconciliationPage() {
   const { currentUser } = useSession();
 
   const activeRole = currentUser?.activeRole || "OWNER";
-  const canAccessBomPage = ["ADMIN", "OWNER", "PLANNER"].includes(activeRole);
-  const canAccessProductionPage = [
-    "ADMIN",
-    "OWNER",
-    "PLANNER",
-    "LEADER",
-    "QC",
-    "WAREHOUSE",
-  ].includes(activeRole);
+  const canExecuteAllocation = ["ADMIN", "OWNER", "PLANNER", "WAREHOUSE"].includes(activeRole);
+  const canAccessPrPage = ["ADMIN", "OWNER", "PLANNER", "PURCHASING"].includes(activeRole);
 
   const spaceParam = searchParams.get("spaceKey");
   const activeSpaceKey = spaceParam || currentSpaceKey || "";
