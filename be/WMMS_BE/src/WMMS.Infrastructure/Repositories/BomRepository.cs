@@ -105,4 +105,18 @@ public class BomRepository : IBomRepository
     {
         await _context.AuditLogs.AddAsync(auditLog);
     }
+
+    public async Task<List<AuditLog>> GetAuditLogsAsync(string entityName, IEnumerable<string> entityIds, string? actionType = null, CancellationToken cancellationToken = default)
+    {
+        var idList = entityIds.ToList();
+        if (idList.Count == 0) return new List<AuditLog>();
+
+        var query = _context.AuditLogs
+            .Where(a => a.EntityName == entityName && idList.Contains(a.EntityId));
+        if (!string.IsNullOrEmpty(actionType))
+        {
+            query = query.Where(a => a.ActionType == actionType);
+        }
+        return await query.ToListAsync(cancellationToken);
+    }
 }

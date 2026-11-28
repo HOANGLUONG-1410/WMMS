@@ -315,6 +315,10 @@ public class ScrapReplenishmentSummaryDto
     public int MissingQty { get; set; }
     public bool CanAbsorbShortfall { get; set; }
     public decimal ShortfallTolerancePercent { get; set; } = 5.0m;
+
+    /// <summary>Số lượng thiếu hụt phế phẩm đã được Chủ xưởng chấp nhận bỏ qua (UC075.1 - Absorb Shortfall).</summary>
+    public int? AbsorbedShortfallQty { get; set; }
+
     public string Status { get; set; } = string.Empty;
     public string StatusLabel { get; set; } = string.Empty;
     public bool IsStockSufficient { get; set; }

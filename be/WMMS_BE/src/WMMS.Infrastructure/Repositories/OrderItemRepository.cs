@@ -65,6 +65,17 @@ public class OrderItemRepository : IOrderItemRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<OrderItem>> GetAllOrderItemsForScrapReplenishmentAsync(CancellationToken cancellationToken = default)
+    {
+        return await BuildFullMrpQuery()
+            .Where(oi => oi.CustomerOrder.Status != OrderStatusEnum.CANCELLED &&
+                         oi.BomHeader != null)
+            .OrderBy(oi => oi.CustomerOrder.EtdDate)
+            .ThenBy(oi => oi.OrderId)
+            .ThenBy(oi => oi.OrderItemId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<List<OrderItem>> GetWaitingMaterialItemsOrderedByEtdAsync(
         IEnumerable<long>? filterMaterialIds = null,
         CancellationToken cancellationToken = default)

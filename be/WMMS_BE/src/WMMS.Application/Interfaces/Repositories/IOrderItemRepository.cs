@@ -13,6 +13,7 @@ public interface IOrderItemRepository
     Task<List<OrderItem>> GetByOrderIdWithFullMrpGraphAsync(long orderId, CancellationToken cancellationToken = default);
     Task<List<OrderItem>> GetBySpaceIdWithFullMrpGraphAsync(long spaceId, CancellationToken cancellationToken = default);
     Task<List<OrderItem>> GetAllActiveOrderItemsWithMrpGraphAsync(CancellationToken cancellationToken = default);
+    Task<List<OrderItem>> GetAllOrderItemsForScrapReplenishmentAsync(CancellationToken cancellationToken = default);
     Task<List<OrderItem>> GetWaitingMaterialItemsOrderedByEtdAsync(IEnumerable<long>? filterMaterialIds = null, CancellationToken cancellationToken = default);
     Task<CustomerOrder?> GetOrderByIdAsync(long orderId, CancellationToken cancellationToken = default);
     Task<CustomerOrder?> GetOrderWithFullProgressGraphAsync(long orderId, CancellationToken cancellationToken = default);

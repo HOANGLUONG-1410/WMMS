@@ -37,4 +37,14 @@ public interface IBomRepository
 
     /// <summary>GBR-05: Lưu nhật ký kiểm toán bất biến vào bảng audit_logs.</summary>
     Task AddAuditLogAsync(AuditLog auditLog);
+
+    /// <summary>
+    /// Lấy danh sách nhật ký kiểm toán theo tên thực thể và danh sách khóa định danh thực thể (GBR-05, UC-75).
+    /// </summary>
+    /// <param name="entityName">Tên thực thể (ví dụ: "OrderItem", "CustomerOrder").</param>
+    /// <param name="entityIds">Danh sách các EntityId cần tra cứu.</param>
+    /// <param name="actionType">Tùy chọn lọc loại hành động (ví dụ: "SCRAP_REPLENISHMENT_ABSORBED").</param>
+    /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
+    /// <returns>Danh sách bản ghi nhật ký kiểm toán phù hợp.</returns>
+    Task<List<AuditLog>> GetAuditLogsAsync(string entityName, IEnumerable<string> entityIds, string? actionType = null, CancellationToken cancellationToken = default);
 }

@@ -93,6 +93,26 @@ public class OrderProgressService : IOrderProgressService
         var now = DateTime.UtcNow;
         var previousOrderStatus = order.Status;
 
+        // Tra cứu số lượng thiếu hụt đã được Chủ xưởng chấp nhận (UC075.1)
+        var itemIds = order.OrderItems.Select(oi => oi.OrderItemId.ToString()).ToList();
+        var absorbLogs = await _unitOfWork.Boms.GetAuditLogsAsync("OrderItem", itemIds, "SCRAP_REPLENISHMENT_ABSORBED", cancellationToken);
+        var absorbedMap = new Dictionary<long, int>();
+        foreach (var log in absorbLogs)
+        {
+            if (long.TryParse(log.EntityId, out var oId) && !string.IsNullOrEmpty(log.AfterState))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(log.AfterState);
+                    if (doc.RootElement.TryGetProperty("AbsorbedShortfallQty", out var prop))
+                    {
+                        absorbedMap[oId] = absorbedMap.GetValueOrDefault(oId, 0) + prop.GetInt32();
+                    }
+                }
+                catch { }
+            }
+        }
+
         await _unitOfWork.BeginTransactionAsync();
         try
         {
@@ -105,7 +125,9 @@ public class OrderProgressService : IOrderProgressService
                                  b.BatchType == BatchTypeEnum.REPLENISH_LOT))
                     .Sum(b => b.BatchQty);
 
-                if (item.OrderedQty > 0 && doneQty >= item.OrderedQty)
+                var effectiveDoneQty = doneQty + absorbedMap.GetValueOrDefault(item.OrderItemId, 0);
+
+                if (item.OrderedQty > 0 && effectiveDoneQty >= item.OrderedQty)
                 {
                     item.Status = OrderItemStatusEnum.DONE;
                 }

@@ -1500,11 +1500,30 @@ public class ProductionOrderService : IProductionOrderService
         var currentActiveAndDoneQty = existingOrderBatches
             .Where(b => b.BatchQty > 0)
             .Sum(b => b.BatchQty);
-        var missingQtyForOrderItem = Math.Max(0, orderItem.OrderedQty - currentActiveAndDoneQty);
+
+        var absorbLogs = await _bomRepository.GetAuditLogsAsync("OrderItem", new[] { orderItem.OrderItemId.ToString() }, "SCRAP_REPLENISHMENT_ABSORBED", cancellationToken);
+        int absorbedQty = 0;
+        foreach (var log in absorbLogs)
+        {
+            if (!string.IsNullOrEmpty(log.AfterState))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(log.AfterState);
+                    if (doc.RootElement.TryGetProperty("AbsorbedShortfallQty", out var prop))
+                    {
+                        absorbedQty += prop.GetInt32();
+                    }
+                }
+                catch { }
+            }
+        }
+
+        var missingQtyForOrderItem = Math.Max(0, orderItem.OrderedQty - (currentActiveAndDoneQty + absorbedQty));
         if (missingQtyForOrderItem <= 0)
         {
             throw new DomainException(
-                $"Hạng mục sản phẩm '{product.ProductName}' đã có đủ sản lượng ({currentActiveAndDoneQty}/{orderItem.OrderedQty} SP), không cần phát hành thêm lô sản xuất bù.",
+                $"Hạng mục sản phẩm '{product.ProductName}' đã có đủ sản lượng hoặc đã được Chủ xưởng chấp nhận thiếu hụt ({currentActiveAndDoneQty + absorbedQty}/{orderItem.OrderedQty} SP), không cần phát hành thêm lô sản xuất bù.",
                 "REPLENISH_NOT_REQUIRED");
         }
         if (request.ReplenishQty > missingQtyForOrderItem)
