@@ -74,6 +74,8 @@ export default function OrderSpaceDetailPage() {
 
   // Quyền người dùng (SALES chỉ xem thông tin đơn hàng & tiến độ, không truy cập BOM hay Đối chiếu tồn kho MRP)
   const activeRole = currentUser?.activeRole || 'OWNER';
+  const canViewCustomer = ['OWNER', 'ADMIN', 'SALES'].includes(activeRole);
+  const isSales = activeRole === 'SALES';
   const canReleaseBatches = ['OWNER', 'ADMIN', 'LEADER'].includes(activeRole);
   const canAccessBom = ['OWNER', 'PLANNER', 'ADMIN'].includes(activeRole);
   const canAccessReconciliation = [
@@ -345,8 +347,10 @@ export default function OrderSpaceDetailPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-                {spaceDetail?.spaceKey || fallbackSpace?.spaceKey || activeKey}:{' '}
-                {spaceDetail?.customerName || fallbackSpace?.customerName || 'Đang tải...'}
+                {spaceDetail?.spaceKey || fallbackSpace?.spaceKey || activeKey}
+                {canViewCustomer && (spaceDetail?.customerName || fallbackSpace?.customerName)
+                  ? `: ${spaceDetail?.customerName || fallbackSpace?.customerName}`
+                  : ''}
               </h1>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
@@ -560,22 +564,28 @@ export default function OrderSpaceDetailPage() {
                   <th className="py-3.5 px-3 min-w-[190px]">Mẫu sản phẩm &amp; quy cách</th>
                   <th className="py-3.5 px-3 min-w-[115px]">Quy cách hoàn thiện</th>
                   <th className="py-3.5 px-3 min-w-[90px]">Số lượng đặt</th>
-                  <th className="py-3.5 px-3 min-w-[130px]">Tiến độ phát hành</th>
+                  {!isSales && (
+                    <th className="py-3.5 px-3 min-w-[130px]">Tiến độ phát hành</th>
+                  )}
                   <th className="py-3.5 px-3 min-w-[145px]">Bản vẽ kỹ thuật</th>
-                  <th className="py-3.5 px-3 min-w-[140px]">Trạng thái BOM</th>
-                  <th className="py-3.5 px-4 text-right min-w-[175px]">Thao tác</th>
+                  {!isSales && (
+                    <>
+                      <th className="py-3.5 px-3 min-w-[140px]">Trạng thái BOM</th>
+                      <th className="py-3.5 px-4 text-right min-w-[175px]">Thao tác</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-sm bg-white">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="py-10 px-6 text-center text-slate-500">
+                    <td colSpan={isSales ? 5 : 8} className="py-10 px-6 text-center text-slate-500">
                       Đang tải danh sách sản phẩm trong Không gian đơn hàng...
                     </td>
                   </tr>
                 ) : lineItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-10 px-6 text-center text-rose-600 font-semibold">
+                    <td colSpan={isSales ? 5 : 8} className="py-10 px-6 text-center text-rose-600 font-semibold">
                       Lỗi: Không tìm thấy dữ liệu sản phẩm nào trong Không gian đơn hàng này.
                     </td>
                   </tr>
@@ -605,21 +615,23 @@ export default function OrderSpaceDetailPage() {
                         <td className="py-4 px-3 font-bold text-slate-900 whitespace-nowrap">
                           {fmtNum(item.orderedQty)} cái
                         </td>
-                        <td className="py-4 px-3 whitespace-nowrap">
-                          <div className="text-xs font-bold text-slate-800">
-                            <span className={stats.initialReleasedQty > 0 ? 'text-blue-600' : 'text-slate-400'}>
-                              {fmtNum(stats.initialReleasedQty)}
-                            </span>{' '}
-                            / {fmtNum(item.orderedQty)} SP
-                          </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
-                            {stats.remainingQty > 0 ? (
-                              <span>Còn {fmtNum(stats.remainingQty)} SP</span>
-                            ) : (
-                              <span className="text-emerald-600 font-bold">✓ Đã phát hành đủ</span>
-                            )}
-                          </div>
-                        </td>
+                        {!isSales && (
+                          <td className="py-4 px-3 whitespace-nowrap">
+                            <div className="text-xs font-bold text-slate-800">
+                              <span className={stats.initialReleasedQty > 0 ? 'text-blue-600' : 'text-slate-400'}>
+                                {fmtNum(stats.initialReleasedQty)}
+                              </span>{' '}
+                              / {fmtNum(item.orderedQty)} SP
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              {stats.remainingQty > 0 ? (
+                                <span>Còn {fmtNum(stats.remainingQty)} SP</span>
+                              ) : (
+                                <span className="text-emerald-600 font-bold">✓ Đã phát hành đủ</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
                         <td className="py-4 px-3 whitespace-nowrap">
                           {(() => {
                             const imgUrl = !brokenImageIds[item.orderItemId]
@@ -700,49 +712,53 @@ export default function OrderSpaceDetailPage() {
                             return <span className="text-slate-400 text-xs italic">Chưa đính kèm</span>;
                           })()}
                         </td>
-                        <td className="py-4 px-3 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full border whitespace-nowrap ${badgeStyle.badge}`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${badgeStyle.dot}`} />
-                            {(item as { bomLifecycleLabel?: string; itemStatusLabel?: string }).bomLifecycleLabel ||
-                              (item as { itemStatusLabel?: string }).itemStatusLabel ||
-                              bomStatusLabel(statusText)}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-right whitespace-nowrap space-x-2">
-                          {canAccessBom && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(
-                                  `/bom?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}&sku=${encodeURIComponent(item.productSku)}`
-                                )
-                              }
-                              className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer"
-                            >
-                              Xem BOM →
-                            </button>
-                          )}
+                        {!isSales && (
+                          <>
+                            <td className="py-4 px-3 whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase rounded-full border whitespace-nowrap ${badgeStyle.badge}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${badgeStyle.dot}`} />
+                                {(item as { bomLifecycleLabel?: string; itemStatusLabel?: string }).bomLifecycleLabel ||
+                                  (item as { itemStatusLabel?: string }).itemStatusLabel ||
+                                  bomStatusLabel(statusText)}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right whitespace-nowrap space-x-2">
+                              {canAccessBom && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    navigate(
+                                      `/bom?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}&sku=${encodeURIComponent(item.productSku)}`
+                                    )
+                                  }
+                                  className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer"
+                                >
+                                  Xem BOM →
+                                </button>
+                              )}
 
-                          {canAccessProductionProgress && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(
-                                  `/production/progress?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}&sku=${encodeURIComponent(item.productSku)}`
-                                )
-                              }
-                              className="px-2.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition cursor-pointer shadow-2xs"
-                            >
-                              Tiến trình SX →
-                            </button>
-                          )}
+                              {canAccessProductionProgress && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    navigate(
+                                      `/production/progress?spaceKey=${encodeURIComponent(activeKey)}&orderItemId=${item.orderItemId}&sku=${encodeURIComponent(item.productSku)}`
+                                    )
+                                  }
+                                  className="px-2.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition cursor-pointer shadow-2xs"
+                                >
+                                  Tiến trình SX →
+                                </button>
+                              )}
 
-                          {!canAccessBom && !canAccessProductionProgress && (
-                            <span className="text-xs text-slate-400 italic">Chỉ xem</span>
-                          )}
-                        </td>
+                              {!canAccessBom && !canAccessProductionProgress && (
+                                <span className="text-xs text-slate-400 italic">Chỉ xem</span>
+                              )}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })

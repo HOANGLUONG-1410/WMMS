@@ -12,7 +12,19 @@ export default function SalesOrderListPage() {
   const { currentUser } = useSession();
 
   const activeRole = currentUser?.activeRole || ROLES.OWNER;
+  const canViewCustomer = ([ROLES.SALES, ROLES.OWNER, ROLES.ADMIN] as string[]).includes(activeRole);
   const canAccessStaging = ([ROLES.SALES, ROLES.OWNER, ROLES.ADMIN] as string[]).includes(activeRole);
+
+  const formatVolumeSummary = (summary: string): string => {
+    if (!summary) return '';
+    // Nếu là dạng "630 bộ (...)" thì rút gọn chỉ lấy "630 bộ"
+    const setMatch = summary.match(/^(\d+[\d.,]*\s*bộ)\s*\(/i);
+    if (setMatch) return setMatch[1];
+    // Nếu là "300 chiếc Tủ sideboard gỗ tần bì..." thì rút gọn phần mô tả gỗ phía sau
+    const woodIdx = summary.toLowerCase().indexOf(' gỗ ');
+    if (woodIdx > 0) return summary.slice(0, woodIdx).trim();
+    return summary;
+  };
 
   // State cho bộ lọc trạng thái và tìm kiếm (Fields #2 & #3)
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -95,14 +107,14 @@ export default function SalesOrderListPage() {
         const kw = searchKeyword.trim().toLowerCase();
         const match =
           ord.spaceKey.toLowerCase().includes(kw) ||
-          ord.customerName.toLowerCase().includes(kw) ||
+          (canViewCustomer && ord.customerName.toLowerCase().includes(kw)) ||
           ord.poNumber.toLowerCase().includes(kw) ||
           ord.lineItemsVolumeSummary.toLowerCase().includes(kw);
         if (!match) return false;
       }
       return true;
     });
-  }, [orderSpaces, statusFilter, searchKeyword]);
+  }, [orderSpaces, statusFilter, searchKeyword, canViewCustomer]);
 
   const activeCount = kpiStats?.activeOrdersCount ?? orderSpaces.length;
   const urgentCount =
@@ -271,7 +283,7 @@ export default function SalesOrderListPage() {
                   type="text"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="Tìm khách hàng, số PO..."
+                  placeholder={canViewCustomer ? 'Tìm khách hàng, số PO...' : 'Tìm mã Space, số PO...'}
                   className="w-full pl-9 pr-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
@@ -283,7 +295,9 @@ export default function SalesOrderListPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500 bg-[#F8FAFC]">
                   <th className="py-3.5 px-6 min-w-[170px]">Mã Order Space</th>
-                  <th className="py-3.5 px-4 min-w-[220px]">Khách hàng / Người mua</th>
+                  {canViewCustomer && (
+                    <th className="py-3.5 px-4 min-w-[220px]">Khách hàng / Người mua</th>
+                  )}
                   <th className="py-3.5 px-4 min-w-[160px]">Mã PO</th>
                   <th className="py-3.5 px-4 min-w-[180px]">ETD mục tiêu</th>
                   <th className="py-3.5 px-4 min-w-[180px]">Dòng hàng / Số lượng</th>
@@ -294,13 +308,13 @@ export default function SalesOrderListPage() {
               <tbody className="divide-y divide-slate-200 text-sm bg-white">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="py-10 px-6 text-center text-slate-500">
+                    <td colSpan={canViewCustomer ? 7 : 6} className="py-10 px-6 text-center text-slate-500">
                       Đang tải danh sách đơn hàng...
                     </td>
                   </tr>
                 ) : filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 px-6 text-center text-rose-600 font-medium">
+                    <td colSpan={canViewCustomer ? 7 : 6} className="py-10 px-6 text-center text-rose-600 font-medium">
                       Không tìm thấy đơn hàng hoặc Không gian đơn hàng nào phù hợp.
                     </td>
                   </tr>
@@ -316,9 +330,11 @@ export default function SalesOrderListPage() {
                           {ord.spaceKey}
                         </button>
                       </td>
-                      <td className="py-4 px-4 font-semibold text-slate-900 whitespace-nowrap">
-                        {ord.customerName}
-                      </td>
+                      {canViewCustomer && (
+                        <td className="py-4 px-4 font-semibold text-slate-900 whitespace-nowrap">
+                          {ord.customerName}
+                        </td>
+                      )}
                       <td className="py-4 px-4 font-mono text-sm text-slate-700 whitespace-nowrap">
                         {ord.poNumber}
                       </td>
@@ -333,7 +349,7 @@ export default function SalesOrderListPage() {
                         </span>
                       </td>
                       <td className="py-4 px-4 text-slate-700 whitespace-nowrap">
-                        {ord.lineItemsVolumeSummary}
+                        {formatVolumeSummary(ord.lineItemsVolumeSummary)}
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap">
                         <span
