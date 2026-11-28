@@ -415,6 +415,12 @@ public class UserService : IUserService
         }
         else
         {
+            // Nếu Admin chủ động đặt trạng thái LOCKED, phải gán thời hạn LockedUntil để AuthService không tự mở khóa ngay lập tức
+            if (newStatus == UserStatusEnum.LOCKED)
+            {
+                user.LockedUntil = DateTime.UtcNow.AddMinutes(30);
+            }
+
             // Thu hồi toàn bộ Refresh Token đang hoạt động khi tài khoản bị BANNED / INACTIVE / LOCKED (UC-10)
             foreach (var activeToken in user.RefreshTokens.Where(rt => !rt.IsRevoked))
             {

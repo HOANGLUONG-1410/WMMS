@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WMMS.Application.Common.Models;
@@ -18,10 +19,14 @@ namespace WMMS.API.Controllers;
 public class MrpController : MasterDataControllerBase
 {
     private readonly IMrpAllocationService _mrpAllocationService;
+    private readonly IValidator<ScrapReplenishmentRequestDto> _scrapReplenishmentValidator;
 
-    public MrpController(IMrpAllocationService mrpAllocationService)
+    public MrpController(
+        IMrpAllocationService mrpAllocationService,
+        IValidator<ScrapReplenishmentRequestDto> scrapReplenishmentValidator)
     {
         _mrpAllocationService = mrpAllocationService;
+        _scrapReplenishmentValidator = scrapReplenishmentValidator;
     }
 
     /// <summary>
@@ -189,7 +194,7 @@ public class MrpController : MasterDataControllerBase
     /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
     /// <returns>Kết quả cấp bù vật tư phế phẩm và mã phiếu PR sinh tự động (nếu có).</returns>
     [HttpPost("scrap-replenishment-request")]
-    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader},{RoleConstants.Warehouse}")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader}")]
     [ProducesResponseType(typeof(ApiResponse<ScrapReplenishmentResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -197,6 +202,14 @@ public class MrpController : MasterDataControllerBase
         [FromBody] ScrapReplenishmentRequestDto request,
         CancellationToken cancellationToken)
     {
+        var validation = await _scrapReplenishmentValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(ApiResponse<ScrapReplenishmentResultDto>.Fail(
+                "Dữ liệu yêu cầu cấp bù vật tư phế phẩm không hợp lệ.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList()));
+        }
+
         var userId = GetCurrentUserId();
         var result = await _mrpAllocationService.RequestScrapReplenishmentAsync(request, userId, cancellationToken);
         return Ok(ApiResponse<ScrapReplenishmentResultDto>.Ok(result, result.Message));
@@ -221,5 +234,63 @@ public class MrpController : MasterDataControllerBase
     {
         var result = await _mrpAllocationService.GetScrapReplenishmentPreviewAsync(orderItemId, scrappedQty, cancellationToken);
         return Ok(ApiResponse<ScrapReplenishmentPreviewDto>.Ok(result, "Tính toán định mức và đối soát tồn kho cấp bù phế phẩm thành công."));
+    }
+
+    /// <summary>
+    /// [UC-75, SC-14b]: Lấy danh sách các dòng sản phẩm đơn hàng đang phát sinh phế phẩm cần cấp bù (Replacement Request List).
+    /// Phục vụ Bảng điều khiển Giám đốc/Chủ xưởng (Executive Dashboard - UC-75 Trigger) và Tổ trưởng / Kế hoạch theo dõi tiến độ.
+    /// </summary>
+    /// <param name="cancellationToken">Token hủy tác vụ.</param>
+    [HttpGet("scrap-replenishment-requests")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner},{RoleConstants.Planner},{RoleConstants.Leader}")]
+    [ProducesResponseType(typeof(ApiResponse<List<ScrapReplenishmentSummaryDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetScrapReplenishmentRequestsAsync(CancellationToken cancellationToken)
+    {
+        var result = await _mrpAllocationService.GetScrapReplenishmentRequestsAsync(cancellationToken);
+        return Ok(ApiResponse<List<ScrapReplenishmentSummaryDto>>.Ok(result, "Lấy danh sách yêu cầu cấp bù phế phẩm thành công."));
+    }
+
+    /// <summary>
+    /// [UC-75, SC-14b]: Chủ xưởng phê duyệt yêu cầu cấp bù nguyên vật liệu cho dòng sản phẩm đơn hàng (Owner Approval).
+    /// Thực hiện khóa giữ chỗ kho (soft-allocation) và tự động tạo Phiếu yêu cầu mua hàng (PR) nếu thiếu hụt phôi gỗ.
+    /// </summary>
+    /// <param name="orderItemId">ID dòng sản phẩm đơn hàng cần phê duyệt cấp bù.</param>
+    /// <param name="request">DTO chứa ghi chú phê duyệt và tùy chọn tạo PR.</param>
+    /// <param name="cancellationToken">Token hủy tác vụ.</param>
+    [HttpPost("scrap-replenishment-requests/{orderItemId:long}/approve")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner}")]
+    [ProducesResponseType(typeof(ApiResponse<ScrapReplenishmentResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ApproveScrapReplenishmentAsync(
+        [FromRoute] long orderItemId,
+        [FromBody] ApproveScrapReplenishmentRequestDto? request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _mrpAllocationService.ApproveScrapReplenishmentAsync(orderItemId, request, userId, cancellationToken);
+        return Ok(ApiResponse<ScrapReplenishmentResultDto>.Ok(result, result.Message));
+    }
+
+    /// <summary>
+    /// [UC-75, UC075.1]: Chủ xưởng phê duyệt chấp nhận mức thiếu hụt phế phẩm theo dung sai hợp đồng (+/- 5%) mà không cần làm bù (Absorb Shortfall).
+    /// Áp dụng khi khách hàng cho phép dung sai giao hàng và Chủ xưởng quyết định đóng luồng cấp bù không remaking.
+    /// </summary>
+    /// <param name="orderItemId">ID dòng sản phẩm đơn hàng.</param>
+    /// <param name="request">DTO chứa lý do bắt buộc.</param>
+    /// <param name="cancellationToken">Token hủy tác vụ.</param>
+    [HttpPost("scrap-replenishment-requests/{orderItemId:long}/absorb-shortfall")]
+    [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.Owner}")]
+    [ProducesResponseType(typeof(ApiResponse<AbsorbScrapShortfallResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AbsorbScrapShortfallAsync(
+        [FromRoute] long orderItemId,
+        [FromBody] AbsorbScrapShortfallRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        var result = await _mrpAllocationService.AbsorbScrapShortfallAsync(orderItemId, request, userId, cancellationToken);
+        return Ok(ApiResponse<AbsorbScrapShortfallResultDto>.Ok(result, result.Message));
     }
 }

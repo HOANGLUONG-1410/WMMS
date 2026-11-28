@@ -51,7 +51,7 @@ public class FinishedGoodsService : IFinishedGoodsService
                 continue;
             }
 
-            if (!onlyReadyForReceipt && !isReadyForReceipt && batch.BatchStatus != BatchStatusEnum.DONE)
+            if (!onlyReadyForReceipt && !isReadyForReceipt && (batch.BatchStatus != BatchStatusEnum.DONE || batch.BatchQty <= 0))
             {
                 continue;
             }
@@ -170,6 +170,14 @@ public class FinishedGoodsService : IFinishedGoodsService
         {
             throw new AppException(
                 $"Số lượng thành phẩm bàn giao ({finalCompletedQty}) không được vượt quá sản lượng hiện có đạt chuẩn của lô ({batch.BatchQty}).",
+                400,
+                MessageCodes.Msg13ValidationError);
+        }
+
+        if (finalCompletedQty < batch.BatchQty)
+        {
+            throw new AppException(
+                $"Số lượng thành phẩm bàn giao ({finalCompletedQty}) phải khớp với toàn bộ sản lượng đã nghiệm thu đạt chuẩn của lô ({batch.BatchQty}). Nếu phát sinh hao hụt/lỗi ở khâu đóng gói, vui lòng ghi nhận tại bước kiểm định KCS trước khi đóng lô.",
                 400,
                 MessageCodes.Msg13ValidationError);
         }
@@ -308,7 +316,12 @@ public class FinishedGoodsService : IFinishedGoodsService
                     var doneOrderUnits = order.OrderItems.Sum(oi =>
                         oi.OrderItemId == targetOrderItem?.OrderItemId
                             ? Math.Min(oi.OrderedQty, totalCompletedForOrderItem)
-                            : (oi.Status == OrderItemStatusEnum.DONE ? oi.OrderedQty : 0));
+                            : Math.Min(oi.OrderedQty, oi.ProductionBatches
+                                .Where(b => b.BatchStatus == BatchStatusEnum.DONE &&
+                                            (b.BatchType == BatchTypeEnum.MAIN_CARD ||
+                                             b.BatchType == BatchTypeEnum.REWORK_SUB_CARD ||
+                                             b.BatchType == BatchTypeEnum.REPLENISH_LOT))
+                                .Sum(b => b.BatchQty)));
                     order.OrderSpace.OverallProgressPct = order.Status == OrderStatusEnum.COMPLETED
                         ? 100m
                         : (totalOrderUnits > 0 ? Math.Min(100m, Math.Round((decimal)doneOrderUnits * 100m / totalOrderUnits, 2)) : 0m);

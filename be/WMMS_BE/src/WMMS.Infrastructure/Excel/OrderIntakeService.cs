@@ -421,7 +421,7 @@ public class OrderIntakeService : IOrderIntakeService
                 customer = new Customer
                 {
                     CustomerCode = generatedCode,
-                    CompanyName = request.CustomerName.Trim(),
+                    CompanyName = string.IsNullOrWhiteSpace(request.CustomerName) ? $"Khách hàng {generatedCode}" : request.CustomerName.Trim(),
                     Country = string.IsNullOrWhiteSpace(request.CustomerCountry) ? "USA" : request.CustomerCountry.Trim(),
                     CreatedAt = now,
                     UpdatedAt = now
@@ -594,22 +594,36 @@ public class OrderIntakeService : IOrderIntakeService
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            if (_notificationHubService != null)
+            try
             {
-                await _notificationHubService.NotifyOrderSpaceCreatedAsync(
-                    orderSpace.SpaceKey,
-                    salesOrder.PoNumber,
-                    customer.CompanyName,
-                    totalUnits,
-                    validationResult.Rows.Count,
-                    cancellationToken);
+                if (_notificationHubService != null)
+                {
+                    await _notificationHubService.NotifyOrderSpaceCreatedAsync(
+                        orderSpace.SpaceKey,
+                        salesOrder.PoNumber,
+                        customer.CompanyName,
+                        totalUnits,
+                        validationResult.Rows.Count,
+                        cancellationToken);
+                }
+            }
+            catch
+            {
+                // Lỗi phát thông báo SignalR sau khi đã Commit CSDL không được làm rollback hoặc trả lỗi 500
             }
 
             return await GetOrderSpaceDetailAsync(orderSpace.SpaceKey, false, cancellationToken);
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            try
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            catch
+            {
+                // Bỏ qua nếu transaction đã hoàn tất trước đó
+            }
             throw;
         }
     }

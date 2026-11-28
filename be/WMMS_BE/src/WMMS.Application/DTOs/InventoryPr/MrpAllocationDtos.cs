@@ -295,3 +295,69 @@ public class ScrapReplenishmentPreviewDto
     public string Recommendation { get; set; } = string.Empty;
     public List<ScrapMaterialAllocationDetailDto> MaterialRequirements { get; set; } = new();
 }
+
+/// <summary>
+/// DTO Tổng hợp thông tin Yêu cầu Cấp bù Phế phẩm trên toàn nhà máy (UC-75, SC-14b).
+/// Phục vụ Bảng điều khiển Giám đốc/Chủ xưởng (Executive Dashboard) để theo dõi và phê duyệt.
+/// </summary>
+public class ScrapReplenishmentSummaryDto
+{
+    public long OrderItemId { get; set; }
+    public long OrderId { get; set; }
+    public string PoNumber { get; set; } = string.Empty;
+    public string CustomerName { get; set; } = string.Empty;
+    public string ProductSku { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public int OrderedQty { get; set; }
+    public int ActiveBatchQty { get; set; }
+    public int TotalScrappedQty { get; set; }
+    public int IssuedReplenishLotQty { get; set; }
+    public int MissingQty { get; set; }
+    public bool CanAbsorbShortfall { get; set; }
+    public decimal ShortfallTolerancePercent { get; set; } = 5.0m;
+    public string Status { get; set; } = string.Empty;
+    public string StatusLabel { get; set; } = string.Empty;
+    public bool IsStockSufficient { get; set; }
+    public long? PurchaseRequestId { get; set; }
+    public string? PurchaseRequestCode { get; set; }
+    public string? PurchaseRequestStatus { get; set; }
+    public DateTime? EtdDate { get; set; }
+}
+
+/// <summary>
+/// DTO Yêu cầu Phê duyệt Cấp bù Phế phẩm từ Chủ xưởng (UC-75).
+/// </summary>
+public class ApproveScrapReplenishmentRequestDto
+{
+    /// <summary>Ghi chú hoặc phê duyệt từ Chủ xưởng.</summary>
+    public string? ApprovalNote { get; set; }
+
+    /// <summary>Tự động tạo hoặc gom phần thiếu hụt kho vào Phiếu PR tổng hợp trong ngày (mặc định: true).</summary>
+    public bool AutoCreatePrIfShortage { get; set; } = true;
+}
+
+/// <summary>
+/// DTO Yêu cầu Chấp nhận Thiếu hụt Phế phẩm không cần làm bù (UC075.1 - Absorb Shortfall).
+/// Áp dụng khi hợp đồng cho phép dung sai giao hàng +/- 5% và Chủ xưởng quyết định không phát hành lô bù.
+/// </summary>
+public class AbsorbScrapShortfallRequestDto
+{
+    /// <summary>Lý do Chủ xưởng quyết định chấp nhận thiếu hụt (bắt buộc).</summary>
+    public string Reason { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// DTO Kết quả sau khi Chủ xưởng quyết định chấp nhận thiếu hụt phế phẩm (UC075.1).
+/// </summary>
+public class AbsorbScrapShortfallResultDto
+{
+    public long OrderItemId { get; set; }
+    public string PoNumber { get; set; } = string.Empty;
+    public string ProductSku { get; set; } = string.Empty;
+    public int OrderedQty { get; set; }
+    public int AbsorbedShortfallQty { get; set; }
+    public decimal ShortfallPercentage { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public DateTime DecidedAt { get; set; } = DateTime.UtcNow;
+}
+

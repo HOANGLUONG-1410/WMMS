@@ -260,7 +260,9 @@ public class PurchaseOrderService : IPurchaseOrderService
             }
         }
 
-        var termsBySupplier = request.SupplierTerms.ToDictionary(t => t.SupplierId);
+        var termsBySupplier = (request.SupplierTerms ?? new List<CreatePoSupplierTermsDto>())
+            .GroupBy(t => t.SupplierId)
+            .ToDictionary(g => g.Key, g => g.First());
         var today = DateTime.UtcNow.Date;
         foreach (var terms in termsBySupplier.Values)
         {
@@ -268,6 +270,31 @@ public class PurchaseOrderService : IPurchaseOrderService
             {
                 throw new AppException(
                     "Ngày nhà cung cấp hẹn giao hàng không được nằm trong quá khứ.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+        }
+
+        foreach (var line in request.Lines)
+        {
+            if (line.OrderedQty <= 0m)
+            {
+                throw new AppException(
+                    "Số lượng đặt mua trên mỗi dòng phải lớn hơn 0.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+            if (line.UnitPrice < 0m)
+            {
+                throw new AppException(
+                    "Đơn giá mua hàng không được nhỏ hơn 0.",
+                    400,
+                    MessageCodes.Msg13ValidationError);
+            }
+            if (!termsBySupplier.ContainsKey(line.SupplierId))
+            {
+                throw new AppException(
+                    $"Thiếu thông tin ngày hẹn giao hàng và điều khoản cho nhà cung cấp #{line.SupplierId}.",
                     400,
                     MessageCodes.Msg13ValidationError);
             }
@@ -322,15 +349,21 @@ public class PurchaseOrderService : IPurchaseOrderService
                     CreatedAt = now
                 };
 
-                foreach (var line in group.OrderBy(l => l.PrItemId))
+                // Gộp các dòng có cùng MaterialId trên cùng một PO để tránh tạo 2 dòng trùng vật tư làm kẹt GRN
+                var groupedDetails = group
+                    .GroupBy(l => itemsById[l.PrItemId].MaterialId)
+                    .OrderBy(g => g.Min(x => x.PrItemId));
+
+                foreach (var matGroup in groupedDetails)
                 {
+                    var firstLine = matGroup.First();
                     po.Details.Add(new PurchaseOrderDetail
                     {
-                        MaterialId = itemsById[line.PrItemId].MaterialId,
-                        OrderedQty = Math.Round(line.OrderedQty, 4),
+                        MaterialId = matGroup.Key,
+                        OrderedQty = Math.Round(matGroup.Sum(x => x.OrderedQty), 4),
                         ReceivedQty = 0m,
-                        UnitPrice = Math.Round(line.UnitPrice, 2),
-                        ExpectedDeliveryDate = line.ExpectedDeliveryDate?.Date
+                        UnitPrice = Math.Round(firstLine.UnitPrice, 2),
+                        ExpectedDeliveryDate = firstLine.ExpectedDeliveryDate?.Date
                     });
                 }
 
@@ -720,12 +753,19 @@ public class PurchaseOrderService : IPurchaseOrderService
                 MessageCodes.Msg08DuplicateConflict);
         }
 
-        if (newStatus == PoStatusEnum.FULFILLED)
+        if (newStatus is PoStatusEnum.FULFILLED or PoStatusEnum.PARTIALLY_RECEIVED)
         {
             throw new AppException(
-                "Trạng thái Đã nhận đủ hàng chỉ được cập nhật tự động thông qua Phiếu nhập kho (GRN).",
+                "Trạng thái Nhận một phần hoặc Đã nhận đủ hàng chỉ được cập nhật tự động thông qua Phiếu nhập kho (GRN).",
                 400,
                 MessageCodes.Msg13ValidationError);
+        }
+
+        if (newStatus == PoStatusEnum.ISSUED && oldStatus == PoStatusEnum.PARTIALLY_RECEIVED)
+        {
+            throw AppException.Conflict(
+                $"Không thể chuyển ngược đơn đặt hàng {po.PoCode} về trạng thái Đã phát hành khi đã phát sinh phiếu nhập kho.",
+                MessageCodes.Msg08DuplicateConflict);
         }
 
         if (newStatus == PoStatusEnum.CANCELLED)
@@ -972,13 +1012,18 @@ public class PurchaseOrderService : IPurchaseOrderService
         }
 
         Supplier? targetSupplier = null;
-        if (request?.SupplierId is > 0)
+        var resolvedSupplierId = request?.SupplierId is > 0 ? request.SupplierId.Value : po.SupplierId;
+        if (resolvedSupplierId > 0)
         {
-            targetSupplier = activeSuppliers.FirstOrDefault(s => s.SupplierId == request.SupplierId.Value);
+            targetSupplier = activeSuppliers.FirstOrDefault(s => s.SupplierId == resolvedSupplierId);
             if (targetSupplier == null)
             {
-                var map = await _purchaseOrderRepository.GetSuppliersByIdsAsync(new[] { request.SupplierId.Value }, cancellationToken);
-                map.TryGetValue(request.SupplierId.Value, out targetSupplier);
+                var map = await _purchaseOrderRepository.GetSuppliersByIdsAsync(new[] { resolvedSupplierId }, cancellationToken);
+                if (map.TryGetValue(resolvedSupplierId, out var loadedSupplier) &&
+                    string.Equals(loadedSupplier.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+                {
+                    targetSupplier = loadedSupplier;
+                }
             }
         }
 

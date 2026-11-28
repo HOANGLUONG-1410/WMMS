@@ -1457,7 +1457,7 @@ public class ProductionOrderService : IProductionOrderService
     /// Phát hành Lô sản xuất bù (REPLENISH_LOT) cho số lượng sản phẩm phế phẩm đã hủy (P0-04, UC-62).
     /// Lô sản xuất bù chạy độc lập đầy đủ từ Trạm 1 (Pha phôi thô) đến Trạm 7 (Đóng gói) để bù đủ số lượng đơn hàng.
     /// </summary>
-    /// <param name="request">DTO chứa OrderItemId, ReplenishQty, Reason, AllowOverdrive, OverdriveJustification.</param>
+    /// <param name="request">DTO chứa OrderItemId, ReplenishQty, Reason (lô bù không tự bật Overdrive; muốn chạy trước phải qua luồng Yêu cầu/Phê duyệt Overdrive của Chủ xưởng - KBN02).</param>
     /// <param name="currentUserId">ID người dùng đang thao tác (Chủ xưởng / Quản đốc).</param>
     /// <param name="cancellationToken">Token hủy tác vụ bất đồng bộ.</param>
     /// <returns>DTO thông tin Lô sản xuất bù kèm tiến trình 7 công đoạn.</returns>
@@ -1495,11 +1495,63 @@ public class ProductionOrderService : IProductionOrderService
         var holdPointStage = routingStages.FirstOrDefault(s => s.IsHoldPoint);
         int? holdPointSeq = holdPointStage?.StageSequence ?? (routingStages.Count >= 5 ? 5 : null);
 
-        // Kiểm tra điều kiện xuất kho vật tư bù (bỏ RELEASED và yêu cầu IssuedQty >= RequiredQty)
+        // Kiểm tra giới hạn số lượng bù và chốt chặn xuất kho vật tư bù (BR-008)
+        var existingOrderBatches = await _batchRepository.GetByOrderItemIdAsync(orderItem.OrderItemId, cancellationToken);
+        var currentActiveAndDoneQty = existingOrderBatches
+            .Where(b => b.BatchQty > 0)
+            .Sum(b => b.BatchQty);
+        var missingQtyForOrderItem = Math.Max(0, orderItem.OrderedQty - currentActiveAndDoneQty);
+        if (missingQtyForOrderItem <= 0)
+        {
+            throw new DomainException(
+                $"Hạng mục sản phẩm '{product.ProductName}' đã có đủ sản lượng ({currentActiveAndDoneQty}/{orderItem.OrderedQty} SP), không cần phát hành thêm lô sản xuất bù.",
+                "REPLENISH_NOT_REQUIRED");
+        }
+        if (request.ReplenishQty > missingQtyForOrderItem)
+        {
+            throw new DomainException(
+                $"Số lượng lô sản xuất bù ({request.ReplenishQty} SP) không được vượt quá sản lượng còn thiếu của hạng mục ({missingQtyForOrderItem} SP).",
+                "REPLENISH_QTY_EXCEEDED");
+        }
+
+        // Kiểm tra điều kiện xuất kho vật tư bù: tổng lượng đã xuất phải đủ cho (OrderedQty + tổng các lô REPLENISH_LOT đã phát hành + request.ReplenishQty)
         var activeRepAllocations = orderItem.MaterialAllocations
             .Where(a => a.AllocationStatus != AllocationStatusEnum.RELEASED)
             .ToList();
+        var bom = orderItem.BomHeader;
+        bool hasIssuedExtraForReplenish = true;
+        if (bom != null && bom.BomDetails.Count > 0)
+        {
+            var existingReplenishLotsQty = existingOrderBatches
+                .Where(b => b.BatchType == BatchTypeEnum.REPLENISH_LOT)
+                .Sum(b => b.BatchRoutingSteps.OrderBy(s => s.StageSequence).FirstOrDefault()?.TargetQty ?? b.BatchQty);
+            var totalCumulativeReplenishQty = existingReplenishLotsQty + request.ReplenishQty;
+
+            var cumulativeRequiredByMaterial = bom.BomDetails
+                .GroupBy(d => d.MaterialId)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    {
+                        var baseDemand = g.Sum(d => d.GrossTotalDemand > 0m
+                            ? d.GrossTotalDemand
+                            : (d.NetQtyPerUnit * orderItem.OrderedQty) * (1m + bom.ScrapRatePercent / 100m));
+                        var extraDemand = g.Sum(d => (d.NetQtyPerUnit * totalCumulativeReplenishQty) * (1m + bom.ScrapRatePercent / 100m));
+                        return Math.Round(baseDemand + extraDemand, 4);
+                    });
+
+            hasIssuedExtraForReplenish = cumulativeRequiredByMaterial.All(kvp =>
+            {
+                var alloc = activeRepAllocations.FirstOrDefault(a => a.MaterialId == kvp.Key);
+                if (alloc == null) return false;
+                return alloc.RequiredQty + 0.0001m >= kvp.Value &&
+                       alloc.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP &&
+                       alloc.IssuedQty >= alloc.RequiredQty;
+            });
+        }
+
         bool isIssuedToShop = activeRepAllocations.Any() &&
+                              hasIssuedExtraForReplenish &&
                               activeRepAllocations.All(a =>
                                   a.AllocationStatus == AllocationStatusEnum.ISSUED_TO_SHOP &&
                                   a.IssuedQty >= a.RequiredQty);
@@ -1566,19 +1618,6 @@ public class ProductionOrderService : IProductionOrderService
             }).ToList();
 
             await _batchRepository.AddStepsRangeAsync(steps, cancellationToken);
-
-            if (isOverdriver && holdPointSeq.HasValue)
-            {
-                replenishBatch.OverdriveLogs.Add(new OverdriveLog
-                {
-                    ProductionBatch = replenishBatch,
-                    RequestedBy = currentUserId,
-                    ApprovedBy = currentUserId,
-                    Justification = request.OverdriveJustification?.Trim() ?? "Chạy trước Overdrive cho lô sản xuất bù để kịp tiến độ giao hàng.",
-                    HoldPointStageSeq = holdPointSeq.Value,
-                    ApprovedAt = DateTime.UtcNow
-                });
-            }
 
             // Ghi nhật ký kiểm toán bất biến GBR-05
             var auditPayload = JsonSerializer.Serialize(new
@@ -2037,10 +2076,18 @@ public class ProductionOrderService : IProductionOrderService
             var mainSteps = mainBatch.BatchRoutingSteps.OrderBy(s => s.StageSequence).ToList();
             foreach (var step in mainSteps.Where(s => s.StageSequence >= mainBatch.CurrentStageSeq))
             {
-                step.TargetQty += mergeQty;
-                if (step.StageSequence == mainBatch.CurrentStageSeq && step.StepStatus == StepStatusEnum.PASSED)
+                if (step.StageSequence > mainBatch.CurrentStageSeq)
                 {
-                    step.PassedQty += mergeQty;
+                    step.TargetQty = newMainQty;
+                }
+                else
+                {
+                    // Tại công đoạn hiện tại: khi tách nhánh TargetQty chưa từng bị trừ, chỉ cập nhật nếu TargetQty < newMainQty (tránh phình TargetQty > BatchQty gây kẹt Is100PercentPassed)
+                    step.TargetQty = Math.Max(step.TargetQty, newMainQty);
+                    if (step.StepStatus == StepStatusEnum.PASSED)
+                    {
+                        step.PassedQty = Math.Min(step.TargetQty, step.PassedQty + mergeQty);
+                    }
                 }
                 await _batchRepository.UpdateStepAsync(step);
             }

@@ -246,6 +246,7 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
     {
         return _context.PurchaseOrders
             .Include(po => po.PurchaseRequest)
+                .ThenInclude(pr => pr.Items)
             .Include(po => po.Supplier)
             .Include(po => po.Creator)
             .Include(po => po.Details)

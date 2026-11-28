@@ -78,7 +78,10 @@ public class OrderItemRepository : IOrderItemRepository
                          (oi.Status == OrderItemStatusEnum.WAITING_MAT ||
                           oi.Status == OrderItemStatusEnum.BOM_APPROVED ||
                           oi.BomHeader.BomStatus == BomStatusEnum.WAITING_FOR_MATERIALS ||
-                          oi.BomHeader.BomStatus == BomStatusEnum.APPROVED));
+                          oi.BomHeader.BomStatus == BomStatusEnum.APPROVED ||
+                          oi.MaterialAllocations.Any(a =>
+                              a.AllocationStatus != AllocationStatusEnum.RELEASED &&
+                              a.RequiredQty > a.ReservedQty + a.IssuedQty)));
 
         if (materialIdSet != null && materialIdSet.Count > 0)
         {

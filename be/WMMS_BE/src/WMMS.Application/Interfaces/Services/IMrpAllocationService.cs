@@ -124,4 +124,31 @@ public interface IMrpAllocationService
         long orderItemId,
         int? overrideScrappedQty = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// [UC-75, SC-14b]: Lấy danh sách các dòng sản phẩm đơn hàng đang phát sinh phế phẩm cần Chủ xưởng / Quản đốc xem xét cấp bù.
+    /// Phục vụ Bảng điều khiển Giám đốc/Chủ xưởng (Executive Dashboard - UC-75 Trigger).
+    /// </summary>
+    Task<List<ScrapReplenishmentSummaryDto>> GetScrapReplenishmentRequestsAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// [UC-75, UC075.1]: Chủ xưởng phê duyệt chấp nhận mức thiếu hụt phế phẩm theo dung sai hợp đồng (+/- 5%) mà không cần làm bù.
+    /// Ghi nhận AuditLog bất biến và đóng trạng thái cảnh báo thiếu hụt cho dòng đơn hàng.
+    /// </summary>
+    Task<AbsorbScrapShortfallResultDto> AbsorbScrapShortfallAsync(
+        long orderItemId,
+        AbsorbScrapShortfallRequestDto request,
+        long currentUserId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// [UC-75]: Chủ xưởng phê duyệt yêu cầu cấp bù nguyên vật liệu cho dòng sản phẩm đơn hàng.
+    /// Khóa giữ chỗ kho (soft-allocation) và tạo PR nếu thiếu hụt phôi gỗ.
+    /// </summary>
+    Task<ScrapReplenishmentResultDto> ApproveScrapReplenishmentAsync(
+        long orderItemId,
+        ApproveScrapReplenishmentRequestDto? request,
+        long currentUserId,
+        CancellationToken cancellationToken = default);
 }

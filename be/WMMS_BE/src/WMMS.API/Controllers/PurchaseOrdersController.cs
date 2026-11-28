@@ -194,7 +194,7 @@ public class PurchaseOrdersController : MasterDataControllerBase
             id, request, GetCurrentUserId(), GetClientIpAddress(), cancellationToken);
 
         var message = isCancelling
-            ? $"Đã hủy đơn đặt hàng {result.PoCode} và tự động tạo phiếu yêu cầu mua hàng mới chờ Chủ xưởng duyệt lại."
+            ? $"Đã hủy đơn đặt hàng {result.PoCode} và cập nhật lại phiếu yêu cầu mua hàng liên quan."
             : $"Đã cập nhật trạng thái đơn đặt hàng {result.PoCode} sang '{result.FulfillmentStatus}'.";
 
         return Ok(ApiResponse<PurchaseOrderDetailDto>.Ok(result, message));
